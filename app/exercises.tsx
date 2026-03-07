@@ -15,6 +15,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -228,20 +229,33 @@ export default function ExercisesScreen() {
         </View>
       </View>
 
-      <View style={{ marginBottom: 24, marginHorizontal: -16 }}>
+      <View style={{ marginBottom: 24 }}>
         <WeeklyCalendar />
       </View>
 
       <View style={styles.sectionHeadRow}>
         <Text style={styles.sectionTitle}>DAILY PROGRAM</Text>
-        <Text style={styles.seeAllText}>SEE ALL</Text>
+        <Pressable onPress={() => {
+          setSearch('');
+          setMuscle('');
+          setIsWarmup(false);
+        }}>
+          <Text style={styles.seeAllText}>SEE ALL</Text>
+        </Pressable>
       </View>
 
       <View style={styles.searchWrap}>
         <Search color="rgba(255,255,255,0.3)" size={20} style={styles.searchIcon} />
-        <View style={styles.searchDummyInput}>
-          <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: '700' }}>SEARCH EXERCISES...</Text>
-        </View>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="SEARCH EXERCISES..."
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
       </View>
 
       <View style={styles.filterRow}>
@@ -437,11 +451,13 @@ const styles = StyleSheet.create({
     left: 16,
     zIndex: 10,
   },
-  searchDummyInput: {
+  searchInput: {
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: 16,
     height: 52,
-    justifyContent: 'center',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
     paddingLeft: 48,
     paddingRight: 16,
     borderWidth: 1,

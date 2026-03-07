@@ -1,10 +1,7 @@
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { addDays, format, isSameDay, startOfWeek } from 'date-fns';
 import React, { useMemo } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
-
-const { width } = Dimensions.get('window');
-const ITEM_WIDTH = Math.min(46, (width - 40) / 7);
+import { StyleSheet, Text, View } from 'react-native';
 
 export function WeeklyCalendar() {
   const palette = useThemeColors();
@@ -95,7 +92,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    width: '100%',
   },
   dayWrap: {
     alignItems: 'center',
@@ -105,10 +102,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 24,
     borderWidth: 1,
-    height: Math.max(70, ITEM_WIDTH * 1.6), // Responsive height
+    height: 72,
     justifyContent: 'center',
     position: 'relative',
-    width: ITEM_WIDTH,
+    width: '92%',
+    maxWidth: 48,
   },
   dot: {
     borderRadius: 999,
