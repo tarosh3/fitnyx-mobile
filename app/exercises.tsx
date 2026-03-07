@@ -235,11 +235,15 @@ export default function ExercisesScreen() {
 
       <View style={styles.sectionHeadRow}>
         <Text style={styles.sectionTitle}>DAILY PROGRAM</Text>
-        <Pressable onPress={() => {
-          setSearch('');
-          setMuscle('');
-          setIsWarmup(false);
-        }}>
+        <Pressable
+          hitSlop={20}
+          style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, paddingVertical: 4, paddingHorizontal: 8, marginRight: -8 }]}
+          onPress={() => {
+            setSearch('');
+            setMuscle('');
+            setIsWarmup(false);
+          }}
+        >
           <Text style={styles.seeAllText}>SEE ALL</Text>
         </Pressable>
       </View>
