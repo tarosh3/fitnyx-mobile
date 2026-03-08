@@ -8,7 +8,7 @@
     "scheme": "fitnyxmobile",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/splash-v2.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
