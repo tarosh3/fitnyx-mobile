@@ -51,9 +51,9 @@ export function FullLogoSvg({ size = 32, color = '#80f20d' }: LogoProps) {
                     M10,12 v16 h6 v-6 h8 v-4 h-8 v-2 h10 v-4 h-16 z
                     M30,12 v16 h6 v-16 h-6 z
                     M40,12 v4 h5 v12 h6 v-12 h5 v-4 h-16 z
-                    M60,12 v16 h6 l8,-12 v12 h6 v-16 h-6 l-8,12 v-12 h-6 z
-                    M84,12 h6 l3,5 l3,-5 h6 l-6,10 v6 h-6 v-6 l-6,-10 z
-                    M106,12 h6 l3,4.5 l3,-4.5 h6 l-5.5,8 l5.5,8 h-6 l-3,-4.5 l-3,4.5 h-6 l5.5,-8 l-5.5,-8 z
+                    M60,12 h6 l8,10 v-10 h6 v16 h-6 l-8,-10 v10 h-6 v-16 z
+                    M84,12 h6 l4,6 l4,-6 h6 l-7,10 v6 h-6 v-6 l-7,-10 z
+                    M104,12 h6 l4,6 l4,-6 h6 l-7,10 l7,6 h-6 l-4,-6 l-4,6 h-6 l7,-6 l-7,-10 z
                     "
                     fill="#FFFFFF"
                     transform={`translate(0, 4)`}
