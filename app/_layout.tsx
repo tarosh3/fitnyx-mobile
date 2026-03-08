@@ -42,7 +42,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded) {
-      SplashScreen.hideAsync();
+      // Splash screen hiding is now deferred to AuthProvider
+      // to ensure app data and session are loaded first.
     }
   }, [loaded]);
 
