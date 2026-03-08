@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
 import { useRouter } from 'expo-router';
+import React, { useEffect } from 'react';
 
 import { Screen } from '@/src/components/ui/Screen';
 import { AuthForm } from '@/src/features/auth/AuthForm';
@@ -16,7 +16,11 @@ export default function SignupScreen() {
   }, [loading, user, router]);
 
   return (
-    <Screen scroll={false} contentContainerStyle={{ justifyContent: 'center' }}>
+    <Screen
+      scroll={false}
+      style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0, backgroundColor: '#000000' }}
+      contentContainerStyle={{ flex: 1, backgroundColor: '#000000' }}
+    >
       <AuthForm initialMode="signup" onSuccess={() => router.replace('/dashboard')} />
     </Screen>
   );

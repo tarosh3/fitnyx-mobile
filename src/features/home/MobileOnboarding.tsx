@@ -20,7 +20,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SECTIONS = [
   {
     id: 'hero',
-    title: 'UNLEASH\nYOUR PEAK',
+    title: 'WELCOME TO\nFITNYX',
     subtitle: 'Sculpt your digital physique with the most advanced fitness platform on earth.',
     icon: Activity,
     tag: 'EVOLUTION BEGINS',
@@ -38,10 +38,10 @@ const SECTIONS = [
   },
   {
     id: 'alpha',
-    title: 'ALPHA\nACCESS',
+    title: 'FITNYX\nELITE',
     subtitle: 'Join the highest tier of elite athletes. Begin your total transformation today.',
     icon: Zap,
-    tag: 'JOIN THE ELITE',
+    tag: 'ALPHA ACCESS',
     action: true,
   },
 ];
@@ -198,13 +198,13 @@ export function MobileOnboarding() {
                 { backgroundColor: neonLime, transform: [{ scale: pressed ? 0.97 : 1 }] }
               ]}
             >
-              <Text style={styles.ctaText}>INITIALIZE</Text>
+              <Text style={styles.ctaText}>GET STARTED</Text>
               <ArrowRight color="#000000" size={24} strokeWidth={3} />
             </Pressable>
             <View style={styles.loginHintRow}>
               <Text style={styles.loginHintBase}>Existing Elite?</Text>
               <Pressable hitSlop={10} onPress={() => openAuth('login')}>
-                <Text style={[styles.loginHintLink, { color: neonLime }]}> SIGN IN</Text>
+                <Text style={[styles.loginHintLink, { color: neonLime }]}> LOG IN</Text>
               </Pressable>
             </View>
           </Animated.View>

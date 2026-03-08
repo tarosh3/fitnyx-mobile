@@ -168,7 +168,7 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
     <Card style={styles.container}>
       <Text style={[styles.brand, { color: palette.text }]}>FITNYX</Text>
       <Text style={[styles.subtitle, { color: palette.mutedText }]}>
-        {mode === 'login' ? 'Authenticate your session' : mode === 'signup' ? 'Initialize your elite profile' : 'Recover your account'}
+        {mode === 'login' ? 'Login to continue your progress' : mode === 'signup' ? 'Create your FitNyx account' : 'Recover your account'}
       </Text>
 
       {error && (
@@ -239,7 +239,7 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
 
       <Button
         title={
-          mode === 'login' ? 'AUTHENTICATE' : mode === 'signup' ? 'INITIALIZE' : 'SEND RECOVERY LINK'
+          mode === 'login' ? 'LOG IN' : mode === 'signup' ? 'SIGN UP' : 'SEND RECOVERY LINK'
         }
         loading={loading}
         onPress={handleAuth}
@@ -266,6 +266,8 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    justifyContent: 'center',
     gap: 14,
     paddingVertical: 24,
     backgroundColor: '#000000', // Pitch black background
