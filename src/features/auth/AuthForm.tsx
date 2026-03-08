@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Input } from '@/src/components/ui/Input';
+import { FullLogoSvg } from '@/src/components/ui/Logo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { supabase } from '@/src/lib/supabase';
 
@@ -166,7 +167,9 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
 
   return (
     <Card style={styles.container}>
-      <Text style={[styles.brand, { color: palette.text }]}>FITNYX</Text>
+      <View style={styles.logoContainer}>
+        <FullLogoSvg size={38} color="#80f20d" />
+      </View>
       <Text style={[styles.subtitle, { color: palette.mutedText }]}>
         {mode === 'login' ? 'Login to continue your progress' : mode === 'signup' ? 'Create your FitNyx account' : 'Recover your account'}
       </Text>
@@ -275,15 +278,12 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     borderWidth: 0,
   },
-  brand: {
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: 2,
-    textAlign: 'center',
-    color: '#FFFFFF',
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 15,
     marginBottom: 4,
     textAlign: 'center',
   },

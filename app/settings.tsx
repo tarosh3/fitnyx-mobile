@@ -4,6 +4,7 @@ import { Bell, ChevronRight, FileText, LogOut, Moon, Shield, Sun, User } from 'l
 import React, { useState } from 'react';
 import { Dimensions, Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { AppIconSvg } from '@/src/components/ui/Logo';
 import { Screen } from '@/src/components/ui/Screen';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -126,6 +127,11 @@ export default function SettingsScreen() {
         <LogOut color="#EF4444" size={20} strokeWidth={2} />
         <Text style={styles.logoutText}>LOG OUT</Text>
       </Pressable>
+
+      <View style={styles.footerBrand}>
+        <AppIconSvg size={42} color={neonLime} />
+        <Text style={styles.versionText}>v1.0.0 — Elite Alpha</Text>
+      </View>
     </Screen>
   );
 }
@@ -284,5 +290,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 1.5,
+  },
+  footerBrand: {
+    marginTop: 64,
+    alignItems: 'center',
+    opacity: 0.6,
+  },
+  versionText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+    marginTop: 16,
+    textTransform: 'uppercase',
   },
 });
