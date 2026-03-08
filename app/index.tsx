@@ -28,7 +28,11 @@ export default function HomeScreen() {
   }
 
   return (
-    <Screen scroll={false} contentContainerStyle={{ flex: 1, paddingHorizontal: 0, paddingTop: 0 }}>
+    <Screen
+      scroll={false}
+      style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
+      contentContainerStyle={{ flex: 1 }}
+    >
       <MobileOnboarding />
     </Screen>
   );

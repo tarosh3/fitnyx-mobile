@@ -20,14 +20,14 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SECTIONS = [
   {
     id: 'hero',
-    title: 'UNLEASH\\nYOUR PEAK',
+    title: 'UNLEASH\nYOUR PEAK',
     subtitle: 'Sculpt your digital physique with the most advanced fitness platform on earth.',
     icon: Activity,
     tag: 'EVOLUTION BEGINS',
   },
   {
     id: 'features',
-    title: 'BEYOND\\nLIMITS',
+    title: 'BEYOND\nLIMITS',
     subtitle: 'Real-time kinetic tracking, custom macro splits, and deep AI-driven analysis.',
     features: [
       { icon: Cpu, label: 'AI ANALYSIS', value: '1.2M+' },
@@ -38,7 +38,7 @@ const SECTIONS = [
   },
   {
     id: 'alpha',
-    title: 'ALPHA\\nACCESS',
+    title: 'ALPHA\nACCESS',
     subtitle: 'Join the highest tier of elite athletes. Begin your total transformation today.',
     icon: Zap,
     tag: 'JOIN THE ELITE',
