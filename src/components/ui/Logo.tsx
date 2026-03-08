@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 interface LogoProps {
@@ -43,22 +43,17 @@ export function FullLogoSvg({ size = 32, color = '#80f20d' }: LogoProps) {
     return (
         <View style={[styles.fullLogoContainer, { height: size }]}>
             <AppIconSvg size={size} color={color} />
-
-            {/* SVG Wordmark to ensure perfect kerning and cross-platform sharpness without relying on system font rendering quirks in headers */}
-            <Svg width={wordWidth + 10} height={size} viewBox={`0 0 ${wordWidth + 10} ${size}`}>
-                <Path
-                    d="
-            M10,12 v16 h6 v-6 h8 v-4 h-8 v-2 h10 v-4 h-16 z
-            M30,12 v16 h6 v-16 h-6 z
-            M44,12 v4 h-6 v-4 h6 z M44,28 h-6 v-10 h6 v10 z
-            M48,12 h6 l8,10 v-10 h6 v16 h-6 l-8,-10 v10 h-6 v-16 z
-            M72,12 h6 l4,6 l4,-6 h6 l-7,10 v6 h-6 v-6 l-7,-10 z
-            M92,12 h6 l4,6 l4,-6 h6 l-7,10 l7,6 h-6 l-4,-6 l-4,6 h-6 l7,-6 l-7,-10 z
-          "
-                    fill="#FFFFFF"
-                    transform={`scale(${size / 40}) translate(0, 4)`}
-                />
-            </Svg>
+            <Text
+                style={[
+                    styles.wordmark,
+                    {
+                        fontSize: size * 1.15,
+                        lineHeight: size * 1.2,
+                    },
+                ]}
+            >
+                FITNYX
+            </Text>
         </View>
     );
 }
@@ -67,6 +62,12 @@ const styles = StyleSheet.create({
     fullLogoContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: 12,
+    },
+    wordmark: {
+        fontFamily: 'Anton_400Regular',
+        color: '#FFFFFF',
+        letterSpacing: 2,
+        includeFontPadding: false,
     },
 });
