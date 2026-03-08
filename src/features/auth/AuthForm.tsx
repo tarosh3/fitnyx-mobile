@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Eye, EyeOff } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
@@ -167,20 +167,38 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
   return (
     <Card style={styles.container}>
       <Text style={[styles.brand, { color: palette.text }]}>FITNYX</Text>
-      <Text style={[styles.subtitle, { color: palette.mutedText }]}> 
+      <Text style={[styles.subtitle, { color: palette.mutedText }]}>
         {mode === 'login' ? 'Login to continue your progress' : mode === 'signup' ? 'Create your FitNyx account' : 'Recover your account'}
       </Text>
 
       {error && (
-        <View style={[styles.errorBox, { borderColor: '#EF444444', backgroundColor: '#EF444422' }]}>
+        <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
       {mode === 'signup' && (
         <View style={styles.row}>
-          <Input value={firstName} onChangeText={setFirstName} placeholder="First name" autoCapitalize="words" />
-          <Input value={lastName} onChangeText={setLastName} placeholder="Last name" autoCapitalize="words" />
+          <View style={{ flex: 1 }}>
+            <Input
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="First name"
+              autoCapitalize="words"
+              style={styles.glassInput}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Input
+              value={lastName}
+              onChangeText={setLastName}
+              placeholder="Last name"
+              autoCapitalize="words"
+              style={styles.glassInput}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+            />
+          </View>
         </View>
       )}
 
@@ -191,11 +209,13 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
         autoCapitalize="none"
         autoCorrect={false}
         placeholder="operator@fitnyx.com"
+        style={styles.glassInput}
+        placeholderTextColor="rgba(255,255,255,0.4)"
       />
 
       {mode !== 'forgot_password' && (
         <View>
-          <View style={[styles.passwordWrap, { backgroundColor: palette.card, borderColor: palette.border }]}> 
+          <View style={[styles.passwordWrap, { backgroundColor: palette.card, borderColor: palette.border }]}>
             <TextInput
               secureTextEntry={!showPassword}
               value={password}
@@ -223,16 +243,18 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
         }
         loading={loading}
         onPress={handleAuth}
+        style={styles.primaryButton}
+        textStyle={styles.primaryButtonText}
       />
 
       {mode !== 'forgot_password' && (
         <View style={styles.socialWrap}>
-          <Button title="Continue with Google" variant="secondary" onPress={() => handleSocialLogin('google')} />
-          <Button title="Continue with Facebook" variant="secondary" onPress={() => handleSocialLogin('facebook')} />
+          <Button title="Continue with Google" variant="outline" onPress={() => handleSocialLogin('google')} style={styles.socialBtn} textStyle={styles.socialText} />
+          <Button title="Continue with Facebook" variant="outline" onPress={() => handleSocialLogin('facebook')} style={styles.socialBtn} textStyle={styles.socialText} />
         </View>
       )}
 
-      <Text style={[styles.switchText, { color: palette.mutedText }]}> 
+      <Text style={[styles.switchText, { color: palette.mutedText }]}>
         {mode === 'login' ? "Don't have an account?" : mode === 'signup' ? 'Already have an account?' : 'Remember your password?'}{' '}
         <Text style={{ color: palette.primary }} onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}>
           {mode === 'login' ? 'Sign up' : 'Log in'}
@@ -246,12 +268,17 @@ const styles = StyleSheet.create({
   container: {
     gap: 14,
     paddingVertical: 24,
+    backgroundColor: '#000000', // Pitch black background
+    paddingHorizontal: 16,
+    borderRadius: 0,
+    borderWidth: 0,
   },
   brand: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 2,
     textAlign: 'center',
+    color: '#FFFFFF',
   },
   subtitle: {
     fontSize: 13,
@@ -278,13 +305,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
-    minHeight: 48,
+    minHeight: 56,
     paddingLeft: 12,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   passwordInput: {
     flex: 1,
     fontSize: 15,
     paddingVertical: 10,
+    color: '#FFFFFF',
   },
   eyeBtn: {
     alignItems: 'center',
@@ -299,6 +329,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'right',
+    color: '#80f20d', // Neon Lime
+  },
+  glassInput: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    color: '#FFFFFF',
+    minHeight: 56,
+    borderRadius: 14,
+  },
+  primaryButton: {
+    backgroundColor: '#80f20d',
+    height: 60,
+    borderRadius: 30,
+    marginTop: 8,
+    shadowColor: '#80f20d',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  primaryButtonText: {
+    color: '#000000',
+    fontWeight: '900',
+    letterSpacing: 1,
+    fontSize: 16,
+  },
+  socialBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    height: 56,
+    borderRadius: 28,
+  },
+  socialText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   socialWrap: {
     gap: 10,
