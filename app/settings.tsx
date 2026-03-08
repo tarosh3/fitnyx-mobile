@@ -130,7 +130,7 @@ export default function SettingsScreen() {
 
       <View style={styles.footerBrand}>
         <AppIconSvg size={42} color={neonLime} />
-        <Text style={styles.versionText}>v1.0.0 — Elite Alpha</Text>
+        <Text style={styles.versionText}>v1.0.0 — FITNYX</Text>
       </View>
     </Screen>
   );
