@@ -1,5 +1,3 @@
-import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Activity,
@@ -12,12 +10,14 @@ import {
   Sparkles,
   User,
 } from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/src/components/ui/Card';
-import { cacheKeys, cacheTTL, staleTime } from '@/src/lib/cache';
-import { fetchLatestMetric } from '@/src/lib/api';
 import { useCachedQuery } from '@/src/hooks/useCachedQuery';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { fetchLatestMetric } from '@/src/lib/api';
+import { cacheKeys, cacheTTL, staleTime } from '@/src/lib/cache';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 
 interface DashboardOverviewProps {
@@ -44,6 +44,7 @@ const QUICK_ACTIONS = [
 export function DashboardOverview({ user }: DashboardOverviewProps) {
   const router = useRouter();
   const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
   const { openCenteredChat } = useAICoach();
 
   const { data: latestMetric } = useCachedQuery(
@@ -189,6 +190,8 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
 
 function GridBackground() {
   const lines = Array.from({ length: 18 });
+  const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
 
   return (
     <View pointerEvents="none" style={styles.gridLayer}>
@@ -202,7 +205,7 @@ function GridBackground() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   container: {
     position: 'relative',
   },
@@ -210,14 +213,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   gridHorizontal: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.border,
     height: StyleSheet.hairlineWidth,
     left: 0,
     position: 'absolute',
     right: 0,
   },
   gridVertical: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: palette.border,
     bottom: 0,
     position: 'absolute',
     top: 0,

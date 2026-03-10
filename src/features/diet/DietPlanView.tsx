@@ -16,9 +16,10 @@ import {
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { DietFoodItem, DietPlan } from '@/src/lib/api';
 
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 
 interface DietPlanViewProps {
   plan: DietPlan;
@@ -90,6 +91,8 @@ function getAlternatives(meal: any): (DietFoodItem | string)[] {
 // ─── Components ───────────────────────────────────────────
 
 function MacroBar({ label, value, grams, maxGrams, color, icon: Icon }: any) {
+  const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
   const pct = maxGrams > 0 ? Math.min((grams / maxGrams) * 100, 100) : 0;
   return (
     <View style={styles.macroCard}>
@@ -108,6 +111,8 @@ function MacroBar({ label, value, grams, maxGrams, color, icon: Icon }: any) {
 }
 
 function FoodItemCard({ item, isSmall = false }: { item: NormalizedItem; isSmall?: boolean }) {
+  const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
   return (
     <View style={isSmall ? styles.foodItemSmall : styles.foodItem}>
       <View style={styles.foodItemHeader}>
@@ -129,7 +134,7 @@ function FoodItemCard({ item, isSmall = false }: { item: NormalizedItem; isSmall
             return (
               <View key={key} style={styles.compCard}>
                 <View style={styles.compIconWrap}>
-                  <Icon size={12} color="rgba(255, 255, 255, 0.4)" />
+                  <Icon size={12} color={palette.mutedText} />
                   <Text style={styles.compKeyText}>{COMPOSITION_LABELS[key] || key.toUpperCase()}</Text>
                 </View>
                 <Text style={styles.compValText}>{val}</Text>
@@ -149,6 +154,8 @@ function FoodItemCard({ item, isSmall = false }: { item: NormalizedItem; isSmall
 }
 
 export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading }: DietPlanViewProps) {
+  const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
   const { plan_data } = plan;
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
 
@@ -221,7 +228,7 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
                     <Flame size={12} color={NEON_LIME} />
                     <Text style={styles.calBadgeText}>{meal.calories}</Text>
                   </View>
-                  <ChevronDown size={20} color="rgba(255,255,255,0.3)" style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }} />
+                  <ChevronDown size={20} color={palette.mutedText} style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }} />
                 </View>
               </Pressable>
 
@@ -282,10 +289,10 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
           style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.9, scale: 0.98 }]}
         >
           {isLoading ? (
-            <ActivityIndicator size="small" color="#000" />
+            <ActivityIndicator size="small" color="#0A0A0A" />
           ) : (
             <>
-              <RefreshCw size={18} color="#000" strokeWidth={3} />
+              <RefreshCw size={18} color="#0A0A0A" strokeWidth={3} />
               <Text style={styles.primaryBtnText}>REGENERATE PLAN</Text>
             </>
           )}
@@ -295,7 +302,7 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
           onPress={onEditPreferences}
           style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.7 }]}
         >
-          <Edit2 size={16} color="rgba(255,255,255,0.6)" />
+          <Edit2 size={16} color={palette.text} />
           <Text style={styles.secondaryBtnText}>EDIT PREFERENCES</Text>
         </Pressable>
       </View>
@@ -303,38 +310,38 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   container: {
     gap: 24,
   },
   heroCard: {
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: palette.border,
     padding: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: palette.card,
     overflow: 'hidden',
   },
   heroOverline: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.5,
     marginBottom: 8,
   },
   heroCalories: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 48,
     fontWeight: '900',
     letterSpacing: -1,
   },
   heroUnit: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 18,
     fontWeight: '600',
   },
   heroSummary: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: palette.mutedText,
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 24,
@@ -351,18 +358,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   macroLabel: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: palette.mutedText,
     fontSize: 12,
     fontWeight: '700',
   },
   macroValue: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 12,
     fontWeight: '800',
   },
   macroTrack: {
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.border,
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -375,7 +382,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.border,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -392,13 +399,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   progressLabel: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
   },
   sectionTitle: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 2,
@@ -407,14 +414,14 @@ const styles = StyleSheet.create({
   },
   mealCard: {
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: palette.border,
     overflow: 'hidden',
   },
   mealCardExpanded: {
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
   },
   mealHeader: {
     flexDirection: 'row',
@@ -431,7 +438,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -439,13 +446,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   mealName: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   mealTime: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -474,7 +481,7 @@ const styles = StyleSheet.create({
   },
   contentDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: palette.border,
     marginBottom: 20,
     marginTop: 8,
   },
@@ -488,21 +495,21 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   foodDish: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: -0.5,
   },
   foodItemSmall: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: palette.surface,
     padding: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: palette.border,
     gap: 12,
   },
   foodDishSmall: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -529,11 +536,11 @@ const styles = StyleSheet.create({
     width: '48%', // Adjusted slightly
     flexGrow: 1,
     minWidth: 140,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: palette.surface,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: palette.border,
     gap: 6,
   },
   compIconWrap: {
@@ -542,25 +549,25 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   compKeyText: {
-    color: 'rgba(255, 255, 255, 0.3)',
+    color: palette.mutedText,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   compValText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: palette.text,
     fontSize: 13,
     fontWeight: '600',
   },
   ingredientsBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.01)',
+    backgroundColor: palette.background,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: palette.border,
   },
   ingredients: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 12,
     lineHeight: 18,
     fontStyle: 'italic',
@@ -573,22 +580,22 @@ const styles = StyleSheet.create({
   },
   macroStatCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: palette.surface,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderRadius: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: palette.border,
     gap: 2,
   },
   macroStatVal: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 15,
     fontWeight: '900',
   },
   macroStatKey: {
-    color: 'rgba(255, 255, 255, 0.3)',
+    color: palette.mutedText,
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -609,7 +616,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   altHeaderTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 1,
@@ -632,7 +639,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primaryBtnText: {
-    color: '#000',
+    color: '#0A0A0A',
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -640,16 +647,16 @@ const styles = StyleSheet.create({
   secondaryBtn: {
     height: 56,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: palette.border,
   },
   secondaryBtnText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: palette.text,
     fontSize: 14,
     fontWeight: '700',
   },

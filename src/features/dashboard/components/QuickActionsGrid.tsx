@@ -14,13 +14,17 @@ import {
 import React from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 const PALE_ORANGE = '#FF9500';
 
 export function QuickActionsGrid() {
     const router = useRouter();
     const { openCenteredChat } = useAICoach();
+    const palette = useThemeColors();
+    const styles = React.useMemo(() => getStyles(palette), [palette]);
 
     const actions = [
         { label: 'Ask AI Coach', icon: BrainCircuit, color: PALE_ORANGE, onPress: openCenteredChat, highlight: true },
@@ -66,14 +70,14 @@ export function QuickActionsGrid() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     section: {
         marginBottom: 24,
     },
     sectionTitle: {
         fontSize: 10,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         letterSpacing: 2,
         marginBottom: 16,
         textTransform: 'uppercase',
@@ -90,9 +94,9 @@ const styles = StyleSheet.create({
         height: 110,
         borderRadius: 20,
         padding: 16,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: palette.border,
         justifyContent: 'center',
         alignItems: 'flex-start',
         gap: 12,
@@ -111,7 +115,7 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: palette.text,
         lineHeight: 14,
     },
 });

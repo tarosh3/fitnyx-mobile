@@ -4,7 +4,9 @@ import { Activity, Ruler } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-const NEON_LIME = '#80f20d';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
+const NEON_LIME = '#5fc793';
 
 interface DashboardStatsProps {
     weight?: number;
@@ -14,6 +16,8 @@ interface DashboardStatsProps {
 
 export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: DashboardStatsProps) {
     const router = useRouter();
+    const palette = useThemeColors();
+    const styles = React.useMemo(() => getStyles(palette), [palette]);
 
     const handlePress = () => {
         router.push('/dashboard/stats');
@@ -30,7 +34,7 @@ export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: Da
                             <Text style={styles.subtext}>Last Recorded</Text>
                         </View>
                         <View style={styles.bgIconContainer}>
-                            <Activity color="white" size={60} style={styles.bgIcon} />
+                            <Activity color={palette.text} size={60} style={styles.bgIcon} />
                         </View>
                     </BlurView>
                 </Pressable>
@@ -62,7 +66,7 @@ export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: Da
                         <Ruler color={NEON_LIME} size={24} />
                     </View>
                     <View style={styles.bgIconContainerFull}>
-                        <Ruler color="white" size={80} style={styles.bgIcon} />
+                        <Ruler color={palette.text} size={80} style={styles.bgIcon} />
                     </View>
                 </BlurView>
             </Pressable>
@@ -70,7 +74,7 @@ export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: Da
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     container: {
         marginBottom: 24,
     },
@@ -86,9 +90,9 @@ const styles = StyleSheet.create({
         height: 140,
         borderRadius: 24,
         padding: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: palette.border,
         overflow: 'hidden',
         justifyContent: 'space-between',
     },
@@ -96,9 +100,9 @@ const styles = StyleSheet.create({
         height: 100,
         borderRadius: 24,
         padding: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: palette.border,
         overflow: 'hidden',
         flexDirection: 'row',
         alignItems: 'center',
@@ -110,14 +114,14 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 10,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         letterSpacing: 1,
         marginBottom: 8,
     },
     value: {
         fontSize: 32,
         fontWeight: '900',
-        color: '#FFFFFF',
+        color: palette.text,
         letterSpacing: -1,
     },
     unit: {
@@ -127,13 +131,13 @@ const styles = StyleSheet.create({
     },
     subtext: {
         fontSize: 10,
-        color: 'rgba(255, 255, 255, 0.3)',
+        color: palette.mutedText,
         marginTop: 4,
         fontWeight: '600',
     },
     bmiTrack: {
         height: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: palette.border,
         borderRadius: 1,
         marginTop: 12,
         width: '100%',

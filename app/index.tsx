@@ -2,8 +2,8 @@ import React from 'react';
 import { ActivityIndicator } from 'react-native';
 
 import { Screen } from '@/src/components/ui/Screen';
+import { AuthLanding } from '@/src/features/auth/AuthLanding';
 import { MobileHome } from '@/src/features/dashboard/MobileHome';
-import { MobileOnboarding } from '@/src/features/home/MobileOnboarding';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useAuth } from '@/src/providers/AuthProvider';
 
@@ -27,13 +27,5 @@ export default function HomeScreen() {
     );
   }
 
-  return (
-    <Screen
-      scroll={false}
-      style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
-      contentContainerStyle={{ flex: 1 }}
-    >
-      <MobileOnboarding />
-    </Screen>
-  );
+  return <AuthLanding />;
 }

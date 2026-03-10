@@ -3,8 +3,9 @@ import { Flame } from 'lucide-react-native';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-const NEON_LIME = '#80f20d';
-const SURFACE_DARK = '#121212';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
+const NEON_LIME = '#5fc793';
 const PALE_ORANGE = '#FF9500';
 
 interface ProfileHeaderProps {
@@ -16,6 +17,8 @@ interface ProfileHeaderProps {
 
 export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDays = 0 }: ProfileHeaderProps) {
     const router = useRouter();
+    const palette = useThemeColors();
+    const styles = getStyles(palette);
 
     if (variant === 'dashboard') {
         return (
@@ -46,14 +49,14 @@ export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDay
                         {userName}.
                     </Text>
                     <Text style={styles.homeSub}>
-                        You have <Text style={{ fontWeight: '900', color: '#FFF' }}>not yet started</Text> with 7-Day Hypertrophy Split. 6 exercises waiting for you.
+                        You have <Text style={{ fontWeight: '900', color: palette.text }}>not yet started</Text> with 7-Day Hypertrophy Split. 6 exercises waiting for you.
                     </Text>
                 </View>
                 <Pressable onPress={() => router.push('/profile')} style={styles.avatarContainer}>
                     {avatarUrl ? (
                         <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
                     ) : (
-                        <View style={[styles.avatarFallback, { backgroundColor: SURFACE_DARK }]} />
+                        <View style={[styles.avatarFallback, { backgroundColor: palette.surface }]} />
                     )}
                 </Pressable>
             </View>
@@ -61,7 +64,7 @@ export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDay
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     homeHeader: {
         marginBottom: 32,
         paddingTop: 12,
@@ -97,7 +100,7 @@ const styles = StyleSheet.create({
     homeGreeting: {
         fontSize: 36,
         fontWeight: '900',
-        color: '#FFFFFF',
+        color: palette.text,
         letterSpacing: -1,
         lineHeight: 38,
         textTransform: 'uppercase',
@@ -105,7 +108,7 @@ const styles = StyleSheet.create({
     },
     homeSub: {
         fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         marginTop: 8,
         fontWeight: '500',
     },
@@ -128,7 +131,7 @@ const styles = StyleSheet.create({
     welcomeTitle: {
         fontSize: 40,
         fontWeight: '900',
-        color: '#FFFFFF',
+        color: palette.text,
         letterSpacing: -1.5,
         lineHeight: 42,
         textTransform: 'uppercase',
@@ -139,7 +142,7 @@ const styles = StyleSheet.create({
         height: 50,
         borderRadius: 25,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: palette.border,
         padding: 2,
     },
     avatarImg: {

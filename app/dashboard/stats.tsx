@@ -13,7 +13,7 @@ import { fetchLatestMetric, fetchMetricsHistory, fetchWithAuth, saveMetric } fro
 import { addToOfflineQueue } from '@/src/lib/cache/indexeddb';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 const CHART_HEIGHT = 180;
 const CHART_PADDING_TOP = 40;
 const CHART_PADDING_BOTTOM = 40;
@@ -60,7 +60,7 @@ function formatDate(dateString: string) {
   return `${day}/${month}/${year}`;
 }
 
-const WeightChart = ({ data, unit }: { data: Metric[], unit: WeightUnit }) => {
+const WeightChart = ({ data, unit, palette, styles }: { data: Metric[], unit: WeightUnit, palette: any, styles: any }) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const pointsRef = useRef<{ x: number; y: number; value: number; date: string }[]>([]);
@@ -93,7 +93,7 @@ const WeightChart = ({ data, unit }: { data: Metric[], unit: WeightUnit }) => {
   if (data.length < 2) {
     return (
       <View style={styles.chartEmpty}>
-        <Activity color="rgba(255, 255, 255, 0.1)" size={48} />
+        <Activity color={palette.border} size={48} />
         <Text style={styles.chartEmptyText}>Log at least 2 entries to see your progress chart</Text>
       </View>
     );
@@ -156,20 +156,20 @@ const WeightChart = ({ data, unit }: { data: Metric[], unit: WeightUnit }) => {
         <Svg width={svgWidth} height={CHART_HEIGHT}>
           <Defs>
             <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={NEON_LIME} stopOpacity="0.2" />
+              <Stop offset="0" stopColor={NEON_LIME} stopOpacity="0.8" />
               <Stop offset="1" stopColor={NEON_LIME} stopOpacity="0" />
             </LinearGradient>
           </Defs>
 
           {/* Grid lines */}
-          <Line x1={CHART_INNER_PADDING} y1={CHART_PADDING_TOP} x2={svgWidth - CHART_INNER_PADDING} y2={CHART_PADDING_TOP} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-          <Line x1={CHART_INNER_PADDING} y1={CHART_HEIGHT - CHART_PADDING_BOTTOM} x2={svgWidth - CHART_INNER_PADDING} y2={CHART_HEIGHT - CHART_PADDING_BOTTOM} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+          <Line x1={CHART_INNER_PADDING} y1={CHART_PADDING_TOP} x2={svgWidth - CHART_INNER_PADDING} y2={CHART_PADDING_TOP} stroke={palette.border} strokeWidth="1" />
+          <Line x1={CHART_INNER_PADDING} y1={CHART_HEIGHT - CHART_PADDING_BOTTOM} x2={svgWidth - CHART_INNER_PADDING} y2={CHART_HEIGHT - CHART_PADDING_BOTTOM} stroke={palette.border} strokeWidth="1" />
 
           <Path d={areaData} fill="url(#gradient)" />
           <Path d={pathData} stroke={NEON_LIME} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
 
           {points.map((p, i) => (
-            <Circle key={i} cx={p.x} cy={p.y} r="4" fill="#000000" stroke={NEON_LIME} strokeWidth="2" />
+            <Circle key={i} cx={p.x} cy={p.y} r="4" fill={palette.background} stroke={NEON_LIME} strokeWidth="2" />
           ))}
 
           {activeIndex !== null && (
@@ -210,6 +210,7 @@ const WeightChart = ({ data, unit }: { data: Metric[], unit: WeightUnit }) => {
 
 export default function StatsScreen() {
   const palette = useThemeColors();
+  const styles = getStyles(palette);
   const router = useRouter();
   const { isOnline } = useNetworkStatus();
 
@@ -331,10 +332,10 @@ export default function StatsScreen() {
   };
 
   return (
-    <Screen scroll={false} style={{ backgroundColor: '#000000' }}>
+    <Screen scroll={false} style={{ backgroundColor: palette.background }}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft color="#FFFFFF" size={24} />
+          <ChevronLeft color={palette.text} size={24} />
         </Pressable>
         <View>
           <Text style={styles.headerTitle}>BODY STATS</Text>
@@ -451,7 +452,7 @@ export default function StatsScreen() {
                 saving && { opacity: 0.5 }
               ]}
             >
-              {saving ? <ActivityIndicator color="#000000" /> : <Text style={styles.saveButtonText}>SAVE STATS</Text>}
+              {saving ? <ActivityIndicator color={palette.background} /> : <Text style={styles.saveButtonText}>SAVE STATS</Text>}
             </Pressable>
           </BlurView>
 
@@ -463,19 +464,19 @@ export default function StatsScreen() {
                   onPress={() => setViewMode('CHART')}
                   style={[styles.toggleBtn, viewMode === 'CHART' && styles.toggleBtnActive]}
                 >
-                  <TrendingUp color={viewMode === 'CHART' ? '#000000' : 'rgba(255, 255, 255, 0.4)'} size={16} />
+                  <TrendingUp color={viewMode === 'CHART' ? palette.background : palette.mutedText} size={16} />
                 </Pressable>
                 <Pressable
                   onPress={() => setViewMode('HISTORY')}
                   style={[styles.toggleBtn, viewMode === 'HISTORY' && styles.toggleBtnActive]}
                 >
-                  <List color={viewMode === 'HISTORY' ? '#000000' : 'rgba(255, 255, 255, 0.4)'} size={16} />
+                  <List color={viewMode === 'HISTORY' ? palette.background : palette.mutedText} size={16} />
                 </Pressable>
               </View>
             </View>
 
             {viewMode === 'CHART' ? (
-              <WeightChart data={history} unit={weightUnit} />
+              <WeightChart data={history} unit={weightUnit} palette={palette} styles={styles} />
             ) : (
               <View>
                 {history.length === 0 ? (
@@ -510,7 +511,7 @@ export default function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -523,21 +524,21 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: palette.border,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: palette.text,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontWeight: '600',
   },
   scrollContent: {
@@ -551,16 +552,16 @@ const styles = StyleSheet.create({
   },
   snapshotContainer: {
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: palette.border,
     padding: 16,
     overflow: 'hidden',
   },
   sectionLabel: {
     fontSize: 9,
     fontWeight: '900',
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
@@ -568,29 +569,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 16,
     marginBottom: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: palette.surface,
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: palette.border,
   },
   summaryCard: {
     flex: 1,
     alignItems: 'center',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(255, 255, 255, 0.1)',
+    borderRightColor: palette.border,
   },
   summaryLabel: {
     fontSize: 7,
     fontWeight: '900',
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: palette.mutedText,
     letterSpacing: 1,
     marginBottom: 2,
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: palette.text,
   },
   summaryUnit: {
     fontSize: 9,
@@ -614,13 +615,13 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 9,
     fontWeight: '900',
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: palette.mutedText,
     letterSpacing: 1,
     marginBottom: 6,
   },
   unitSelector: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.surface,
     borderRadius: 10,
     padding: 3,
     gap: 3,
@@ -638,19 +639,19 @@ const styles = StyleSheet.create({
   unitBtnText: {
     fontSize: 9,
     fontWeight: '900',
-    color: 'rgba(255, 255, 255, 0.3)',
+    color: palette.mutedText,
   },
   unitBtnTextActive: {
     color: '#000000',
   },
   premiumInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.surface,
+    borderColor: palette.border,
     height: 48,
     borderRadius: 12,
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: palette.text,
     paddingHorizontal: 12,
   },
   bodyTypeSection: {
@@ -665,10 +666,10 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: palette.surface,
   },
   bodyTypeBtnActive: {
     borderColor: NEON_LIME,
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
   bodyTypeBtnText: {
     fontSize: 9,
     fontWeight: '900',
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: palette.mutedText,
     letterSpacing: 0.5,
   },
   bodyTypeBtnTextActive: {
@@ -693,7 +694,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#000000',
+    color: palette.background,
     letterSpacing: 1,
   },
   historySection: {
@@ -708,7 +709,7 @@ const styles = StyleSheet.create({
   },
   modeToggle: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.surface,
     borderRadius: 10,
     padding: 3,
     gap: 3,
@@ -724,11 +725,11 @@ const styles = StyleSheet.create({
     backgroundColor: NEON_LIME,
   },
   chartWrapper: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: palette.card,
     borderRadius: 20,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: palette.border,
   },
   chartContainer: {
     height: CHART_HEIGHT,
@@ -746,7 +747,7 @@ const styles = StyleSheet.create({
   },
   yLabel: {
     fontSize: 8,
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: palette.mutedText,
     fontWeight: '900',
     textAlign: 'center',
     width: CHART_INNER_PADDING,
@@ -762,14 +763,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 5,
     fontSize: 7,
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: palette.mutedText,
     fontWeight: '900',
     width: 40,
     textAlign: 'center',
   },
   chartInstruction: {
     fontSize: 8,
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: palette.mutedText,
     textAlign: 'center',
     marginTop: 12,
     fontWeight: '600',
@@ -780,16 +781,16 @@ const styles = StyleSheet.create({
     top: 10,
     padding: 8,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: palette.border,
     zIndex: 10,
     minWidth: 100,
     alignItems: 'center',
   },
   tooltipDate: {
     fontSize: 8,
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontWeight: '900',
     marginBottom: 2,
   },
@@ -802,19 +803,19 @@ const styles = StyleSheet.create({
     height: CHART_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: palette.card,
     borderRadius: 20,
     gap: 8,
   },
   chartEmptyText: {
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: palette.mutedText,
     fontSize: 10,
     textAlign: 'center',
     paddingHorizontal: 40,
     fontWeight: '600',
   },
   emptyText: {
-    color: 'rgba(255, 255, 255, 0.2)',
+    color: palette.mutedText,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 20,
@@ -825,7 +826,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: palette.border,
   },
   historyMain: {
     flex: 1,
@@ -833,12 +834,12 @@ const styles = StyleSheet.create({
   historyDate: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: palette.text,
     marginBottom: 2,
   },
   historyStats: {
     fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontWeight: '600',
   },
   deleteButton: {

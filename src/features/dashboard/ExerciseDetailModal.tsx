@@ -12,12 +12,13 @@ interface ExerciseDetailModalProps {
   onSelectExercise: (exercise: RelatedExercise) => void;
 }
 
-const NEON_LIME = '#80f20d';
-const DEPTH_BG = '#000000';
-const CARD_BG = 'rgba(255, 255, 255, 0.03)';
-const BORDER_COLOR = 'rgba(255, 255, 255, 0.08)';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
+const NEON_LIME = '#5fc793';
 
 export function ExerciseDetailModal({ exercise, isOpen, onClose, onSelectExercise }: ExerciseDetailModalProps) {
+  const palette = useThemeColors();
+  const styles = getStyles(palette);
   const videoUrl = exercise?.video_url || (exercise?.media_url?.toLowerCase().endsWith('.mp4') ? exercise?.media_url : null);
   const imageUrl = exercise?.media_url && !exercise?.media_url.toLowerCase().endsWith('.mp4') ? exercise?.media_url : (exercise?.video_url ? null : exercise?.media_url);
 
@@ -37,7 +38,7 @@ export function ExerciseDetailModal({ exercise, isOpen, onClose, onSelectExercis
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={2}>{exercise.title.toUpperCase()}</Text>
             <Pressable onPress={onClose} style={styles.closeBtn}>
-              <X color="#fff" size={20} />
+              <X color={palette.text} size={20} />
             </Pressable>
           </View>
 
@@ -151,18 +152,18 @@ export function ExerciseDetailModal({ exercise, isOpen, onClose, onSelectExercis
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   backdrop: {
     backgroundColor: 'rgba(0,0,0,0.85)',
     flex: 1,
     justifyContent: 'flex-end',
   },
   panel: {
-    backgroundColor: DEPTH_BG,
+    backgroundColor: palette.background,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     borderTopWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
     height: '92%',
   },
   header: {
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   title: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 22,
     fontWeight: '900',
     letterSpacing: -0.5,
@@ -184,11 +185,11 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
   },
   content: {
     paddingHorizontal: 24,
@@ -200,14 +201,14 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
   },
   videoBg: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#111',
+    backgroundColor: palette.surface,
   },
   playOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   proTipText: {
-    color: '#CBD5E1',
+    color: palette.text,
     fontSize: 14,
     lineHeight: 22,
   },
@@ -256,11 +257,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sectionTitle: {
-    color: '#fff',
+    color: palette.mutedText,
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 1,
-    opacity: 0.4,
   },
   muscleTags: {
     flexDirection: 'row',
@@ -271,9 +271,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -282,16 +282,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    opacity: 0.8,
   },
   muscleTagLabelPrimary: {
-    color: '#94A3B8',
+    color: palette.mutedText,
     fontSize: 14,
   },
   muscleTagValuePrimary: {
@@ -300,14 +299,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   muscleTagLabelSecondary: {
-    color: '#94A3B8',
+    color: palette.mutedText,
     fontSize: 14,
   },
   muscleTagValueSecondary: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 14,
     fontWeight: '900',
-    opacity: 0.9,
   },
   dot: {
     width: 4,
@@ -320,7 +318,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   instructionText: {
-    color: '#CBD5E1',
+    color: palette.text,
     fontSize: 15,
     lineHeight: 24,
   },
@@ -329,15 +327,15 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   pill: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
   pillText: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,

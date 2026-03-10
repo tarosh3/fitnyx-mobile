@@ -7,7 +7,7 @@ import { Input } from '@/src/components/ui/Input';
 import { DayData } from '@/src/features/workouts/types';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 const DEPTH_BG = '#000000';
 const CARD_BG = 'rgba(255, 255, 255, 0.03)';
 const BORDER_COLOR = 'rgba(255, 255, 255, 0.08)';

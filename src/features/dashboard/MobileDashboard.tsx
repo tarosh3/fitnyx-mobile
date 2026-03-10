@@ -5,8 +5,9 @@ import { DashboardStats } from './components/DashboardStats';
 import { ProfileHeader } from './components/ProfileHeader';
 import { QuickActionsGrid } from './components/QuickActionsGrid';
 
-const BG_DARK = '#0A0A0A';
-const NEON_LIME = '#80f20d';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
+const NEON_LIME = '#5fc793';
 
 interface MobileDashboardProps {
   user: any;
@@ -15,19 +16,20 @@ interface MobileDashboardProps {
 
 export function MobileDashboard({ user, avatarUrl }: MobileDashboardProps) {
   const metrics = useRetentionMetrics(user?.id);
+  const palette = useThemeColors();
 
   const userName = (user?.user_metadata?.username || user?.user_metadata?.first_name || 'Athlete');
 
   if (metrics.loading) {
     return (
-      <View style={styles.loadingWrap}>
+      <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
         <ActivityIndicator size="large" color={NEON_LIME} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
         <ProfileHeader
           userName={userName}
@@ -54,11 +56,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: BG_DARK,
   },
   container: {
     flex: 1,
-    backgroundColor: BG_DARK,
   },
   content: {
     paddingHorizontal: 0,

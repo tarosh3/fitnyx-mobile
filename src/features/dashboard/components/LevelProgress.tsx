@@ -3,7 +3,9 @@ import { Zap } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-const NEON_LIME = '#80f20d';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
+const NEON_LIME = '#5fc793';
 
 interface LevelProgressProps {
     level: number;
@@ -13,6 +15,8 @@ interface LevelProgressProps {
 }
 
 export function LevelProgress({ level, xp, nextLevelXp, progressPercent }: LevelProgressProps) {
+    const palette = useThemeColors();
+    const styles = getStyles(palette);
     return (
         <View style={styles.container}>
             <BlurView intensity={10} tint="light" style={styles.glassCard}>
@@ -47,7 +51,7 @@ export function LevelProgress({ level, xp, nextLevelXp, progressPercent }: Level
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     container: {
         marginBottom: 24,
     },
@@ -55,9 +59,9 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         overflow: 'hidden',
         padding: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        borderColor: palette.border,
     },
     cardHeader: {
         flexDirection: 'row',
@@ -70,21 +74,21 @@ const styles = StyleSheet.create({
         height: 60,
         borderRadius: 30,
         borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: palette.border,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(28, 28, 30, 0.5)',
+        backgroundColor: palette.surface,
     },
     levelCircleLabel: {
         fontSize: 8,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         letterSpacing: 1,
     },
     levelCircleValue: {
         fontSize: 24,
         fontWeight: '900',
-        color: '#FFFFFF',
+        color: palette.text,
         lineHeight: 28,
     },
     levelTextInfo: {
@@ -100,11 +104,11 @@ const styles = StyleSheet.create({
     xpValueText: {
         fontSize: 14,
         fontWeight: '900',
-        color: '#FFFFFF',
+        color: palette.text,
     },
     xpDescription: {
         fontSize: 11,
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         lineHeight: 14,
         fontWeight: '500',
     },
@@ -121,7 +125,7 @@ const styles = StyleSheet.create({
         color: NEON_LIME,
     },
     nextLevelSub: {
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         fontWeight: '700',
     },
     percentageText: {
@@ -134,7 +138,7 @@ const styles = StyleSheet.create({
     },
     progressTrack: {
         height: 6,
-        backgroundColor: '#1C1C1E',
+        backgroundColor: palette.border,
         borderRadius: 3,
         overflow: 'hidden',
     },

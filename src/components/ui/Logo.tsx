@@ -11,7 +11,7 @@ interface LogoProps {
 /**
  * Premium standalone "F" Lightning Mark
  */
-export function AppIconSvg({ size = 48, color = '#80f20d' }: LogoProps) {
+export function AppIconSvg({ size = 48, color = '#5fc793' }: LogoProps) {
     return (
         <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
             <Defs>
@@ -35,7 +35,7 @@ export function AppIconSvg({ size = 48, color = '#80f20d' }: LogoProps) {
 /**
  * Full Logo with Wordmark for Headers and Main Branding
  */
-export function FullLogoSvg({ size = 32, color = '#80f20d' }: LogoProps) {
+export function FullLogoSvg({ size = 32, color = '#5fc793' }: LogoProps) {
     // We scale the text relative to the icon size
     const fontRatio = size * 0.8;
     const wordWidth = fontRatio * 4;

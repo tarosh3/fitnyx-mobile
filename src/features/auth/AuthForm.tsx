@@ -4,11 +4,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { Eye, EyeOff } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Button } from '@/src/components/ui/Button';
-import { Card } from '@/src/components/ui/Card';
-import { Input } from '@/src/components/ui/Input';
-import { FullLogoSvg } from '@/src/components/ui/Logo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { supabase } from '@/src/lib/supabase';
 
@@ -17,11 +15,13 @@ WebBrowser.maybeCompleteAuthSession();
 interface AuthFormProps {
   initialMode?: 'login' | 'signup';
   onSuccess?: () => void;
+  onSwitchMode?: (mode: 'login' | 'signup') => void;
 }
 
-export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
+export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: AuthFormProps) {
   const router = useRouter();
   const palette = useThemeColors();
+  const styles = getStyles(palette);
 
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot_password'>(initialMode);
   const [email, setEmail] = useState('');
@@ -33,6 +33,34 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  const formOpacity = useSharedValue(1);
+  const formTranslateX = useSharedValue(0);
+
+  const toggleMode = (newMode: 'login' | 'signup' | 'forgot_password') => {
+    if (newMode === mode) return;
+
+    // Animate out
+    formOpacity.value = withTiming(0, { duration: 150 });
+    formTranslateX.value = withTiming(-10, { duration: 150 });
+
+    setTimeout(() => {
+      setMode(newMode);
+      if (newMode === 'login' || newMode === 'signup') {
+        onSwitchMode?.(newMode);
+      }
+
+      // Prepare for animate in
+      formTranslateX.value = 10;
+      formOpacity.value = withTiming(1, { duration: 250 });
+      formTranslateX.value = withTiming(0, { duration: 250 });
+    }, 150);
+  };
+
+  const rFormStyle = useAnimatedStyle(() => ({
+    opacity: formOpacity.value,
+    transform: [{ translateX: formTranslateX.value }],
+  }));
 
   const redirectTo = useMemo(
     () => makeRedirectUri({ scheme: 'fitnyxmobile', path: 'auth/callback' }),
@@ -149,149 +177,151 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
 
   if (confirmation) {
     return (
-      <Card style={styles.confirmCard}>
-        <Text style={[styles.confirmTitle, { color: palette.text }]}>Email Sent</Text>
-        <Text style={[styles.confirmText, { color: palette.mutedText }]}>{confirmation}</Text>
+      <View style={styles.confirmCard}>
+        <Text style={[styles.confirmTitle, { color: '#FFFFFF' }]}>Email Sent</Text>
+        <Text style={[styles.confirmText, { color: '#9CA3AF' }]}>{confirmation}</Text>
         <Button
           title="Go to Login"
           onPress={() => {
             setConfirmation(null);
-            setMode('login');
+            toggleMode('login');
             setPassword('');
           }}
           style={styles.confirmBtn}
         />
-      </Card>
+      </View>
     );
   }
 
   return (
-    <Card style={styles.container}>
-      <View style={styles.logoContainer}>
-        <FullLogoSvg size={38} color="#80f20d" />
-      </View>
-      <Text style={[styles.subtitle, { color: palette.mutedText }]}>
-        {mode === 'login' ? 'Login to continue your progress' : mode === 'signup' ? 'Create your FitNyx account' : 'Recover your account'}
-      </Text>
-
+    <View style={styles.formContainer}>
       {error && (
-        <View style={styles.errorBox}>
+        <View style={[styles.errorBox, { borderColor: palette.destructive + '44' }]}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
-      {mode === 'signup' && (
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Input
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholder="First name"
-              autoCapitalize="words"
-              style={styles.glassInput}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-            />
+      <Animated.View style={[rFormStyle, { flex: 1, gap: 16 }]}>
+        {mode === 'signup' && (
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="First name"
+                placeholderTextColor="#4B5563"
+                autoCapitalize="words"
+                style={styles.premiumInput}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Last name"
+                placeholderTextColor="#4B5563"
+                autoCapitalize="words"
+                style={styles.premiumInput}
+              />
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Input
-              value={lastName}
-              onChangeText={setLastName}
-              placeholder="Last name"
-              autoCapitalize="words"
-              style={styles.glassInput}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-            />
+        )}
+
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="email@example.com"
+          placeholderTextColor="#4B5563"
+          style={styles.premiumInput}
+        />
+
+        {mode !== 'forgot_password' && (
+          <View>
+            <View style={styles.passwordWrap}>
+              <TextInput
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor="#4B5563"
+                autoCapitalize="none"
+                style={styles.passwordInput}
+              />
+              <Pressable onPress={() => setShowPassword((prev) => !prev)} style={styles.eyeBtn}>
+                {showPassword ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#9CA3AF" size={20} />}
+              </Pressable>
+            </View>
+            {mode === 'login' && (
+              <Pressable onPress={() => toggleMode('forgot_password')}>
+                <Text style={styles.forgotLink}>Forgot Password?</Text>
+              </Pressable>
+            )}
           </View>
-        </View>
-      )}
+        )}
 
-      <Input
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholder="operator@fitnyx.com"
-        style={styles.glassInput}
-        placeholderTextColor="rgba(255,255,255,0.4)"
-      />
+        <Button
+          title={
+            mode === 'login' ? 'LOG IN' : mode === 'signup' ? 'SIGN UP' : 'SEND RECOVERY LINK'
+          }
+          loading={loading}
+          onPress={handleAuth}
+          style={styles.primaryButton}
+          textStyle={styles.primaryButtonText}
+        />
 
-      {mode !== 'forgot_password' && (
-        <View>
-          <View style={[styles.passwordWrap, { backgroundColor: palette.card, borderColor: palette.border }]}>
-            <TextInput
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={palette.mutedText}
-              autoCapitalize="none"
-              style={[styles.passwordInput, { color: palette.text }]}
-            />
-            <Pressable onPress={() => setShowPassword((prev) => !prev)} style={styles.eyeBtn}>
-              {showPassword ? <EyeOff color={palette.mutedText} size={16} /> : <Eye color={palette.mutedText} size={16} />}
+        {mode !== 'forgot_password' && (
+          <View style={styles.socialWrap}>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.socialBtn, pressed && { opacity: 0.7 }]}
+              onPress={() => handleSocialLogin('google')}
+            >
+              <Text style={styles.socialText}>Continue with Google</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.socialBtn, pressed && { opacity: 0.7 }]}
+              onPress={() => handleSocialLogin('facebook')}
+            >
+              <Text style={styles.socialText}>Continue with Facebook</Text>
             </Pressable>
           </View>
-          {mode === 'login' && (
-            <Text style={[styles.link, { color: palette.primary }]} onPress={() => setMode('forgot_password')}>
-              Forgot Password?
+        )}
+
+        <View style={styles.footer}>
+          <Text style={styles.switchText}>
+            {mode === 'login' ? "Don't have an account?" : mode === 'signup' ? 'Already have an account?' : 'Remember your password?'}{' '}
+          </Text>
+          <Pressable hitSlop={15} onPress={() => toggleMode(mode === 'login' ? 'signup' : 'login')}>
+            <Text style={styles.switchLink}>
+              {mode === 'login' ? 'Sign up' : 'Log in'}
             </Text>
-          )}
+          </Pressable>
         </View>
-      )}
-
-      <Button
-        title={
-          mode === 'login' ? 'LOG IN' : mode === 'signup' ? 'SIGN UP' : 'SEND RECOVERY LINK'
-        }
-        loading={loading}
-        onPress={handleAuth}
-        style={styles.primaryButton}
-        textStyle={styles.primaryButtonText}
-      />
-
-      {mode !== 'forgot_password' && (
-        <View style={styles.socialWrap}>
-          <Button title="Continue with Google" variant="outline" onPress={() => handleSocialLogin('google')} style={styles.socialBtn} textStyle={styles.socialText} />
-          <Button title="Continue with Facebook" variant="outline" onPress={() => handleSocialLogin('facebook')} style={styles.socialBtn} textStyle={styles.socialText} />
-        </View>
-      )}
-
-      <Text style={[styles.switchText, { color: palette.mutedText }]}>
-        {mode === 'login' ? "Don't have an account?" : mode === 'signup' ? 'Already have an account?' : 'Remember your password?'}{' '}
-        <Text style={{ color: palette.primary }} onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}>
-          {mode === 'login' ? 'Sign up' : 'Log in'}
-        </Text>
-      </Text>
-    </Card>
+      </Animated.View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const getStyles = (palette: any) => StyleSheet.create({
+  formContainer: {
     flex: 1,
-    justifyContent: 'center',
-    gap: 14,
-    paddingVertical: 24,
-    backgroundColor: '#000000', // Pitch black background
-    paddingHorizontal: 16,
-    borderRadius: 0,
-    borderWidth: 0,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 15,
-    marginBottom: 4,
-    textAlign: 'center',
+    gap: 16,
   },
   errorBox: {
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   errorText: {
     color: '#EF4444',
@@ -300,53 +330,50 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
+  },
+  premiumInput: {
+    backgroundColor: '#151515',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    color: '#FFFFFF',
+    minHeight: 60,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    fontSize: 16,
   },
   passwordWrap: {
-    alignItems: 'center',
-    borderRadius: 14,
+    backgroundColor: '#151515',
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
     flexDirection: 'row',
-    minHeight: 56,
-    paddingLeft: 12,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    minHeight: 60,
+    paddingHorizontal: 16,
   },
   passwordInput: {
     flex: 1,
-    fontSize: 15,
-    paddingVertical: 10,
+    fontSize: 16,
     color: '#FFFFFF',
+    height: '100%',
   },
   eyeBtn: {
-    alignItems: 'center',
-    borderRadius: 10,
-    height: 36,
-    justifyContent: 'center',
-    minHeight: 36,
-    width: 36,
+    padding: 8,
   },
-  link: {
-    fontSize: 12,
+  forgotLink: {
+    fontSize: 14,
     fontWeight: '600',
-    marginTop: 8,
+    marginTop: 12,
     textAlign: 'right',
-    color: '#80f20d', // Neon Lime
-  },
-  glassInput: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    color: '#FFFFFF',
-    minHeight: 56,
-    borderRadius: 14,
+    color: '#5FC793',
   },
   primaryButton: {
-    backgroundColor: '#80f20d',
+    backgroundColor: '#5FC793',
     height: 60,
     borderRadius: 30,
-    marginTop: 8,
-    shadowColor: '#80f20d',
+    marginTop: 10,
+    shadowColor: '#5FC793',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -355,46 +382,75 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#000000',
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 2,
     fontSize: 16,
   },
+  socialWrap: {
+    marginTop: 10,
+    gap: 12,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  dividerText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
   socialBtn: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
     height: 56,
     borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#151515',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   socialText: {
     color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
   },
-  socialWrap: {
-    gap: 10,
-    marginTop: 6,
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 12,
   },
   switchText: {
-    fontSize: 13,
-    marginTop: 8,
-    textAlign: 'center',
+    fontSize: 14,
+    color: '#9CA3AF',
   },
-  confirmCard: {
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 8,
-    marginTop: 20,
-    paddingVertical: 30,
-  },
-  confirmTitle: {
-    fontSize: 22,
+  switchLink: {
+    fontSize: 14,
+    color: '#5FC793',
     fontWeight: '800',
   },
+  confirmCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  confirmTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: 12,
+  },
   confirmText: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
   },
   confirmBtn: {
-    marginTop: 10,
-    minWidth: 200,
+    width: '100%',
   },
 });

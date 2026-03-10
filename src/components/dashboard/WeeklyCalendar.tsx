@@ -37,8 +37,8 @@ export function WeeklyCalendar() {
                 style={[
                   styles.dayCard,
                   {
-                    backgroundColor: isActive ? palette.primary : 'rgba(255, 255, 255, 0.03)',
-                    borderColor: isActive ? palette.primary : 'rgba(255, 255, 255, 0.08)',
+                    backgroundColor: isActive ? palette.primary : palette.card,
+                    borderColor: isActive ? palette.primary : palette.border,
                   },
                 ]}
               >
@@ -69,7 +69,7 @@ export function WeeklyCalendar() {
                   style={[
                     styles.dateText,
                     {
-                      color: isActive ? palette.primaryText : '#FFFFFF',
+                      color: isActive ? palette.primaryText : palette.text,
                     },
                   ]}
                 >

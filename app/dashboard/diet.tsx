@@ -18,11 +18,12 @@ const FITNESS_TIPS = [
   'Consistency over intensity wins long-term progress.',
 ];
 
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 
 export default function DietScreen() {
   const palette = useThemeColors();
   const router = useRouter();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
   const [plan, setPlan] = useState<DietPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -92,7 +93,7 @@ export default function DietScreen() {
           onPress={() => router.back()}
           style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
         >
-          <ChevronLeft color="#fff" size={24} />
+          <ChevronLeft color={palette.text} size={24} />
         </Pressable>
         <View>
           <Text style={styles.headerTitle}>DIET & NUTRITION</Text>
@@ -125,7 +126,7 @@ export default function DietScreen() {
         />
       ) : (
         <View style={styles.centered}>
-          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>No diet plan available.</Text>
+          <Text style={{ color: palette.mutedText, fontSize: 13 }}>No diet plan available.</Text>
         </View>
       )}
 
@@ -134,9 +135,9 @@ export default function DietScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   container: {
-    backgroundColor: '#000',
+    backgroundColor: palette.background,
   },
   loaderContainer: {
     flex: 1,
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loaderText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.mutedText,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.2,
@@ -162,20 +163,20 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: palette.border,
   },
   headerTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 24,
     fontWeight: '900',
     letterSpacing: -0.5,
   },
   headerSub: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: palette.mutedText,
     fontSize: 13,
     fontWeight: '500',
   },
@@ -191,10 +192,10 @@ const styles = StyleSheet.create({
   generatingCard: {
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: palette.border,
     padding: 32,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: palette.card,
     overflow: 'hidden',
   },
   iconCircle: {
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(128, 242, 13, 0.1)',
   },
   generatingTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: 1,
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   generatingSub: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: palette.mutedText,
     fontSize: 14,
     lineHeight: 22,
     textAlign: 'center',

@@ -12,8 +12,9 @@ import { LevelProgress } from './components/LevelProgress';
 import { PerformanceStats } from './components/PerformanceStats';
 import { ProfileHeader } from './components/ProfileHeader';
 
-const BG_DARK = '#0A0A0A';
-const NEON_LIME = '#80f20d';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
+const NEON_LIME = '#5fc793';
 
 interface MobileHomeProps {
     user: any;
@@ -24,19 +25,21 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
     const { openCenteredChat } = useAICoach();
     const metrics = useRetentionMetrics(user?.id);
     const activity = useActivityData(user?.id);
+    const palette = useThemeColors();
+    const styles = getStyles(palette);
 
     const userName = (user?.user_metadata?.first_name || user?.user_metadata?.username || 'Athlete');
 
     if (metrics.loading) {
         return (
-            <View style={styles.loadingWrap}>
+            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
                 <ActivityIndicator size="large" color={NEON_LIME} />
             </View>
         );
     }
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <ScrollView style={[styles.container, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
             <View style={styles.content}>
                 <ProfileHeader
                     userName={userName}
@@ -100,16 +103,14 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     loadingWrap: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: BG_DARK,
     },
     container: {
         flex: 1,
-        backgroundColor: BG_DARK,
     },
     content: {
         paddingHorizontal: 0,
@@ -122,9 +123,9 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         overflow: 'hidden',
         padding: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: palette.border,
     },
     aiIconRow: {
         flexDirection: 'row',
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
     aiTitle: {
         fontSize: 10,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         letterSpacing: 1.5,
     },
     aiPulseDot: {
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
     },
     aiText: {
         fontSize: 13,
-        color: '#FFFFFF',
+        color: palette.text,
         fontWeight: '500',
         opacity: 0.9,
     },

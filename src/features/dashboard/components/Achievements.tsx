@@ -4,7 +4,9 @@ import { Flame, Medal, Trophy, Zap } from 'lucide-react-native';
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-const NEON_LIME = '#80f20d';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
+const NEON_LIME = '#5fc793';
 
 const ACHIEVEMENTS = [
     { id: '1', title: 'First Step', status: 'UNLOCKED', icon: Medal, color: '#60A5FA', unlocked: true },
@@ -15,6 +17,8 @@ const ACHIEVEMENTS = [
 
 export function Achievements() {
     const router = useRouter();
+    const palette = useThemeColors();
+    const styles = getStyles(palette);
 
     return (
         <View style={styles.container}>
@@ -33,8 +37,8 @@ export function Achievements() {
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => (
                     <BlurView intensity={10} tint="light" style={styles.card}>
-                        <View style={[styles.iconCircle, { backgroundColor: item.unlocked ? `${item.color}20` : 'rgba(255,255,255,0.05)' }]}>
-                            <item.icon color={item.unlocked ? item.color : 'rgba(255,255,255,0.2)'} size={24} />
+                        <View style={[styles.iconCircle, { backgroundColor: item.unlocked ? `${item.color}20` : palette.surface, borderWidth: item.unlocked ? 0 : 1, borderColor: palette.border }]}>
+                            <item.icon color={item.unlocked ? item.color : palette.mutedText} size={24} />
                         </View>
                         <Text style={styles.cardTitle}>{item.title}</Text>
                         <Text style={styles.cardStatus}>{item.status}</Text>
@@ -45,7 +49,7 @@ export function Achievements() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     container: {
         marginBottom: 32,
     },
@@ -58,7 +62,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 10,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         letterSpacing: 2,
         textTransform: 'uppercase',
     },
@@ -76,9 +80,9 @@ const styles = StyleSheet.create({
         height: 140,
         borderRadius: 20,
         padding: 16,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: palette.border,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -92,14 +96,14 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     cardTitle: {
-        color: '#FFFFFF',
+        color: palette.text,
         fontSize: 11,
         fontWeight: '800',
         textAlign: 'center',
         marginBottom: 4,
     },
     cardStatus: {
-        color: 'rgba(255, 255, 255, 0.3)',
+        color: palette.mutedText,
         fontSize: 9,
         fontWeight: '900',
         letterSpacing: 0.5,

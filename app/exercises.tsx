@@ -32,10 +32,7 @@ import { useRouter } from 'expo-router';
 
 const MUSCLES = ['Abs', 'Biceps', 'Triceps', 'Chest', 'Back', 'Legs', 'Shoulders', 'Glutes', 'Calves', 'Cardio'];
 
-const NEON_LIME = '#80f20d';
-const DEPTH_BG = '#000000';
-const CARD_BG = 'rgba(255, 255, 255, 0.03)';
-const BORDER_COLOR = 'rgba(255, 255, 255, 0.08)';
+const NEON_LIME = '#5fc793';
 
 function getThumbnail(exercise: Exercise): string | undefined {
   return (
@@ -51,6 +48,7 @@ export default function ExercisesScreen() {
   const palette = useThemeColors();
   const { user, avatarUrl } = useAuth();
   const router = useRouter();
+  const styles = useMemo(() => getStyles(palette), [palette]);
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,7 +176,7 @@ export default function ExercisesScreen() {
           }}
           style={styles.clearFilterBtn}
         >
-          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>Clear Filters</Text>
+          <Text style={{ color: palette.text, fontSize: 13, fontWeight: '800' }}>Clear Filters</Text>
         </Pressable>
       </View>
     ),
@@ -201,7 +199,7 @@ export default function ExercisesScreen() {
             {avatarUrl || user?.user_metadata?.avatar_url ? (
               <Image source={{ uri: avatarUrl || user?.user_metadata?.avatar_url }} style={styles.avatarImage} />
             ) : (
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>
+              <Text style={{ color: palette.text, fontSize: 16, fontWeight: '800' }}>
                 {userName.charAt(0).toUpperCase()}
               </Text>
             )}
@@ -212,7 +210,7 @@ export default function ExercisesScreen() {
           </View>
         </View>
         <Pressable style={styles.mascotBtn}>
-          <Settings color="#fff" size={24} />
+          <Settings color={palette.text} size={24} />
         </Pressable>
       </View>
 
@@ -249,11 +247,11 @@ export default function ExercisesScreen() {
       </View>
 
       <View style={styles.searchWrap}>
-        <Search color="rgba(255,255,255,0.3)" size={20} style={styles.searchIcon} />
+        <Search color={palette.mutedText} size={20} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="SEARCH EXERCISES..."
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          placeholderTextColor={palette.mutedText}
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
@@ -303,7 +301,7 @@ export default function ExercisesScreen() {
   );
 
   return (
-    <Screen scroll={false} contentContainerStyle={{ paddingHorizontal: 0, backgroundColor: DEPTH_BG }}>
+    <Screen scroll={false} contentContainerStyle={{ paddingHorizontal: 0, backgroundColor: palette.background }}>
       <FlatList
         data={exercises}
         keyExtractor={(item) => `${item.id}-${item.uuid}`}
@@ -339,7 +337,7 @@ export default function ExercisesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   headerContainer: {
     paddingHorizontal: 0,
     paddingTop: 24,
@@ -372,14 +370,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   greetingTitle: {
-    color: '#94A3B8',
+    color: palette.mutedText,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
   greetingSub: {
-    color: '#FFFFFF',
+    color: palette.text,
     fontSize: 20,
     fontWeight: '900',
     marginTop: 2,
@@ -401,7 +399,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   challengeTitle: {
-    color: DEPTH_BG,
+    color: '#0A0A0A',
     fontSize: 28,
     fontWeight: '900',
     lineHeight: 28,
@@ -414,7 +412,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   challengeBtn: {
-    backgroundColor: DEPTH_BG,
+    backgroundColor: '#0A0A0A',
     alignSelf: 'flex-start',
     paddingHorizontal: 24,
     paddingVertical: 10,
@@ -434,7 +432,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 22,
     fontWeight: '900',
     letterSpacing: -0.5,
@@ -456,25 +454,25 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   searchInput: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.card,
     borderRadius: 16,
     height: 52,
-    color: '#FFFFFF',
+    color: palette.text,
     fontSize: 13,
     fontWeight: '700',
     paddingLeft: 48,
     paddingRight: 16,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
   },
   filterRow: {
     marginBottom: 24,
   },
   chip: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
@@ -483,13 +481,13 @@ const styles = StyleSheet.create({
     borderColor: NEON_LIME,
   },
   chipText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.mutedText,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   chipTextActive: {
-    color: DEPTH_BG,
+    color: '#0A0A0A',
   },
   warmupRow: {
     flexDirection: 'row',
@@ -498,7 +496,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   warmupLabel: {
-    color: 'rgba(255,255,255,0.5)',
+    color: palette.mutedText,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -510,10 +508,10 @@ const styles = StyleSheet.create({
     width: 48,
     height: 28,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.card,
     padding: 2,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
   },
   switchTrackActive: {
     backgroundColor: NEON_LIME,
@@ -537,8 +535,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tile: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderColor: BORDER_COLOR,
+    backgroundColor: palette.card,
+    borderColor: palette.border,
     borderRadius: 24,
     borderWidth: 1,
     padding: 16,
@@ -563,7 +561,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tileTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: -0.5,
@@ -580,7 +578,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   tileMetaText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.mutedText,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -589,11 +587,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
   },
   emptyWrap: {
     alignItems: 'center',
@@ -602,17 +600,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 18,
     fontWeight: '800',
     marginTop: 8,
   },
   emptySub: {
-    color: '#94A3B8',
+    color: palette.mutedText,
     fontSize: 14,
   },
   clearFilterBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: palette.border,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 999,

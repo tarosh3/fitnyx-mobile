@@ -7,10 +7,11 @@ import {
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
+import { BackHandler, ToastAndroid } from 'react-native';
 
 import { AICoachChat } from '@/src/components/ai/AICoachChat';
 import { BackendKeepAlive } from '@/src/components/BackendKeepAlive';
@@ -19,12 +20,19 @@ import { BottomNav } from '@/src/components/navigation/BottomNav';
 import { SyncManager } from '@/src/components/SyncManager';
 import { AICoachProvider } from '@/src/providers/AICoachProvider';
 import { AuthProvider } from '@/src/providers/AuthProvider';
-import { ThemeProvider } from '@/src/providers/ThemeProvider';
+import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { WorkoutProvider } from '@/src/providers/WorkoutProvider';
 
 SplashScreen.preventAutoHideAsync();
 
+function DynamicStatusBar() {
+  const { theme } = useTheme();
+  return <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />;
+}
+
 export default function RootLayout() {
+  const pathname = usePathname();
+  const router = useRouter();
   const [loaded, error] = useFonts({
     Anton_400Regular,
     Inter_400Regular,
@@ -47,6 +55,40 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    let currentCount = 0;
+
+    const backAction = () => {
+      // If we aren't on the root dashboard page, route there
+      if (pathname !== '/' && pathname !== '/dashboard') {
+        router.replace('/');
+        return true;
+      }
+
+      // If we are on the dashboard, require double tap to exit
+      setTimeout(() => {
+        currentCount = 0;
+      }, 2000); // 2 seconds threshold
+
+      if (currentCount === 0) {
+        currentCount = 1;
+        ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+        return true; // prevent default behavior
+      } else if (currentCount === 1) {
+        BackHandler.exitApp();
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [pathname, router]);
+
   if (!loaded) {
     return null;
   }
@@ -56,7 +98,7 @@ export default function RootLayout() {
       <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
         <WorkoutProvider>
           <AICoachProvider>
-            <StatusBar style="light" />
+            <DynamicStatusBar />
             <BackendKeepAlive />
             <SyncManager />
             <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
