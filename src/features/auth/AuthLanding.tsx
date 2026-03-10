@@ -4,12 +4,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     BackHandler,
     Dimensions,
-    Image,
     Pressable,
     StatusBar,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import Animated, {
     Extrapolate,
@@ -66,9 +65,11 @@ export function AuthLanding() {
     // Animation shared values
     const expandProgress = useSharedValue(0); // 0 = Idle, 1 = Expanded
     const formOpacity = useSharedValue(0);
+    const modeProgress = useSharedValue(0); // 0 = LOGIN, 1 = SIGNUP
 
     const handleExpand = useCallback((targetState: AuthState) => {
         setAuthState(targetState);
+        modeProgress.value = targetState === 'SIGN_UP' ? 1 : 0;
         expandProgress.value = withSpring(1, { damping: 15, stiffness: 90 });
         formOpacity.value = withTiming(1, { duration: 400 });
     }, []);
@@ -103,10 +104,11 @@ export function AuthLanding() {
     });
 
     const rPanelStyle = useAnimatedStyle(() => {
+        const expandedHeight = interpolate(modeProgress.value, [0, 1], [EXPANDED_PANEL_HEIGHT, EXPANDED_PANEL_HEIGHT]);
         const height = interpolate(
             expandProgress.value,
             [0, 1],
-            [BOTTOM_SECTION_HEIGHT, EXPANDED_PANEL_HEIGHT],
+            [BOTTOM_SECTION_HEIGHT, expandedHeight],
             Extrapolate.CLAMP
         );
 
@@ -128,16 +130,26 @@ export function AuthLanding() {
 
     const animatedPathProps = useAnimatedProps(() => {
         const p = expandProgress.value;
-        const y1 = interpolate(p, [0, 1], [110, 40]);
-        const c1y = interpolate(p, [0, 1], [30, 40]);
-        const c2y = interpolate(p, [0, 1], [40, 40]);
-        const py1 = interpolate(p, [0, 1], [110, 40]);
-        const c3y = interpolate(p, [0, 1], [180, 40]);
-        const c4y = interpolate(p, [0, 1], [190, 40]);
-        const py2 = interpolate(p, [0, 1], [140, 40]);
+        const mp = modeProgress.value;
+
+        const targetY1 = interpolate(mp, [0, 1], [100, 80]);
+        const targetC1y = interpolate(mp, [0, 1], [40, 20]);
+        const targetC2y = interpolate(mp, [0, 1], [65, 50]);
+        const targetPy1 = interpolate(mp, [0, 1], [100, 80]);
+        const targetC3y = interpolate(mp, [0, 1], [140, 120]);
+        const targetC4y = interpolate(mp, [0, 1], [150, 130]);
+        const targetPy2 = interpolate(mp, [0, 1], [120, 100]);
+
+        const y1 = interpolate(p, [0, 1], [170, targetY1]);
+        const c1y = interpolate(p, [0, 1], [90, targetC1y]);
+        const c2y = interpolate(p, [0, 1], [100, targetC2y]);
+        const py1 = interpolate(p, [0, 1], [170, targetPy1]);
+        const c3y = interpolate(p, [0, 1], [240, targetC3y]);
+        const c4y = interpolate(p, [0, 1], [250, targetC4y]);
+        const py2 = interpolate(p, [0, 1], [200, targetPy2]);
 
         return {
-            d: `M 0,${y1} C 280,${c1y} 500,${c2y} 720,${py1} C 940,${c3y} 1200,${c4y} 1440,${py2} L 1440,200 L 0,200 Z`
+            d: `M 0,${y1} C 280,${c1y} 500,${c2y} 720,${py1} C 940,${c3y} 1200,${c4y} 1440,${py2} L 1440,300 L 0,300 Z`
         };
     });
 
@@ -159,23 +171,21 @@ export function AuthLanding() {
                         <Text style={styles.compactBranding}>FIT</Text>
                         <Text style={[styles.compactBranding, { color: '#5FC793' }]}>NYX</Text>
                     </View>
-                    <Image
-                        source={require('@/assets/images/icon.png')}
-                        style={{ width: 48, height: 48, marginTop: 16, borderRadius: 12 }}
-                    />
-                    <Text style={styles.compactSubtitle}>
-                        {authState === 'SIGN_UP' ? 'Create your FitNyx account' : 'Login to continue your progress'}
-                    </Text>
                 </Animated.View>
             </Animated.View>
 
             {/* Bottom Section: Panel */}
             <Animated.View style={[styles.panelContainer, rPanelStyle]}>
 
-                {/* Dynamic SVG Background layered inside panel container! */}
-                <View style={StyleSheet.absoluteFill}>
-                    <View style={{ width: '100%', height: 200 }}>
-                        <Svg viewBox="0 0 1440 200" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                <View style={[StyleSheet.absoluteFill, { overflow: 'visible', top: -60 }]}>
+                    <View style={{ width: '100%', height: 300 }}>
+                        <Svg viewBox="0 0 1440 300" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                            {/* Stacked strokes mimicking neon glow for Android cross-compatibility */}
+                            <AnimatedPath fill="none" stroke="#5FC793" strokeWidth={15} opacity={0.2} animatedProps={animatedPathProps} />
+                            <AnimatedPath fill="none" stroke="#5FC793" strokeWidth={10} opacity={0.4} animatedProps={animatedPathProps} />
+                            <AnimatedPath fill="none" stroke="#5FC793" strokeWidth={5} opacity={0.8} animatedProps={animatedPathProps} />
+
+                            {/* Main Background Panel curve */}
                             <AnimatedPath fill="#111111" animatedProps={animatedPathProps} />
                         </Svg>
                     </View>
@@ -211,12 +221,20 @@ export function AuthLanding() {
                         </View>
                     ) : (
                         <Animated.View style={[styles.authContent, rFormStyle]}>
-                            <Pressable onPress={handleCollapse} style={styles.backButton} hitSlop={15}>
-                                <ChevronLeft color="#FFFFFF" size={28} />
-                            </Pressable>
+                            <View style={styles.panelHeaderRow}>
+                                <Pressable onPress={handleCollapse} style={styles.backButton} hitSlop={15}>
+                                    <ChevronLeft color="#FFFFFF" size={28} />
+                                </Pressable>
+                                <Text style={styles.panelTitle}>
+                                    {authState === 'SIGN_UP' ? 'Create your FitNyx account' : 'Login to continue your progress'}
+                                </Text>
+                            </View>
                             <AuthForm
                                 initialMode={authState === 'SIGN_UP' ? 'signup' : 'login'}
-                                onSwitchMode={(mode) => setAuthState(mode === 'signup' ? 'SIGN_UP' : 'LOG_IN')}
+                                onSwitchMode={(mode) => {
+                                    setAuthState(mode === 'signup' ? 'SIGN_UP' : 'LOG_IN');
+                                    modeProgress.value = withSpring(mode === 'signup' ? 1 : 0, { damping: 14, stiffness: 80 });
+                                }}
                             />
                         </Animated.View>
                     )}
@@ -233,6 +251,7 @@ const styles = StyleSheet.create({
     topSection: {
         width: '100%',
         overflow: 'hidden',
+        zIndex: 1,
     },
     compactHeader: {
         alignItems: 'center',
@@ -244,33 +263,18 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         letterSpacing: 4,
     },
-    compactSubtitle: {
-        fontSize: 14,
-        color: '#9CA3AF',
-        marginTop: 8,
-    },
     panelContainer: {
         width: '100%',
         position: 'absolute',
         bottom: 0,
         backgroundColor: 'transparent',
+        zIndex: 20,
     },
     panelContentWrapper: {
         flex: 1,
         paddingHorizontal: 24,
-        paddingTop: 120,
+        paddingTop: 90,
         zIndex: 10,
-    },
-    panelGlow: {
-        position: 'absolute',
-        top: 20,
-        alignSelf: 'center',
-        width: SCREEN_WIDTH * 0.8,
-        height: 100,
-        backgroundColor: '#5FC793',
-        opacity: 0.1,
-        borderRadius: 50,
-        filter: [{ blur: 40 }],
     },
     idleContent: {
         flex: 1,
@@ -332,14 +336,23 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(95, 199, 147, 0.05)',
     },
+    panelHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    panelTitle: {
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: '600',
+    },
     backButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(255,255,255,0.05)',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 16,
-        marginTop: -10,
+        marginRight: 16,
     },
 });
