@@ -24,12 +24,15 @@ import Svg, { G, Path } from 'react-native-svg';
 import { AuthForm } from './AuthForm';
 import { OnboardingCarousel } from './components/OnboardingCarousel';
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TOP_SECTION_HEIGHT = SCREEN_HEIGHT * 0.52;
+// The wave SVG sits top:-60 above the panel. The wave fill (path M 0,170)
+// starts at panelTop - 60 + 170 = 0.52h + 110 ≈ 64%, and at the right edge
+// (y=200) at 0.52h + 140 ≈ 68%. TOP_SECTION_HEIGHT must exceed 68% so the
+// carousel image fully covers behind the wave with no black gap.
+// The panel (zIndex:20) renders on top of the top section.
+const TOP_SECTION_HEIGHT = SCREEN_HEIGHT * 0.73;
 const BOTTOM_SECTION_HEIGHT = SCREEN_HEIGHT * 0.48;
-const EXPANDED_PANEL_HEIGHT = SCREEN_HEIGHT * 0.8;
-const COMPACT_HEADER_HEIGHT = SCREEN_HEIGHT * 0.2;
 
 function TopographicBackground() {
     return (
@@ -94,25 +97,47 @@ export function AuthLanding() {
 
     // Animated styles
     const rTopSectionStyle = useAnimatedStyle(() => {
+        // IDLE = TOP_SECTION_HEIGHT (0.73) — covers full wave transition area
+        // Expanded (both LOGIN and SIGNUP) = 0.18 — just enough for the logo
         const height = interpolate(
             expandProgress.value,
             [0, 1],
-            [TOP_SECTION_HEIGHT, COMPACT_HEADER_HEIGHT],
+            [TOP_SECTION_HEIGHT, SCREEN_HEIGHT * 0.18],
             Extrapolate.CLAMP
         );
         return { height };
     });
 
     const rPanelStyle = useAnimatedStyle(() => {
-        const expandedHeight = interpolate(modeProgress.value, [0, 1], [EXPANDED_PANEL_HEIGHT, EXPANDED_PANEL_HEIGHT]);
+        // IDLE = BOTTOM_SECTION_HEIGHT (0.48)
+        // Expanded (both LOGIN and SIGNUP) = 0.82 — fills nearly the full screen
         const height = interpolate(
             expandProgress.value,
             [0, 1],
-            [BOTTOM_SECTION_HEIGHT, expandedHeight],
+            [BOTTOM_SECTION_HEIGHT, SCREEN_HEIGHT * 0.82],
             Extrapolate.CLAMP
         );
-
         return { height };
+    });
+
+    const rPanelPaddingStyle = useAnimatedStyle(() => {
+        // Values chosen to follow the wave curve perfectly
+        // IDLE Split targetY = 170 -> Padding 150
+        // LOGIN targetY = 100 -> Padding 80
+        // SIGNUP targetY = 130 -> Padding 110
+        const targetPadding = interpolate(
+            modeProgress.value,
+            [0, 1],
+            [80, 110],
+            Extrapolate.CLAMP
+        );
+        const paddingTop = interpolate(
+            expandProgress.value,
+            [0, 1],
+            [150, targetPadding],
+            Extrapolate.CLAMP
+        );
+        return { paddingTop };
     });
 
     const rCarouselOpacity = useAnimatedStyle(() => ({
@@ -132,13 +157,14 @@ export function AuthLanding() {
         const p = expandProgress.value;
         const mp = modeProgress.value;
 
-        const targetY1 = interpolate(mp, [0, 1], [100, 80]);
-        const targetC1y = interpolate(mp, [0, 1], [40, 20]);
-        const targetC2y = interpolate(mp, [0, 1], [65, 50]);
-        const targetPy1 = interpolate(mp, [0, 1], [100, 80]);
-        const targetC3y = interpolate(mp, [0, 1], [140, 120]);
-        const targetC4y = interpolate(mp, [0, 1], [150, 130]);
-        const targetPy2 = interpolate(mp, [0, 1], [120, 100]);
+        // Decoupled wave targets
+        const targetY1 = interpolate(mp, [0, 1], [100, 130]);
+        const targetC1y = interpolate(mp, [0, 1], [40, 70]);
+        const targetC2y = interpolate(mp, [0, 1], [65, 95]);
+        const targetPy1 = interpolate(mp, [0, 1], [100, 130]);
+        const targetC3y = interpolate(mp, [0, 1], [140, 170]);
+        const targetC4y = interpolate(mp, [0, 1], [150, 180]);
+        const targetPy2 = interpolate(mp, [0, 1], [120, 150]);
 
         const y1 = interpolate(p, [0, 1], [170, targetY1]);
         const c1y = interpolate(p, [0, 1], [90, targetC1y]);
@@ -157,15 +183,17 @@ export function AuthLanding() {
         <View style={[styles.container, { backgroundColor: '#000000' }]}>
             <StatusBar barStyle="light-content" />
 
-            {/* Top Section: Carousel/Branding */}
+            {/* Top Section: Carousel — extended tall enough to fill behind the wave */}
             <Animated.View style={[styles.topSection, rTopSectionStyle]}>
+                {/* Topography Layer */}
                 <TopographicBackground />
-                {/* Onboarding Carousel (Visible when IDLE) */}
+
+                {/* Carousel fills the entire top section via absoluteFill */}
                 <Animated.View style={[StyleSheet.absoluteFill, rCarouselOpacity]}>
                     <OnboardingCarousel isPaused={authState !== 'IDLE'} />
                 </Animated.View>
 
-                {/* Compact Header (Visible when AUTH) */}
+                {/* Compact Header — fades in when auth panel is open */}
                 <Animated.View style={[styles.compactHeader, rCompactHeaderOpacity, { paddingTop: insets.top + 10 }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={styles.compactBranding}>FIT</Text>
@@ -174,7 +202,7 @@ export function AuthLanding() {
                 </Animated.View>
             </Animated.View>
 
-            {/* Bottom Section: Panel */}
+            {/* Bottom Section: Panel — zIndex:20 renders wave on top of the carousel */}
             <Animated.View style={[styles.panelContainer, rPanelStyle]}>
 
                 <View style={[StyleSheet.absoluteFill, { overflow: 'visible', top: -60 }]}>
@@ -192,7 +220,7 @@ export function AuthLanding() {
                     <View style={{ flex: 1, backgroundColor: '#111111', marginTop: -2 }} />
                 </View>
 
-                <View style={[styles.panelContentWrapper, { paddingBottom: insets.bottom + 8 }]}>
+                <Animated.View style={[styles.panelContentWrapper, rPanelPaddingStyle, { paddingBottom: insets.bottom + 8 }]}>
 
                     {authState === 'IDLE' ? (
                         <View style={styles.idleContent}>
@@ -238,7 +266,7 @@ export function AuthLanding() {
                             />
                         </Animated.View>
                     )}
-                </View>
+                </Animated.View>
             </Animated.View>
         </View>
     );
@@ -249,8 +277,12 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     topSection: {
-        width: '100%',
+        backgroundColor: '#000',
         overflow: 'hidden',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         zIndex: 1,
     },
     compactHeader: {
@@ -331,11 +363,6 @@ const styles = StyleSheet.create({
     authContent: {
         flex: 1,
     },
-    topoLine: {
-        position: 'absolute',
-        borderWidth: 1,
-        borderColor: 'rgba(95, 199, 147, 0.05)',
-    },
     panelHeaderRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -345,6 +372,7 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 18,
         fontWeight: '600',
+        flex: 1,
     },
     backButton: {
         width: 44,
