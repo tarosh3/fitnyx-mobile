@@ -6,8 +6,9 @@ import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Input } from '@/src/components/ui/Input';
 import { DayData } from '@/src/features/workouts/types';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { sanitizeGeneralText, MAX_TITLE, MAX_LONG_TEXT } from '@/src/lib/validators';
 
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 const DEPTH_BG = '#000000';
 const CARD_BG = 'rgba(255, 255, 255, 0.03)';
 const BORDER_COLOR = 'rgba(255, 255, 255, 0.08)';
@@ -94,6 +95,8 @@ export function DayConfigurationForm({ numDays, initialDays, onSubmit, loading }
                       value={day.title || ''}
                       onChangeText={(value) => updateDay(index, 'title', value)}
                       placeholder="TITLE (E.G. CHEST & TRICEPS)"
+                      sanitize={(v) => sanitizeGeneralText(v, MAX_TITLE)}
+                      maxLength={MAX_TITLE}
                       style={styles.input}
                     />
                   </View>
@@ -104,6 +107,8 @@ export function DayConfigurationForm({ numDays, initialDays, onSubmit, loading }
                       placeholder="ADDITIONAL NOTES"
                       multiline
                       numberOfLines={3}
+                      sanitize={(v) => sanitizeGeneralText(v, MAX_LONG_TEXT)}
+                      maxLength={MAX_LONG_TEXT}
                       style={styles.notesInput}
                     />
                   </View>

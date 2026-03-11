@@ -5,6 +5,7 @@ import { Input } from '@/src/components/ui/Input';
 import { ChoiceCard } from '@/src/features/onboarding/steps/ChoiceCard';
 import { StepScaffold } from '@/src/features/onboarding/steps/StepScaffold';
 import { OnboardingStepProps } from '@/src/features/onboarding/types';
+import { sanitizeGeneralText, MAX_MEDIUM_TEXT } from '@/src/lib/validators';
 
 const INJURIES = [
   { id: 'none', label: 'No injuries', emoji: '🚫' },
@@ -53,7 +54,13 @@ export function InjuriesStep({ data, onNext, saving }: OnboardingStepProps) {
       </View>
 
       {selected.includes('other') ? (
-        <Input value={otherText} onChangeText={setOtherText} placeholder="Describe your injury..." />
+        <Input
+          value={otherText}
+          onChangeText={setOtherText}
+          placeholder="Describe your injury..."
+          sanitize={(v) => sanitizeGeneralText(v, MAX_MEDIUM_TEXT)}
+          maxLength={MAX_MEDIUM_TEXT}
+        />
       ) : null}
     </StepScaffold>
   );

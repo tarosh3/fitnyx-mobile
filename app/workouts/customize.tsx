@@ -12,10 +12,7 @@ import { DayData, PlanData } from '@/src/features/workouts/types';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { addDaysToPlan, createWorkoutPlan } from '@/src/lib/api/workoutPlans';
 
-const NEON_LIME = '#80f20d';
-const DEPTH_BG = '#000000';
-const CARD_BG = 'rgba(255, 255, 255, 0.03)';
-const BORDER_COLOR = 'rgba(255, 255, 255, 0.08)';
+const NEON_LIME = '#5fc793';
 
 type WizardStep = 1 | 2 | 3;
 
@@ -28,6 +25,7 @@ const STEPS = [
 export default function CustomizeWorkoutScreen() {
   const router = useRouter();
   const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
 
   const [step, setStep] = useState<WizardStep>(1);
   const [loading, setLoading] = useState(false);
@@ -108,7 +106,7 @@ export default function CustomizeWorkoutScreen() {
   };
 
   return (
-    <Screen style={{ backgroundColor: DEPTH_BG }}>
+    <Screen style={{ backgroundColor: palette.background }}>
       <View style={styles.header}>
         <Pressable
           onPress={() => {
@@ -120,7 +118,7 @@ export default function CustomizeWorkoutScreen() {
           }}
           style={styles.backBtn}
         >
-          <ChevronLeft size={24} color="#fff" />
+          <ChevronLeft size={24} color={palette.text} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>CUSTOMIZE PLAN</Text>
@@ -140,7 +138,7 @@ export default function CustomizeWorkoutScreen() {
                   style={[
                     styles.connector,
                     {
-                      backgroundColor: step > item.number ? NEON_LIME : 'rgba(255,255,255,0.08)',
+                      backgroundColor: step > item.number ? NEON_LIME : palette.border,
                     },
                   ]}
                 />
@@ -153,20 +151,20 @@ export default function CustomizeWorkoutScreen() {
                 style={[
                   styles.circle,
                   {
-                    backgroundColor: current ? NEON_LIME : done ? 'rgba(128, 242, 13, 0.15)' : 'rgba(255,255,255,0.05)',
-                    borderColor: current ? NEON_LIME : done ? 'rgba(128, 242, 13, 0.3)' : 'rgba(255,255,255,0.1)',
+                    backgroundColor: current ? NEON_LIME : done ? 'rgba(128, 242, 13, 0.15)' : palette.card,
+                    borderColor: current ? NEON_LIME : done ? 'rgba(128, 242, 13, 0.3)' : palette.border,
                   },
                 ]}
               >
                 {done ? (
-                  <Check size={16} color={current ? '#000' : NEON_LIME} />
+                  <Check size={16} color={current ? '#0A0A0A' : NEON_LIME} />
                 ) : (
-                  <Text style={[styles.stepNum, current && { color: '#000' }]}>
+                  <Text style={[styles.stepNum, current && { color: '#0A0A0A' }]}>
                     {item.number}
                   </Text>
                 )}
               </Pressable>
-              <Text style={[styles.stepTitle, (current || done) && { color: '#fff' }]}>
+              <Text style={[styles.stepTitle, (current || done) && { color: palette.text }]}>
                 {item.title.toUpperCase()}
               </Text>
             </View>
@@ -197,7 +195,7 @@ export default function CustomizeWorkoutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -209,20 +207,20 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: palette.border,
   },
   headerTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: -0.5,
   },
   headerSubtitle: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.mutedText,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
@@ -257,12 +255,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   stepNum: {
-    color: 'rgba(255,255,255,0.3)',
+    color: palette.mutedText,
     fontSize: 14,
     fontWeight: '900',
   },
   stepTitle: {
-    color: 'rgba(255,255,255,0.3)',
+    color: palette.mutedText,
     fontSize: 9,
     fontWeight: '900',
     marginTop: 8,

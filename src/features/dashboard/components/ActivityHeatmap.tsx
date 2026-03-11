@@ -3,7 +3,10 @@ import { Flame, Trophy } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-const NEON_LIME = '#80f20d';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { useTheme } from '@/src/providers/ThemeProvider';
+
+const NEON_LIME = '#5fc793';
 const CELL_SIZE = 10;
 const CELL_GAP = 5;
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -38,8 +41,8 @@ function getWeeksGrid(monthsBack: number): { date: Date; dateStr: string }[][] {
     return weeks;
 }
 
-function getIntensityColor(count: number): string {
-    if (count === 0) return '#1C1C1E'; // Match Github empty cell look in Image 1
+function getIntensityColor(count: number, palette: any, theme: string): string {
+    if (count === 0) return theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : palette.border;
     if (count === 1) return `${NEON_LIME}44`;
     if (count === 2) return `${NEON_LIME}88`;
     return NEON_LIME;
@@ -51,6 +54,9 @@ interface ActivityHeatmapProps {
 }
 
 export function ActivityHeatmap({ streakDays, activityDays }: ActivityHeatmapProps) {
+    const palette = useThemeColors();
+    const { theme } = useTheme();
+    const styles = getStyles(palette);
     const weeks = useMemo(() => getWeeksGrid(5), []);
     const totalWidth = weeks.length * (CELL_SIZE + CELL_GAP);
 
@@ -75,9 +81,9 @@ export function ActivityHeatmap({ streakDays, activityDays }: ActivityHeatmapPro
             <View style={styles.header}>
                 <Text style={styles.sectionTitle}>ACTIVITY</Text>
                 <View style={styles.headerIcons}>
-                    <Trophy color="rgba(255,255,255,0.4)" size={14} />
+                    <Trophy color={palette.mutedText} size={14} />
                     <Text style={styles.statText}>0 days</Text>
-                    <Flame color="rgba(255,255,255,0.4)" size={14} />
+                    <Flame color={palette.mutedText} size={14} />
                     <Text style={styles.statText}>Max 0</Text>
                 </View>
             </View>
@@ -95,7 +101,7 @@ export function ActivityHeatmap({ streakDays, activityDays }: ActivityHeatmapPro
                                                 key={day.dateStr}
                                                 style={[
                                                     styles.cell,
-                                                    { backgroundColor: getIntensityColor(count) },
+                                                    { backgroundColor: getIntensityColor(count, palette, theme) },
                                                 ]}
                                             />
                                         );
@@ -122,7 +128,7 @@ export function ActivityHeatmap({ streakDays, activityDays }: ActivityHeatmapPro
                 <View style={[styles.footer, { marginTop: 12, justifyContent: 'flex-end' }]}>
                     <View style={styles.legend}>
                         <Text style={styles.legendText}>Less</Text>
-                        <View style={[styles.legendCell, { backgroundColor: '#1C1C1E' }]} />
+                        <View style={[styles.legendCell, { backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : palette.border }]} />
                         <View style={[styles.legendCell, { backgroundColor: `${NEON_LIME}44` }]} />
                         <View style={[styles.legendCell, { backgroundColor: NEON_LIME }]} />
                         <Text style={styles.legendText}>More</Text>
@@ -133,7 +139,7 @@ export function ActivityHeatmap({ streakDays, activityDays }: ActivityHeatmapPro
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     section: {
         marginBottom: 24,
     },
@@ -146,7 +152,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 10,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         letterSpacing: 2,
     },
     headerIcons: {
@@ -157,15 +163,15 @@ const styles = StyleSheet.create({
     statText: {
         fontSize: 10,
         fontWeight: '700',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
     },
     heatmapCard: {
         borderRadius: 20,
         overflow: 'hidden',
         padding: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: palette.border,
     },
     heatmapGrid: {
         flexDirection: 'row',
@@ -192,7 +198,7 @@ const styles = StyleSheet.create({
     monthText: {
         fontSize: 9,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.2)',
+        color: palette.mutedText, // Changed from translucent
     },
     legend: {
         flexDirection: 'row',
@@ -202,7 +208,7 @@ const styles = StyleSheet.create({
     legendText: {
         fontSize: 8,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         textTransform: 'uppercase',
     },
     legendCell: {

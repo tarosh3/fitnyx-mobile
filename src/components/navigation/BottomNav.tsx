@@ -31,6 +31,8 @@ export function BottomNav() {
   const { user } = useAuth();
   const { openCenteredChat } = useAICoach();
 
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
+
   if (!user) return null;
   if (hiddenRoutePrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) return null;
 
@@ -83,6 +85,7 @@ export function BottomNav() {
 
 function NavItem({ item, onPress, palette }: { item: any; onPress: () => void; palette: any }) {
   const Icon = item.icon;
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.item, pressed && { transform: [{ scale: 0.94 }] }]}>
@@ -91,7 +94,7 @@ function NavItem({ item, onPress, palette }: { item: any; onPress: () => void; p
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   wrap: {
     bottom: 4,
     left: 0,
@@ -128,7 +131,7 @@ const styles = StyleSheet.create({
   aiButton: {
     alignItems: 'center',
     backgroundColor: '#F59E0B',
-    borderColor: '#0A0A0A',
+    borderColor: palette.background,
     borderRadius: 999,
     borderWidth: 4,
     height: 68,

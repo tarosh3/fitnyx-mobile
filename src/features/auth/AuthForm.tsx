@@ -1,26 +1,28 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Eye, EyeOff } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Button } from '@/src/components/ui/Button';
-import { Card } from '@/src/components/ui/Card';
-import { Input } from '@/src/components/ui/Input';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { supabase } from '@/src/lib/supabase';
+import { sanitizeName, sanitizeEmail, MAX_NAME, MAX_EMAIL, MAX_PASSWORD } from '@/src/lib/validators';
 
 WebBrowser.maybeCompleteAuthSession();
 
 interface AuthFormProps {
   initialMode?: 'login' | 'signup';
   onSuccess?: () => void;
+  onSwitchMode?: (mode: 'login' | 'signup') => void;
 }
 
-export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
+export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: AuthFormProps) {
   const router = useRouter();
   const palette = useThemeColors();
+  const styles = getStyles(palette);
 
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot_password'>(initialMode);
   const [email, setEmail] = useState('');
@@ -33,6 +35,44 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
 
+  const isMounted = React.useRef(true);
+  React.useEffect(() => {
+    return () => { isMounted.current = false; };
+  }, []);
+
+  const safeSetLoading = (val: boolean) => isMounted.current && setLoading(val);
+  const safeSetError = (val: string | null) => isMounted.current && setError(val);
+  const safeSetConfirmation = (val: string | null) => isMounted.current && setConfirmation(val);
+
+  const formOpacity = useSharedValue(1);
+  const formTranslateX = useSharedValue(0);
+
+  const toggleMode = (newMode: 'login' | 'signup' | 'forgot_password') => {
+    if (newMode === mode) return;
+
+    // Animate out
+    formOpacity.value = withTiming(0, { duration: 150 });
+    formTranslateX.value = withTiming(-10, { duration: 150 });
+
+    setTimeout(() => {
+      if (!isMounted.current) return;
+      setMode(newMode);
+      if (newMode === 'login' || newMode === 'signup') {
+        onSwitchMode?.(newMode);
+      }
+
+      // Prepare for animate in
+      formTranslateX.value = 10;
+      formOpacity.value = withTiming(1, { duration: 250 });
+      formTranslateX.value = withTiming(0, { duration: 250 });
+    }, 150);
+  };
+
+  const rFormStyle = useAnimatedStyle(() => ({
+    opacity: formOpacity.value,
+    transform: [{ translateX: formTranslateX.value }],
+  }));
+
   const redirectTo = useMemo(
     () => makeRedirectUri({ scheme: 'fitnyxmobile', path: 'auth/callback' }),
     []
@@ -41,8 +81,8 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
   const handleAuth = async () => {
     if (!email.trim()) return;
 
-    setLoading(true);
-    setError(null);
+    safeSetLoading(true);
+    safeSetError(null);
 
     try {
       if (mode === 'signup') {
@@ -59,14 +99,14 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
         });
 
         if (signUpError) throw signUpError;
-        setConfirmation('Check your email to confirm account.');
+        safeSetConfirmation('Check your email to confirm account.');
       } else if (mode === 'forgot_password') {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo,
         });
 
         if (resetError) throw resetError;
-        setConfirmation('Check your email for the password reset link.');
+        safeSetConfirmation('Check your email for the password reset link.');
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -80,22 +120,22 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
     } catch (err: any) {
       const message = String(err?.message || '').toLowerCase();
       if (message.includes('user already registered') || message.includes('email already') || err?.status === 422) {
-        setError('Email address already exists. Please login instead.');
+        safeSetError('Email address already exists. Please login instead.');
       } else if (message.includes('rate limit') || err?.status === 429) {
-        setError('Too many attempts. Please wait before trying again.');
+        safeSetError('Too many attempts. Please wait before trying again.');
       } else if (message.includes('invalid login credentials')) {
-        setError('Invalid email or password. Please try again.');
+        safeSetError('Invalid email or password. Please try again.');
       } else {
-        setError(err?.message || 'An error occurred. Please try again.');
+        safeSetError(err?.message || 'An error occurred. Please try again.');
       }
     } finally {
-      setLoading(false);
+      safeSetLoading(false);
     }
   };
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
-    setError(null);
-    setLoading(true);
+    safeSetError(null);
+    safeSetLoading(true);
 
     try {
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -113,7 +153,7 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
       if (result.type !== 'success' || !result.url) {
-        setLoading(false);
+        safeSetLoading(false);
         return;
       }
 
@@ -140,129 +180,162 @@ export function AuthForm({ initialMode = 'login', onSuccess }: AuthFormProps) {
       router.replace('/dashboard');
       onSuccess?.();
     } catch (err: any) {
-      setError(err?.message || 'Social login failed. Please try again.');
+      safeSetError(err?.message || 'Social login failed. Please try again.');
     } finally {
-      setLoading(false);
+      safeSetLoading(false);
     }
   };
 
   if (confirmation) {
     return (
-      <Card style={styles.confirmCard}>
-        <Text style={[styles.confirmTitle, { color: palette.text }]}>Email Sent</Text>
-        <Text style={[styles.confirmText, { color: palette.mutedText }]}>{confirmation}</Text>
+      <View style={styles.confirmCard}>
+        <Text style={[styles.confirmTitle, { color: '#FFFFFF' }]}>Email Sent</Text>
+        <Text style={[styles.confirmText, { color: '#9CA3AF' }]}>{confirmation}</Text>
         <Button
           title="Go to Login"
           onPress={() => {
             setConfirmation(null);
-            setMode('login');
+            toggleMode('login');
             setPassword('');
           }}
           style={styles.confirmBtn}
         />
-      </Card>
+      </View>
     );
   }
 
   return (
-    <Card style={styles.container}>
-      <Text style={[styles.brand, { color: palette.text }]}>FITNYX</Text>
-      <Text style={[styles.subtitle, { color: palette.mutedText }]}> 
-        {mode === 'login' ? 'Login to continue your progress' : mode === 'signup' ? 'Create your FitNyx account' : 'Recover your account'}
-      </Text>
-
+    <View style={styles.formContainer}>
       {error && (
-        <View style={[styles.errorBox, { borderColor: '#EF444444', backgroundColor: '#EF444422' }]}>
+        <View style={[styles.errorBox, { borderColor: palette.destructive + '44' }]}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
-      {mode === 'signup' && (
-        <View style={styles.row}>
-          <Input value={firstName} onChangeText={setFirstName} placeholder="First name" autoCapitalize="words" />
-          <Input value={lastName} onChangeText={setLastName} placeholder="Last name" autoCapitalize="words" />
-        </View>
-      )}
+      <Animated.View style={[rFormStyle, { gap: 12 }]}>
+        {mode === 'signup' && (
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={firstName}
+                onChangeText={(v) => setFirstName(sanitizeName(v))}
+                placeholder="First name"
+                placeholderTextColor="#4B5563"
+                autoCapitalize="words"
+                maxLength={MAX_NAME}
+                style={styles.premiumInput}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={lastName}
+                onChangeText={(v) => setLastName(sanitizeName(v))}
+                placeholder="Last name"
+                placeholderTextColor="#4B5563"
+                autoCapitalize="words"
+                maxLength={MAX_NAME}
+                style={styles.premiumInput}
+              />
+            </View>
+          </View>
+        )}
 
-      <Input
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholder="operator@fitnyx.com"
-      />
+        <TextInput
+          value={email}
+          onChangeText={(v) => setEmail(sanitizeEmail(v))}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="email@example.com"
+          placeholderTextColor="#4B5563"
+          maxLength={MAX_EMAIL}
+          style={styles.premiumInput}
+        />
 
-      {mode !== 'forgot_password' && (
-        <View>
-          <View style={[styles.passwordWrap, { backgroundColor: palette.card, borderColor: palette.border }]}> 
-            <TextInput
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={palette.mutedText}
-              autoCapitalize="none"
-              style={[styles.passwordInput, { color: palette.text }]}
-            />
-            <Pressable onPress={() => setShowPassword((prev) => !prev)} style={styles.eyeBtn}>
-              {showPassword ? <EyeOff color={palette.mutedText} size={16} /> : <Eye color={palette.mutedText} size={16} />}
+        {mode !== 'forgot_password' && (
+          <View>
+            <View style={styles.passwordWrap}>
+              <TextInput
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor="#4B5563"
+                autoCapitalize="none"
+                maxLength={MAX_PASSWORD}
+                style={styles.passwordInput}
+              />
+              <Pressable onPress={() => setShowPassword((prev) => !prev)} style={styles.eyeBtn}>
+                {showPassword ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#9CA3AF" size={20} />}
+              </Pressable>
+            </View>
+            {mode === 'login' && (
+              <Pressable onPress={() => toggleMode('forgot_password')}>
+                <Text style={styles.forgotLink}>Forgot Password?</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        <Button
+          title={
+            mode === 'login' ? 'LOG IN' : mode === 'signup' ? 'SIGN UP' : 'SEND RECOVERY LINK'
+          }
+          loading={loading}
+          onPress={handleAuth}
+          style={styles.primaryButton}
+          textStyle={styles.primaryButtonText}
+        />
+
+        {mode !== 'forgot_password' && (
+          <View style={styles.socialWrap}>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.socialBtn, pressed && { opacity: 0.7 }]}
+              onPress={() => handleSocialLogin('google')}
+            >
+              <Text style={styles.socialText}>Continue with Google</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.socialBtn, pressed && { opacity: 0.7 }]}
+              onPress={() => handleSocialLogin('facebook')}
+            >
+              <Text style={styles.socialText}>Continue with Facebook</Text>
             </Pressable>
           </View>
-          {mode === 'login' && (
-            <Text style={[styles.link, { color: palette.primary }]} onPress={() => setMode('forgot_password')}>
-              Forgot Password?
+        )}
+
+        <View style={styles.footer}>
+          <Text style={styles.switchText}>
+            {mode === 'login' ? "Don't have an account?" : mode === 'signup' ? 'Already have an account?' : 'Remember your password?'}{' '}
+          </Text>
+          <Pressable hitSlop={15} onPress={() => toggleMode(mode === 'login' ? 'signup' : 'login')}>
+            <Text style={styles.switchLink}>
+              {mode === 'login' ? 'Sign up' : 'Log in'}
             </Text>
-          )}
+          </Pressable>
         </View>
-      )}
-
-      <Button
-        title={
-          mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Sign Up' : 'Send Recovery Link'
-        }
-        loading={loading}
-        onPress={handleAuth}
-      />
-
-      {mode !== 'forgot_password' && (
-        <View style={styles.socialWrap}>
-          <Button title="Continue with Google" variant="secondary" onPress={() => handleSocialLogin('google')} />
-          <Button title="Continue with Facebook" variant="secondary" onPress={() => handleSocialLogin('facebook')} />
-        </View>
-      )}
-
-      <Text style={[styles.switchText, { color: palette.mutedText }]}> 
-        {mode === 'login' ? "Don't have an account?" : mode === 'signup' ? 'Already have an account?' : 'Remember your password?'}{' '}
-        <Text style={{ color: palette.primary }} onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}>
-          {mode === 'login' ? 'Sign up' : 'Log in'}
-        </Text>
-      </Text>
-    </Card>
+      </Animated.View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    gap: 14,
-    paddingVertical: 24,
-  },
-  brand: {
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 13,
-    marginBottom: 4,
-    textAlign: 'center',
+const getStyles = (palette: any) => StyleSheet.create({
+  formContainer: {
+    gap: 12,
   },
   errorBox: {
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   errorText: {
     color: '#EF4444',
@@ -273,59 +346,126 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  passwordWrap: {
-    alignItems: 'center',
-    borderRadius: 14,
+  premiumInput: {
+    backgroundColor: '#151515',
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    color: '#FFFFFF',
+    minHeight: 50,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    fontSize: 15,
+  },
+  passwordWrap: {
+    backgroundColor: '#151515',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
     flexDirection: 'row',
-    minHeight: 48,
-    paddingLeft: 12,
+    alignItems: 'center',
+    minHeight: 50,
+    paddingHorizontal: 14,
   },
   passwordInput: {
     flex: 1,
     fontSize: 15,
-    paddingVertical: 10,
+    color: '#FFFFFF',
+    height: '100%',
   },
   eyeBtn: {
-    alignItems: 'center',
-    borderRadius: 10,
-    height: 36,
-    justifyContent: 'center',
-    minHeight: 36,
-    width: 36,
+    padding: 8,
   },
-  link: {
-    fontSize: 12,
+  forgotLink: {
+    fontSize: 13,
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'right',
+    color: '#5FC793',
+  },
+  primaryButton: {
+    backgroundColor: '#5FC793',
+    height: 50,
+    borderRadius: 25,
+    marginTop: 6,
+    shadowColor: '#5FC793',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  primaryButtonText: {
+    color: '#000000',
+    fontWeight: '900',
+    letterSpacing: 2,
+    fontSize: 15,
   },
   socialWrap: {
-    gap: 10,
     marginTop: 6,
-  },
-  switchText: {
-    fontSize: 13,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  confirmCard: {
-    alignItems: 'center',
     gap: 10,
-    marginHorizontal: 8,
-    marginTop: 20,
-    paddingVertical: 30,
   },
-  confirmTitle: {
-    fontSize: 22,
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 6,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  dividerText: {
+    color: '#9CA3AF',
+    fontSize: 12,
     fontWeight: '800',
   },
-  confirmText: {
+  socialBtn: {
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#151515',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 14,
+    paddingBottom: 4,
+  },
+  switchText: {
     fontSize: 14,
+    color: '#9CA3AF',
+  },
+  switchLink: {
+    fontSize: 14,
+    color: '#5FC793',
+    fontWeight: '800',
+  },
+  confirmCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  confirmTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: 12,
+  },
+  confirmText: {
+    fontSize: 16,
     textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
   },
   confirmBtn: {
-    marginTop: 10,
-    minWidth: 200,
+    width: '100%',
   },
 });

@@ -43,7 +43,7 @@ import {
   XCircle
 } from 'lucide-react-native';
 
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 const DEPTH_BG = '#000000';
 const CARD_BG = 'rgba(255, 255, 255, 0.03)';
 const BORDER_COLOR = 'rgba(255, 255, 255, 0.08)';

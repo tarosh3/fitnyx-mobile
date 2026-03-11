@@ -9,10 +9,7 @@ import { Calendar, ChevronDown, ChevronUp, Clock, Dumbbell, Hash, History, Trash
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-const NEON_LIME = '#80f20d';
-const DEPTH_BG = '#000000';
-const CARD_BG = 'rgba(255, 255, 255, 0.03)';
-const BORDER_COLOR = 'rgba(255, 255, 255, 0.08)';
+const NEON_LIME = '#5fc793';
 
 interface ExerciseSummary {
   exercise_uuid: string;
@@ -192,8 +189,10 @@ export default function WorkoutHistoryScreen() {
     );
   };
 
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
+
   return (
-    <Screen style={{ backgroundColor: DEPTH_BG }}>
+    <Screen style={{ backgroundColor: palette.background }}>
       <PageHeader
         title="WORKOUT HISTORY"
         subtitle="Track your progress over time"
@@ -270,7 +269,7 @@ export default function WorkoutHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
@@ -308,7 +307,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
   emptyTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 1,
@@ -327,10 +326,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sessionCard: {
-    backgroundColor: '#0A0A0A',
+    backgroundColor: palette.card,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
     overflow: 'hidden',
   },
   cardHeader: {
@@ -344,7 +343,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   planTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: -0.5,
@@ -481,12 +480,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pageBtnText: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1,

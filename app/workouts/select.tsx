@@ -22,10 +22,7 @@ import {
   Zap
 } from 'lucide-react-native';
 
-const NEON_LIME = '#80f20d';
-const DEPTH_BG = '#000000';
-const CARD_BG = 'rgba(255, 255, 255, 0.03)';
-const BORDER_COLOR = 'rgba(255, 255, 255, 0.08)';
+const NEON_LIME = '#5fc793';
 
 type PlansTab = 'my-plans' | 'system-plans';
 
@@ -41,6 +38,7 @@ function formatDate(dateString?: string) {
 export default function SelectWorkoutScreen() {
   const router = useRouter();
   const palette = useThemeColors();
+  const styles = useMemo(() => getStyles(palette), [palette]);
 
   const [activeTab, setActiveTab] = useState<PlansTab>('my-plans');
   const [myPlans, setMyPlans] = useState<WorkoutPlan[]>([]);
@@ -148,7 +146,7 @@ export default function SelectWorkoutScreen() {
   };
 
   return (
-    <Screen style={{ backgroundColor: DEPTH_BG }}>
+    <Screen style={{ backgroundColor: palette.background }}>
       <PageHeader
         title="SELECT PLAN"
         subtitle="Choose your training path"
@@ -189,7 +187,7 @@ export default function SelectWorkoutScreen() {
       ) : currentPlans.length === 0 ? (
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIconCircle}>
-            <Info size={32} color="rgba(255,255,255,0.2)" />
+            <Info size={32} color={palette.mutedText} />
           </View>
           <Text style={styles.emptyTitle}>
             {activeTab === 'my-plans' ? 'No Custom Plans' : 'No Default Plans'}
@@ -252,7 +250,7 @@ export default function SelectWorkoutScreen() {
 
                   <View style={styles.metaStrip}>
                     <View style={styles.metaItem}>
-                      <Zap size={10} color="rgba(255,255,255,0.4)" />
+                      <Zap size={10} color={palette.mutedText} />
                       <Text style={styles.metaText}>{plan.source.toUpperCase()}</Text>
                     </View>
                     {activeTab === 'my-plans' && (
@@ -286,7 +284,7 @@ export default function SelectWorkoutScreen() {
                       onPress={() => router.push(`/workouts/plans/${plan.id}`)}
                       style={[styles.detailsAction, active && { flex: 1 }]}
                     >
-                      <ArrowRight size={16} color="#fff" />
+                      <ArrowRight size={16} color={palette.text} />
                       <Text style={styles.detailsActionText}>DETAILS</Text>
                     </Pressable>
 
@@ -295,7 +293,7 @@ export default function SelectWorkoutScreen() {
                         onPress={() => onDeletePlan(plan.id)}
                         style={styles.deleteAction}
                       >
-                        <Trash2 size={16} color="rgba(255,255,255,0.4)" />
+                        <Trash2 size={16} color={palette.mutedText} />
                       </Pressable>
                     )}
                   </View>
@@ -319,7 +317,7 @@ export default function SelectWorkoutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -330,10 +328,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   tabsWrap: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: palette.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: palette.border,
     flexDirection: 'row',
     padding: 6,
     gap: 6,
@@ -349,7 +347,7 @@ const styles = StyleSheet.create({
     backgroundColor: NEON_LIME,
   },
   tabBtnText: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1,
@@ -374,19 +372,19 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: palette.border,
   },
   emptyTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 20,
     fontWeight: '900',
   },
   emptySubtitle: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.mutedText,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -402,7 +400,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   createBtnText: {
-    color: DEPTH_BG,
+    color: '#0A0A0A',
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 1,
@@ -413,9 +411,9 @@ const styles = StyleSheet.create({
   },
   planCard: {
     borderRadius: 24,
-    backgroundColor: CARD_BG,
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: palette.border,
     overflow: 'hidden',
   },
   planCardActive: {
@@ -433,7 +431,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   planTitle: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: -0.5,
@@ -460,21 +458,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   planGoalBadge: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.surface,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: palette.border,
   },
   planGoalText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: palette.mutedText,
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   planDesc: {
-    color: 'rgba(255,255,255,0.5)',
+    color: palette.mutedText,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -489,7 +487,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   metaText: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -510,14 +508,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   activateActionText: {
-    color: DEPTH_BG,
+    color: '#0A0A0A',
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   detailsAction: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.card,
     height: 50,
     borderRadius: 16,
     flexDirection: 'row',
@@ -525,10 +523,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: palette.border,
   },
   detailsActionText: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -537,11 +535,11 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: palette.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: palette.border,
   },
   errorBox: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',

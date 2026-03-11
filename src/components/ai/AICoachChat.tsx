@@ -16,6 +16,7 @@ import { Send, Sparkles, User, X } from 'lucide-react-native';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { sanitizeGeneralText, MAX_LONG_TEXT } from '@/src/lib/validators';
 
 const SUGGESTED_PROMPTS = ['How\'s my progress looking?', 'What should I focus on today?', 'Any tips for recovery?'];
 
@@ -161,7 +162,8 @@ export function AICoachChat() {
                 placeholderTextColor={palette.mutedText}
                 style={[styles.input, { backgroundColor: palette.card, color: palette.text, borderColor: palette.border }]}
                 value={inputValue}
-                onChangeText={setInputValue}
+                onChangeText={(v) => setInputValue(sanitizeGeneralText(v, MAX_LONG_TEXT))}
+                maxLength={MAX_LONG_TEXT}
               />
               <Pressable
                 onPress={handleSend}

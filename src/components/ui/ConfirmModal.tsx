@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { AlertCircle, X } from 'lucide-react-native';
 import React from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -14,10 +15,7 @@ interface ConfirmModalProps {
     showCancel?: boolean;
 }
 
-const NEON_LIME = '#80f20d';
-const BG_DARK = '#000000';
-const CARD_BG = 'rgba(255, 255, 255, 0.05)';
-const BORDER_COLOR = 'rgba(255, 255, 255, 0.1)';
+const NEON_LIME = '#5fc793';
 
 export function ConfirmModal({
     visible,
@@ -30,6 +28,9 @@ export function ConfirmModal({
     variant = 'primary',
     showCancel = true,
 }: ConfirmModalProps) {
+    const palette = useThemeColors();
+    const styles = React.useMemo(() => getStyles(palette), [palette]);
+
     return (
         <Modal
             transparent
@@ -57,8 +58,8 @@ export function ConfirmModal({
                     </View>
 
                     <View style={styles.content}>
-                        <Text style={styles.title}>{title.toUpperCase()}</Text>
-                        <Text style={styles.message}>{message}</Text>
+                        <Text style={[styles.title, { color: palette.text }]}>{title.toUpperCase()}</Text>
+                        <Text style={[styles.message, { color: palette.mutedText }]}>{message}</Text>
                     </View>
 
                     <View style={styles.footer}>
@@ -93,7 +94,7 @@ export function ConfirmModal({
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'center',
@@ -107,10 +108,10 @@ const styles = StyleSheet.create({
     panel: {
         width: '100%',
         maxWidth: 340,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: palette.card,
         borderRadius: 28,
         borderWidth: 1,
-        borderColor: BORDER_COLOR,
+        borderColor: palette.border,
         padding: 24,
         gap: 20,
         ...Platform.select({
@@ -149,13 +150,11 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     title: {
-        color: '#fff',
         fontSize: 18,
         fontWeight: '900',
         letterSpacing: -0.5,
     },
     message: {
-        color: 'rgba(255,255,255,0.5)',
         fontSize: 14,
         lineHeight: 20,
         fontWeight: '500',
@@ -171,7 +170,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         backgroundColor: 'rgba(255,255,255,0.03)',
         borderWidth: 1,
-        borderColor: BORDER_COLOR,
+        borderColor: palette.border,
         alignItems: 'center',
         justifyContent: 'center',
     },

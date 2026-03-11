@@ -1,14 +1,15 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { supabase } from '@/src/lib/supabase';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
+import { saveMetric } from '@/src/lib/api';
 import { getOnboardingStatus } from '@/src/lib/api/onboarding';
 import { getProfile } from '@/src/lib/api/users';
 import { cacheClear, cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
-import { saveMetric } from '@/src/lib/api';
-import { getOfflineQueue, clearOfflineQueue } from '@/src/lib/cache/indexeddb';
-import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
+import { clearOfflineQueue, getOfflineQueue } from '@/src/lib/cache/indexeddb';
+import { supabase } from '@/src/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -165,6 +166,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, [pathname, router]);
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync();
+    }
+  }, [loading]);
 
   useEffect(() => {
     const syncOffline = async () => {

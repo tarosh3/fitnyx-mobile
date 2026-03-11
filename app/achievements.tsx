@@ -5,6 +5,8 @@ import { Flame, Medal, Trophy, Zap } from 'lucide-react-native';
 import React from 'react';
 import { Dimensions, FlatList, StyleSheet, Text, View } from 'react-native';
 
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 44) / 2; // Account for 16px side padding + 12px gap
 
@@ -18,6 +20,8 @@ const ACHIEVEMENTS = [
 ];
 
 export default function AchievementsScreen() {
+    const palette = useThemeColors();
+    const styles = React.useMemo(() => getStyles(palette), [palette]);
     return (
         <Screen scroll={false} contentContainerStyle={styles.screenContent}>
             <PageHeader title="Achievements" subtitle="Track your fitness milestones" backTo="/" />
@@ -31,12 +35,12 @@ export default function AchievementsScreen() {
                 showsVerticalScrollIndicator={false}
                 renderItem={({ item }) => (
                     <BlurView intensity={10} tint="light" style={styles.card}>
-                        <View style={[styles.iconCircle, { backgroundColor: item.unlocked ? `${item.color}20` : 'rgba(255,255,255,0.05)' }]}>
-                            <item.icon color={item.unlocked ? item.color : 'rgba(255,255,255,0.2)'} size={32} />
+                        <View style={[styles.iconCircle, { backgroundColor: item.unlocked ? `${item.color}20` : palette.surface }]}>
+                            <item.icon color={item.unlocked ? item.color : palette.mutedText} size={32} />
                         </View>
                         <Text style={styles.cardTitle}>{item.title}</Text>
                         <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
-                        <Text style={[styles.cardStatus, item.unlocked && { color: '#80f20d' }]}>{item.status}</Text>
+                        <Text style={[styles.cardStatus, item.unlocked && { color: '#5fc793' }]}>{item.status}</Text>
                     </BlurView>
                 )}
             />
@@ -44,7 +48,7 @@ export default function AchievementsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     screenContent: {
         flex: 1,
     },
@@ -61,9 +65,9 @@ const styles = StyleSheet.create({
         height: 180,
         borderRadius: 24,
         padding: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: palette.border,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -77,14 +81,14 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     cardTitle: {
-        color: '#FFFFFF',
+        color: palette.text,
         fontSize: 14,
         fontWeight: '900',
         textAlign: 'center',
         marginBottom: 4,
     },
     cardDesc: {
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         fontSize: 10,
         fontWeight: '500',
         textAlign: 'center',
@@ -93,7 +97,7 @@ const styles = StyleSheet.create({
     cardStatus: {
         fontSize: 10,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.2)',
+        color: palette.mutedText,
         letterSpacing: 1,
         textTransform: 'uppercase',
     },

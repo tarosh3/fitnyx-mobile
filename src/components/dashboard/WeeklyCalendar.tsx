@@ -1,22 +1,22 @@
-import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { addDays, format, isSameDay, startOfWeek } from 'date-fns';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 export function WeeklyCalendar() {
   const palette = useThemeColors();
 
   const calendarDays = useMemo(() => {
     const today = new Date();
-    // In JS/date-fns, weekStartsOn: 1 means Monday
+    // weekStartsOn: 1 means Monday
     const start = startOfWeek(today, { weekStartsOn: 1 });
     const days = [];
 
     for (let i = 0; i < 7; i += 1) {
       const current = addDays(start, i);
       days.push({
-        day: format(current, 'EEE'), // Mon, Tue...
-        date: format(current, 'd'), // 22, 23...
+        day: format(current, 'EEe').substring(0, 3).toUpperCase(), // MON, TUE...
+        date: format(current, 'd'), // 2, 3...
         fullDate: current,
         active: isSameDay(current, today),
         dot: i % 2 !== 0, // Mock dot logic for visual variety
@@ -27,7 +27,7 @@ export function WeeklyCalendar() {
 
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.row}>
         {calendarDays.map((item, index) => {
           const isActive = item.active;
 
@@ -37,7 +37,7 @@ export function WeeklyCalendar() {
                 style={[
                   styles.dayCard,
                   {
-                    backgroundColor: isActive ? palette.primary : 'transparent',
+                    backgroundColor: isActive ? palette.primary : palette.card,
                     borderColor: isActive ? palette.primary : palette.border,
                   },
                 ]}
@@ -59,7 +59,7 @@ export function WeeklyCalendar() {
                     styles.dayText,
                     {
                       color: isActive ? palette.primaryText : palette.mutedText,
-                      marginTop: item.dot ? 8 : 0,
+                      marginTop: item.dot ? 6 : 0,
                     },
                   ]}
                 >
@@ -79,7 +79,7 @@ export function WeeklyCalendar() {
             </View>
           );
         })}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -87,35 +87,38 @@ export function WeeklyCalendar() {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
-  scrollContent: {
-    paddingHorizontal: 4,
-    gap: 12, // Space between items
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
   },
   dayWrap: {
     alignItems: 'center',
-    minWidth: 50,
+    flex: 1,
   },
   dayCard: {
     alignItems: 'center',
-    borderRadius: 32,
+    borderRadius: 24,
     borderWidth: 1,
-    height: 85,
+    height: 72,
     justifyContent: 'center',
     position: 'relative',
-    width: 52,
+    width: '92%',
+    maxWidth: 48,
   },
   dot: {
     borderRadius: 999,
-    height: 6,
+    height: 4,
     position: 'absolute',
-    top: 12,
-    width: 6,
+    top: 8,
+    width: 4,
   },
   dayText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   dateText: {

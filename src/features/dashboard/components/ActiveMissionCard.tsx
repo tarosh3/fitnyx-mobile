@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import { PlayCircle } from 'lucide-react-native';
+import { Play } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 const BG_DARK = '#0A0A0A';
 
 interface ActiveMissionCardProps {
@@ -43,7 +43,7 @@ export function ActiveMissionCard({ activePlan, activeSession, currentDay }: Act
                         </View>
                     ) : null}
                 </View>
-                <PlayCircle color={BG_DARK} size={40} fill={BG_DARK} strokeWidth={1} />
+                <Play color={BG_DARK} size={32} fill={BG_DARK} />
 
                 {/* Subtle bubble pattern simulated with absolutely positioned decorative views if needed, 
                     but pure color with the big play icon is most important for the "exact" look */}

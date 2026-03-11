@@ -4,17 +4,19 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import { Input } from '@/src/components/ui/Input';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { sanitizeGeneralText, MAX_SHORT_TEXT, MAX_MEDIUM_TEXT, MAX_LONG_TEXT } from '@/src/lib/validators';
 
 interface DietWizardProps {
   onComplete: (preferences: any) => void;
   isLoading: boolean;
 }
 
-const NEON_LIME = '#80f20d';
+const NEON_LIME = '#5fc793';
 const STEPS = ['GOALS', 'ACTIVITY', 'HEALTH'];
 
 export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
   const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
   const [currentStep, setCurrentStep] = useState(0);
   const [preferences, setPreferences] = useState({
     goal: 'weight_loss',
@@ -117,7 +119,9 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
                 value={preferences.state}
                 onChangeText={(value) => update('state', value)}
                 placeholder="e.g. Maharashtra, California"
-                style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: '#fff' }}
+                sanitize={(v) => sanitizeGeneralText(v, MAX_SHORT_TEXT)}
+                maxLength={MAX_SHORT_TEXT}
+                style={{ backgroundColor: palette.card, borderColor: palette.border, color: palette.text }}
               />
             </View>
           </View>
@@ -167,7 +171,9 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
                 value={preferences.medical_conditions}
                 onChangeText={(value) => update('medical_conditions', value)}
                 placeholder="e.g. Diabetes, PCOS"
-                style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: '#fff' }}
+                sanitize={(v) => sanitizeGeneralText(v, MAX_MEDIUM_TEXT)}
+                maxLength={MAX_MEDIUM_TEXT}
+                style={{ backgroundColor: palette.card, borderColor: palette.border, color: palette.text }}
               />
             </View>
 
@@ -177,14 +183,16 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
                 value={preferences.dislikes}
                 onChangeText={(value) => update('dislikes', value)}
                 placeholder="e.g. Mushrooms"
-                style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)', color: '#fff' }}
+                sanitize={(v) => sanitizeGeneralText(v, MAX_MEDIUM_TEXT)}
+                maxLength={MAX_MEDIUM_TEXT}
+                style={{ backgroundColor: palette.card, borderColor: palette.border, color: palette.text }}
               />
             </View>
 
             <View style={{ gap: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={styles.label}>Specific requirements</Text>
-                <Info size={12} color="rgba(255,255,255,0.3)" />
+                <Info size={12} color={palette.mutedText} />
               </View>
               <Input
                 value={preferences.feedback}
@@ -192,6 +200,8 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
                 placeholder="High protein, replace X with Y..."
                 multiline
                 numberOfLines={4}
+                sanitize={(v) => sanitizeGeneralText(v, MAX_LONG_TEXT)}
+                maxLength={MAX_LONG_TEXT}
                 style={styles.textArea}
               />
             </View>
@@ -241,6 +251,8 @@ function OptionGroup({
   value: string;
   onChange: (next: string) => void;
 }) {
+  const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
   return (
     <View style={styles.group}>
       <Text style={styles.groupLabel}>{title}</Text>
@@ -279,6 +291,8 @@ function CheckboxGroup({
   values: string[];
   onChange: (nextValues: string[]) => void;
 }) {
+  const palette = useThemeColors();
+  const styles = React.useMemo(() => getStyles(palette), [palette]);
   const toggle = (option: string) => {
     if (values.includes(option)) {
       onChange(values.filter((v) => v !== option));
@@ -314,7 +328,7 @@ function CheckboxGroup({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
   container: {
     paddingHorizontal: 4,
   },
@@ -322,14 +336,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    color: '#fff',
+    color: palette.text,
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: 1,
     marginBottom: 4,
   },
   subtitle: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 13,
     fontWeight: '500',
   },
@@ -349,11 +363,11 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: palette.border,
   },
   stepCircleActive: {
     backgroundColor: NEON_LIME,
@@ -369,12 +383,12 @@ const styles = StyleSheet.create({
     borderColor: NEON_LIME,
   },
   stepNumber: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: palette.mutedText,
     fontSize: 11,
     fontWeight: '900',
   },
   stepText: {
-    color: 'rgba(255, 255, 255, 0.3)',
+    color: palette.mutedText,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -385,7 +399,7 @@ const styles = StyleSheet.create({
   stepLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.border,
     marginRight: 8,
   },
   formContainer: {
@@ -395,7 +409,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   groupLabel: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: palette.mutedText,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
@@ -410,16 +424,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: palette.border,
   },
   optionActive: {
     backgroundColor: 'rgba(128, 242, 13, 0.05)',
     borderColor: NEON_LIME,
   },
   optionText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: palette.mutedText,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -428,7 +442,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   label: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: palette.mutedText,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
@@ -436,12 +450,12 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 100,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: palette.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: palette.border,
     padding: 16,
-    color: '#fff',
+    color: palette.text,
     textAlignVertical: 'top',
   },
   actions: {
@@ -461,7 +475,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   nextBtnText: {
-    color: '#000',
+    color: '#0A0A0A',
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -470,14 +484,14 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 56,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: palette.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: palette.border,
   },
   backBtnText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: palette.mutedText,
     fontSize: 15,
     fontWeight: '700',
   },

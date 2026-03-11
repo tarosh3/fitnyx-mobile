@@ -2,8 +2,9 @@ import { Dumbbell, Flame, TrendingDown, TrendingUp } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-const NEON_LIME = '#80f20d';
-const SURFACE_DARK = '#1C1C1E'; // Slightly lighter dark for the cards in Image 1
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
+const NEON_LIME = '#5fc793';
 
 interface PerformanceStatsProps {
     weeklyWorkouts: number;
@@ -12,6 +13,8 @@ interface PerformanceStatsProps {
 }
 
 export function PerformanceStats({ weeklyWorkouts, weeklyVolume, weeklyBurned = 0 }: PerformanceStatsProps) {
+    const palette = useThemeColors();
+    const styles = getStyles(palette);
     return (
         <View style={styles.container}>
             <Text style={styles.sectionTitle}>THIS WEEK'S PERFORMANCE</Text>
@@ -62,14 +65,14 @@ export function PerformanceStats({ weeklyWorkouts, weeklyVolume, weeklyBurned = 
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (palette: any) => StyleSheet.create({
     container: {
         marginBottom: 24,
     },
     sectionTitle: {
         fontSize: 10,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         letterSpacing: 2,
         marginBottom: 16,
         textTransform: 'uppercase',
@@ -82,10 +85,10 @@ const styles = StyleSheet.create({
         flex: 1,
         aspectRatio: 1,
         borderRadius: 16,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        backgroundColor: palette.card,
         padding: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
+        borderColor: palette.border,
         justifyContent: 'space-between',
     },
     cardHeader: {
@@ -101,21 +104,21 @@ const styles = StyleSheet.create({
     statLabel: {
         fontSize: 9,
         fontWeight: '900',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
         letterSpacing: 0.5,
         textAlign: 'center',
     },
     statValue: {
         fontSize: 22,
         fontWeight: '900',
-        color: '#FFFFFF',
+        color: palette.text,
         fontStyle: 'italic',
     },
     statUnit: {
         fontSize: 10,
         fontWeight: '700',
         fontStyle: 'normal',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: palette.mutedText,
     },
     trendPercent: {
         fontSize: 8,
