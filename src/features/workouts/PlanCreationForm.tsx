@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Input } from '@/src/components/ui/Input';
 import { PlanData } from '@/src/features/workouts/types';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { sanitizeGeneralText, MAX_TITLE, MAX_LONG_TEXT, MAX_SHORT_TEXT } from '@/src/lib/validators';
 import { Calendar, ChevronRight, Info, Target } from 'lucide-react-native';
 import { Pressable } from 'react-native';
 
@@ -54,6 +55,8 @@ export function PlanCreationForm({ initialData, onSubmit, loading }: PlanCreatio
             value={formData.title}
             onChangeText={(title) => setFormData({ ...formData, title })}
             placeholder="e.g. SUMMER SHRED"
+            sanitize={(v) => sanitizeGeneralText(v, MAX_TITLE)}
+            maxLength={MAX_TITLE}
             style={styles.input}
           />
         </View>
@@ -69,6 +72,8 @@ export function PlanCreationForm({ initialData, onSubmit, loading }: PlanCreatio
             placeholder="BRIEF DESCRIPTION"
             multiline
             numberOfLines={4}
+            sanitize={(v) => sanitizeGeneralText(v, MAX_LONG_TEXT)}
+            maxLength={MAX_LONG_TEXT}
             style={styles.textArea}
           />
         </View>
@@ -112,6 +117,8 @@ export function PlanCreationForm({ initialData, onSubmit, loading }: PlanCreatio
               value={formData.goal || ''}
               onChangeText={(goal) => setFormData({ ...formData, goal })}
               placeholder="ENTER CUSTOM GOAL"
+              sanitize={(v) => sanitizeGeneralText(v, MAX_SHORT_TEXT)}
+              maxLength={MAX_SHORT_TEXT}
               style={[styles.input, { marginTop: 12 }]}
             />
           ) : null}

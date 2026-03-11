@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import { Input } from '@/src/components/ui/Input';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { sanitizeGeneralText, MAX_SHORT_TEXT, MAX_MEDIUM_TEXT, MAX_LONG_TEXT } from '@/src/lib/validators';
 
 interface DietWizardProps {
   onComplete: (preferences: any) => void;
@@ -118,6 +119,8 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
                 value={preferences.state}
                 onChangeText={(value) => update('state', value)}
                 placeholder="e.g. Maharashtra, California"
+                sanitize={(v) => sanitizeGeneralText(v, MAX_SHORT_TEXT)}
+                maxLength={MAX_SHORT_TEXT}
                 style={{ backgroundColor: palette.card, borderColor: palette.border, color: palette.text }}
               />
             </View>
@@ -168,6 +171,8 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
                 value={preferences.medical_conditions}
                 onChangeText={(value) => update('medical_conditions', value)}
                 placeholder="e.g. Diabetes, PCOS"
+                sanitize={(v) => sanitizeGeneralText(v, MAX_MEDIUM_TEXT)}
+                maxLength={MAX_MEDIUM_TEXT}
                 style={{ backgroundColor: palette.card, borderColor: palette.border, color: palette.text }}
               />
             </View>
@@ -178,6 +183,8 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
                 value={preferences.dislikes}
                 onChangeText={(value) => update('dislikes', value)}
                 placeholder="e.g. Mushrooms"
+                sanitize={(v) => sanitizeGeneralText(v, MAX_MEDIUM_TEXT)}
+                maxLength={MAX_MEDIUM_TEXT}
                 style={{ backgroundColor: palette.card, borderColor: palette.border, color: palette.text }}
               />
             </View>
@@ -193,6 +200,8 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
                 placeholder="High protein, replace X with Y..."
                 multiline
                 numberOfLines={4}
+                sanitize={(v) => sanitizeGeneralText(v, MAX_LONG_TEXT)}
+                maxLength={MAX_LONG_TEXT}
                 style={styles.textArea}
               />
             </View>

@@ -4,7 +4,6 @@ import { Bell, ChevronLeft, ChevronRight, FileText, LogOut, Moon, Shield, Sun, U
 import React, { useState } from 'react';
 import { Dimensions, Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { AppIconSvg } from '@/src/components/ui/Logo';
 import { Screen } from '@/src/components/ui/Screen';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -141,7 +140,11 @@ export default function SettingsScreen() {
       </Pressable>
 
       <View style={styles.footerBrand}>
-        <AppIconSvg size={42} color={neonLime} />
+        <Image
+          source={require('@/assets/images/fitnyx_logo_4k_transparent.png')}
+          style={styles.footerLogo}
+          resizeMode="contain"
+        />
         <Text style={styles.versionText}>v1.0.0 — FITNYX</Text>
       </View>
     </Screen>
@@ -323,6 +326,10 @@ const getStyles = (palette: any, neonLime: string) => StyleSheet.create({
     marginTop: 64,
     alignItems: 'center',
     opacity: 0.6,
+  },
+  footerLogo: {
+    width: 120,
+    height: 40,
   },
   versionText: {
     color: palette.mutedText,

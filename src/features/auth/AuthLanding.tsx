@@ -4,7 +4,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     BackHandler,
     Dimensions,
+    Platform,
     Pressable,
+    ScrollView,
     StatusBar,
     StyleSheet,
     Text,
@@ -25,6 +27,11 @@ import { AuthForm } from './AuthForm';
 import { OnboardingCarousel } from './components/OnboardingCarousel';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Android's Dimensions.get('window') excludes the status bar, so the
+// available height is smaller. Use slightly more generous header ratios.
+const EXPANDED_TOP_RATIO = Platform.OS === 'android' ? 0.22 : 0.18;
+const EXPANDED_PANEL_RATIO = Platform.OS === 'android' ? 0.78 : 0.82;
 
 // The wave SVG sits top:-60 above the panel. The wave fill (path M 0,170)
 // starts at panelTop - 60 + 170 = 0.52h + 110 ≈ 64%, and at the right edge
@@ -98,11 +105,11 @@ export function AuthLanding() {
     // Animated styles
     const rTopSectionStyle = useAnimatedStyle(() => {
         // IDLE = TOP_SECTION_HEIGHT (0.73) — covers full wave transition area
-        // Expanded (both LOGIN and SIGNUP) = 0.18 — just enough for the logo
+        // Expanded = just enough for the logo (platform-adjusted)
         const height = interpolate(
             expandProgress.value,
             [0, 1],
-            [TOP_SECTION_HEIGHT, SCREEN_HEIGHT * 0.18],
+            [TOP_SECTION_HEIGHT, SCREEN_HEIGHT * EXPANDED_TOP_RATIO],
             Extrapolate.CLAMP
         );
         return { height };
@@ -110,11 +117,11 @@ export function AuthLanding() {
 
     const rPanelStyle = useAnimatedStyle(() => {
         // IDLE = BOTTOM_SECTION_HEIGHT (0.48)
-        // Expanded (both LOGIN and SIGNUP) = 0.82 — fills nearly the full screen
+        // Expanded = fills nearly the full screen (platform-adjusted)
         const height = interpolate(
             expandProgress.value,
             [0, 1],
-            [BOTTOM_SECTION_HEIGHT, SCREEN_HEIGHT * 0.82],
+            [BOTTOM_SECTION_HEIGHT, SCREEN_HEIGHT * EXPANDED_PANEL_RATIO],
             Extrapolate.CLAMP
         );
         return { height };
@@ -248,23 +255,25 @@ export function AuthLanding() {
                             </View>
                         </View>
                     ) : (
-                        <Animated.View style={[styles.authContent, rFormStyle]}>
-                            <View style={styles.panelHeaderRow}>
-                                <Pressable onPress={handleCollapse} style={styles.backButton} hitSlop={15}>
-                                    <ChevronLeft color="#FFFFFF" size={28} />
-                                </Pressable>
-                                <Text style={styles.panelTitle}>
-                                    {authState === 'SIGN_UP' ? 'Create your FitNyx account' : 'Login to continue your progress'}
-                                </Text>
-                            </View>
-                            <AuthForm
-                                initialMode={authState === 'SIGN_UP' ? 'signup' : 'login'}
-                                onSwitchMode={(mode) => {
-                                    setAuthState(mode === 'signup' ? 'SIGN_UP' : 'LOG_IN');
-                                    modeProgress.value = withSpring(mode === 'signup' ? 1 : 0, { damping: 14, stiffness: 80 });
-                                }}
-                            />
-                        </Animated.View>
+                        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }} showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
+                            <Animated.View style={[styles.authContent, rFormStyle]}>
+                                <View style={styles.panelHeaderRow}>
+                                    <Pressable onPress={handleCollapse} style={styles.backButton} hitSlop={15}>
+                                        <ChevronLeft color="#FFFFFF" size={28} />
+                                    </Pressable>
+                                    <Text style={styles.panelTitle}>
+                                        {authState === 'SIGN_UP' ? 'Create your FitNyx account' : 'Login to continue your progress'}
+                                    </Text>
+                                </View>
+                                <AuthForm
+                                    initialMode={authState === 'SIGN_UP' ? 'signup' : 'login'}
+                                    onSwitchMode={(mode) => {
+                                        setAuthState(mode === 'signup' ? 'SIGN_UP' : 'LOG_IN');
+                                        modeProgress.value = withSpring(mode === 'signup' ? 1 : 0, { damping: 14, stiffness: 80 });
+                                    }}
+                                />
+                            </Animated.View>
+                        </ScrollView>
                     )}
                 </Animated.View>
             </Animated.View>
@@ -361,7 +370,6 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
     authContent: {
-        flex: 1,
     },
     panelHeaderRow: {
         flexDirection: 'row',

@@ -7,11 +7,19 @@ interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   containerStyle?: StyleProp<ViewStyle>;
+  /** Security: optional sanitiser applied to input on every keystroke */
+  sanitize?: (text: string) => string;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(
-  ({ label, error, style, containerStyle, placeholderTextColor, ...props }, ref) => {
+  ({ label, error, style, containerStyle, placeholderTextColor, sanitize, onChangeText, ...props }, ref) => {
     const palette = useThemeColors();
+
+    // Security: wrap onChangeText to apply sanitiser before propagating
+    const handleChangeText = (text: string) => {
+      const cleaned = sanitize ? sanitize(text) : text;
+      onChangeText?.(cleaned);
+    };
 
     return (
       <View style={[styles.container, containerStyle]}>
@@ -28,6 +36,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             style,
           ]}
           placeholderTextColor={placeholderTextColor || palette.mutedText}
+          onChangeText={handleChangeText}
           {...props}
         />
         {error && <Text style={[styles.error, { color: palette.destructive }]}>{error}</Text>}

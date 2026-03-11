@@ -9,6 +9,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { Button } from '@/src/components/ui/Button';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { supabase } from '@/src/lib/supabase';
+import { sanitizeName, sanitizeEmail, MAX_NAME, MAX_EMAIL, MAX_PASSWORD } from '@/src/lib/validators';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -34,6 +35,15 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
 
+  const isMounted = React.useRef(true);
+  React.useEffect(() => {
+    return () => { isMounted.current = false; };
+  }, []);
+
+  const safeSetLoading = (val: boolean) => isMounted.current && setLoading(val);
+  const safeSetError = (val: string | null) => isMounted.current && setError(val);
+  const safeSetConfirmation = (val: string | null) => isMounted.current && setConfirmation(val);
+
   const formOpacity = useSharedValue(1);
   const formTranslateX = useSharedValue(0);
 
@@ -45,6 +55,7 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
     formTranslateX.value = withTiming(-10, { duration: 150 });
 
     setTimeout(() => {
+      if (!isMounted.current) return;
       setMode(newMode);
       if (newMode === 'login' || newMode === 'signup') {
         onSwitchMode?.(newMode);
@@ -70,8 +81,8 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
   const handleAuth = async () => {
     if (!email.trim()) return;
 
-    setLoading(true);
-    setError(null);
+    safeSetLoading(true);
+    safeSetError(null);
 
     try {
       if (mode === 'signup') {
@@ -88,14 +99,14 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
         });
 
         if (signUpError) throw signUpError;
-        setConfirmation('Check your email to confirm account.');
+        safeSetConfirmation('Check your email to confirm account.');
       } else if (mode === 'forgot_password') {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo,
         });
 
         if (resetError) throw resetError;
-        setConfirmation('Check your email for the password reset link.');
+        safeSetConfirmation('Check your email for the password reset link.');
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -109,22 +120,22 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
     } catch (err: any) {
       const message = String(err?.message || '').toLowerCase();
       if (message.includes('user already registered') || message.includes('email already') || err?.status === 422) {
-        setError('Email address already exists. Please login instead.');
+        safeSetError('Email address already exists. Please login instead.');
       } else if (message.includes('rate limit') || err?.status === 429) {
-        setError('Too many attempts. Please wait before trying again.');
+        safeSetError('Too many attempts. Please wait before trying again.');
       } else if (message.includes('invalid login credentials')) {
-        setError('Invalid email or password. Please try again.');
+        safeSetError('Invalid email or password. Please try again.');
       } else {
-        setError(err?.message || 'An error occurred. Please try again.');
+        safeSetError(err?.message || 'An error occurred. Please try again.');
       }
     } finally {
-      setLoading(false);
+      safeSetLoading(false);
     }
   };
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
-    setError(null);
-    setLoading(true);
+    safeSetError(null);
+    safeSetLoading(true);
 
     try {
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -142,7 +153,7 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
       if (result.type !== 'success' || !result.url) {
-        setLoading(false);
+        safeSetLoading(false);
         return;
       }
 
@@ -169,9 +180,9 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
       router.replace('/dashboard');
       onSuccess?.();
     } catch (err: any) {
-      setError(err?.message || 'Social login failed. Please try again.');
+      safeSetError(err?.message || 'Social login failed. Please try again.');
     } finally {
-      setLoading(false);
+      safeSetLoading(false);
     }
   };
 
@@ -201,26 +212,28 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
         </View>
       )}
 
-      <Animated.View style={[rFormStyle, { flex: 1, gap: 16 }]}>
+      <Animated.View style={[rFormStyle, { gap: 12 }]}>
         {mode === 'signup' && (
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
               <TextInput
                 value={firstName}
-                onChangeText={setFirstName}
+                onChangeText={(v) => setFirstName(sanitizeName(v))}
                 placeholder="First name"
                 placeholderTextColor="#4B5563"
                 autoCapitalize="words"
+                maxLength={MAX_NAME}
                 style={styles.premiumInput}
               />
             </View>
             <View style={{ flex: 1 }}>
               <TextInput
                 value={lastName}
-                onChangeText={setLastName}
+                onChangeText={(v) => setLastName(sanitizeName(v))}
                 placeholder="Last name"
                 placeholderTextColor="#4B5563"
                 autoCapitalize="words"
+                maxLength={MAX_NAME}
                 style={styles.premiumInput}
               />
             </View>
@@ -229,12 +242,13 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
 
         <TextInput
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(v) => setEmail(sanitizeEmail(v))}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
           placeholder="email@example.com"
           placeholderTextColor="#4B5563"
+          maxLength={MAX_EMAIL}
           style={styles.premiumInput}
         />
 
@@ -248,6 +262,7 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
                 placeholder="••••••••"
                 placeholderTextColor="#4B5563"
                 autoCapitalize="none"
+                maxLength={MAX_PASSWORD}
                 style={styles.passwordInput}
               />
               <Pressable onPress={() => setShowPassword((prev) => !prev)} style={styles.eyeBtn}>
@@ -313,8 +328,7 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
 
 const getStyles = (palette: any) => StyleSheet.create({
   formContainer: {
-    flex: 1,
-    gap: 16,
+    gap: 12,
   },
   errorBox: {
     borderRadius: 12,
@@ -330,31 +344,31 @@ const getStyles = (palette: any) => StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   premiumInput: {
     backgroundColor: '#151515',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     color: '#FFFFFF',
-    minHeight: 60,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    minHeight: 50,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    fontSize: 15,
   },
   passwordWrap: {
     backgroundColor: '#151515',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 60,
-    paddingHorizontal: 16,
+    minHeight: 50,
+    paddingHorizontal: 14,
   },
   passwordInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: '#FFFFFF',
     height: '100%',
   },
@@ -362,38 +376,38 @@ const getStyles = (palette: any) => StyleSheet.create({
     padding: 8,
   },
   forgotLink: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    marginTop: 12,
+    marginTop: 8,
     textAlign: 'right',
     color: '#5FC793',
   },
   primaryButton: {
     backgroundColor: '#5FC793',
-    height: 60,
-    borderRadius: 30,
-    marginTop: 10,
+    height: 50,
+    borderRadius: 25,
+    marginTop: 6,
     shadowColor: '#5FC793',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowRadius: 10,
     elevation: 8,
   },
   primaryButtonText: {
     color: '#000000',
     fontWeight: '900',
     letterSpacing: 2,
-    fontSize: 16,
+    fontSize: 15,
   },
   socialWrap: {
-    marginTop: 10,
-    gap: 12,
+    marginTop: 6,
+    gap: 10,
   },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
-    gap: 12,
+    marginVertical: 6,
+    gap: 10,
   },
   dividerLine: {
     flex: 1,
@@ -406,8 +420,8 @@ const getStyles = (palette: any) => StyleSheet.create({
     fontWeight: '800',
   },
   socialBtn: {
-    height: 56,
-    borderRadius: 28,
+    height: 46,
+    borderRadius: 23,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     backgroundColor: '#151515',
@@ -416,13 +430,14 @@ const getStyles = (palette: any) => StyleSheet.create({
   },
   socialText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 14,
+    paddingBottom: 4,
   },
   switchText: {
     fontSize: 14,

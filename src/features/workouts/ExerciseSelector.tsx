@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Input } from '@/src/components/ui/Input';
 import { DayData } from '@/src/features/workouts/types';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { sanitizeSearch, sanitizeNumericInt, sanitizeNumericDecimal, MAX_SEARCH } from '@/src/lib/validators';
 import {
   addExercisesToDay,
   CreateExerciseInput,
@@ -162,6 +163,8 @@ export function ExerciseSelector({ days, dayIds, onFinish }: ExerciseSelectorPro
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="SEARCH EXERCISES..."
+            sanitize={sanitizeSearch}
+            maxLength={MAX_SEARCH}
             style={styles.searchInput}
           />
         </View>
@@ -223,6 +226,8 @@ export function ExerciseSelector({ days, dayIds, onFinish }: ExerciseSelectorPro
                 keyboardType="number-pad"
                 value={`${exerciseForm.target_sets}`}
                 onChangeText={(value) => setExerciseForm((prev) => ({ ...prev, target_sets: Number(value) || 0 }))}
+                sanitize={(v) => sanitizeNumericInt(v, 3)}
+                maxLength={3}
                 style={styles.miniInput}
               />
             </View>
@@ -232,6 +237,8 @@ export function ExerciseSelector({ days, dayIds, onFinish }: ExerciseSelectorPro
                 keyboardType="number-pad"
                 value={`${exerciseForm.target_reps}`}
                 onChangeText={(value) => setExerciseForm((prev) => ({ ...prev, target_reps: Number(value) || 0 }))}
+                sanitize={(v) => sanitizeNumericInt(v, 3)}
+                maxLength={3}
                 style={styles.miniInput}
               />
             </View>
@@ -246,6 +253,8 @@ export function ExerciseSelector({ days, dayIds, onFinish }: ExerciseSelectorPro
                     target_weight_kg: value ? Number(value) : undefined,
                   }))
                 }
+                sanitize={(v) => sanitizeNumericDecimal(v, 6)}
+                maxLength={6}
                 style={styles.miniInput}
               />
             </View>
@@ -255,6 +264,8 @@ export function ExerciseSelector({ days, dayIds, onFinish }: ExerciseSelectorPro
                 keyboardType="number-pad"
                 value={`${exerciseForm.rest_seconds}`}
                 onChangeText={(value) => setExerciseForm((prev) => ({ ...prev, rest_seconds: Number(value) || 0 }))}
+                sanitize={(v) => sanitizeNumericInt(v, 4)}
+                maxLength={4}
                 style={styles.miniInput}
               />
             </View>
