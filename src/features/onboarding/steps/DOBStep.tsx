@@ -1,25 +1,137 @@
-import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { NativeScrollEvent, NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { OnboardingStepProps } from '@/src/features/onboarding/types';
 import { StepScaffold } from '@/src/features/onboarding/steps/StepScaffold';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
+
+const ITEM_HEIGHT = 48;
+const VISIBLE_ITEMS = 5;
+const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+
+interface WheelPickerProps {
+  items: { label: string; value: number }[];
+  selectedValue: number;
+  onValueChange: (value: number) => void;
+  palette: any;
+}
+
+function WheelPicker({ items, selectedValue, onValueChange, palette }: WheelPickerProps) {
+  const scrollRef = useRef<Animated.ScrollView>(null);
+  const initialIndex = items.findIndex((item) => item.value === selectedValue);
+  const initialOffset = Math.max(0, initialIndex) * ITEM_HEIGHT;
+
+  const handleMomentumEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = e.nativeEvent.contentOffset.y;
+      const index = Math.round(offsetY / ITEM_HEIGHT);
+      const clamped = Math.max(0, Math.min(index, items.length - 1));
+      if (items[clamped]) {
+        onValueChange(items[clamped].value);
+      }
+    },
+    [items, onValueChange],
+  );
+
+  // Padding so first/last items can be centered
+  const topPad = (VISIBLE_ITEMS - 1) / 2 * ITEM_HEIGHT;
+
+  return (
+    <View style={[wheelStyles.container, { height: PICKER_HEIGHT }]}>
+      {/* Selection highlight */}
+      <View
+        style={[
+          wheelStyles.highlight,
+          {
+            top: topPad,
+            backgroundColor: palette.primary + '18',
+            borderColor: palette.primary + '40',
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      <Animated.ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        decelerationRate="fast"
+        contentOffset={{ x: 0, y: initialOffset }}
+        onMomentumScrollEnd={handleMomentumEnd}
+        contentContainerStyle={{ paddingVertical: topPad }}
+      >
+        {items.map((item) => (
+          <View key={item.value} style={wheelStyles.item}>
+            <Text
+              style={[
+                wheelStyles.itemText,
+                {
+                  color: item.value === selectedValue ? '#FFFFFF' : palette.mutedText,
+                  fontWeight: item.value === selectedValue ? '700' : '400',
+                  fontSize: item.value === selectedValue ? 20 : 16,
+                },
+              ]}
+            >
+              {item.label}
+            </Text>
+          </View>
+        ))}
+      </Animated.ScrollView>
+
+      {/* Top/bottom fade gradients */}
+      <View style={[wheelStyles.fadeTop, { backgroundColor: palette.card }]} pointerEvents="none" />
+      <View style={[wheelStyles.fadeBottom, { backgroundColor: palette.card }]} pointerEvents="none" />
+    </View>
+  );
+}
+
+const wheelStyles = StyleSheet.create({
+  container: {
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  highlight: {
+    borderRadius: 12,
+    borderWidth: 1,
+    height: ITEM_HEIGHT,
+    left: 4,
+    position: 'absolute',
+    right: 4,
+    zIndex: 1,
+  },
+  item: {
+    alignItems: 'center',
+    height: ITEM_HEIGHT,
+    justifyContent: 'center',
+  },
+  itemText: {
+    textAlign: 'center',
+  },
+  fadeTop: {
+    height: ITEM_HEIGHT * 1.2,
+    left: 0,
+    opacity: 0.7,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 2,
+  },
+  fadeBottom: {
+    bottom: 0,
+    height: ITEM_HEIGHT * 1.2,
+    left: 0,
+    opacity: 0.7,
+    position: 'absolute',
+    right: 0,
+    zIndex: 2,
+  },
+});
 
 export function DOBStep({ data, onNext, saving }: OnboardingStepProps) {
   const palette = useThemeColors();
@@ -40,20 +152,24 @@ export function DOBStep({ data, onNext, saving }: OnboardingStepProps) {
   const [year, setYear] = useState(initial.year);
   const [error, setError] = useState('');
 
-  const years = useMemo(() => {
-    const result: number[] = [];
+  const yearItems = useMemo(() => {
+    const result: { label: string; value: number }[] = [];
     for (let y = currentYear - 13; y >= currentYear - 100; y -= 1) {
-      result.push(y);
+      result.push({ label: `${y}`, value: y });
     }
     return result;
   }, [currentYear]);
 
+  const monthItems = useMemo(
+    () => MONTHS.map((label, index) => ({ label, value: index })),
+    [],
+  );
+
   const daysInMonth = useMemo(() => new Date(year, month + 1, 0).getDate(), [year, month]);
 
-  const days = useMemo(
-    () =>
-      Array.from({ length: daysInMonth }, (_, i) => i + 1),
-    [daysInMonth]
+  const dayItems = useMemo(
+    () => Array.from({ length: daysInMonth }, (_, i) => ({ label: `${i + 1}`, value: i + 1 })),
+    [daysInMonth],
   );
 
   const handleSubmit = () => {
@@ -92,37 +208,27 @@ export function DOBStep({ data, onNext, saving }: OnboardingStepProps) {
       error={error}
     >
       <View style={styles.pickerRow}>
-        <View style={[styles.pickerWrap, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-          <Text style={[styles.pickerLabel, { color: palette.mutedText }]}>Day</Text>
-          <Picker selectedValue={day} onValueChange={(value) => setDay(Number(value))} style={{ color: palette.text }}>
-            {days.map((value) => (
-              <Picker.Item key={value} label={`${value}`} value={value} />
-            ))}
-          </Picker>
+        <View style={[styles.column, { borderColor: palette.border, backgroundColor: palette.card }]}>
+          <Text style={[styles.columnLabel, { color: palette.mutedText }]}>DAY</Text>
+          <WheelPicker items={dayItems} selectedValue={day} onValueChange={setDay} palette={palette} />
         </View>
 
-        <View style={[styles.pickerWrap, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-          <Text style={[styles.pickerLabel, { color: palette.mutedText }]}>Month</Text>
-          <Picker selectedValue={month} onValueChange={(value) => setMonth(Number(value))} style={{ color: palette.text }}>
-            {MONTHS.map((label, index) => (
-              <Picker.Item key={label} label={label.slice(0, 3)} value={index} />
-            ))}
-          </Picker>
+        <View style={[styles.column, { borderColor: palette.border, backgroundColor: palette.card }]}>
+          <Text style={[styles.columnLabel, { color: palette.mutedText }]}>MONTH</Text>
+          <WheelPicker items={monthItems} selectedValue={month} onValueChange={setMonth} palette={palette} />
         </View>
 
-        <View style={[styles.pickerWrap, { borderColor: palette.border, backgroundColor: palette.card }]}> 
-          <Text style={[styles.pickerLabel, { color: palette.mutedText }]}>Year</Text>
-          <Picker selectedValue={year} onValueChange={(value) => setYear(Number(value))} style={{ color: palette.text }}>
-            {years.map((value) => (
-              <Picker.Item key={value} label={`${value}`} value={value} />
-            ))}
-          </Picker>
+        <View style={[styles.column, { borderColor: palette.border, backgroundColor: palette.card }]}>
+          <Text style={[styles.columnLabel, { color: palette.mutedText }]}>YEAR</Text>
+          <WheelPicker items={yearItems} selectedValue={year} onValueChange={setYear} palette={palette} />
         </View>
       </View>
 
-      <Text style={[styles.ageText, { color: palette.mutedText }]}> 
-        You are <Text style={{ color: palette.primary, fontWeight: '700' }}>{computedAge}</Text> years old
-      </Text>
+      <View style={[styles.ageBadge, { backgroundColor: palette.primary + '15', borderColor: palette.primary + '30' }]}>
+        <Text style={[styles.ageText, { color: palette.mutedText }]}>
+          You are <Text style={{ color: palette.primary, fontWeight: '800' }}>{computedAge}</Text> years old
+        </Text>
+      </View>
     </StepScaffold>
   );
 }
@@ -130,25 +236,34 @@ export function DOBStep({ data, onNext, saving }: OnboardingStepProps) {
 const styles = StyleSheet.create({
   pickerRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
-  pickerWrap: {
-    borderRadius: 14,
+  column: {
+    borderRadius: 16,
     borderWidth: 1,
     flex: 1,
     overflow: 'hidden',
-  },
-  pickerLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    paddingLeft: 12,
     paddingTop: 10,
+  },
+  columnLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+    textAlign: 'center',
     textTransform: 'uppercase',
   },
+  ageBadge: {
+    alignSelf: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
   ageText: {
-    fontSize: 13,
-    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

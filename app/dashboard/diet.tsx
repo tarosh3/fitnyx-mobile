@@ -1,6 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Sparkles, Wand2 } from 'lucide-react-native';
+import LottieView from 'lottie-react-native';
+import { ChevronLeft, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -105,7 +106,12 @@ export default function DietScreen() {
         <View style={styles.generatingWrapper}>
           <BlurView intensity={20} tint="dark" style={styles.generatingCard}>
             <View style={styles.iconCircle}>
-              <Wand2 color={NEON_LIME} size={32} />
+              <LottieView
+                source={require('@/assets/animations/chatbot.json')}
+                autoPlay
+                loop
+                style={{ width: 80, height: 80 }}
+              />
             </View>
             <Text style={styles.generatingTitle}>CRAFTING YOUR PLAN</Text>
             <View style={styles.tipContainer}>

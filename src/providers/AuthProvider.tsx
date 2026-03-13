@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { saveMetric } from '@/src/lib/api';
+import { clearSessionId, getSessionId, registerSession } from '@/src/lib/api/auth';
 import { getOnboardingStatus } from '@/src/lib/api/onboarding';
 import { getProfile } from '@/src/lib/api/users';
 import { cacheClear, cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
@@ -105,6 +106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Redirect to onboarding if needed (reacts to path changes)
+  useEffect(() => {
+    if (!loading && user && !onboardingComplete && !ONBOARDING_EXEMPT_PATHS.includes(pathname)) {
+      router.replace('/onboarding');
+    }
+  }, [pathname, loading, user, onboardingComplete]);
+
+  // Initialize auth and listen for state changes (runs once)
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -118,12 +127,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
-        if (currentUser) {
-          fetchUserProfile(currentUser.id);
-          const done = await checkOnboarding(currentUser);
-          if (!done && !ONBOARDING_EXEMPT_PATHS.includes(pathname)) {
-            router.replace('/onboarding');
+        if (currentUser && session?.access_token) {
+          // Ensure device has a registered session (registers if missing)
+          const existingSessionId = await getSessionId();
+          if (!existingSessionId) {
+            try {
+              await registerSession();
+            } catch (e) {
+              console.warn('Failed to register session on init:', e);
+            }
           }
+          fetchUserProfile(currentUser.id);
+          await checkOnboarding(currentUser);
         }
       } catch (error) {
         console.error('Auth check failed', error);
@@ -151,11 +166,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         setLoading(true);
         try {
-          fetchUserProfile(currentUser.id);
-          const done = await checkOnboarding(currentUser);
-          if (!done && !ONBOARDING_EXEMPT_PATHS.includes(pathname)) {
-            router.replace('/onboarding');
+          // Register device session on sign-in (enforces single-device login)
+          if (event === 'SIGNED_IN') {
+            try {
+              await registerSession();
+            } catch (e) {
+              console.warn('Failed to register session:', e);
+            }
           }
+          fetchUserProfile(currentUser.id);
+          await checkOnboarding(currentUser);
         } finally {
           setLoading(false);
         }
@@ -165,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [pathname, router]);
+  }, []);
 
   useEffect(() => {
     if (!loading) {
@@ -197,6 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isOnline, user]);
 
   const signOut = async () => {
+    await clearSessionId();
     await cacheClear();
     await supabase.auth.signOut();
     setUser(null);

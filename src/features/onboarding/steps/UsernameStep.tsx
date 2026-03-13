@@ -4,7 +4,7 @@ import { AtSign, Check, X } from 'lucide-react-native';
 
 import { Input } from '@/src/components/ui/Input';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { checkAndLockUsername, CheckAndLockResponse } from '@/src/lib/api/username';
+import { checkAndLockUsername, CheckAndLockResponse, getUsernameSuggestions } from '@/src/lib/api/username';
 import { OnboardingStepProps } from '@/src/features/onboarding/types';
 import { StepScaffold } from '@/src/features/onboarding/steps/StepScaffold';
 
@@ -22,14 +22,56 @@ function useDebounce<T>(value: T, delay: number): T {
 export function UsernameStep({ data, onNext, saving }: OnboardingStepProps) {
   const palette = useThemeColors();
 
-  const [username, setUsername] = useState(data?.username || '');
+  const [username, setUsername] = useState('');
   const [status, setStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLocked, setIsLocked] = useState(false);
+  const [resolving, setResolving] = useState(true);
 
   const previousUsernameRef = useRef('');
   const debouncedUsername = useDebounce(username, 300);
+
+  // On mount, resolve an available username before showing the form
+  useEffect(() => {
+    let cancelled = false;
+    const resolve = async () => {
+      const initial = data?.username?.toLowerCase();
+      if (!initial) {
+        setResolving(false);
+        return;
+      }
+
+      try {
+        const response = await checkAndLockUsername(initial, '');
+        if (cancelled) return;
+
+        if (response.available) {
+          // Backend username is available — use it directly
+          setUsername(initial);
+          setResolving(false);
+          return;
+        }
+
+        // Username is taken — fetch suggestions and auto-pick the first one
+        const suggestionsResp = await getUsernameSuggestions(initial);
+        if (cancelled) return;
+
+        if (suggestionsResp.suggestions?.length) {
+          setUsername(suggestionsResp.suggestions[0]);
+        } else {
+          // Fallback: show the original so user can manually change
+          setUsername(initial);
+        }
+      } catch {
+        if (!cancelled) setUsername(initial);
+      } finally {
+        if (!cancelled) setResolving(false);
+      }
+    };
+    resolve();
+    return () => { cancelled = true; };
+  }, []);
 
   const validateLocally = useCallback((value: string) => {
     if (!value) return { valid: false, error: '' };
@@ -43,6 +85,9 @@ export function UsernameStep({ data, onNext, saving }: OnboardingStepProps) {
   }, []);
 
   useEffect(() => {
+    // Don't run debounced checks until initial resolution is done
+    if (resolving) return;
+
     if (!debouncedUsername) {
       setStatus('idle');
       setError('');
@@ -95,7 +140,7 @@ export function UsernameStep({ data, onNext, saving }: OnboardingStepProps) {
     };
 
     checkUsername();
-  }, [debouncedUsername, validateLocally]);
+  }, [debouncedUsername, validateLocally, resolving]);
 
   const canContinue = status === 'available' && isLocked && !saving;
 
@@ -105,6 +150,22 @@ export function UsernameStep({ data, onNext, saving }: OnboardingStepProps) {
     if (status === 'taken' || status === 'invalid') return <X size={18} color={palette.destructive} />;
     return null;
   })();
+
+  if (resolving) {
+    return (
+      <StepScaffold
+        title="Choose your username"
+        subtitle="This is how others will find you on FitNyx."
+        onContinue={() => {}}
+        disabled
+      >
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={palette.primary} />
+          <Text style={[styles.loadingText, { color: palette.mutedText }]}>Finding the perfect username for you…</Text>
+        </View>
+      </StepScaffold>
+    );
+  }
 
   return (
     <StepScaffold
@@ -211,5 +272,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 6,
     padding: 12,
+  },
+  loadingWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

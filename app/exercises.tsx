@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import {
   Clock,
   Dumbbell,
@@ -225,6 +226,12 @@ export default function ExercisesScreen() {
             <Text style={styles.challengeBtnText}>JOIN NOW</Text>
           </Pressable>
         </View>
+        <LottieView
+          source={require('@/assets/animations/yoga.json')}
+          autoPlay
+          loop
+          style={styles.challengeAnimation}
+        />
       </View>
 
       <View style={{ marginBottom: 24 }}>
@@ -395,8 +402,14 @@ const getStyles = (palette: any) => StyleSheet.create({
     padding: 24,
     marginBottom: 32,
     minHeight: 160,
-    flexDirection: 'column',
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  challengeAnimation: {
+    width: 150,
+    height: 150,
   },
   challengeTitle: {
     color: '#0A0A0A',

@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, LogOut } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import {
   completeOnboarding,
@@ -27,6 +29,8 @@ import { InjuriesStep } from '@/src/features/onboarding/steps/InjuriesStep';
 import { IntensityStep } from '@/src/features/onboarding/steps/IntensityStep';
 import { MotivationStep } from '@/src/features/onboarding/steps/MotivationStep';
 
+const PRIMARY = '#5FC793';
+
 const STEPS = [
   { id: 0, title: 'Welcome', component: WelcomeStep },
   { id: 1, title: 'Username', component: UsernameStep },
@@ -43,15 +47,34 @@ const STEPS = [
   { id: 12, title: 'Motivation', component: MotivationStep },
 ];
 
+function DotProgress({ current, total }: { current: number; total: number }) {
+  return (
+    <View style={styles.dotRow}>
+      {Array.from({ length: total }, (_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.dot,
+            i < current && styles.dotCompleted,
+            i === current && styles.dotCurrent,
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
 export function OnboardingFlow() {
   const router = useRouter();
   const palette = useThemeColors();
+  const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [stepKey, setStepKey] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
@@ -74,6 +97,7 @@ export function OnboardingFlow() {
   const handleNext = async (stepData?: Record<string, unknown>) => {
     if (currentStep === 0) {
       setCurrentStep(1);
+      setStepKey((k) => k + 1);
       return;
     }
 
@@ -114,64 +138,65 @@ export function OnboardingFlow() {
     }
 
     setCurrentStep((prev) => prev + 1);
+    setStepKey((k) => k + 1);
   };
 
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
+      setStepKey((k) => k + 1);
     }
   };
 
   const handleLogout = async () => {
     await signOut();
-    router.replace('/');
   };
 
-  const progress = useMemo(() => (currentStep / (STEPS.length - 1)) * 100, [currentStep]);
-
   const StepComponent = STEPS[currentStep].component;
+  const showHeader = currentStep > 0;
 
   if (loading) {
     return (
-      <View style={[styles.loading, { backgroundColor: palette.background }]}> 
-        <ActivityIndicator color={palette.primary} size="large" />
+      <View style={[styles.loading, { backgroundColor: palette.background }]}>
+        <ActivityIndicator color={PRIMARY} size="large" />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}> 
-      <View style={[styles.header, { borderColor: palette.border, backgroundColor: `${palette.background}EE` }]}> 
-        <View style={styles.headerRow}>
-          {currentStep > 0 ? (
-            <Pressable onPress={handleBack} style={[styles.iconBtn, { borderColor: palette.border }]}> 
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      {showHeader && (
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <View style={styles.headerRow}>
+            <Pressable
+              onPress={handleBack}
+              style={[styles.iconBtn, { backgroundColor: `${palette.text}08`, borderColor: palette.border }]}
+            >
               <ChevronLeft size={18} color={palette.text} />
             </Pressable>
-          ) : (
-            <View style={styles.iconPlaceholder} />
-          )}
 
-          <Text style={[styles.headerTitle, { color: palette.text }]}>{STEPS[currentStep].title}</Text>
+            <Text style={[styles.headerTitle, { color: palette.text }]}>{STEPS[currentStep].title}</Text>
 
-          <Pressable onPress={handleLogout} style={[styles.iconBtn, { borderColor: palette.border }]}> 
-            <LogOut size={16} color={palette.mutedText} />
-          </Pressable>
-        </View>
-
-        {currentStep > 0 ? (
-          <View style={styles.progressRow}>
-            <Text style={[styles.progressText, { color: palette.mutedText }]}>Step {currentStep}</Text>
-            <View style={[styles.progressTrack, { backgroundColor: palette.border }]}> 
-              <View style={[styles.progressFill, { backgroundColor: palette.primary, width: `${progress}%` }]} />
-            </View>
-            <Text style={[styles.progressText, { color: palette.mutedText }]}>{Math.round(progress)}%</Text>
+            <Pressable
+              onPress={handleLogout}
+              style={[styles.iconBtn, { backgroundColor: `${palette.text}08`, borderColor: palette.border }]}
+            >
+              <LogOut size={16} color={palette.mutedText} />
+            </Pressable>
           </View>
-        ) : null}
-      </View>
 
-      <View style={styles.content}>
+          <DotProgress current={currentStep} total={STEPS.length - 1} />
+        </View>
+      )}
+
+      {/* Step content with animated transition */}
+      <Animated.View
+        key={stepKey}
+        entering={FadeIn.duration(350)}
+        style={[styles.content, !showHeader && { paddingTop: insets.top + 16 }]}
+      >
         <StepComponent onNext={handleNext} onBack={handleBack} data={onboardingData} saving={saving} />
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -186,9 +211,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
-    borderBottomWidth: 1,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
   },
   headerRow: {
     alignItems: 'center',
@@ -199,38 +223,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 999,
     borderWidth: 1,
-    height: 36,
+    height: 38,
     justifyContent: 'center',
-    width: 36,
-  },
-  iconPlaceholder: {
-    width: 36,
+    width: 38,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  progressRow: {
+  dotRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
+    gap: 5,
+    justifyContent: 'center',
+    marginTop: 14,
   },
-  progressText: {
-    fontSize: 11,
-    fontWeight: '600',
-    minWidth: 40,
-    textAlign: 'center',
-  },
-  progressTrack: {
-    borderRadius: 99,
-    flex: 1,
+  dot: {
+    backgroundColor: '#333',
+    borderRadius: 3,
     height: 6,
-    overflow: 'hidden',
+    width: 6,
   },
-  progressFill: {
-    borderRadius: 99,
-    height: '100%',
+  dotCompleted: {
+    backgroundColor: PRIMARY,
+    borderRadius: 3,
+    height: 6,
+    width: 6,
+  },
+  dotCurrent: {
+    backgroundColor: PRIMARY,
+    borderRadius: 4,
+    height: 8,
+    width: 16,
   },
   content: {
     flex: 1,
