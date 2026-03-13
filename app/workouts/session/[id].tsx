@@ -17,14 +17,10 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchExerciseByUUID } from '@/src/lib/api/exercises';
 import { getDayExercises, WorkoutDayExercise } from '@/src/lib/api/workoutPlans';
 import {
-  abandonSessionAction,
   deleteExerciseLog,
   ExerciseLog,
-  finishSession,
   getWorkoutSession,
   logExerciseSet,
-  pauseSession,
-  resumeSession,
   updateExerciseLog,
   WorkoutSession,
 } from '@/src/lib/api/workoutSessions';
@@ -78,7 +74,7 @@ export default function WorkoutSessionScreen() {
   const palette = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessionId = Array.isArray(id) ? id[0] : id;
-  const { setActiveSession } = useWorkout();
+  const { setActiveSession, pauseActiveSession, resumeActiveSession, finishActiveSession, abandonActiveSession } = useWorkout();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -324,9 +320,14 @@ export default function WorkoutSessionScreen() {
     if (!sessionId || !session) return;
 
     try {
-      const updated = session.status === 'paused' ? await resumeSession(sessionId) : await pauseSession(sessionId);
-      setSession(updated);
-      setActiveSession(updated);
+      if (session.status === 'paused') {
+        await resumeActiveSession();
+      } else {
+        await pauseActiveSession();
+      }
+      // Refresh local session state from server
+      const response = await getWorkoutSession(sessionId);
+      setSession(response.session);
     } catch (actionError) {
       console.error('Failed to update pause state', actionError);
       setError('Failed to update session state.');
@@ -340,8 +341,7 @@ export default function WorkoutSessionScreen() {
     setError(null);
 
     try {
-      await finishSession(sessionId);
-      setActiveSession(null);
+      await finishActiveSession();
       router.replace('/workouts/select');
     } catch (finishError) {
       console.error('Failed to finish workout', finishError);
@@ -363,8 +363,7 @@ export default function WorkoutSessionScreen() {
       onConfirm: async () => {
         hideConfirm();
         try {
-          await abandonSessionAction(sessionId);
-          setActiveSession(null);
+          await abandonActiveSession();
           router.replace('/workouts/select');
         } catch (abandonError) {
           console.error('Failed to abandon', abandonError);

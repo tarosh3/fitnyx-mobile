@@ -12,10 +12,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fitnyx.app",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#000000",
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +30,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.fitnyx.app",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#000000",
+      "permissions": ["FOREGROUND_SERVICE"]
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +40,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-video"
+      "expo-video",
+      "expo-dev-client"
     ],
     "experiments": {
       "typedRoutes": true

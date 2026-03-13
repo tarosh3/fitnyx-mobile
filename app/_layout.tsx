@@ -1,3 +1,6 @@
+// Register notification background handler & foreground service at module level
+import '@/src/lib/notificationBackgroundHandler';
+
 import { Anton_400Regular } from '@expo-google-fonts/anton';
 import {
   Inter_400Regular,
@@ -12,6 +15,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { BackHandler, ToastAndroid } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
 
 // Set native screen background to black to prevent white flash during transitions
@@ -107,21 +111,23 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
-        <WorkoutProvider>
-          <AICoachProvider>
-            <DynamicStatusBar />
-            <BackendKeepAlive />
-            <SyncManager />
-            <ThemedStack />
-            <BottomNav />
-            <ActiveSessionIndicator />
-            <AICoachChat />
-          </AICoachProvider>
-        </WorkoutProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
+          <WorkoutProvider>
+            <AICoachProvider>
+              <DynamicStatusBar />
+              <BackendKeepAlive />
+              <SyncManager />
+              <ThemedStack />
+              <BottomNav />
+              <ActiveSessionIndicator />
+              <AICoachChat />
+            </AICoachProvider>
+          </WorkoutProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 

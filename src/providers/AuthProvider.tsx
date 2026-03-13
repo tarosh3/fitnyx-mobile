@@ -128,15 +128,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentUser);
 
         if (currentUser && session?.access_token) {
-          // Ensure device has a registered session (registers if missing)
-          const existingSessionId = await getSessionId();
-          if (!existingSessionId) {
-            try {
-              await registerSession();
-            } catch (e) {
-              console.warn('Failed to register session on init:', e);
-            }
-          }
+          // Session registration is handled by onAuthStateChange (which
+          // receives a fresh token). Attempting it here with a potentially
+          // expired cached token causes "Access token is required" errors.
           fetchUserProfile(currentUser.id);
           await checkOnboarding(currentUser);
         }
@@ -166,10 +160,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         setLoading(true);
         try {
-          // Register device session on sign-in (enforces single-device login)
-          if (event === 'SIGNED_IN') {
+          // Register device session on sign-in (enforces single-device login).
+          // Also register on TOKEN_REFRESHED if no session ID exists yet
+          // (covers cold start where init skips registration).
+          const needsRegistration =
+            event === 'SIGNED_IN' || (event === 'TOKEN_REFRESHED' && !(await getSessionId()));
+          if (needsRegistration) {
             try {
-              await registerSession();
+              await registerSession(session?.access_token);
             } catch (e) {
               console.warn('Failed to register session:', e);
             }
