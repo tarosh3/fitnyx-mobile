@@ -41,7 +41,8 @@
     "plugins": [
       "expo-router",
       "expo-video",
-      "expo-dev-client"
+      "expo-dev-client",
+      "./plugins/withNotifeeRepo"
     ],
     "experiments": {
       "typedRoutes": true
