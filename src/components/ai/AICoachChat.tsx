@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Dimensions,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
+import LottieView from 'lottie-react-native';
 import { Send, Sparkles, User, X } from 'lucide-react-native';
 
 import { useAICoach } from '@/src/providers/AICoachProvider';
@@ -31,7 +34,7 @@ export function AICoachChat() {
     if (!isOpen) return;
     const timeout = setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
-    }, 80);
+    }, 150);
 
     return () => clearTimeout(timeout);
   }, [messages, isOpen, isLoading]);
@@ -50,11 +53,16 @@ export function AICoachChat() {
           keyboardVerticalOffset={90}
           style={styles.modalWrap}
         >
-          <View style={[styles.panel, { backgroundColor: palette.background, borderColor: palette.border }]}> 
+          <View style={[styles.panel, { backgroundColor: palette.background, borderColor: palette.border }]}>
             <View style={[styles.header, { borderColor: palette.border }]}> 
               <View style={styles.headerLeft}>
-                <View style={[styles.botIcon, { backgroundColor: `${palette.primary}22` }]}> 
-                  <Sparkles color={palette.primary} size={16} />
+                <View style={[styles.botIcon, { backgroundColor: `${palette.primary}22` }]}>
+                  <LottieView
+                    source={require('@/assets/animations/chatbot.json')}
+                    autoPlay
+                    loop
+                    style={{ width: 28, height: 28 }}
+                  />
                 </View>
                 <View>
                   <Text style={[styles.headerTitle, { color: palette.text }]}>FitNyx Coach</Text>
@@ -74,13 +82,20 @@ export function AICoachChat() {
 
             <ScrollView
               ref={scrollRef}
+              style={styles.messagesList}
               contentContainerStyle={styles.messagesWrap}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
               {messages.length === 0 ? (
                 <View style={styles.emptyWrap}>
-                  <Text style={[styles.emptyTitle, { color: palette.text }]}>Hey, I\'m your coach.</Text>
+                  <LottieView
+                    source={require('@/assets/animations/chatbot.json')}
+                    autoPlay
+                    loop
+                    style={{ width: 80, height: 80, marginBottom: 8 }}
+                  />
+                  <Text style={[styles.emptyTitle, { color: palette.text }]}>Hey, I'm your coach.</Text>
                   <Text style={[styles.emptySub, { color: palette.mutedText }]}>Ask me anything about training, nutrition, or recovery.</Text>
                   {SUGGESTED_PROMPTS.map((prompt) => (
                     <Pressable
@@ -100,7 +115,12 @@ export function AICoachChat() {
                   >
                     {message.role === 'assistant' && (
                       <View style={[styles.avatar, { backgroundColor: palette.card }]}>
-                        <Sparkles color={palette.primary} size={14} />
+                        <LottieView
+                          source={require('@/assets/animations/chatbot.json')}
+                          autoPlay
+                          loop
+                          style={{ width: 26, height: 26 }}
+                        />
                       </View>
                     )}
 
@@ -128,11 +148,12 @@ export function AICoachChat() {
                     </View>
 
                     {message.role === 'user' && (
-                      <View style={[styles.avatar, { backgroundColor: `${palette.primary}33` }]}> 
+                      <View style={[styles.avatar, { backgroundColor: `${palette.primary}33` }]}>
                         {avatarUrl || user?.user_metadata?.avatar_url ? (
-                          <Text style={[styles.avatarInitial, { color: palette.primary }]}>
-                            {(user?.email?.charAt(0) || 'U').toUpperCase()}
-                          </Text>
+                          <Image
+                            source={{ uri: avatarUrl || user?.user_metadata?.avatar_url }}
+                            style={styles.avatarImage}
+                          />
                         ) : (
                           <User color={palette.primary} size={14} />
                         )}
@@ -145,9 +166,20 @@ export function AICoachChat() {
               {isLoading && (
                 <View style={styles.row}>
                   <View style={[styles.avatar, { backgroundColor: palette.card }]}>
-                    <Sparkles color={palette.primary} size={14} />
+                    <LottieView
+                      source={require('@/assets/animations/chatbot.json')}
+                      autoPlay
+                      loop
+                      style={{ width: 26, height: 26 }}
+                    />
                   </View>
-                  <View style={[styles.bubble, styles.bubbleAssistant, { backgroundColor: palette.card }]}> 
+                  <View style={[styles.bubble, styles.bubbleAssistant, { backgroundColor: palette.card, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                    <LottieView
+                      source={require('@/assets/animations/chatbot.json')}
+                      autoPlay
+                      loop
+                      style={{ width: 24, height: 24 }}
+                    />
                     <Text style={{ color: palette.mutedText }}>Thinking...</Text>
                   </View>
                 </View>
@@ -238,7 +270,11 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 4,
   },
+  messagesList: {
+    maxHeight: Dimensions.get('window').height * 0.6,
+  },
   messagesWrap: {
+    flexGrow: 1,
     gap: 12,
     padding: 14,
   },
@@ -286,9 +322,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 26,
   },
-  avatarInitial: {
-    fontSize: 12,
-    fontWeight: '700',
+  avatarImage: {
+    width: 26,
+    height: 26,
+    borderRadius: 999,
   },
   bubble: {
     borderRadius: 16,

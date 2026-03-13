@@ -128,7 +128,6 @@ export default function SettingsScreen() {
       <Pressable
         onPress={async () => {
           await signOut();
-          router.replace('/login');
         }}
         style={({ pressed }) => [
           styles.logoutButton,

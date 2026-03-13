@@ -92,6 +92,8 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
 
                 <ActivityHeatmap
                     streakDays={metrics.streakDays}
+                    maxStreak={activity.maxStreak}
+                    totalActiveDays={activity.totalActiveDays}
                     activityDays={activity.days}
                 />
 

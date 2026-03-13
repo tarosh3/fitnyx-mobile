@@ -1,8 +1,12 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { supabase } from '@/src/lib/supabase';
 import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
 import { getApiBaseUrl } from '@/src/lib/config/backend';
 
 export const API_BASE_URL = getApiBaseUrl();
+
+const SESSION_ID_KEY = 'fitnyx-session-id';
 
 export async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   const {
@@ -20,6 +24,12 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
     ...(options.headers as Record<string, string>),
   };
 
+  // Attach session ID for single-device validation (if registered)
+  const sessionId = await AsyncStorage.getItem(SESSION_ID_KEY);
+  if (sessionId) {
+    headers['X-Session-ID'] = sessionId;
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
@@ -29,12 +39,20 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
   const body = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    // Auto-logout if session was revoked (another device logged in)
+    if (response.status === 401 && body?.code === 'SESSION_REVOKED') {
+      await AsyncStorage.removeItem(SESSION_ID_KEY);
+      await supabase.auth.signOut();
+    }
+
     const wrapped = new Error(body?.error || `API call failed: ${response.statusText}`) as Error & {
       status?: number;
       data?: any;
+      code?: string;
     };
     wrapped.status = response.status;
     wrapped.data = body;
+    wrapped.code = body?.code;
     throw wrapped;
   }
 

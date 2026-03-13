@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Flame } from 'lucide-react-native';
+import LottieView from 'lottie-react-native';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -41,7 +41,12 @@ export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDay
             <View style={styles.headerRow}>
                 <View>
                     <View style={styles.streakBadge}>
-                        <Flame color={PALE_ORANGE} size={12} fill={PALE_ORANGE} />
+                        <LottieView
+                            source={require('@/assets/animations/fire.json')}
+                            autoPlay
+                            loop
+                            style={{ width: 20, height: 20, transform: [{ scale: 1 + Math.min(streakDays, 30) * 0.03 }] }}
+                        />
                         <Text style={styles.streakText}>{streakDays} DAY STREAK</Text>
                     </View>
                     <Text style={styles.homeGreeting}>
