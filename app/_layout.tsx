@@ -30,6 +30,7 @@ import { BottomNav } from '@/src/components/navigation/BottomNav';
 import { SyncManager } from '@/src/components/SyncManager';
 import { AICoachProvider } from '@/src/providers/AICoachProvider';
 import { AuthProvider } from '@/src/providers/AuthProvider';
+import { QueryProvider } from '@/src/providers/QueryProvider';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { WorkoutProvider } from '@/src/providers/WorkoutProvider';
 
@@ -112,21 +113,23 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
-          <WorkoutProvider>
-            <AICoachProvider>
-              <DynamicStatusBar />
-              <BackendKeepAlive />
-              <SyncManager />
-              <ThemedStack />
-              <BottomNav />
-              <ActiveSessionIndicator />
-              <AICoachChat />
-            </AICoachProvider>
-          </WorkoutProvider>
-        </ThemeProvider>
-      </AuthProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
+            <WorkoutProvider>
+              <AICoachProvider>
+                <DynamicStatusBar />
+                <BackendKeepAlive />
+                <SyncManager />
+                <ThemedStack />
+                <BottomNav />
+                <ActiveSessionIndicator />
+                <AICoachChat />
+              </AICoachProvider>
+            </WorkoutProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </QueryProvider>
     </GestureHandlerRootView>
   );
 }
@@ -154,6 +157,7 @@ function ThemedStack() {
       <Stack.Screen name="achievements" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="auth/callback" />
       <Stack.Screen name="update-password" />
       <Stack.Screen name="email-verified" />
       <Stack.Screen name="verification-failed" />

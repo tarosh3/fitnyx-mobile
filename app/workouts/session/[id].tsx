@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,17 +13,22 @@ import { Input } from '@/src/components/ui/Input';
 import { Screen } from '@/src/components/ui/Screen';
 import { ExerciseDetailModal } from '@/src/features/dashboard/ExerciseDetailModal';
 import { ExerciseMedia } from '@/src/features/workouts/ExerciseMedia';
+import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { fetchExerciseByUUID } from '@/src/lib/api/exercises';
 import { getDayExercises, WorkoutDayExercise } from '@/src/lib/api/workoutPlans';
 import {
-  deleteExerciseLog,
   ExerciseLog,
-  getWorkoutSession,
-  logExerciseSet,
-  updateExerciseLog,
   WorkoutSession,
 } from '@/src/lib/api/workoutSessions';
+import {
+  offlineGetSession,
+  offlineLogSet,
+  offlineUpdateLog,
+  offlineDeleteLog,
+} from '@/src/lib/offline/offlineApi';
+import { fetchExerciseWithCache, cacheExercisesForDay } from '@/src/lib/offline/exerciseCache';
+import { cacheWorkoutVideos } from '@/src/lib/offline/videoCache';
+import { getCachedDayExercises } from '@/src/lib/db';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 import { Exercise, RelatedExercise } from '@/src/types/exercise';
 import {
@@ -69,24 +74,104 @@ function pickExerciseMedia(exercise: Exercise | null): string | undefined {
   return exercise.variations?.[0]?.image || exercise.primary_muscles?.[0]?.image || exercise.video_url || undefined;
 }
 
+// Isolated timer component — re-renders every second without affecting the parent
+function SessionTimer({ session, onPauseResume, onFinish, onAbandon, finishing }: {
+  session: WorkoutSession;
+  onPauseResume: () => void;
+  onFinish: () => void;
+  onAbandon: () => void;
+  finishing: boolean;
+}) {
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  useEffect(() => {
+    const updateElapsed = () => {
+      if (session.status === 'paused') {
+        setElapsedTime(session.total_duration_sec);
+        return;
+      }
+
+      const base = session.total_duration_sec;
+      const since = new Date(session.last_resumed_at || session.started_at).getTime();
+      const currentInterval = Math.max(0, Math.floor((Date.now() - since) / 1000));
+      setElapsedTime(base + currentInterval);
+    };
+
+    updateElapsed();
+    if (session.status === 'paused') return;
+
+    const interval = setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [session]);
+
+  return (
+    <View style={styles.timerCard}>
+      <View style={styles.timerContent}>
+        <Text style={styles.timerText}>{formatTime(elapsedTime)}</Text>
+        <Text style={styles.timerLabel}>TOTAL ELAPSED TIME</Text>
+      </View>
+
+      <View style={styles.timerActions}>
+        <Pressable onPress={onPauseResume} style={styles.timerActionBtn}>
+          {session.status === 'paused' ? (
+            <Play size={20} color={NEON_LIME} fill={NEON_LIME} />
+          ) : (
+            <Pause size={20} color="#fff" fill="#fff" />
+          )}
+          <Text style={[styles.timerActionText, session.status === 'paused' && { color: NEON_LIME }]}>
+            {session.status === 'paused' ? 'RESUME' : 'PAUSE'}
+          </Text>
+        </Pressable>
+
+        <Pressable onPress={onFinish} disabled={finishing} style={styles.timerActionBtnFinish}>
+          {finishing ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <>
+              <CheckCircle2 size={18} color="#000" />
+              <Text style={styles.timerActionTextFinish}>FINISH</Text>
+            </>
+          )}
+        </Pressable>
+
+        <Pressable onPress={onAbandon} style={styles.timerActionBtnAbandon}>
+          <XCircle size={20} color="rgba(255,255,255,0.4)" />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 export default function WorkoutSessionScreen() {
   const router = useRouter();
   const palette = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessionId = Array.isArray(id) ? id[0] : id;
   const { setActiveSession, pauseActiveSession, resumeActiveSession, finishActiveSession, abandonActiveSession } = useWorkout();
+  const { isOffline, pendingCount } = useOfflineAware();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [exercises, setExercises] = useState<ExerciseWithLogs[]>([]);
 
-  const [elapsedTime, setElapsedTime] = useState(0);
   const [activeExerciseUuid, setActiveExerciseUuid] = useState<string | null>(null);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [reps, setReps] = useState('10');
   const [weight, setWeight] = useState('0');
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>('kg');
+
+  const sanitizeReps = (text: string) => text.replace(/[^0-9]/g, '').slice(0, 3);
+
+  const sanitizeWeight = (text: string) => {
+    const digits = text.replace(/[^0-9.]/g, '');
+    const parts = digits.split('.');
+    const whole = parts[0].slice(0, 3);
+    if (parts.length > 1) {
+      return whole + '.' + parts.slice(1).join('').slice(0, 1);
+    }
+    return whole;
+  };
 
   const [submittingSet, setSubmittingSet] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -113,32 +198,22 @@ export default function WorkoutSessionScreen() {
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
 
+  // Reload when coming back online (exercises may have failed to load while offline)
+  const [wasOffline, setWasOffline] = useState(false);
+  useEffect(() => {
+    if (isOffline) {
+      setWasOffline(true);
+    } else if (wasOffline) {
+      setWasOffline(false);
+      // Re-load session data now that we're online
+      if (sessionId) loadSession();
+    }
+  }, [isOffline]);
+
   useEffect(() => {
     if (!sessionId) return;
     loadSession();
   }, [sessionId]);
-
-  useEffect(() => {
-    if (!session) return;
-
-    const updateElapsed = () => {
-      if (session.status === 'paused') {
-        setElapsedTime(session.total_duration_sec);
-        return;
-      }
-
-      const base = session.total_duration_sec;
-      const since = new Date(session.last_resumed_at || session.started_at).getTime();
-      const currentInterval = Math.max(0, Math.floor((Date.now() - since) / 1000));
-      setElapsedTime(base + currentInterval);
-    };
-
-    updateElapsed();
-    if (session.status === 'paused') return;
-
-    const interval = setInterval(updateElapsed, 1000);
-    return () => clearInterval(interval);
-  }, [session]);
 
   const loadSession = async () => {
     if (!sessionId) return;
@@ -147,7 +222,7 @@ export default function WorkoutSessionScreen() {
     setError(null);
 
     try {
-      const response = await getWorkoutSession(sessionId);
+      const response = await offlineGetSession(sessionId);
       setSession(response.session);
       setActiveSession(response.session);
 
@@ -156,9 +231,18 @@ export default function WorkoutSessionScreen() {
         return;
       }
 
-      const dayExercises = await getDayExercises(response.session.day_id);
-      const byExercise = new Map<string, ExerciseLog[]>();
+      // Try API first, fall back to cache for day exercises
+      let dayExerciseList: WorkoutDayExercise[] = [];
+      try {
+        const dayExercises = await getDayExercises(response.session.day_id);
+        dayExerciseList = dayExercises.data || [];
+      } catch {
+        // Fallback to cached day exercises
+        const cached = await getCachedDayExercises(response.session.day_id);
+        dayExerciseList = cached || [];
+      }
 
+      const byExercise = new Map<string, ExerciseLog[]>();
       (response.exercise_logs || []).forEach((log) => {
         if (!byExercise.has(log.exercise_uuid)) {
           byExercise.set(log.exercise_uuid, []);
@@ -167,14 +251,8 @@ export default function WorkoutSessionScreen() {
       });
 
       const merged: ExerciseWithLogs[] = await Promise.all(
-        (dayExercises.data || []).map(async (planned) => {
-          let details: Exercise | null = null;
-          try {
-            details = await fetchExerciseByUUID(planned.exercise_uuid);
-          } catch {
-            details = null;
-          }
-
+        dayExerciseList.map(async (planned) => {
+          const details = await fetchExerciseWithCache(planned.exercise_uuid);
           return {
             exercise: planned,
             exerciseDetails: details,
@@ -184,6 +262,20 @@ export default function WorkoutSessionScreen() {
       );
 
       setExercises(merged);
+
+      // Cache exercise data and videos for offline use (only when online)
+      if (!isOffline) {
+        const uuids = dayExerciseList.map((e) => e.exercise_uuid);
+        cacheExercisesForDay(uuids).catch(() => {});
+
+        const videoUrls = merged
+          .map((e) => e.exerciseDetails?.video_url)
+          .filter((url): url is string => Boolean(url))
+          .filter((url) => url.endsWith('.mp4'));
+        if (videoUrls.length > 0) {
+          cacheWorkoutVideos(videoUrls).catch(() => {});
+        }
+      }
     } catch (loadError: any) {
       console.error('Failed to load workout session', loadError);
       setError(loadError?.message || 'Failed to load workout session.');
@@ -243,7 +335,7 @@ export default function WorkoutSessionScreen() {
 
     try {
       if (editingLogId) {
-        const updated = await updateExerciseLog(editingLogId, {
+        const updated = await offlineUpdateLog(sessionId, editingLogId, {
           actual_reps: repsNumber,
           actual_weight_kg: weightKg,
         });
@@ -262,7 +354,7 @@ export default function WorkoutSessionScreen() {
         const currentLogs = exercises.find((entry) => entry.exercise.exercise_uuid === exerciseUuid)?.logs || [];
         const setNumber = currentLogs.length + 1;
 
-        const created = await logExerciseSet(sessionId, {
+        const created = await offlineLogSet(sessionId, {
           exercise_uuid: exerciseUuid,
           set_number: setNumber,
           actual_reps: repsNumber,
@@ -301,7 +393,7 @@ export default function WorkoutSessionScreen() {
       onConfirm: async () => {
         hideConfirm();
         try {
-          await deleteExerciseLog(logId);
+          await offlineDeleteLog(sessionId, logId);
           setExercises((prev) =>
             prev.map((entry) => ({
               ...entry,
@@ -316,7 +408,7 @@ export default function WorkoutSessionScreen() {
     });
   };
 
-  const pauseOrResume = async () => {
+  const pauseOrResume = useCallback(async () => {
     if (!sessionId || !session) return;
 
     try {
@@ -325,16 +417,16 @@ export default function WorkoutSessionScreen() {
       } else {
         await pauseActiveSession();
       }
-      // Refresh local session state from server
-      const response = await getWorkoutSession(sessionId);
+      // Refresh local session state
+      const response = await offlineGetSession(sessionId);
       setSession(response.session);
     } catch (actionError) {
       console.error('Failed to update pause state', actionError);
       setError('Failed to update session state.');
     }
-  };
+  }, [sessionId, session?.status]);
 
-  const completeWorkout = async () => {
+  const completeWorkout = useCallback(async () => {
     if (!sessionId) return;
 
     setFinishing(true);
@@ -349,9 +441,9 @@ export default function WorkoutSessionScreen() {
     } finally {
       setFinishing(false);
     }
-  };
+  }, [sessionId]);
 
-  const abandonWorkout = () => {
+  const abandonWorkout = useCallback(() => {
     if (!sessionId) return;
 
     setConfirmConfig({
@@ -371,12 +463,12 @@ export default function WorkoutSessionScreen() {
         }
       },
     });
-  };
+  }, [sessionId]);
 
   const onSelectRelated = async (exercise: RelatedExercise) => {
     try {
-      const details = await fetchExerciseByUUID(exercise.uuid);
-      setSelectedExercise(details);
+      const details = await fetchExerciseWithCache(exercise.uuid);
+      if (details) setSelectedExercise(details);
     } catch {
       // keep current details
     }
@@ -422,6 +514,16 @@ export default function WorkoutSessionScreen() {
           <View style={styles.statusBadgeRow}>
             <View style={[styles.statusDot, { backgroundColor: session.status === 'paused' ? '#FFA500' : NEON_LIME }]} />
             <Text style={styles.headerSubtitle}>{statusLabel.toUpperCase()}</Text>
+            {isOffline && (
+              <View style={styles.offlineBadge}>
+                <Text style={styles.offlineBadgeText}>OFFLINE</Text>
+              </View>
+            )}
+            {!isOffline && pendingCount > 0 && (
+              <View style={styles.syncBadge}>
+                <Text style={styles.syncBadgeText}>SYNCING {pendingCount}</Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -432,40 +534,13 @@ export default function WorkoutSessionScreen() {
         </View>
       ) : null}
 
-      <View style={styles.timerCard}>
-        <View style={styles.timerContent}>
-          <Text style={styles.timerText}>{formatTime(elapsedTime)}</Text>
-          <Text style={styles.timerLabel}>TOTAL ELAPSED TIME</Text>
-        </View>
-
-        <View style={styles.timerActions}>
-          <Pressable onPress={pauseOrResume} style={styles.timerActionBtn}>
-            {session.status === 'paused' ? (
-              <Play size={20} color={NEON_LIME} fill={NEON_LIME} />
-            ) : (
-              <Pause size={20} color="#fff" fill="#fff" />
-            )}
-            <Text style={[styles.timerActionText, session.status === 'paused' && { color: NEON_LIME }]}>
-              {session.status === 'paused' ? 'RESUME' : 'PAUSE'}
-            </Text>
-          </Pressable>
-
-          <Pressable onPress={completeWorkout} disabled={finishing} style={styles.timerActionBtnFinish}>
-            {finishing ? (
-              <ActivityIndicator size="small" color="#000" />
-            ) : (
-              <>
-                <CheckCircle2 size={18} color="#000" />
-                <Text style={styles.timerActionTextFinish}>FINISH</Text>
-              </>
-            )}
-          </Pressable>
-
-          <Pressable onPress={abandonWorkout} style={styles.timerActionBtnAbandon}>
-            <XCircle size={20} color="rgba(255,255,255,0.4)" />
-          </Pressable>
-        </View>
-      </View>
+      <SessionTimer
+        session={session}
+        onPauseResume={pauseOrResume}
+        onFinish={completeWorkout}
+        onAbandon={abandonWorkout}
+        finishing={finishing}
+      />
 
       <View style={styles.exercisesList}>
         {exercises.map((entry, index) => {
@@ -548,23 +623,28 @@ export default function WorkoutSessionScreen() {
               {editingThis ? (
                 <View style={styles.editorBox}>
                   <View style={styles.editorFields}>
-                    <View style={styles.fieldItem}>
+                    <View style={styles.fieldItemReps}>
                       <Text style={styles.fieldLabel}>REPS</Text>
                       <Input
                         value={reps}
                         onChangeText={setReps}
+                        sanitize={sanitizeReps}
                         keyboardType="number-pad"
+                        maxLength={3}
                         style={styles.editorInput}
                       />
                     </View>
-                    <View style={styles.fieldItem}>
+                    <View style={styles.fieldItemWeight}>
                       <Text style={styles.fieldLabel}>WEIGHT ({weightUnit.toUpperCase()})</Text>
                       <View style={styles.weightInputRow}>
                         <Input
                           value={weight}
                           onChangeText={setWeight}
+                          sanitize={sanitizeWeight}
                           keyboardType="decimal-pad"
-                          style={[styles.editorInput, { flex: 1 }]}
+                          maxLength={5}
+                          containerStyle={{ flex: 1, minWidth: 0 }}
+                          style={styles.editorInput}
                         />
                         <Pressable
                           onPress={() => setWeightUnit(weightUnit === 'kg' ? 'lbs' : 'kg')}
@@ -890,8 +970,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  fieldItem: {
-    flex: 1,
+  fieldItemReps: {
+    flex: 2,
+    gap: 8,
+  },
+  fieldItemWeight: {
+    flex: 3,
     gap: 8,
   },
   fieldLabel: {
@@ -910,10 +994,12 @@ const styles = StyleSheet.create({
   },
   weightInputRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   unitSwitch: {
-    width: 48,
+    width: 44,
+    minWidth: 44,
     height: 48,
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -995,5 +1081,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '800',
+  },
+  offlineBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  offlineBadgeText: {
+    color: '#EF4444',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  syncBadge: {
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  syncBadgeText: {
+    color: '#FBBF24',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
 });

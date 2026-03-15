@@ -1,6 +1,6 @@
 import { usePathname, useRouter } from 'expo-router';
 import { Dumbbell, Home, LayoutGrid, Settings, Sparkles } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -30,8 +30,22 @@ export function BottomNav() {
   const palette = useThemeColors();
   const { user } = useAuth();
   const { openCenteredChat } = useAICoach();
+  const lastNavTime = useRef(0);
 
   const styles = React.useMemo(() => getStyles(palette), [palette]);
+
+  // Throttled navigation: skip if already on route or tapped within 300ms
+  // Use replace instead of push so tab taps don't stack history
+  const navigateTo = useCallback(
+    (href: string, isActive: boolean) => {
+      if (isActive) return;
+      const now = Date.now();
+      if (now - lastNavTime.current < 300) return;
+      lastNavTime.current = now;
+      router.replace(href as never);
+    },
+    [router]
+  );
 
   if (!user) return null;
   if (hiddenRoutePrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) return null;
@@ -66,7 +80,7 @@ export function BottomNav() {
     <View style={styles.wrap}>
       <View style={[styles.container, { backgroundColor: `${palette.background}D9`, borderColor: `${palette.border}CC` }]}>
         {left.map((item) => (
-          <NavItem key={item.href} item={item} onPress={() => router.push(item.href as never)} palette={palette} />
+          <NavItem key={item.href} item={item} onPress={() => navigateTo(item.href, item.active)} palette={palette} />
         ))}
 
         <View style={styles.centerSlot}>
@@ -76,7 +90,7 @@ export function BottomNav() {
         </View>
 
         {right.map((item) => (
-          <NavItem key={item.href} item={item} onPress={() => router.push(item.href as never)} palette={palette} />
+          <NavItem key={item.href} item={item} onPress={() => navigateTo(item.href, item.active)} palette={palette} />
         ))}
       </View>
     </View>

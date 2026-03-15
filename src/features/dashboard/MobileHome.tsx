@@ -24,7 +24,7 @@ interface MobileHomeProps {
 export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
     const { openCenteredChat } = useAICoach();
     const metrics = useRetentionMetrics(user?.id);
-    const activity = useActivityData(user?.id);
+    const activity = useActivityData(metrics.sessions);
     const palette = useThemeColors();
     const styles = getStyles(palette);
 
@@ -46,6 +46,9 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
                     avatarUrl={avatarUrl}
                     variant="home"
                     streakDays={metrics.streakDays}
+                    activePlanName={metrics.activePlan?.title ?? null}
+                    nextExercisesCount={metrics.nextExercisesCount}
+                    hasActiveSession={!!metrics.activeSession}
                 />
 
                 <LevelProgress

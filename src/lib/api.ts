@@ -30,10 +30,20 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
     headers['X-Session-ID'] = sessionId;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  // Abort after 10s to avoid hanging when device is "connected" but has no internet
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const text = await response.text();
   const body = text ? JSON.parse(text) : null;

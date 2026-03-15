@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
+import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import {
   activateWorkoutPlan,
@@ -13,6 +14,9 @@ import {
   getWorkoutPlans,
   WorkoutPlan,
 } from '@/src/lib/api/workoutPlans';
+import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
+import { cacheKeys, cacheTTL } from '@/src/lib/cache/keys';
+import { useAuth } from '@/src/providers/AuthProvider';
 import {
   ArrowRight,
   Info,
@@ -39,6 +43,8 @@ export default function SelectWorkoutScreen() {
   const router = useRouter();
   const palette = useThemeColors();
   const styles = useMemo(() => getStyles(palette), [palette]);
+  const { isOffline } = useOfflineAware();
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<PlansTab>('my-plans');
   const [myPlans, setMyPlans] = useState<WorkoutPlan[]>([]);
@@ -65,11 +71,36 @@ export default function SelectWorkoutScreen() {
     setLoading(true);
     setError(null);
     try {
+      if (isOffline) {
+        // Load from cache when offline
+        const cachedPlans = user ? await idbGet<{ data: WorkoutPlan[] }>(cacheKeys.workoutPlans(user.id)) : null;
+        if (cachedPlans?.data) {
+          setMyPlans(cachedPlans.data);
+        }
+        setDefaultPlans([]);
+        setLoading(false);
+        return;
+      }
+
       const [my, defaults] = await Promise.all([getWorkoutPlans(), getDefaultWorkoutPlans()]);
       setMyPlans(my.data || []);
       setDefaultPlans(defaults.data || []);
+
+      // Cache plans for offline use
+      if (user && my.data) {
+        idbSet(cacheKeys.workoutPlans(user.id), { data: my.data }, cacheTTL.DAY).catch(() => {});
+      }
     } catch (loadError) {
       console.error('Failed to load plans', loadError);
+      // Try cache fallback on network error
+      if (user) {
+        const cachedPlans = await idbGet<{ data: WorkoutPlan[] }>(cacheKeys.workoutPlans(user.id));
+        if (cachedPlans?.data) {
+          setMyPlans(cachedPlans.data);
+          setLoading(false);
+          return;
+        }
+      }
       setError('Failed to load workout plans.');
     } finally {
       setLoading(false);
@@ -78,7 +109,7 @@ export default function SelectWorkoutScreen() {
 
   useEffect(() => {
     loadPlans();
-  }, []);
+  }, [isOffline]);
 
   const currentPlans = useMemo(() => {
     const plans = activeTab === 'my-plans' ? [...myPlans] : [...defaultPlans];
@@ -174,6 +205,12 @@ export default function SelectWorkoutScreen() {
         </View>
       </View>
 
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>OFFLINE MODE — SHOWING CACHED PLANS</Text>
+        </View>
+      )}
+
       {error ? (
         <View style={[styles.errorBox, { borderColor: '#EF444466', backgroundColor: '#EF444422' }]}>
           <Text style={styles.errorText}>{error}</Text>
@@ -198,7 +235,7 @@ export default function SelectWorkoutScreen() {
               : 'Our system plans are being optimized for your profile.'}
           </Text>
 
-          {activeTab === 'my-plans' ? (
+          {activeTab === 'my-plans' && !isOffline ? (
             <Pressable
               onPress={() => router.push('/workouts/customize')}
               style={styles.createBtn}
@@ -261,7 +298,7 @@ export default function SelectWorkoutScreen() {
                   </View>
 
                   <View style={styles.planActions}>
-                    {!active ? (
+                    {!active && !isOffline ? (
                       <Pressable
                         onPress={() => onActivatePlan(plan.id)}
                         disabled={busy}
@@ -282,13 +319,13 @@ export default function SelectWorkoutScreen() {
 
                     <Pressable
                       onPress={() => router.push(`/workouts/plans/${plan.id}`)}
-                      style={[styles.detailsAction, active && { flex: 1 }]}
+                      style={[styles.detailsAction, (active || isOffline) && { flex: 1 }]}
                     >
                       <ArrowRight size={16} color={palette.text} />
                       <Text style={styles.detailsActionText}>DETAILS</Text>
                     </Pressable>
 
-                    {activeTab === 'my-plans' && (
+                    {activeTab === 'my-plans' && !isOffline && (
                       <Pressable
                         onPress={() => onDeletePlan(plan.id)}
                         style={styles.deleteAction}
@@ -554,5 +591,20 @@ const getStyles = (palette: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  offlineBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  offlineBannerText: {
+    color: '#EF4444',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
 });

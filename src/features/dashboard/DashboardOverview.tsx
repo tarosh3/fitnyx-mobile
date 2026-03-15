@@ -14,10 +14,9 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/src/components/ui/Card';
-import { useCachedQuery } from '@/src/hooks/useCachedQuery';
+import { useQuery } from '@tanstack/react-query';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchLatestMetric } from '@/src/lib/api';
-import { cacheKeys, cacheTTL, staleTime } from '@/src/lib/cache';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 
 interface DashboardOverviewProps {
@@ -47,15 +46,13 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
   const styles = React.useMemo(() => getStyles(palette), [palette]);
   const { openCenteredChat } = useAICoach();
 
-  const { data: latestMetric } = useCachedQuery(
-    user ? cacheKeys.userMetrics(user.id) : 'metrics:none',
-    () => fetchLatestMetric(),
-    {
-      enabled: !!user,
-      staleTime: staleTime.MEDIUM,
-      ttl: cacheTTL.MEDIUM,
-    }
-  );
+  const { data: latestMetric } = useQuery({
+    queryKey: ['userMetrics', user?.id],
+    queryFn: fetchLatestMetric,
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
+    placeholderData: (prev) => prev,
+  });
 
   const userName = (user?.user_metadata?.username || user?.email?.split('@')[0] || 'ATHLETE').toUpperCase();
 

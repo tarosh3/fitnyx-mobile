@@ -3,14 +3,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Timer } from 'lucide-react-native';
 
+import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { useWorkout } from '@/src/providers/WorkoutProvider';
+import { useWorkout, useWorkoutTimer } from '@/src/providers/WorkoutProvider';
 
 export function ActiveSessionIndicator() {
   const palette = useThemeColors();
   const router = useRouter();
   const pathname = usePathname();
-  const { activeSession, elapsedTime, formatTime } = useWorkout();
+  const { activeSession } = useWorkout();
+  const { elapsedTime, formatTime } = useWorkoutTimer();
+  const { isOffline } = useOfflineAware();
 
   if (!activeSession || pathname === `/workouts/session/${activeSession.id}`) return null;
 
@@ -22,7 +25,9 @@ export function ActiveSessionIndicator() {
       >
         <Timer color={palette.primaryText} size={16} />
         <View>
-          <Text style={[styles.status, { color: palette.primaryText }]}>ACTIVE SESSION</Text>
+          <Text style={[styles.status, { color: palette.primaryText }]}>
+            {isOffline ? 'ACTIVE SESSION (OFFLINE)' : 'ACTIVE SESSION'}
+          </Text>
           <Text style={[styles.time, { color: palette.primaryText }]}>{formatTime(elapsedTime)}</Text>
         </View>
       </Pressable>

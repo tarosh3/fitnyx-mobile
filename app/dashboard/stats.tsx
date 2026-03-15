@@ -228,6 +228,27 @@ export default function StatsScreen() {
 
   const [error, setError] = useState<string | null>(null);
 
+  // Sanitizers: only digits and one decimal point, capped length
+  const sanitizeWeight = (text: string) => {
+    const digits = text.replace(/[^0-9.]/g, '');
+    const parts = digits.split('.');
+    const whole = parts[0].slice(0, 3); // max 999
+    if (parts.length > 1) {
+      return whole + '.' + parts.slice(1).join('').slice(0, 1);
+    }
+    return whole;
+  };
+
+  const sanitizeHeight = (text: string) => {
+    const digits = text.replace(/[^0-9.]/g, '');
+    const parts = digits.split('.');
+    const whole = parts[0].slice(0, 3); // max 999
+    if (parts.length > 1) {
+      return whole + '.' + parts.slice(1).join('').slice(0, 1);
+    }
+    return whole;
+  };
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -286,6 +307,16 @@ export default function StatsScreen() {
     }
     const weightKg = weightUnit === 'kg' ? weightValue : lbsToKg(weightValue);
     const heightCm = heightUnit === 'cm' ? heightValue : ftToCm(heightValue);
+
+    // Range validation (kg: 20-350, cm: 50-300)
+    if (weightKg < 20 || weightKg > 350) {
+      Alert.alert('Invalid weight', 'Weight must be between 20–350 kg (44–772 lbs).');
+      return;
+    }
+    if (heightCm < 50 || heightCm > 300) {
+      Alert.alert('Invalid height', 'Height must be between 50–300 cm (1.6–9.8 ft).');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -391,6 +422,8 @@ export default function StatsScreen() {
                   value={weight}
                   keyboardType="decimal-pad"
                   onChangeText={setWeight}
+                  sanitize={sanitizeWeight}
+                  maxLength={5}
                   placeholder="0.0"
                   style={styles.premiumInput}
                 />
@@ -419,6 +452,8 @@ export default function StatsScreen() {
                   value={height}
                   keyboardType="decimal-pad"
                   onChangeText={setHeight}
+                  sanitize={sanitizeHeight}
+                  maxLength={5}
                   placeholder="0.0"
                   style={styles.premiumInput}
                 />

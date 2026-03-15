@@ -10,6 +10,7 @@ import { getOnboardingStatus } from '@/src/lib/api/onboarding';
 import { getProfile } from '@/src/lib/api/users';
 import { cacheClear, cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { clearOfflineQueue, getOfflineQueue } from '@/src/lib/cache/indexeddb';
+import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
 import { supabase } from '@/src/lib/supabase';
 
 interface AuthContextType {
@@ -26,6 +27,7 @@ interface AuthContextType {
 
 const ONBOARDING_EXEMPT_PATHS = [
   '/onboarding',
+  '/auth/callback',
   '/email-verified',
   '/update-password',
   '/verification-failed',
@@ -199,13 +201,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const queue = await getOfflineQueue();
         if (!queue.length) return;
 
-        for (const item of queue) {
-          if (item.type === 'UPDATE_STATS') {
-            await saveMetric(item.payload);
-          }
+        const result = await processOfflineQueue();
+        if (result.failed > 0) {
+          console.warn(`Offline sync: ${result.processed} synced, ${result.failed} failed`);
         }
-
-        await clearOfflineQueue();
       } catch (error) {
         console.error('Offline sync failed', error);
       }
