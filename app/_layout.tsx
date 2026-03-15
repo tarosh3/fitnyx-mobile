@@ -67,19 +67,16 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      // Splash screen hiding is now deferred to AuthProvider
-      // to ensure app data and session are loaded first.
-    }
-  }, [loaded]);
-
-  useEffect(() => {
     let currentCount = 0;
 
     const backAction = () => {
-      // If we aren't on the root dashboard page, route there
+      // If we aren't on the root dashboard page, go back or navigate to dashboard
       if (pathname !== '/' && pathname !== '/dashboard') {
-        router.back();
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/dashboard');
+        }
         return true;
       }
 
@@ -140,11 +137,11 @@ function ThemedStack() {
   const bg = theme === 'dark' ? '#0A0A0A' : '#F7F7F8';
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: bg } }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="signup" />
-      <Stack.Screen name="onboarding" />
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true, contentStyle: { backgroundColor: bg } }}>
+      <Stack.Screen name="index" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="login" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="signup" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       <Stack.Screen name="dashboard/index" />
       <Stack.Screen name="exercises" />
       <Stack.Screen name="dashboard/stats" />

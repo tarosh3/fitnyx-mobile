@@ -91,7 +91,7 @@ export default function DietScreen() {
       {/* Premium Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')}
           style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
         >
           <ChevronLeft color={palette.text} size={24} />

@@ -365,7 +365,7 @@ export default function StatsScreen() {
   return (
     <Screen scroll={false} style={{ backgroundColor: palette.background }}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backButton}>
           <ChevronLeft color={palette.text} size={24} />
         </Pressable>
         <View>

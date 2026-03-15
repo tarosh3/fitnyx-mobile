@@ -32,7 +32,7 @@ export default function SettingsScreen() {
   return (
     <Screen scroll={true} contentContainerStyle={[styles.screenContent, { backgroundColor: palette.background }]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backButton}>
           <ChevronLeft color={palette.text} size={24} />
         </Pressable>
         <View>
