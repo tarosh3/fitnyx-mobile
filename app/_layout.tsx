@@ -14,7 +14,7 @@ import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { BackHandler, ToastAndroid } from 'react-native';
+import { BackHandler, ToastAndroid, View, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
 
@@ -33,6 +33,7 @@ import { AuthProvider } from '@/src/providers/AuthProvider';
 import { QueryProvider } from '@/src/providers/QueryProvider';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { WorkoutProvider } from '@/src/providers/WorkoutProvider';
+import AnimatedSplash from '@/src/screens/SplashScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -60,11 +61,20 @@ export default function RootLayout() {
     Inter_800ExtraBold,
   });
 
+  const [showAnimated, setShowAnimated] = React.useState(true);
+
   useEffect(() => {
     if (error) {
       throw error;
     }
   }, [error]);
+
+  const onLayoutRootView = React.useCallback(async () => {
+    if (loaded) {
+      // Hide the NATIVE splash as soon as the root view mounts
+      await SplashScreen.hideAsync();
+    }
+  }, [loaded]);
 
   useEffect(() => {
     let currentCount = 0;
@@ -109,19 +119,34 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <QueryProvider>
         <AuthProvider>
           <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
             <WorkoutProvider>
               <AICoachProvider>
-                <DynamicStatusBar />
-                <BackendKeepAlive />
-                <SyncManager />
-                <ThemedStack />
-                <BottomNav />
-                <ActiveSessionIndicator />
-                <AICoachChat />
+                <View style={{ flex: 1 }}>
+                  <ThemedStack />
+                  
+                  {showAnimated && (
+                    <View style={StyleSheet.absoluteFill}>
+                      <AnimatedSplash
+                        onAnimationComplete={() => setShowAnimated(false)}
+                      />
+                    </View>
+                  )}
+
+                  {!showAnimated && (
+                    <>
+                      <DynamicStatusBar />
+                      <BackendKeepAlive />
+                      <SyncManager />
+                      <BottomNav />
+                      <ActiveSessionIndicator />
+                      <AICoachChat />
+                    </>
+                  )}
+                </View>
               </AICoachProvider>
             </WorkoutProvider>
           </ThemeProvider>

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +13,9 @@ import { cacheClear, cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/c
 import { clearOfflineQueue, getOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
 import { supabase } from '@/src/lib/supabase';
+
+// Durable key that persists indefinitely (not subject to TTL expiry)
+const ONBOARDING_DONE_KEY = 'fitnyx:onboarding-complete';
 
 interface AuthContextType {
   user: User | null;
@@ -59,28 +63,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
+    // 1. Check durable (permanent) AsyncStorage flag first — survives TTL expiry
+    const durableKey = `${ONBOARDING_DONE_KEY}:${currentUser.id}`;
+    const durableValue = await AsyncStorage.getItem(durableKey).catch(() => null);
+    const durableComplete = durableValue === 'true';
+
+    // 2. Check TTL cache (fast, in-memory + AsyncStorage)
     const cacheKey = cacheKeys.onboardingStatus(currentUser.id);
     const cached = await cacheGet<{ complete: boolean }>(cacheKey);
 
     if (cached !== null) {
       setOnboardingComplete(cached.complete);
+      // Background refresh
       getOnboardingStatus()
         .then((status) => {
           setOnboardingComplete(status.onboarding_complete);
           cacheSet(cacheKey, { complete: status.onboarding_complete }, cacheTTL.MEDIUM);
+          if (status.onboarding_complete) {
+            AsyncStorage.setItem(durableKey, 'true').catch(() => undefined);
+          }
         })
         .catch(() => undefined);
       return cached.complete;
     }
 
+    // 3. Try the API
     try {
       const status = await getOnboardingStatus();
       setOnboardingComplete(status.onboarding_complete);
       await cacheSet(cacheKey, { complete: status.onboarding_complete }, cacheTTL.MEDIUM);
+      if (status.onboarding_complete) {
+        await AsyncStorage.setItem(durableKey, 'true').catch(() => undefined);
+      }
       return status.onboarding_complete;
     } catch {
-      setOnboardingComplete(false);
-      return false;
+      // 4. API failed (offline / server down) — trust the durable flag.
+      //    Only truly new users (no durable flag) will see onboarding.
+      setOnboardingComplete(durableComplete);
+      return durableComplete;
     }
   };
 
@@ -214,6 +234,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isOnline, user]);
 
   const signOut = async () => {
+    // Clear durable onboarding flag for this user before wiping state
+    if (user?.id) {
+      await AsyncStorage.removeItem(`${ONBOARDING_DONE_KEY}:${user.id}`).catch(() => undefined);
+    }
     await clearSessionId();
     await cacheClear();
     await supabase.auth.signOut();
