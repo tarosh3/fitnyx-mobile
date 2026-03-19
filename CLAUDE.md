@@ -1,80 +1,127 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with this repository.
+
+**Always add `/Users/taroshmathuria/FitNyx/backend` as an additional working directory at the start of every session (use `/add-dir`).**
+
+---
+
+## Self-improvement
+
+Whenever you make a mistake, get corrected, or discover something new about this codebase:
+- Immediately update the relevant CLAUDE.md with a specific rule
+- Be precise — write exactly what went wrong and the exact rule to follow
+- Never write vague notes like "be careful with X" — write actionable rules
+
+---
 
 ## Commands
 
 ```bash
-# Start dev server
-npx expo start
-
-# Run on iOS simulator
-npx expo run:ios
-
-# Run on Android emulator
-npx expo run:android
+npx expo start            # Start dev server
+npx expo run:ios          # Run on iOS simulator
+npx expo run:android      # Run on Android emulator
 ```
 
-No lint or test commands are configured in `package.json`.
+No lint or test commands configured in package.json yet.
 
-## Environment Setup
+---
 
-Copy `.env.example` to `.env` and fill in:
+## Environment
+
 - `EXPO_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key
-- `EXPO_PUBLIC_BACKEND_URL` — Backend base URL (default: `http://localhost:8080`)
-- `EXPO_PUBLIC_API_URL` — Optional override for API URL (defaults to `BACKEND_URL/api/v1`)
+- `EXPO_PUBLIC_BACKEND_URL` — Backend base URL (default: http://localhost:8080)
+- `EXPO_PUBLIC_API_URL` — Defaults to BACKEND_URL/api/v1
+- Android emulator: localhost auto-remaps to 10.0.2.2
 
-On Android emulator, `localhost` is automatically remapped to `10.0.2.2`.
+---
 
 ## Architecture
 
-### Routing
+**Routing:** Expo Router (file-based). All screens in `app/`. Path alias `@/` = project root (tsconfig.json).
 
-Uses **Expo Router** (file-based routing). All screens are in `app/`. The root layout (`app/_layout.tsx`) wraps everything in four providers in order: `AuthProvider → ThemeProvider → WorkoutProvider → AICoachProvider`.
+**Provider order in `app/_layout.tsx`:**
+`AuthProvider → ThemeProvider → WorkoutProvider → AICoachProvider`
 
-Path alias `@/` maps to the project root (configured in `tsconfig.json`).
+- `AuthProvider` — Supabase session, onboarding redirects, offline queue sync, hides splash
+- `ThemeProvider` — light/dark toggle, persisted as `fitnyx-theme`. Use `useTheme()` and `useThemeColors()`
+- `WorkoutProvider` — active session polled every 30s, elapsed timer. Use `useWorkout()`
+- `AICoachProvider` — AI coach chat state, talks to `/api/v1/agent/*`. Use `useAICoach()`
 
-### Provider Hierarchy
+**API (`src/lib/api.ts` + `src/lib/api/`):**
+All authenticated calls via `fetchWithAuth()` — attaches Supabase JWT automatically.
+Domain modules: `auth`, `exercises`, `onboarding`, `users`, `username`, `workoutPlans`, `workoutSessions`, `agent`.
 
-- **`AuthProvider`** — Manages Supabase session, onboarding redirect logic, avatar, and offline queue sync on reconnect. Hides the splash screen once auth is resolved.
-- **`ThemeProvider`** — Light/dark theme toggle persisted under key `fitnyx-theme`. Colors defined in `src/theme/colors.ts`, typography in `src/theme/typography.ts`. Consume via `useTheme()` and `useThemeColors()`.
-- **`WorkoutProvider`** — Tracks the active workout session (polled every 30s) and live elapsed timer. Consume via `useWorkout()`.
-- **`AICoachProvider`** — Manages the AI coach chat state and communicates with `/api/v1/agent/*` endpoints. Consume via `useAICoach()`.
+**Cache (`src/lib/cache/`):**
+Two layers: in-memory Map (fast) + AsyncStorage via indexeddb.ts (persisted).
+- Use `cacheGet` / `cacheSet` / `cacheInvalidate` from `src/lib/cache/index.ts`
+- Keys defined in `src/lib/cache/keys.ts` — TTLs: SHORT 1m, MEDIUM 5m, LONG 30m, DAY 24h
+- Use `useCachedQuery` hook for stale-while-revalidate in components
 
-### Data Layer
+**Offline (`src/lib/db.ts`):**
+AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:offline-queue`. Replayed by AuthProvider on reconnect.
 
-**Backend API** (`src/lib/api.ts` + `src/lib/api/`): All authenticated calls go through `fetchWithAuth()`, which attaches the Supabase JWT. Endpoints live under `API_BASE_URL` (resolved from env). Domain-specific modules: `auth`, `exercises`, `onboarding`, `users`, `username`, `workoutPlans`, `workoutSessions`, `agent`.
+**Supabase (`src/lib/supabase.ts`):**
+PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
-**Caching** (`src/lib/cache/`): Two-layer cache:
-1. In-memory `Map` (fast, non-persistent)
-2. AsyncStorage via `indexeddb.ts` (persisted)
+---
 
-Use `cacheGet`/`cacheSet`/`cacheInvalidate` from `src/lib/cache/index.ts`. Cache keys are defined in `src/lib/cache/keys.ts`. TTL constants (`SHORT` 1m, `MEDIUM` 5m, `LONG` 30m, `DAY` 24h) and stale times are also in `keys.ts`.
+## File structure rules
 
-`useCachedQuery` hook (`src/hooks/useCachedQuery.ts`) provides a stale-while-revalidate pattern for components.
+- New screens → `app/` (Expo Router conventions)
+- New shared components → `src/components/ui/`
+- New feature code → `src/features/<feature>/`
+- New API domain calls → `src/lib/api/<domain>.ts`
+- New cache keys → `src/lib/cache/keys.ts` only — never inline strings
 
-**Offline** (`src/lib/db.ts`): AsyncStorage-backed local store for workout plans, days, and exercises. An offline request queue (`fitnyx-db:offline-queue`) is replayed by `AuthProvider` on reconnect.
+## Feature modules (`src/features/`)
 
-**Supabase** (`src/lib/supabase.ts`): Client uses PKCE flow with AsyncStorage for session persistence. Auto-refresh pauses when app is backgrounded.
+`auth` · `dashboard` · `diet` · `home` · `onboarding` · `workouts`
 
-### Feature Modules (`src/features/`)
+## UI primitives (`src/components/ui/`)
 
-- `auth` — Auth landing, login/signup forms, onboarding carousel
-- `dashboard` — Home stats and activity
-- `diet` — Diet plan display
-- `home` — Main home screen
-- `onboarding` — Onboarding flow
-- `workouts` — Workout selection, customization, session, history
+Button, Card, Input, Screen, PageHeader, ConfirmModal, Logo
 
-### UI Primitives (`src/components/ui/`)
+Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, BackendKeepAlive, SyncManager
 
-Shared components: `Button`, `Card`, `Input`, `Screen`, `PageHeader`, `ConfirmModal`, `Logo`.
+## Fonts
 
-Global overlays rendered at the root level (outside the screen stack): `BottomNav`, `ActiveSessionIndicator`, `AICoachChat`, `BackendKeepAlive`, `SyncManager`.
+- Anton 400 — FITNYX wordmark/logo only
+- Inter 400/500/600/700/800 — all UI text
 
-### Fonts
+---
 
-Two font families loaded in `_layout.tsx`:
-- **Anton** (400) — used for the FITNYX wordmark/logo
-- **Inter** (400/500/600/700/800) — body and UI text
+## Coding rules — never break these
+
+- `fetchWithAuth()` for every API call — never raw fetch
+- `useThemeColors()` for every color — never hardcode hex values
+- Named exports only — never default exports
+- Cache keys in `src/lib/cache/keys.ts` — never inline strings
+- `useCachedQuery` for data fetching in components
+- Components over ~150 lines should be split
+
+---
+
+## How to work — follow this every time
+
+1. **Read before writing** — check relevant files before making changes, never assume structure
+2. **Find the pattern** — look for a similar existing feature and match it exactly
+3. **Extend, don't create** — add to existing modules before making new files
+4. **Check the API module** — before writing any API call, check `src/lib/api/` first
+5. **Small steps** — make one logical change at a time, don't rewrite large sections unprompted
+6. **Ask, don't guess** — if the right approach is unclear, ask before writing code
+
+---
+
+## Slash commands
+
+- `/project:add-feature` — adds a full-stack feature with plan-first approach
+- `/project:review` — audits code for bugs and pattern violations
+- `/project:sync-api` — maps all backend endpoints vs mobile API calls
+
+---
+
+## Mistakes log
+
+_Claude updates this section automatically when corrections are made._

@@ -46,7 +46,7 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
   const styles = React.useMemo(() => getStyles(palette), [palette]);
   const { openCenteredChat } = useAICoach();
 
-  const { data: latestMetric } = useQuery({
+  const { data: latestMetric, isError: metricError } = useQuery({
     queryKey: ['userMetrics', user?.id],
     queryFn: fetchLatestMetric,
     enabled: !!user,
@@ -95,34 +95,45 @@ export function DashboardOverview({ user }: DashboardOverviewProps) {
         <Text style={[styles.title, { color: palette.text }]}>WELCOME BACK,{'\n'}{userName}</Text>
       </View>
 
-      <View style={styles.statsGrid}>
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card
-              key={stat.label}
-              style={[
-                styles.statCard,
-                index === 2 && styles.fullWidthCard,
-                {
-                  backgroundColor: `${palette.background}EA`,
-                  borderColor: `${palette.border}CC`,
-                },
-              ]}
-            >
-              <View style={styles.statHead}>
-                <View style={[styles.iconBadge, { backgroundColor: stat.iconBg }]}>
-                  <Icon color={stat.iconColor} size={16} />
+      {metricError ? (
+        <View style={styles.stateWrap}>
+          <Text style={[styles.stateText, { color: palette.mutedText }]}>COULD NOT LOAD METRICS</Text>
+        </View>
+      ) : !latestMetric && user ? (
+        <View style={styles.stateWrap}>
+          <Text style={[styles.stateText, { color: palette.mutedText }]}>NO BODY STATS YET</Text>
+          <Text style={[styles.stateSub, { color: palette.mutedText }]}>Add your first metric in Body Stats</Text>
+        </View>
+      ) : (
+        <View style={styles.statsGrid}>
+          {stats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card
+                key={stat.label}
+                style={[
+                  styles.statCard,
+                  index === 2 && styles.fullWidthCard,
+                  {
+                    backgroundColor: `${palette.background}EA`,
+                    borderColor: `${palette.border}CC`,
+                  },
+                ]}
+              >
+                <View style={styles.statHead}>
+                  <View style={[styles.iconBadge, { backgroundColor: stat.iconBg }]}>
+                    <Icon color={stat.iconColor} size={16} />
+                  </View>
+                  <Text style={[styles.statLabel, { color: palette.mutedText }]}>{stat.label}</Text>
                 </View>
-                <Text style={[styles.statLabel, { color: palette.mutedText }]}>{stat.label}</Text>
-              </View>
 
-              <Text style={[styles.statValue, { color: palette.text }]}>{stat.value}</Text>
-              <Text style={[styles.statSub, { color: palette.mutedText }]}>{stat.sub}</Text>
-            </Card>
-          );
-        })}
-      </View>
+                <Text style={[styles.statValue, { color: palette.text }]}>{stat.value}</Text>
+                <Text style={[styles.statSub, { color: palette.mutedText }]}>{stat.sub}</Text>
+              </Card>
+            );
+          })}
+        </View>
+      )}
 
       <Card
         style={[
@@ -238,6 +249,20 @@ const getStyles = (palette: any) => StyleSheet.create({
     fontSize: 34,
     letterSpacing: 0.5,
     lineHeight: 36,
+  },
+  stateWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  stateText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+  },
+  stateSub: {
+    fontSize: 12,
+    marginTop: 6,
   },
   statsGrid: {
     flexDirection: 'row',

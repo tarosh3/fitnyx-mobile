@@ -124,7 +124,7 @@ export function useRetentionMetrics(userId?: string) {
   const queryClient = useQueryClient();
   const { activeSession } = useWorkout();
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: ['retentionMetrics', userId],
     queryFn: fetchRetentionMetrics,
     enabled: !!userId,
@@ -138,10 +138,10 @@ export function useRetentionMetrics(userId?: string) {
   };
 
   if (!data) {
-    return { ...DEFAULTS, activeSession, loading: isLoading, refresh };
+    return { ...DEFAULTS, activeSession, loading: isLoading, error: isError, refresh };
   }
 
-  return { ...data, activeSession, loading: false, refresh };
+  return { ...data, activeSession, loading: false, error: false, refresh };
 }
 
 // Query key export for external invalidation (e.g. after completing a workout)

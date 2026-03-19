@@ -38,6 +38,24 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
         );
     }
 
+    if (metrics.error) {
+        return (
+            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
+                <Text style={[styles.stateText, { color: palette.mutedText }]}>SOMETHING WENT WRONG</Text>
+                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Pull down to retry</Text>
+            </View>
+        );
+    }
+
+    if (!metrics.sessions.length && !metrics.activePlan) {
+        return (
+            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
+                <Text style={[styles.stateText, { color: palette.mutedText }]}>NO ACTIVITY YET</Text>
+                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Start a workout to see your dashboard</Text>
+            </View>
+        );
+    }
+
     return (
         <ScrollView style={[styles.container, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
             <View style={styles.content}>
@@ -113,6 +131,15 @@ const getStyles = (palette: any) => StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    stateText: {
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1.1,
+    },
+    stateSub: {
+        fontSize: 12,
+        marginTop: 6,
     },
     container: {
         flex: 1,
