@@ -1,11 +1,10 @@
 import { saveMetric } from '@/src/lib/api';
 import {
-  startWorkoutSession,
   logExerciseSet,
   updateExerciseLog,
   deleteExerciseLog,
+  sessionAction,
 } from '@/src/lib/api/workoutSessions';
-import { sessionAction } from '@/src/lib/api/workoutSessions';
 import { getOfflineQueue, removeFromOfflineQueue, OfflineMutation } from '@/src/lib/cache/indexeddb';
 import { setIdMapping, getIdMapping, clearIdMappings, clearPersistedSession, cleanupStaleSessions } from './offlineStore';
 
@@ -32,15 +31,17 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
 
     case 'START_SESSION': {
       try {
-        const session = await startWorkoutSession({
-          workout_plan_id: payload.planId,
-          workout_day_id: payload.dayId,
+        // Use the validated /action endpoint (checks plan ownership + deletion)
+        const session = await sessionAction('start', {
+          planId: payload.planId,
+          dayId: payload.dayId,
+          startedAt: payload.startedAt,
         });
         await setIdMapping(payload.tempId, session.id);
       } catch (error: any) {
         // 409 = server already has an active session — map to existing session
-        if (error?.status === 409 && error?.data?.session_id) {
-          await setIdMapping(payload.tempId, error.data.session_id);
+        if (error?.status === 409 && error?.data?.session?.id) {
+          await setIdMapping(payload.tempId, error.data.session.id);
         } else {
           throw error;
         }
@@ -82,21 +83,21 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
     case 'PAUSE_SESSION': {
       const realId = await resolveSessionId(payload.sessionId);
       if (realId.startsWith('offline-')) throw new Error('Session not yet synced');
-      await sessionAction('pause', { sessionId: realId });
+      await sessionAction('pause', { sessionId: realId, timestamp: payload.timestamp });
       break;
     }
 
     case 'RESUME_SESSION': {
       const realId = await resolveSessionId(payload.sessionId);
       if (realId.startsWith('offline-')) throw new Error('Session not yet synced');
-      await sessionAction('resume', { sessionId: realId });
+      await sessionAction('resume', { sessionId: realId, timestamp: payload.timestamp });
       break;
     }
 
     case 'FINISH_SESSION': {
       const realId = await resolveSessionId(payload.sessionId);
       if (realId.startsWith('offline-')) throw new Error('Session not yet synced');
-      await sessionAction('finish', { sessionId: realId });
+      await sessionAction('finish', { sessionId: realId, timestamp: payload.timestamp });
       // Clean up offline data for this session
       await clearPersistedSession(payload.sessionId);
       break;
@@ -105,7 +106,7 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
     case 'ABANDON_SESSION': {
       const realId = await resolveSessionId(payload.sessionId);
       if (realId.startsWith('offline-')) throw new Error('Session not yet synced');
-      await sessionAction('abandon', { sessionId: realId });
+      await sessionAction('abandon', { sessionId: realId, timestamp: payload.timestamp });
       await clearPersistedSession(payload.sessionId);
       break;
     }
@@ -157,7 +158,7 @@ async function processOfflineQueueInternal(): Promise<SyncResult> {
       }
 
       // Hard server rejection (4xx) — remove from queue, mutation is invalid
-      console.error(`Sync failed for ${mutation.type} (${status}):`, message);
+      console.warn(`Sync failed for ${mutation.type} (${status}):`, message);
       await removeFromOfflineQueue(mutation.id);
       result.failed++;
       result.errors.push({ mutation, error: message });

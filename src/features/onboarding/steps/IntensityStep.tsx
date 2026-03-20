@@ -12,13 +12,13 @@ const INTENSITIES = [
 ];
 
 export function IntensityStep({ data, onNext, saving }: OnboardingStepProps) {
-  const [selected, setSelected] = useState(data?.fitness_profile?.workout_intensity || '');
+  const [selected, setSelected] = useState(data?.fitness_profile?.preferred_intensity || '');
 
   return (
     <StepScaffold
       title="How intense should workouts be?"
       subtitle="We'll calibrate the difficulty level."
-      onContinue={() => onNext({ workout_intensity: selected })}
+      onContinue={() => onNext({ preferred_intensity: selected })}
       saving={saving}
       disabled={!selected}
     >

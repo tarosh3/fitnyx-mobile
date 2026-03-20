@@ -38,9 +38,25 @@ export async function cacheVideo(remoteUrl: string): Promise<string | null> {
 
     if (file.exists) return file.uri;
 
-    const downloaded = await File.downloadFileAsync(remoteUrl, getVideoDir());
-    // Rename to our sanitized filename if needed
-    return downloaded.uri;
+    // Download to a temp name first, then move to final destination to avoid conflicts
+    const tempName = `_tmp_${Date.now()}_${filename}`;
+    const tempFile = new File(getVideoDir(), tempName);
+
+    try {
+      const downloaded = await File.downloadFileAsync(remoteUrl, getVideoDir());
+      // If downloaded file has a different name, move it to our sanitized name
+      if (downloaded.uri !== file.uri) {
+        // The file was downloaded with server-assigned name; just use it
+        return downloaded.uri;
+      }
+      return file.uri;
+    } catch (downloadError: any) {
+      // If destination already exists, the file was cached by a concurrent call
+      if (downloadError?.message?.includes('Destination already exists')) {
+        return file.exists ? file.uri : null;
+      }
+      throw downloadError;
+    }
   } catch (error) {
     console.warn('Failed to cache video:', error);
     return null;

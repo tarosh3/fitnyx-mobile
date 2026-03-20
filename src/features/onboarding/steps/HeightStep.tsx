@@ -26,7 +26,7 @@ export function HeightStep({ data, onNext, saving }: OnboardingStepProps) {
   const palette = useThemeColors();
 
   const [unit, setUnit] = useState<'cm' | 'ft'>('cm');
-  const initCm = data?.height || 170;
+  const initCm = data?.height_cm || 170;
   const initFtIn = cmToFtIn(initCm);
 
   const [heightCm, setHeightCm] = useState(initCm);

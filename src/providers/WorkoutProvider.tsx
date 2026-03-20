@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import {
@@ -100,7 +101,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       } catch (error) {
-        console.error('Failed to fetch active session', error);
+        console.warn('Failed to fetch active session', error);
         // On API failure, don't clear the active session — fall through to offline fallback
       }
     }
@@ -172,18 +173,33 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [activeSession]);
 
-  // Poll for active session (skip when offline — no point hitting server)
+  // Refresh session state when app returns to foreground (handles background notification actions)
   useEffect(() => {
-    if (!user || !isOnline) return;
-    const interval = setInterval(refreshActiveSession, 30000);
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && activeSession) {
+        refreshActiveSession();
+      }
+    });
+    return () => subscription.remove();
+  }, [activeSession?.id, refreshActiveSession]);
+
+  // Poll for active session only when one is in progress (skip when offline or no session)
+  useEffect(() => {
+    if (!user || !isOnline || !activeSession) return;
+    const interval = setInterval(refreshActiveSession, 60000);
     return () => clearInterval(interval);
-  }, [user, isOnline, refreshActiveSession]);
+  }, [user, isOnline, !!activeSession, refreshActiveSession]);
 
   // Notification lifecycle: show/dismiss based on activeSession
   useEffect(() => {
     if (activeSession) {
       const isPaused = activeSession.status === 'paused';
-      WorkoutNotification.showActiveWorkout(elapsedTime, isPaused);
+      WorkoutNotification.showActiveWorkout(
+        elapsedTime,
+        isPaused,
+        activeSession.started_at,
+        activeSession.last_resumed_at,
+      );
     } else {
       WorkoutNotification.dismiss();
     }
@@ -196,50 +212,89 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     const now = Date.now();
     if (now - lastIosUpdate.current >= 10000) {
       lastIosUpdate.current = now;
-      WorkoutNotification.updateTimer(elapsedTime, false);
+      WorkoutNotification.updateTimer(
+        elapsedTime,
+        false,
+        activeSession.started_at,
+        activeSession.last_resumed_at,
+      );
     }
   }, [elapsedTime, activeSession]);
+
+  // Use a ref to always access the latest action handlers from the notification callback
+  const actionHandlersRef = useRef<{
+    pause: () => Promise<void>;
+    resume: () => Promise<void>;
+    finish: () => Promise<void>;
+  } | null>(null);
 
   // Handle notification action presses (foreground)
   useEffect(() => {
     if (!activeSession) return;
 
     const unsubscribe = WorkoutNotification.onAction(async (action) => {
+      const handlers = actionHandlersRef.current;
+      if (!handlers) return;
+
       switch (action) {
         case 'pause':
-          await pauseActiveSessionInternal();
+          await handlers.pause();
           break;
         case 'resume':
-          await resumeActiveSessionInternal();
+          await handlers.resume();
           break;
         case 'finish':
-          await finishActiveSessionInternal();
+          await handlers.finish();
           break;
       }
     });
 
     return unsubscribe;
-  }, [activeSession?.id]);
+  }, [activeSession?.id, activeSession?.status]);
 
   const pauseActiveSessionInternal = async () => {
     if (!activeSession) return;
+    const previousSession = activeSession;
+
+    // Optimistic update: immediately reflect paused state in the UI
+    const lastResumed = new Date(activeSession.last_resumed_at || activeSession.started_at).getTime();
+    const additionalSec = Math.floor((Date.now() - lastResumed) / 1000);
+    const optimistic: WorkoutSession = {
+      ...activeSession,
+      status: 'paused',
+      paused_at: new Date().toISOString(),
+      total_duration_sec: activeSession.total_duration_sec + additionalSec,
+    };
+    setActiveSession(optimistic);
+
     try {
-      const updated = await offlinePauseSession(activeSession.id);
-      setActiveSession(updated);
+      const confirmed = await offlinePauseSession(activeSession.id);
+      setActiveSession(confirmed); // Sync with server-confirmed state
     } catch (error) {
       console.error('Failed to pause session', error);
-      throw error;
+      setActiveSession(previousSession); // Revert on failure
     }
   };
 
   const resumeActiveSessionInternal = async () => {
     if (!activeSession) return;
+    const previousSession = activeSession;
+
+    // Optimistic update: immediately reflect resumed state in the UI
+    const optimistic: WorkoutSession = {
+      ...activeSession,
+      status: 'in_progress',
+      last_resumed_at: new Date().toISOString(),
+      paused_at: undefined,
+    };
+    setActiveSession(optimistic);
+
     try {
-      const updated = await offlineResumeSession(activeSession.id);
-      setActiveSession(updated);
+      const confirmed = await offlineResumeSession(activeSession.id);
+      setActiveSession(confirmed); // Sync with server-confirmed state
     } catch (error) {
       console.error('Failed to resume session', error);
-      throw error;
+      setActiveSession(previousSession); // Revert on failure
     }
   };
 
@@ -254,6 +309,17 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   };
+
+  // Update ref synchronously during render (safe for refs, after function declarations)
+  if (activeSession) {
+    actionHandlersRef.current = {
+      pause: pauseActiveSessionInternal,
+      resume: resumeActiveSessionInternal,
+      finish: finishActiveSessionInternal,
+    };
+  } else {
+    actionHandlersRef.current = null;
+  }
 
   const abandonActiveSessionInternal = async () => {
     if (!activeSession) return;

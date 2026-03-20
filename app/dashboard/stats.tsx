@@ -321,10 +321,24 @@ export default function StatsScreen() {
     setError(null);
     try {
       const payload = { weight_kg: Number(weightKg.toFixed(2)), height_cm: Number(heightCm.toFixed(2)), source: 'user' };
-      if (isOnline) await saveMetric(payload);
-      else await addToOfflineQueue({ type: 'UPDATE_STATS', payload });
-      await loadData();
-      if (!isOnline) Alert.alert('Saved offline', 'Your stats will sync once you are back online.');
+      if (isOnline) {
+        await saveMetric(payload);
+        await loadData();
+      } else {
+        await addToOfflineQueue({ type: 'UPDATE_STATS', payload });
+        // Optimistically update local state so the UI reflects the save
+        const now = new Date().toISOString();
+        const optimistic: Metric = {
+          id: `offline-${Date.now()}`,
+          weight_kg: payload.weight_kg,
+          height_cm: payload.height_cm,
+          source: 'user',
+          recorded_at: now,
+        };
+        setLatest(optimistic);
+        setHistory((prev) => [optimistic, ...prev]);
+        Alert.alert('Saved offline', 'Your stats will sync once you are back online.');
+      }
     } catch (saveError: any) {
       setError(saveError?.message || 'Failed to save metrics.');
     } finally {

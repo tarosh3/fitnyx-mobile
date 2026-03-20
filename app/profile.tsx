@@ -12,6 +12,7 @@ import { PageHeader } from '@/src/components/ui/PageHeader';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { countries } from '@/src/lib/countries';
 import { getProfile, updateProfile } from '@/src/lib/api/users';
+import { checkAndLockUsername, claimUsername } from '@/src/lib/api/username';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 
@@ -24,6 +25,8 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
 
   const [username, setUsername] = useState('');
+  const [originalUsername, setOriginalUsername] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -57,7 +60,9 @@ export default function ProfileScreen() {
       const metadata = user.user_metadata || {};
       const fullPhone = profile?.phone || metadata.phone || '';
 
-      setUsername(profile?.username || metadata.username || '');
+      const loadedUsername = profile?.username || metadata.username || '';
+      setUsername(loadedUsername);
+      setOriginalUsername(loadedUsername);
       setFirstName(profile?.first_name || metadata.first_name || '');
       setLastName(profile?.last_name || metadata.last_name || '');
       setEmail(user.email || '');
@@ -147,8 +152,23 @@ export default function ProfileScreen() {
 
     setSaving(true);
     setMessage(null);
+    setUsernameError(null);
 
     try {
+      // If username changed, validate via lock/claim flow
+      const usernameChanged = username.trim().toLowerCase() !== originalUsername.trim().toLowerCase();
+      if (usernameChanged && username.trim()) {
+        const lockResult = await checkAndLockUsername(username.trim(), originalUsername);
+        if (!lockResult.available || !lockResult.locked) {
+          const hint = lockResult.suggestions?.length
+            ? ` Try: ${lockResult.suggestions.slice(0, 3).join(', ')}`
+            : '';
+          setUsernameError(lockResult.error || `Username "${username}" is not available.${hint}`);
+          setSaving(false);
+          return;
+        }
+      }
+
       let nextAvatar = avatarUri;
       if (newAvatarLocalUri) {
         const uploaded = await uploadAvatar();
@@ -160,9 +180,24 @@ export default function ProfileScreen() {
 
       const normalizedPhone = `${countryCode}${phone.replace(/[^0-9]/g, '')}`;
 
+      // If username changed, claim it (completes the lock→claim flow, writes to DB + cleans up Redis)
+      if (usernameChanged && username.trim()) {
+        await claimUsername(username.trim());
+      }
+
+      // Write to backend first — only update Supabase metadata if backend succeeds.
+      // This prevents divergence if the backend rejects the change.
+      await updateProfile({
+        username: username.trim(),
+        first_name: firstName,
+        last_name: lastName,
+        phone: normalizedPhone,
+        avatar_url: nextAvatar,
+      });
+
       await supabase.auth.updateUser({
         data: {
-          username,
+          username: username.trim(),
           first_name: firstName,
           last_name: lastName,
           phone: normalizedPhone,
@@ -170,14 +205,7 @@ export default function ProfileScreen() {
         },
       });
 
-      await updateProfile({
-        username,
-        first_name: firstName,
-        last_name: lastName,
-        phone: normalizedPhone,
-        avatar_url: nextAvatar,
-      });
-
+      setOriginalUsername(username.trim());
       setNewAvatarLocalUri(null);
       setMessage({ type: 'success', text: 'Profile updated successfully.' });
     } catch (saveError: any) {
@@ -259,7 +287,15 @@ export default function ProfileScreen() {
 
         <View>
           <Text style={[styles.label, { color: palette.text }]}>Username</Text>
-          <Input value={username} onChangeText={setUsername} placeholder="Username" autoCapitalize="none" />
+          <Input
+            value={username}
+            onChangeText={(v) => { setUsername(v); setUsernameError(null); }}
+            placeholder="Username"
+            autoCapitalize="none"
+          />
+          {usernameError ? (
+            <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '600', marginTop: 4 }}>{usernameError}</Text>
+          ) : null}
         </View>
 
         <View>

@@ -10,6 +10,7 @@ import { DietPlanView } from '@/src/features/diet/DietPlanView';
 import { DietWizard } from '@/src/features/diet/DietWizard';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { DietPlan, generateDietPlan, getDietPlan } from '@/src/lib/api';
+import { useAuth } from '@/src/providers/AuthProvider';
 
 const FITNESS_TIPS = [
   'Muscle burns more calories at rest than fat.',
@@ -24,6 +25,7 @@ const NEON_LIME = '#5fc793';
 export default function DietScreen() {
   const palette = useThemeColors();
   const router = useRouter();
+  const { user } = useAuth();
   const styles = React.useMemo(() => getStyles(palette), [palette]);
   const [plan, setPlan] = useState<DietPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ export default function DietScreen() {
   const loadPlan = async () => {
     setLoading(true);
     try {
-      const result = await getDietPlan();
+      const result = await getDietPlan(user?.id ?? '');
       if (result?.id) {
         setPlan(result);
         setView('plan');
@@ -65,7 +67,7 @@ export default function DietScreen() {
   const onGenerate = async (preferences: any) => {
     setGenerating(true);
     try {
-      const result = await generateDietPlan(preferences);
+      const result = await generateDietPlan(user?.id ?? '', preferences);
       setPlan(result);
       setView('plan');
     } catch (error) {

@@ -1,8 +1,9 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import { Bell, ChevronLeft, ChevronRight, FileText, LogOut, Moon, Shield, Sun, User } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Dimensions, Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import notifee, { AuthorizationStatus } from '@notifee/react-native';
+import { Bell, Brain, ChevronLeft, ChevronRight, FileText, LogOut, Moon, Shield, Sun, User } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Dimensions, Image, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Screen } from '@/src/components/ui/Screen';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -17,7 +18,58 @@ export default function SettingsScreen() {
   const { theme, toggleTheme } = useTheme();
   const { user, avatarUrl, signOut } = useAuth();
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  // Check actual device notification permission on mount
+  const checkPermission = useCallback(async () => {
+    try {
+      const settings = await notifee.getNotificationSettings();
+      setNotificationsEnabled(
+        settings.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
+        settings.authorizationStatus === AuthorizationStatus.PROVISIONAL
+      );
+    } catch {
+      setNotificationsEnabled(false);
+    }
+  }, []);
+
+  useEffect(() => { checkPermission(); }, [checkPermission]);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    if (value) {
+      const settings = await notifee.requestPermission();
+      const granted =
+        settings.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
+        settings.authorizationStatus === AuthorizationStatus.PROVISIONAL;
+      setNotificationsEnabled(granted);
+      if (!granted) {
+        Alert.alert(
+          'Notifications Disabled',
+          'Please enable notifications in your device settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => {
+              if (Platform.OS === 'ios') Linking.openURL('app-settings:');
+              else Linking.openSettings();
+            }},
+          ]
+        );
+      }
+    } else {
+      // Can't revoke programmatically — direct user to settings
+      Alert.alert(
+        'Disable Notifications',
+        'To disable notifications, please turn them off in your device settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => {
+            if (Platform.OS === 'ios') Linking.openURL('app-settings:');
+            else Linking.openSettings();
+          }},
+        ]
+      );
+    }
+  };
 
   // Neon Lime Accent
   const neonLime = palette.primary;
@@ -70,11 +122,18 @@ export default function SettingsScreen() {
             right={
               <Switch
                 value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
+                onValueChange={handleToggleNotifications}
                 trackColor={{ false: palette.border, true: `${neonLime}44` }}
                 thumbColor={notificationsEnabled ? neonLime : '#f4f4f5'}
               />
             }
+          />
+          <View style={styles.divider} />
+          <Row
+            styles={styles} palette={palette}
+            icon={<Brain color={palette.text} size={20} strokeWidth={1.5} />}
+            label="Coach Memory"
+            onPress={() => router.push('/settings/coach-memory' as any)}
           />
           <View style={styles.divider} />
           <Row

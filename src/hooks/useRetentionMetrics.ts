@@ -1,13 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSessionsHistory, WorkoutSession } from '@/src/lib/api/workoutSessions';
-import {
-  getWorkoutPlans,
-  getPlanDays,
-  getDayExercises,
-  WorkoutPlan,
-  WorkoutPlanDay,
-} from '@/src/lib/api/workoutPlans';
-import { getDailyInsight } from '@/src/lib/api/agent';
+import { WorkoutSession } from '@/src/lib/api/workoutSessions';
+import { WorkoutPlanDay } from '@/src/lib/api/workoutPlans';
+import { getDashboard, DashboardSession, DashboardPlan, DashboardPlanDay } from '@/src/lib/api/dashboard';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 
 export interface RetentionMetrics {
@@ -20,14 +14,14 @@ export interface RetentionMetrics {
   weeklyVolume: number;
   weeklyDuration: number;
   weeklyCalories: number;
-  activePlan: WorkoutPlan | null;
-  currentDay: WorkoutPlanDay | null;
+  activePlan: DashboardPlan | null;
+  currentDay: DashboardPlanDay | null;
   currentDayIndex: number;
   totalDays: number;
   planProgress: number;
   nextExercisesCount: number;
   activeSession: WorkoutSession | null;
-  sessions: WorkoutSession[];
+  sessions: DashboardSession[];
   dailyInsight?: string;
   loading: boolean;
 }
@@ -55,48 +49,21 @@ const DEFAULTS: RetentionMetrics = {
 };
 
 async function fetchRetentionMetrics(): Promise<Omit<RetentionMetrics, 'loading' | 'activeSession'>> {
-  // Parallel batch: independent calls (active session comes from WorkoutProvider)
-  const [historyRes, plansRes, insightResult] = await Promise.all([
-    getSessionsHistory(1, 200),
-    getWorkoutPlans(),
-    getDailyInsight().catch(() => null),
-  ]);
+  // Single server request replaces the previous 3-5 waterfall calls
+  const dashboard = await getDashboard();
 
-  const sessions = historyRes.data || [];
+  const sessions = dashboard.sessions || [];
   const { streak, xp, level, weeklyStats } = calculateStats(sessions);
 
-  const activePlan = plansRes.data.find((plan) => plan.is_active) || null;
-
-  let currentDay: WorkoutPlanDay | null = null;
-  let currentDayIndex = 1;
-  let totalDays = 0;
+  // Plan progress: how many unique days in this plan have been completed
   let planProgress = 0;
-  let nextExercisesCount = 0;
-
-  if (activePlan) {
-    const daysRes = await getPlanDays(activePlan.id);
-    const planDays = daysRes.data.sort((a, b) => a.day_index - b.day_index);
-    totalDays = planDays.length;
-
-    const planSessions = sessions.filter(
-      (session) => session.plan_id === activePlan.id && session.status === 'completed'
+  if (dashboard.active_plan && dashboard.total_days > 0) {
+    const completedDayIds = new Set(
+      sessions
+        .filter((s) => s.plan_id === dashboard.active_plan!.id && s.status === 'completed' && s.day_id)
+        .map((s) => s.day_id)
     );
-    const completedDayIds = new Set(planSessions.map((session) => session.day_id));
-    const completedCount = completedDayIds.size;
-
-    const nextDayIndex = totalDays ? (completedCount % totalDays) + 1 : 1;
-    currentDay = planDays.find((day) => day.day_index === nextDayIndex) || planDays[0] || null;
-    currentDayIndex = nextDayIndex;
-    planProgress = totalDays ? Math.round((completedCount / totalDays) * 100) : 0;
-
-    if (currentDay) {
-      try {
-        const exRes = await getDayExercises(currentDay.id);
-        nextExercisesCount = exRes.data.length;
-      } catch {
-        nextExercisesCount = 0;
-      }
-    }
+    planProgress = Math.round((completedDayIds.size / dashboard.total_days) * 100);
   }
 
   return {
@@ -109,14 +76,14 @@ async function fetchRetentionMetrics(): Promise<Omit<RetentionMetrics, 'loading'
     weeklyVolume: weeklyStats.volume,
     weeklyDuration: Math.round(weeklyStats.duration / 60),
     weeklyCalories: weeklyStats.calories,
-    activePlan,
-    currentDay,
-    currentDayIndex,
-    totalDays,
+    activePlan: dashboard.active_plan,
+    currentDay: dashboard.current_day,
+    currentDayIndex: dashboard.current_day_index || 1,
+    totalDays: dashboard.total_days,
     planProgress,
-    nextExercisesCount,
+    nextExercisesCount: dashboard.current_day?.exercise_count ?? 0,
     sessions,
-    dailyInsight: insightResult?.insight ?? '',
+    dailyInsight: dashboard.daily_insight || '',
   };
 }
 
@@ -147,7 +114,7 @@ export function useRetentionMetrics(userId?: string) {
 // Query key export for external invalidation (e.g. after completing a workout)
 export const retentionMetricsKey = (userId?: string) => ['retentionMetrics', userId];
 
-function calculateStats(sessions: WorkoutSession[]) {
+function calculateStats(sessions: DashboardSession[]) {
   let streak = 0;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -156,7 +123,7 @@ function calculateStats(sessions: WorkoutSession[]) {
     sessions
       .filter((session) => session.status === 'completed')
       .map((session) => {
-        const date = new Date(session.finished_at || session.created_at);
+        const date = new Date(session.finished_at || session.started_at);
         date.setHours(0, 0, 0, 0);
         return date.getTime();
       })
@@ -190,12 +157,14 @@ function calculateStats(sessions: WorkoutSession[]) {
   let weeklyVolume = 0;
   let weeklyDuration = 0;
 
-  sessions.forEach((session: any) => {
-    totalXp += 300;
-    if (session.total_duration_sec) totalXp += Math.round((session.total_duration_sec / 60) * 5);
-    if (session.total_volume_kg) totalXp += Math.round(session.total_volume_kg / 100);
+  sessions.forEach((session) => {
+    if (session.status === 'completed') {
+      totalXp += 300;
+      if (session.total_duration_sec) totalXp += Math.round((session.total_duration_sec / 60) * 5);
+      if (session.total_volume_kg) totalXp += Math.round(session.total_volume_kg / 100);
+    }
 
-    const date = new Date(session.finished_at || session.created_at);
+    const date = new Date(session.finished_at || session.started_at);
     if (date >= oneWeekAgo && date <= new Date(today.getTime() + 86400000) && session.status === 'completed') {
       weeklyWorkouts += 1;
       weeklyDuration += session.total_duration_sec || 0;

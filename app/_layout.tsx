@@ -179,6 +179,7 @@ function ThemedStack() {
       <Stack.Screen name="achievements" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="settings/coach-memory" />
       <Stack.Screen name="auth/callback" />
       <Stack.Screen name="update-password" />
       <Stack.Screen name="email-verified" />

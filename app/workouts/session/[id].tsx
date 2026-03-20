@@ -352,7 +352,8 @@ export default function WorkoutSessionScreen() {
         );
       } else {
         const currentLogs = exercises.find((entry) => entry.exercise.exercise_uuid === exerciseUuid)?.logs || [];
-        const setNumber = currentLogs.length + 1;
+        const maxSetIndex = currentLogs.reduce((max, log) => Math.max(max, log.set_index), 0);
+        const setNumber = maxSetIndex + 1;
 
         const created = await offlineLogSet(sessionId, {
           exercise_uuid: exerciseUuid,

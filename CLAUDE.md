@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code when working with this repository.
 
-**Always add `/Users/taroshmathuria/FitNyx/backend` as an additional working directory at the start of every session (use `/add-dir`).**
+**Always add `/Users/taroshmathuria/FitNyx/backend` and `/Users/taroshmathuria/Documents/AdminDashboard/admin` as additional working directories at the start of every session (use `/add-dir`).**
 
 ---
 

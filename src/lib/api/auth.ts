@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { API_BASE_URL } from '@/src/lib/api';
+import { secureStorage } from '@/src/lib/secureStorage';
 import { supabase } from '@/src/lib/supabase';
 
 const SESSION_ID_KEY = 'fitnyx-session-id';
@@ -29,15 +28,15 @@ export async function registerSession(accessToken?: string): Promise<string> {
   if (!token) {
     token = await getAuthToken();
   }
-  const body = JSON.stringify({ access_token: token });
 
+  // Token is sent only in the Authorization header — never in the body,
+  // to prevent it from appearing in server request logs.
   const response = await fetch(`${API_BASE_URL}/auth/session`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body,
   });
   const text = await response.text();
   const result = text ? JSON.parse(text) : null;
@@ -45,16 +44,16 @@ export async function registerSession(accessToken?: string): Promise<string> {
     throw new Error(result?.error || `API call failed: ${response.statusText}`);
   }
   const sessionId = result.session_id;
-  await AsyncStorage.setItem(SESSION_ID_KEY, sessionId);
+  await secureStorage.setItem(SESSION_ID_KEY, sessionId);
   return sessionId;
 }
 
 /** Get the stored session ID (if any). */
 export async function getSessionId(): Promise<string | null> {
-  return AsyncStorage.getItem(SESSION_ID_KEY);
+  return secureStorage.getItem(SESSION_ID_KEY);
 }
 
 /** Clear the stored session ID on logout. */
 export async function clearSessionId(): Promise<void> {
-  await AsyncStorage.removeItem(SESSION_ID_KEY);
+  await secureStorage.removeItem(SESSION_ID_KEY);
 }

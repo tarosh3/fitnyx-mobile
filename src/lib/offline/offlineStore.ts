@@ -149,6 +149,17 @@ export async function clearPersistedSession(sessionId: string): Promise<void> {
   }
 }
 
+// --- Clear all offline data (used on sign-out to prevent cross-account bleed) ---
+
+export async function clearAllOfflineData(): Promise<void> {
+  await AsyncStorage.multiRemove([
+    KEYS.sessions,
+    KEYS.logs,
+    KEYS.activeSessionId,
+    KEYS.idMap,
+  ]);
+}
+
 // --- Cleanup stale data ---
 
 const STALE_SESSION_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

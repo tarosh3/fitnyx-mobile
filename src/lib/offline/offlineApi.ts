@@ -1,9 +1,9 @@
 import NetInfo from '@react-native-community/netinfo';
 import {
-  startWorkoutSession,
   logExerciseSet,
   updateExerciseLog,
   deleteExerciseLog,
+  sessionAction,
   WorkoutSession,
   ExerciseLog,
   LogExerciseInput,
@@ -11,7 +11,6 @@ import {
   getWorkoutSession,
   SessionWithLogs,
 } from '@/src/lib/api/workoutSessions';
-import { sessionAction } from '@/src/lib/api/workoutSessions';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue, idbSet } from '@/src/lib/cache/indexeddb';
 import {
   generateOfflineId,
@@ -43,7 +42,12 @@ export async function offlineStartSession(input: StartSessionInput): Promise<Wor
 
   if (online) {
     try {
-      const session = await startWorkoutSession(input);
+      // Use the validated /action endpoint (checks plan ownership + deletion)
+      const session = await sessionAction('start', {
+        planId: input.workout_plan_id,
+        dayId: input.workout_day_id,
+        startedAt: input.started_at,
+      });
       await setActiveOfflineSessionId(session.id);
       await saveOfflineSession(session);
       return session;
@@ -326,6 +330,28 @@ async function offlineSessionAction(
       }
       return result;
     } catch (error: any) {
+      // For pause/resume, a 400 means the session is already in the target state
+      // (e.g. foreground handler already paused it). Treat as success by fetching current state.
+      if (error?.status === 400 && (actionType === 'pause' || actionType === 'resume')) {
+        try {
+          const { getActiveSession } = require('@/src/lib/api/workoutSessions');
+          const resp = await getActiveSession();
+          if (resp.active && resp.session) {
+            // Sync local copy with server state
+            const localSession = await getOfflineSession(sessionId);
+            if (localSession) {
+              localSession.status = resp.session.status;
+              localSession.paused_at = resp.session.paused_at;
+              localSession.last_resumed_at = resp.session.last_resumed_at;
+              localSession.total_duration_sec = resp.session.total_duration_sec;
+              await saveOfflineSession(localSession);
+            }
+            return resp.session;
+          }
+        } catch {
+          // If fetching active session also fails, fall through to offline
+        }
+      }
       if (error?.status) throw error;
     }
   }

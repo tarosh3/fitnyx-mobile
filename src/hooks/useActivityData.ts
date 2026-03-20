@@ -1,5 +1,11 @@
 import { useMemo } from 'react';
-import { WorkoutSession } from '@/src/lib/api/workoutSessions';
+
+/** Minimal session shape needed for activity data computation. */
+interface SessionLike {
+  status: string;
+  finished_at?: string | null;
+  started_at: string;
+}
 
 interface ActivityData {
   days: Map<string, number>;
@@ -10,13 +16,13 @@ interface ActivityData {
 
 const DEFAULTS: ActivityData = { days: new Map(), totalActiveDays: 0, maxStreak: 0, loading: true };
 
-function computeActivityData(sessions: WorkoutSession[]) {
+function computeActivityData(sessions: SessionLike[]) {
   const completed = sessions.filter((s) => s.status === 'completed');
 
   const dayMap = new Map<string, number>();
 
   completed.forEach((session) => {
-    const dateStr = (session.finished_at || session.started_at || session.created_at).slice(0, 10);
+    const dateStr = (session.finished_at || session.started_at).slice(0, 10);
     dayMap.set(dateStr, (dayMap.get(dateStr) || 0) + 1);
   });
 
@@ -43,7 +49,7 @@ function computeActivityData(sessions: WorkoutSession[]) {
   };
 }
 
-export function useActivityData(sessions?: WorkoutSession[]): ActivityData {
+export function useActivityData(sessions?: SessionLike[]): ActivityData {
   const result = useMemo(() => {
     if (!sessions) return null;
     return computeActivityData(sessions);

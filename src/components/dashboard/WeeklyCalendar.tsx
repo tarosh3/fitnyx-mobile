@@ -3,7 +3,12 @@ import { addDays, format, isSameDay, startOfWeek } from 'date-fns';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-export function WeeklyCalendar() {
+interface WeeklyCalendarProps {
+  /** Map of "YYYY-MM-DD" → workout count for the current week */
+  activityDays?: Map<string, number>;
+}
+
+export function WeeklyCalendar({ activityDays }: WeeklyCalendarProps) {
   const palette = useThemeColors();
 
   const calendarDays = useMemo(() => {
@@ -14,16 +19,17 @@ export function WeeklyCalendar() {
 
     for (let i = 0; i < 7; i += 1) {
       const current = addDays(start, i);
+      const dateStr = format(current, 'yyyy-MM-dd');
       days.push({
         day: format(current, 'EEe').substring(0, 3).toUpperCase(), // MON, TUE...
         date: format(current, 'd'), // 2, 3...
         fullDate: current,
         active: isSameDay(current, today),
-        dot: i % 2 !== 0, // Mock dot logic for visual variety
+        dot: (activityDays?.get(dateStr) ?? 0) > 0,
       });
     }
     return days;
-  }, []);
+  }, [activityDays]);
 
   return (
     <View style={styles.container}>
@@ -42,7 +48,7 @@ export function WeeklyCalendar() {
                   },
                 ]}
               >
-                {/* Dot indicator */}
+                {/* Dot indicator — only shown for days with recorded workouts */}
                 {item.dot && (
                   <View
                     style={[

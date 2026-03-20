@@ -1,19 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WorkoutPlan, WorkoutPlanDay, WorkoutDayExercise } from '@/src/lib/api/workoutPlans';
 
-interface OfflineRequest {
-  id: number;
-  url: string;
-  method: 'POST' | 'PUT' | 'DELETE';
-  body: any;
-  timestamp: number;
-}
-
 const KEYS = {
   plans: 'fitnyx-db:plans',
   days: 'fitnyx-db:days',
   exercises: 'fitnyx-db:exercises',
-  queue: 'fitnyx-db:offline-queue',
 } as const;
 
 type PlansStore = Record<string, WorkoutPlan>;
@@ -65,30 +56,4 @@ export async function cacheDayExercises(dayId: string, exercises: WorkoutDayExer
 export async function getCachedDayExercises(dayId: string): Promise<WorkoutDayExercise[] | null> {
   const allExercises = await readJson<ExercisesStore>(KEYS.exercises, {});
   return allExercises[dayId] ?? null;
-}
-
-export async function queueRequest(url: string, method: 'POST' | 'PUT' | 'DELETE', body: any): Promise<void> {
-  const queue = await readJson<OfflineRequest[]>(KEYS.queue, []);
-  const id = queue.length ? queue[queue.length - 1].id + 1 : 1;
-  queue.push({
-    id,
-    url,
-    method,
-    body,
-    timestamp: Date.now(),
-  });
-  await writeJson(KEYS.queue, queue);
-}
-
-export async function getQueuedRequests(): Promise<OfflineRequest[]> {
-  const queue = await readJson<OfflineRequest[]>(KEYS.queue, []);
-  return [...queue].sort((a, b) => a.timestamp - b.timestamp);
-}
-
-export async function removeQueuedRequest(id: number): Promise<void> {
-  const queue = await readJson<OfflineRequest[]>(KEYS.queue, []);
-  await writeJson(
-    KEYS.queue,
-    queue.filter((item) => item.id !== id)
-  );
 }

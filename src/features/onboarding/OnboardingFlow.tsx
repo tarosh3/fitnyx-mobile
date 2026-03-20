@@ -68,7 +68,7 @@ export function OnboardingFlow() {
   const router = useRouter();
   const palette = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
+  const { signOut, markOnboardingComplete } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
@@ -104,6 +104,11 @@ export function OnboardingFlow() {
     if (stepData && currentStep > 0) {
       setSaving(true);
       try {
+        // Save to backend first — only sync Supabase metadata after backend succeeds
+        // to avoid divergence if the backend rejects the change.
+        const updated = await saveOnboardingStep(currentStep, stepData);
+        setOnboardingData(updated);
+
         if (currentStep === 1 && stepData.username) {
           supabase.auth
             .updateUser({
@@ -113,9 +118,6 @@ export function OnboardingFlow() {
             })
             .catch(() => undefined);
         }
-
-        const updated = await saveOnboardingStep(currentStep, stepData);
-        setOnboardingData(updated);
       } catch (error) {
         console.error('Failed to save onboarding step', error);
         setSaving(false);
@@ -128,6 +130,7 @@ export function OnboardingFlow() {
       setSaving(true);
       try {
         await completeOnboarding();
+        markOnboardingComplete();
         router.replace('/dashboard');
       } catch (error) {
         console.error('Failed to complete onboarding', error);

@@ -17,20 +17,29 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
 
     switch (actionId) {
       case 'pause':
-        await pauseSession(session.id);
+        // Guard: only pause if session is still in_progress (foreground handler may have already paused it)
+        if (session.status === 'in_progress') {
+          await pauseSession(session.id);
+        }
         // Re-display notification in paused state
         const { updateTimer } = require('@/src/lib/workoutNotification');
-        await updateTimer(session.total_duration_sec, true);
+        await updateTimer(session.total_duration_sec, true, session.started_at, session.last_resumed_at);
         break;
 
       case 'resume':
-        await resumeSession(session.id);
+        // Guard: only resume if session is actually paused
+        if (session.status === 'paused') {
+          await resumeSession(session.id);
+        }
         const wn = require('@/src/lib/workoutNotification');
-        await wn.updateTimer(session.total_duration_sec, false);
+        await wn.updateTimer(session.total_duration_sec, false, session.started_at, session.last_resumed_at);
         break;
 
       case 'finish':
-        await finishSession(session.id);
+        // Guard: only finish if session is active
+        if (session.status === 'in_progress' || session.status === 'paused') {
+          await finishSession(session.id);
+        }
         const { dismiss } = require('@/src/lib/workoutNotification');
         await dismiss();
         break;

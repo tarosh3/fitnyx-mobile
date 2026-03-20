@@ -15,13 +15,12 @@ export function useOfflineAware() {
     }
   }, []);
 
+  // Refresh on mount and whenever connectivity changes
   useEffect(() => {
     refreshPendingCount();
-    const interval = setInterval(refreshPendingCount, 10000);
-    return () => clearInterval(interval);
   }, [refreshPendingCount]);
 
-  // Refresh count when coming back online (sync may clear it)
+  // Refresh count shortly after coming back online (sync may clear the queue)
   useEffect(() => {
     if (isOnline) {
       const timeout = setTimeout(refreshPendingCount, 3000);

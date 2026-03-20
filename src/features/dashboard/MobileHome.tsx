@@ -5,7 +5,6 @@ import { BlurView } from 'expo-blur';
 import { Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Achievements } from './components/Achievements';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
 import { LevelProgress } from './components/LevelProgress';
@@ -117,8 +116,6 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
                     totalActiveDays={activity.totalActiveDays}
                     activityDays={activity.days}
                 />
-
-                <Achievements />
 
                 <View style={{ height: 120 }} />
             </View>
