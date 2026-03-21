@@ -1,3 +1,6 @@
+// Register notification background handler & foreground service at module level
+import '@/src/lib/notificationBackgroundHandler';
+
 import { Anton_400Regular } from '@expo-google-fonts/anton';
 import {
   Inter_400Regular,
@@ -11,7 +14,8 @@ import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { BackHandler, ToastAndroid } from 'react-native';
+import { BackHandler, ToastAndroid, View, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
 
 // Set native screen background to black to prevent white flash during transitions
@@ -26,8 +30,10 @@ import { BottomNav } from '@/src/components/navigation/BottomNav';
 import { SyncManager } from '@/src/components/SyncManager';
 import { AICoachProvider } from '@/src/providers/AICoachProvider';
 import { AuthProvider } from '@/src/providers/AuthProvider';
+import { QueryProvider } from '@/src/providers/QueryProvider';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { WorkoutProvider } from '@/src/providers/WorkoutProvider';
+import AnimatedSplash from '@/src/screens/SplashScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -55,16 +61,18 @@ export default function RootLayout() {
     Inter_800ExtraBold,
   });
 
+  const [showAnimated, setShowAnimated] = React.useState(true);
+
   useEffect(() => {
     if (error) {
       throw error;
     }
   }, [error]);
 
-  useEffect(() => {
+  const onLayoutRootView = React.useCallback(async () => {
     if (loaded) {
-      // Splash screen hiding is now deferred to AuthProvider
-      // to ensure app data and session are loaded first.
+      // Hide the NATIVE splash as soon as the root view mounts
+      await SplashScreen.hideAsync();
     }
   }, [loaded]);
 
@@ -72,9 +80,13 @@ export default function RootLayout() {
     let currentCount = 0;
 
     const backAction = () => {
-      // If we aren't on the root dashboard page, route there
+      // If we aren't on the root dashboard page, go back or navigate to dashboard
       if (pathname !== '/' && pathname !== '/dashboard') {
-        router.back();
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/dashboard');
+        }
         return true;
       }
 
@@ -107,21 +119,40 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
-        <WorkoutProvider>
-          <AICoachProvider>
-            <DynamicStatusBar />
-            <BackendKeepAlive />
-            <SyncManager />
-            <ThemedStack />
-            <BottomNav />
-            <ActiveSessionIndicator />
-            <AICoachChat />
-          </AICoachProvider>
-        </WorkoutProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <QueryProvider>
+        <AuthProvider>
+          <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
+            <WorkoutProvider>
+              <AICoachProvider>
+                <View style={{ flex: 1 }}>
+                  <ThemedStack />
+                  
+                  {showAnimated && (
+                    <View style={StyleSheet.absoluteFill}>
+                      <AnimatedSplash
+                        onAnimationComplete={() => setShowAnimated(false)}
+                      />
+                    </View>
+                  )}
+
+                  {!showAnimated && (
+                    <>
+                      <DynamicStatusBar />
+                      <BackendKeepAlive />
+                      <SyncManager />
+                      <BottomNav />
+                      <ActiveSessionIndicator />
+                      <AICoachChat />
+                    </>
+                  )}
+                </View>
+              </AICoachProvider>
+            </WorkoutProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </QueryProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -131,11 +162,11 @@ function ThemedStack() {
   const bg = theme === 'dark' ? '#0A0A0A' : '#F7F7F8';
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: bg } }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="signup" />
-      <Stack.Screen name="onboarding" />
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true, contentStyle: { backgroundColor: bg } }}>
+      <Stack.Screen name="index" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="login" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="signup" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       <Stack.Screen name="dashboard/index" />
       <Stack.Screen name="exercises" />
       <Stack.Screen name="dashboard/stats" />
@@ -148,6 +179,8 @@ function ThemedStack() {
       <Stack.Screen name="achievements" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="settings/coach-memory" />
+      <Stack.Screen name="auth/callback" />
       <Stack.Screen name="update-password" />
       <Stack.Screen name="email-verified" />
       <Stack.Screen name="verification-failed" />

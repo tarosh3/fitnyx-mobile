@@ -14,13 +14,13 @@ const MOTIVATIONS = [
 ];
 
 export function MotivationStep({ data, onNext, saving }: OnboardingStepProps) {
-  const [selected, setSelected] = useState(data?.fitness_profile?.motivation || '');
+  const [selected, setSelected] = useState(data?.fitness_profile?.motivations || '');
 
   return (
     <StepScaffold
       title="What motivates you the most?"
       subtitle="This helps us keep you engaged."
-      onContinue={() => onNext({ motivation: selected })}
+      onContinue={() => onNext({ motivations: selected })}
       continueLabel="Complete Setup"
       saving={saving}
       disabled={!selected}

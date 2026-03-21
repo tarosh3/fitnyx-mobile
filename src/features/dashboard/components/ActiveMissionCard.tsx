@@ -22,8 +22,7 @@ export function ActiveMissionCard({ activePlan, activeSession, currentDay }: Act
     };
 
     const title = activeSession ? 'RESUME TODAY\'S MISSION' : (activePlan ? 'START TODAY\'S MISSION' : 'START YOUR JOURNEY');
-    const subtext = activeSession ? 'WORKOUT IN PROGRESS' : (activePlan ? (currentDay?.title || 'READY TO START') : 'SELECT A PLAN TO BEGIN');
-    const timeText = activePlan ? '~45 min' : '';
+    const subtext = activeSession ? 'WORKOUT IN PROGRESS' : (activePlan ? (currentDay?.day_name || 'READY TO START') : 'SELECT A PLAN TO BEGIN');
 
     return (
         <View style={styles.section}>
@@ -37,11 +36,6 @@ export function ActiveMissionCard({ activePlan, activeSession, currentDay }: Act
                 <View style={styles.content}>
                     <Text style={styles.ctaTitle}>{title}</Text>
                     <Text style={styles.ctaSub}>{subtext}</Text>
-                    {timeText ? (
-                        <View style={styles.timeBadge}>
-                            <Text style={styles.timeText}>{timeText}</Text>
-                        </View>
-                    ) : null}
                 </View>
                 <Play color={BG_DARK} size={32} fill={BG_DARK} />
 
@@ -83,19 +77,5 @@ const styles = StyleSheet.create({
         color: BG_DARK,
         marginTop: 4,
         opacity: 0.8,
-    },
-    timeBadge: {
-        backgroundColor: 'rgba(0,0,0,0.08)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        marginTop: 12,
-        alignSelf: 'flex-start',
-    },
-    timeText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: BG_DARK,
-        opacity: 0.6,
     },
 });

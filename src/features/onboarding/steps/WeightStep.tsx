@@ -17,8 +17,8 @@ export function WeightStep({ data, onNext, saving }: OnboardingStepProps) {
   const palette = useThemeColors();
 
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
-  const [weightKg, setWeightKg] = useState(data?.weight || 70);
-  const [weightLbs, setWeightLbs] = useState(Math.round((data?.weight || 70) * 2.205));
+  const [weightKg, setWeightKg] = useState(data?.weight_kg || 70);
+  const [weightLbs, setWeightLbs] = useState(Math.round((data?.weight_kg || 70) * 2.205));
   const [error, setError] = useState('');
 
   const currentWeight = unit === 'kg' ? weightKg : weightLbs;

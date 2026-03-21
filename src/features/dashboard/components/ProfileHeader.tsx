@@ -8,14 +8,24 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 const NEON_LIME = '#5fc793';
 const PALE_ORANGE = '#FF9500';
 
+function getGreeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'GOOD MORNING';
+    if (hour < 17) return 'GOOD AFTERNOON';
+    return 'GOOD EVENING';
+}
+
 interface ProfileHeaderProps {
     userName: string;
     avatarUrl?: string | null;
     variant?: 'home' | 'dashboard';
     streakDays?: number;
+    activePlanName?: string | null;
+    nextExercisesCount?: number;
+    hasActiveSession?: boolean;
 }
 
-export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDays = 0 }: ProfileHeaderProps) {
+export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDays = 0, activePlanName, nextExercisesCount = 0, hasActiveSession = false }: ProfileHeaderProps) {
     const router = useRouter();
     const palette = useThemeColors();
     const styles = getStyles(palette);
@@ -50,12 +60,24 @@ export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDay
                         <Text style={styles.streakText}>{streakDays} DAY STREAK</Text>
                     </View>
                     <Text style={styles.homeGreeting}>
-                        GOOD EVENING,{"\n"}
+                        {getGreeting()},{"\n"}
                         {userName}.
                     </Text>
-                    <Text style={styles.homeSub}>
-                        You have <Text style={{ fontWeight: '900', color: palette.text }}>not yet started</Text> with 7-Day Hypertrophy Split. 6 exercises waiting for you.
-                    </Text>
+                    {activePlanName ? (
+                        <Text style={styles.homeSub}>
+                            {hasActiveSession ? (
+                                <>You have a <Text style={{ fontWeight: '900', color: palette.text }}>session in progress</Text> with {activePlanName}.</>
+                            ) : nextExercisesCount > 0 ? (
+                                <><Text style={{ fontWeight: '900', color: palette.text }}>{nextExercisesCount} exercise{nextExercisesCount !== 1 ? 's' : ''}</Text> waiting for you in {activePlanName}.</>
+                            ) : (
+                                <>Your plan <Text style={{ fontWeight: '900', color: palette.text }}>{activePlanName}</Text> is ready to go.</>
+                            )}
+                        </Text>
+                    ) : (
+                        <Text style={styles.homeSub}>
+                            No active plan yet. <Text style={{ fontWeight: '900', color: palette.text }}>Pick a workout</Text> to get started.
+                        </Text>
+                    )}
                 </View>
                 <Pressable onPress={() => router.push('/profile')} style={styles.avatarContainer}>
                     {avatarUrl ? (

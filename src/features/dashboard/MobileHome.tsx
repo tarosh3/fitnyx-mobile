@@ -5,7 +5,6 @@ import { BlurView } from 'expo-blur';
 import { Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Achievements } from './components/Achievements';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
 import { LevelProgress } from './components/LevelProgress';
@@ -24,7 +23,7 @@ interface MobileHomeProps {
 export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
     const { openCenteredChat } = useAICoach();
     const metrics = useRetentionMetrics(user?.id);
-    const activity = useActivityData(user?.id);
+    const activity = useActivityData(metrics.sessions);
     const palette = useThemeColors();
     const styles = getStyles(palette);
 
@@ -38,6 +37,24 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
         );
     }
 
+    if (metrics.error) {
+        return (
+            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
+                <Text style={[styles.stateText, { color: palette.mutedText }]}>SOMETHING WENT WRONG</Text>
+                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Pull down to retry</Text>
+            </View>
+        );
+    }
+
+    if (!metrics.sessions.length && !metrics.activePlan) {
+        return (
+            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
+                <Text style={[styles.stateText, { color: palette.mutedText }]}>NO ACTIVITY YET</Text>
+                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Start a workout to see your dashboard</Text>
+            </View>
+        );
+    }
+
     return (
         <ScrollView style={[styles.container, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
             <View style={styles.content}>
@@ -46,6 +63,9 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
                     avatarUrl={avatarUrl}
                     variant="home"
                     streakDays={metrics.streakDays}
+                    activePlanName={metrics.activePlan?.title ?? null}
+                    nextExercisesCount={metrics.nextExercisesCount}
+                    hasActiveSession={!!metrics.activeSession}
                 />
 
                 <LevelProgress
@@ -97,8 +117,6 @@ export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
                     activityDays={activity.days}
                 />
 
-                <Achievements />
-
                 <View style={{ height: 120 }} />
             </View>
         </ScrollView>
@@ -110,6 +128,15 @@ const getStyles = (palette: any) => StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    stateText: {
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1.1,
+    },
+    stateSub: {
+        fontSize: 12,
+        marginTop: 6,
     },
     container: {
         flex: 1,

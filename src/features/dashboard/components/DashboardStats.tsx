@@ -2,19 +2,24 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Activity, Ruler } from 'lucide-react-native';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DimensionValue, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 const NEON_LIME = '#5fc793';
 
 interface DashboardStatsProps {
-    weight?: number;
-    bmi?: number;
-    height?: number;
+    weight?: number | null;
+    bmi?: number | null;
+    height?: number | null;
 }
 
-export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: DashboardStatsProps) {
+// BMI bar fill: maps BMI to a 0-100% range (15 = 0%, 40 = 100%)
+function bmiToPercent(bmi: number): number {
+    return Math.max(0, Math.min(100, ((bmi - 15) / 25) * 100));
+}
+
+export function DashboardStats({ weight, bmi, height }: DashboardStatsProps) {
     const router = useRouter();
     const palette = useThemeColors();
     const styles = React.useMemo(() => getStyles(palette), [palette]);
@@ -23,6 +28,11 @@ export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: Da
         router.push('/dashboard/stats');
     };
 
+    const weightDisplay = weight != null ? `${weight.toFixed(1)} ` : '-- ';
+    const bmiDisplay = bmi != null ? bmi.toFixed(1) : '--';
+    const heightDisplay = height != null ? `${height.toFixed(1)} ` : '-- ';
+    const bmiPercent: DimensionValue = bmi != null ? `${bmiToPercent(bmi)}%` as DimensionValue : '0%';
+
     return (
         <View style={styles.container}>
             <View style={styles.row}>
@@ -30,7 +40,7 @@ export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: Da
                     <BlurView intensity={10} tint="light" style={styles.statCardHalf}>
                         <View style={styles.cardContent}>
                             <Text style={styles.label}>WEIGHT</Text>
-                            <Text style={styles.value}>{weight.toFixed(1)} <Text style={styles.unit}>kg</Text></Text>
+                            <Text style={styles.value}>{weightDisplay}<Text style={styles.unit}>kg</Text></Text>
                             <Text style={styles.subtext}>Last Recorded</Text>
                         </View>
                         <View style={styles.bgIconContainer}>
@@ -43,10 +53,10 @@ export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: Da
                     <BlurView intensity={10} tint="light" style={styles.statCardHalf}>
                         <View style={styles.cardContent}>
                             <Text style={styles.label}>BMI</Text>
-                            <Text style={styles.value}>{bmi.toFixed(1)}</Text>
+                            <Text style={styles.value}>{bmiDisplay}</Text>
                             <Text style={styles.subtext}>Score</Text>
                             <View style={styles.bmiTrack}>
-                                <View style={[styles.bmiFill, { width: '75%' }]} />
+                                <View style={[styles.bmiFill, { width: bmiPercent }]} />
                             </View>
                         </View>
                     </BlurView>
@@ -58,7 +68,7 @@ export function DashboardStats({ weight = 79.0, bmi = 24.4, height = 180.0 }: Da
                     <View style={styles.cardContent}>
                         <Text style={styles.label}>HEIGHT</Text>
                         <View style={styles.heightRow}>
-                            <Text style={styles.value}>{height.toFixed(1)} <Text style={styles.unit}>cm</Text></Text>
+                            <Text style={styles.value}>{heightDisplay}<Text style={styles.unit}>cm</Text></Text>
                         </View>
                         <Text style={styles.subtext}>Current</Text>
                     </View>

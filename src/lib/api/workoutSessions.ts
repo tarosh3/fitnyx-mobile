@@ -38,6 +38,7 @@ export interface SessionWithLogs {
 export interface StartSessionInput {
   workout_plan_id: string;
   workout_day_id: string;
+  started_at?: string; // ISO8601 — used by offline sync to preserve original start time
 }
 
 export interface LogExerciseInput {
@@ -48,30 +49,10 @@ export interface LogExerciseInput {
   actual_rest_seconds?: number;
 }
 
-export async function startWorkoutSession(data: StartSessionInput): Promise<WorkoutSession> {
-  return fetchWithAuth('/workout-sessions/start', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
 export async function logExerciseSet(sessionId: string, data: LogExerciseInput): Promise<ExerciseLog> {
   return fetchWithAuth(`/workout-sessions/${sessionId}/exercises`, {
     method: 'POST',
     body: JSON.stringify(data),
-  });
-}
-
-export async function completeSession(sessionId: string, notes?: string): Promise<WorkoutSession> {
-  return fetchWithAuth(`/workout-sessions/${sessionId}/complete`, {
-    method: 'PUT',
-    body: JSON.stringify({ notes }),
-  });
-}
-
-export async function abandonSession(sessionId: string): Promise<WorkoutSession> {
-  return fetchWithAuth(`/workout-sessions/${sessionId}/abandon`, {
-    method: 'PUT',
   });
 }
 
@@ -108,8 +89,32 @@ export interface ActiveSessionResponse {
   exercise_logs?: ExerciseLog[];
 }
 
+/** Enriched exercise summary returned by the history endpoint. */
+export interface HistoryExerciseSummary {
+  exercise_uuid: string;
+  exercise_name: string;
+  sets: number;
+  total_reps: number;
+  max_weight_kg: number | null;
+}
+
+/** Enriched session object returned by GET /workout-sessions/history. */
+export interface HistorySession {
+  id: string;
+  plan_name: string;
+  workout_date: string;
+  started_at: string;
+  completed_at: string | null;
+  status: string;
+  total_duration_sec: number;
+  exercise_count: number;
+  total_sets: number;
+  total_volume_kg: number;
+  exercises: HistoryExerciseSummary[];
+}
+
 export interface SessionHistoryResponse {
-  data: WorkoutSession[];
+  data: HistorySession[];
   meta: {
     total: number;
     page: number;
@@ -120,7 +125,7 @@ export interface SessionHistoryResponse {
 
 export async function sessionAction(
   action: SessionAction,
-  options?: { planId?: string; dayId?: string; sessionId?: string }
+  options?: { planId?: string; dayId?: string; sessionId?: string; timestamp?: string; startedAt?: string }
 ): Promise<WorkoutSession> {
   return fetchWithAuth('/workout-sessions/action', {
     method: 'POST',
@@ -129,6 +134,8 @@ export async function sessionAction(
       plan_id: options?.planId,
       day_id: options?.dayId,
       session_id: options?.sessionId,
+      timestamp: options?.timestamp,
+      started_at: options?.startedAt,
     }),
   });
 }

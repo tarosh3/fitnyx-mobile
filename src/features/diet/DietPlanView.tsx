@@ -164,13 +164,6 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
   const fatsG = parseMacroGrams(plan_data.macros.fats);
   const maxMacro = Math.max(proteinG, carbsG, fatsG, 1);
 
-  const consumedCalories = useMemo(
-    () => plan_data.meals.reduce((sum, m) => sum + (m.calories || 0), 0),
-    [plan_data.meals]
-  );
-  const caloriePct = plan_data.total_calories > 0
-    ? Math.min((consumedCalories / plan_data.total_calories) * 100, 100)
-    : 0;
 
   return (
     <View style={styles.container}>
@@ -189,17 +182,6 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
           <MacroBar label="Fats" value={plan_data.macros.fats} grams={fatsG} maxGrams={maxMacro} color="#f59e0b" icon={Droplets} />
         </View>
       </BlurView>
-
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${caloriePct}%` }]} />
-        </View>
-        <View style={styles.progressLabels}>
-          <Text style={styles.progressLabel}>PROGRESS</Text>
-          <Text style={styles.progressLabel}>{consumedCalories} / {plan_data.total_calories} KCAL</Text>
-        </View>
-      </View>
 
       {/* Meal Schedule */}
       <View style={{ gap: 16 }}>
@@ -376,33 +358,6 @@ const getStyles = (palette: any) => StyleSheet.create({
   macroFill: {
     height: '100%',
     borderRadius: 2,
-  },
-  progressContainer: {
-    gap: 8,
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: palette.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FACC15',
-    shadowColor: '#FACC15',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-  },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressLabel: {
-    color: palette.mutedText,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
   },
   sectionTitle: {
     color: palette.mutedText,

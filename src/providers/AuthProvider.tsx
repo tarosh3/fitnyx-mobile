@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -10,7 +11,12 @@ import { getOnboardingStatus } from '@/src/lib/api/onboarding';
 import { getProfile } from '@/src/lib/api/users';
 import { cacheClear, cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { clearOfflineQueue, getOfflineQueue } from '@/src/lib/cache/indexeddb';
+import { clearAllOfflineData } from '@/src/lib/offline/offlineStore';
+import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
 import { supabase } from '@/src/lib/supabase';
+
+// Durable key that persists indefinitely (not subject to TTL expiry)
+const ONBOARDING_DONE_KEY = 'fitnyx:onboarding-complete';
 
 interface AuthContextType {
   user: User | null;
@@ -21,11 +27,13 @@ interface AuthContextType {
   isAuthOpen: boolean;
   authMode: 'login' | 'signup';
   onboardingComplete: boolean;
+  markOnboardingComplete: () => void;
   avatarUrl: string | null;
 }
 
 const ONBOARDING_EXEMPT_PATHS = [
   '/onboarding',
+  '/auth/callback',
   '/email-verified',
   '/update-password',
   '/verification-failed',
@@ -57,28 +65,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
+    // 1. Check durable (permanent) AsyncStorage flag first — survives TTL expiry
+    const durableKey = `${ONBOARDING_DONE_KEY}:${currentUser.id}`;
+    const durableValue = await AsyncStorage.getItem(durableKey).catch(() => null);
+    const durableComplete = durableValue === 'true';
+
+    // 2. Check TTL cache (fast, in-memory + AsyncStorage)
     const cacheKey = cacheKeys.onboardingStatus(currentUser.id);
     const cached = await cacheGet<{ complete: boolean }>(cacheKey);
 
     if (cached !== null) {
       setOnboardingComplete(cached.complete);
+      // Background refresh
       getOnboardingStatus()
         .then((status) => {
           setOnboardingComplete(status.onboarding_complete);
           cacheSet(cacheKey, { complete: status.onboarding_complete }, cacheTTL.MEDIUM);
+          if (status.onboarding_complete) {
+            AsyncStorage.setItem(durableKey, 'true').catch(() => undefined);
+          }
         })
         .catch(() => undefined);
       return cached.complete;
     }
 
+    // 3. Try the API
     try {
       const status = await getOnboardingStatus();
       setOnboardingComplete(status.onboarding_complete);
       await cacheSet(cacheKey, { complete: status.onboarding_complete }, cacheTTL.MEDIUM);
+      if (status.onboarding_complete) {
+        await AsyncStorage.setItem(durableKey, 'true').catch(() => undefined);
+      }
       return status.onboarding_complete;
     } catch {
-      setOnboardingComplete(false);
-      return false;
+      // 4. API failed (offline / server down) — trust the durable flag.
+      //    Only truly new users (no durable flag) will see onboarding.
+      setOnboardingComplete(durableComplete);
+      return durableComplete;
     }
   };
 
@@ -102,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAvatarUrl(profile.avatar_url ?? null);
       cacheSet(cacheKey, profile, cacheTTL.DAY);
     } catch (error) {
-      console.error('Failed to load profile', error);
+      console.warn('Failed to load profile', error);
     }
   };
 
@@ -125,20 +149,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
 
         const currentUser = session?.user ?? null;
-        setUser(currentUser);
 
         if (currentUser && session?.access_token) {
-          // Ensure device has a registered session (registers if missing)
+          // Register backend session BEFORE setting user state.
+          // Setting user triggers child providers (WorkoutProvider, AICoachProvider)
+          // to fire API calls — they need X-Session-ID to exist first.
           const existingSessionId = await getSessionId();
           if (!existingSessionId) {
             try {
-              await registerSession();
+              await registerSession(session.access_token);
             } catch (e) {
-              console.warn('Failed to register session on init:', e);
+              console.warn('Session registration during init failed:', e);
             }
           }
+          setUser(currentUser);
           fetchUserProfile(currentUser.id);
           await checkOnboarding(currentUser);
+        } else {
+          setUser(currentUser);
         }
       } catch (error) {
         console.error('Auth check failed', error);
@@ -152,6 +180,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // INITIAL_SESSION is handled by initialize() above — skip it here
+      // to avoid a race where setUser triggers child providers before
+      // the backend session ID is registered.
+      if (event === 'INITIAL_SESSION') return;
+
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setOnboardingComplete(false);
@@ -161,25 +194,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
 
       if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         setLoading(true);
         try {
-          // Register device session on sign-in (enforces single-device login)
-          if (event === 'SIGNED_IN') {
+          // Register session BEFORE setUser — child providers react to user
+          // state and immediately fire API calls that need X-Session-ID.
+          const hasSessionId = await getSessionId();
+          if (!hasSessionId) {
             try {
-              await registerSession();
+              await registerSession(session?.access_token);
             } catch (e) {
               console.warn('Failed to register session:', e);
             }
           }
+          setUser(currentUser);
           fetchUserProfile(currentUser.id);
           await checkOnboarding(currentUser);
         } finally {
           setLoading(false);
         }
       } else {
+        setUser(currentUser);
         setLoading(false);
       }
     });
@@ -201,15 +237,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const queue = await getOfflineQueue();
         if (!queue.length) return;
 
-        for (const item of queue) {
-          if (item.type === 'UPDATE_STATS') {
-            await saveMetric(item.payload);
-          }
+        const result = await processOfflineQueue();
+        if (result.failed > 0) {
+          console.warn(`Offline sync: ${result.processed} synced, ${result.failed} failed`);
         }
-
-        await clearOfflineQueue();
       } catch (error) {
-        console.error('Offline sync failed', error);
+        console.warn('Offline sync failed', error);
       }
     };
 
@@ -217,8 +250,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isOnline, user]);
 
   const signOut = async () => {
+    // Clear durable onboarding flag for this user before wiping state
+    if (user?.id) {
+      await AsyncStorage.removeItem(`${ONBOARDING_DONE_KEY}:${user.id}`).catch(() => undefined);
+    }
     await clearSessionId();
     await cacheClear();
+    await clearAllOfflineData();
+    await clearOfflineQueue();
     await supabase.auth.signOut();
     setUser(null);
     router.replace('/');
@@ -234,6 +273,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthOpen(false);
   };
 
+  const markOnboardingComplete = () => {
+    setOnboardingComplete(true);
+    if (user?.id) {
+      const durableKey = `${ONBOARDING_DONE_KEY}:${user.id}`;
+      AsyncStorage.setItem(durableKey, 'true').catch(() => undefined);
+      const cacheKey = cacheKeys.onboardingStatus(user.id);
+      cacheSet(cacheKey, { complete: true }, cacheTTL.MEDIUM).catch(() => undefined);
+    }
+  };
+
   const value = useMemo<AuthContextType>(
     () => ({
       user,
@@ -244,6 +293,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthOpen,
       authMode,
       onboardingComplete,
+      markOnboardingComplete,
       avatarUrl,
     }),
     [user, loading, onboardingComplete, avatarUrl, isAuthOpen, authMode]

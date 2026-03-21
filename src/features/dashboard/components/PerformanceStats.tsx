@@ -1,4 +1,4 @@
-import { Dumbbell, Flame, TrendingDown, TrendingUp } from 'lucide-react-native';
+import { Dumbbell, Flame, TrendingUp } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -27,7 +27,6 @@ export function PerformanceStats({ weeklyWorkouts, weeklyVolume, weeklyBurned = 
                     <View style={styles.statContent}>
                         <Text style={styles.statValue}>{weeklyWorkouts}</Text>
                         <Text style={[styles.statLabel, { marginTop: 4 }]}>WORKOUTS</Text>
-                        <Text style={styles.trendPercent}>+0%</Text>
                     </View>
                 </View>
 
@@ -42,14 +41,13 @@ export function PerformanceStats({ weeklyWorkouts, weeklyVolume, weeklyBurned = 
                             <Text style={styles.statUnit}> tons</Text>
                         </Text>
                         <Text style={[styles.statLabel, { marginTop: 4 }]}>VOLUME</Text>
-                        <Text style={styles.trendPercent}>+0%</Text>
                     </View>
                 </View>
 
                 <View style={styles.statCard}>
                     <View style={styles.cardHeader}>
                         <Flame color="#FF453A" size={14} />
-                        <TrendingDown color="#FF453A" size={10} />
+                        <TrendingUp color="#FF453A" size={10} />
                     </View>
                     <View style={styles.statContent}>
                         <Text style={styles.statValue}>
@@ -57,7 +55,6 @@ export function PerformanceStats({ weeklyWorkouts, weeklyVolume, weeklyBurned = 
                             <Text style={styles.statUnit}> kcal</Text>
                         </Text>
                         <Text style={[styles.statLabel, { marginTop: 4 }]}>BURNED</Text>
-                        <Text style={styles.trendPercentRed}>-0%</Text>
                     </View>
                 </View>
             </View>
@@ -119,17 +116,5 @@ const getStyles = (palette: any) => StyleSheet.create({
         fontWeight: '700',
         fontStyle: 'normal',
         color: palette.mutedText,
-    },
-    trendPercent: {
-        fontSize: 8,
-        fontWeight: '900',
-        color: NEON_LIME,
-        marginTop: 2,
-    },
-    trendPercentRed: {
-        fontSize: 8,
-        fontWeight: '900',
-        color: '#FF453A',
-        marginTop: 2,
     },
 });

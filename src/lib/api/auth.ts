@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { fetchWithAuth } from '@/src/lib/api';
+import { API_BASE_URL } from '@/src/lib/api';
+import { secureStorage } from '@/src/lib/secureStorage';
 import { supabase } from '@/src/lib/supabase';
 
 const SESSION_ID_KEY = 'fitnyx-session-id';
@@ -20,20 +19,41 @@ export async function getAuthToken(): Promise<string> {
  * Register a device session with the backend.
  * This revokes all previous sessions (enforcing single-device login).
  * Returns the session_id which must be sent as X-Session-ID on all requests.
+ *
+ * When called during early init, pass the already-retrieved accessToken to
+ * avoid a second supabase.auth.getSession() call that may race and fail.
  */
-export async function registerSession(): Promise<string> {
-  const result = await fetchWithAuth('/auth/session', { method: 'POST' });
+export async function registerSession(accessToken?: string): Promise<string> {
+  let token = accessToken;
+  if (!token) {
+    token = await getAuthToken();
+  }
+
+  // Token is sent only in the Authorization header — never in the body,
+  // to prevent it from appearing in server request logs.
+  const response = await fetch(`${API_BASE_URL}/auth/session`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  const text = await response.text();
+  const result = text ? JSON.parse(text) : null;
+  if (!response.ok) {
+    throw new Error(result?.error || `API call failed: ${response.statusText}`);
+  }
   const sessionId = result.session_id;
-  await AsyncStorage.setItem(SESSION_ID_KEY, sessionId);
+  await secureStorage.setItem(SESSION_ID_KEY, sessionId);
   return sessionId;
 }
 
 /** Get the stored session ID (if any). */
 export async function getSessionId(): Promise<string | null> {
-  return AsyncStorage.getItem(SESSION_ID_KEY);
+  return secureStorage.getItem(SESSION_ID_KEY);
 }
 
 /** Clear the stored session ID on logout. */
 export async function clearSessionId(): Promise<void> {
-  await AsyncStorage.removeItem(SESSION_ID_KEY);
+  await secureStorage.removeItem(SESSION_ID_KEY);
 }

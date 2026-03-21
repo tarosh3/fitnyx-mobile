@@ -4,7 +4,9 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
+import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { useWorkout } from '@/src/providers/WorkoutProvider';
 import {
   getDayExercises,
   getPlanDays,
@@ -13,7 +15,7 @@ import {
   WorkoutPlan,
   WorkoutPlanDay,
 } from '@/src/lib/api/workoutPlans';
-import { startWorkoutSession } from '@/src/lib/api/workoutSessions';
+import { offlineStartSession } from '@/src/lib/offline/offlineApi';
 import {
   cacheDayExercises,
   cachePlan,
@@ -62,11 +64,13 @@ export default function PlanDetailsScreen() {
   const [expandedDayId, setExpandedDayId] = useState<string | null>(null);
   const [loadingDayId, setLoadingDayId] = useState<string | null>(null);
   const [startingDayId, setStartingDayId] = useState<string | null>(null);
+  const { isOffline } = useOfflineAware();
+  const { activeSession } = useWorkout();
 
   useEffect(() => {
     if (!planId) return;
     loadPlan();
-  }, [planId]);
+  }, [planId, isOffline]);
 
   const loadPlan = async () => {
     if (!planId) return;
@@ -83,6 +87,9 @@ export default function PlanDetailsScreen() {
         loadedCached = true;
         setLoading(false);
       }
+
+      // If offline and we have cache, skip API calls entirely
+      if (isOffline && loadedCached) return;
 
       const [planResult, daysResult] = await Promise.all([getWorkoutPlan(planId), getPlanDays(planId)]);
       setPlan(planResult);
@@ -117,6 +124,11 @@ export default function PlanDetailsScreen() {
       const cached = await getCachedDayExercises(day.id);
       if (cached) {
         setDays((prev) => prev.map((entry) => (entry.id === day.id ? { ...entry, exercises: cached } : entry)));
+        // If offline, stop here — don't try API
+        if (isOffline) {
+          setLoadingDayId(null);
+          return;
+        }
       }
 
       const response = await getDayExercises(day.id);
@@ -137,7 +149,7 @@ export default function PlanDetailsScreen() {
     setError(null);
 
     try {
-      const session = await startWorkoutSession({
+      const session = await offlineStartSession({
         workout_plan_id: planId,
         workout_day_id: dayId,
       });
@@ -183,6 +195,12 @@ export default function PlanDetailsScreen() {
         subtitle="WORKOUT PLAN DETAILS"
         backTo="/workouts/select"
       />
+
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>OFFLINE MODE</Text>
+        </View>
+      )}
 
       {error ? (
         <View style={styles.errorBox}>
@@ -308,23 +326,40 @@ export default function PlanDetailsScreen() {
                         <Text style={styles.noExercisesText}>No exercises added for this day.</Text>
                       )}
 
-                      <Pressable
-                        onPress={() => startDayWorkout(day.id)}
-                        disabled={startingDayId === day.id}
-                        style={({ pressed }) => [
-                          styles.startBtn,
-                          pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
-                        ]}
-                      >
-                        {startingDayId === day.id ? (
-                          <ActivityIndicator color="#000" />
-                        ) : (
-                          <>
-                            <Play size={18} color="#000" fill="#000" />
-                            <Text style={styles.startBtnText}>START WORKOUT</Text>
-                          </>
-                        )}
-                      </Pressable>
+                      {activeSession && activeSession.day_id === day.id ? (
+                        <Pressable
+                          onPress={() => router.push(`/workouts/session/${activeSession.id}`)}
+                          style={({ pressed }) => [
+                            styles.startBtn,
+                            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+                          ]}
+                        >
+                          <Play size={18} color="#000" fill="#000" />
+                          <Text style={styles.startBtnText}>CONTINUE WORKOUT</Text>
+                        </Pressable>
+                      ) : activeSession ? (
+                        <View style={[styles.startBtn, { opacity: 0.4 }]}>
+                          <Text style={styles.startBtnText}>SESSION ALREADY ACTIVE</Text>
+                        </View>
+                      ) : (
+                        <Pressable
+                          onPress={() => startDayWorkout(day.id)}
+                          disabled={startingDayId === day.id}
+                          style={({ pressed }) => [
+                            styles.startBtn,
+                            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+                          ]}
+                        >
+                          {startingDayId === day.id ? (
+                            <ActivityIndicator color="#000" />
+                          ) : (
+                            <>
+                              <Play size={18} color="#000" fill="#000" />
+                              <Text style={styles.startBtnText}>START WORKOUT</Text>
+                            </>
+                          )}
+                        </Pressable>
+                      )}
                     </View>
                   )}
                 </View>
@@ -605,5 +640,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  offlineBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  offlineBannerText: {
+    color: '#EF4444',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
 });

@@ -1,0 +1,1 @@
+Use a subagent to scan the entire backend and return a clean map of every API endpoint — method, path, what it does, request body shape, response shape. Then check if each endpoint has a corresponding function in src/lib/api/ on the mobile side. List any endpoints that are missing a mobile implementation.

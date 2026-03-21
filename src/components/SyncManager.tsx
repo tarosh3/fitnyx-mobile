@@ -1,37 +1,26 @@
 import { useEffect } from 'react';
 
-import { getQueuedRequests, removeQueuedRequest } from '@/src/lib/db';
-import { fetchWithAuth } from '@/src/lib/api';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
+import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
 
+/**
+ * Processes the offline mutation queue when connectivity is restored.
+ *
+ * Sync is event-driven (triggered by isOnline changing to true),
+ * not polled on an interval, to avoid unnecessary battery drain.
+ * AuthProvider also calls processOfflineQueue on reconnect as a
+ * secondary trigger.
+ */
 export function SyncManager() {
+  const { isOnline } = useNetworkStatus();
+
   useEffect(() => {
-    const processQueue = async () => {
-      try {
-        const queued = await getQueuedRequests();
-        if (!queued.length) return;
+    if (!isOnline) return;
 
-        for (const request of queued) {
-          try {
-            await fetchWithAuth(request.url, {
-              method: request.method,
-              body: JSON.stringify(request.body),
-            });
-
-            await removeQueuedRequest(request.id);
-          } catch (error) {
-            console.error('Failed to replay queued request', error);
-          }
-        }
-      } catch (error) {
-        console.error('Queue processing failed', error);
-      }
-    };
-
-    processQueue();
-    const interval = setInterval(processQueue, 60000);
-
-    return () => clearInterval(interval);
-  }, []);
+    processOfflineQueue().catch((error) => {
+      console.warn('Offline queue processing failed', error);
+    });
+  }, [isOnline]);
 
   return null;
 }

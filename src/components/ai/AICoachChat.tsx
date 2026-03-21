@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
+  FlatList,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -14,7 +15,7 @@ import {
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import LottieView from 'lottie-react-native';
-import { Send, Sparkles, User, X } from 'lucide-react-native';
+import { Archive, ChevronDown, MessageSquarePlus, Send, User, X } from 'lucide-react-native';
 
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -27,7 +28,22 @@ export function AICoachChat() {
   const palette = useThemeColors();
   const scrollRef = useRef<ScrollView>(null);
   const { user, avatarUrl } = useAuth();
-  const { messages, isOpen, isLoading, toggleChat, sendMessage, clearHistory } = useAICoach();
+  const {
+    threads,
+    currentThreadId,
+    currentThreadTitle,
+    messages,
+    isOpen,
+    isLoading,
+    isThreadListOpen,
+    toggleChat,
+    sendMessage,
+    startNewChat,
+    switchThread,
+    archiveCurrentThread,
+    toggleThreadList,
+    loadThreads,
+  } = useAICoach();
   const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
@@ -35,9 +51,15 @@ export function AICoachChat() {
     const timeout = setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     }, 150);
-
     return () => clearTimeout(timeout);
   }, [messages, isOpen, isLoading]);
+
+  // Reload threads when chat opens
+  useEffect(() => {
+    if (isOpen) {
+      loadThreads();
+    }
+  }, [isOpen]);
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
@@ -54,7 +76,8 @@ export function AICoachChat() {
           style={styles.modalWrap}
         >
           <View style={[styles.panel, { backgroundColor: palette.background, borderColor: palette.border }]}>
-            <View style={[styles.header, { borderColor: palette.border }]}> 
+            {/* Header */}
+            <View style={[styles.header, { borderColor: palette.border }]}>
               <View style={styles.headerLeft}>
                 <View style={[styles.botIcon, { backgroundColor: `${palette.primary}22` }]}>
                   <LottieView
@@ -64,22 +87,80 @@ export function AICoachChat() {
                     style={{ width: 28, height: 28 }}
                   />
                 </View>
-                <View>
-                  <Text style={[styles.headerTitle, { color: palette.text }]}>FitNyx Coach</Text>
-                  <Text style={[styles.headerSub, { color: palette.mutedText }]}>AI Fitness Expert</Text>
-                </View>
+                <Pressable onPress={toggleThreadList} style={styles.titleRow}>
+                  <View>
+                    <Text style={[styles.headerTitle, { color: palette.text }]} numberOfLines={1}>
+                      {currentThreadTitle}
+                    </Text>
+                    <Text style={[styles.headerSub, { color: palette.mutedText }]}>
+                      {threads.length > 0 ? `${threads.length} chats` : 'AI Fitness Expert'}
+                    </Text>
+                  </View>
+                  <ChevronDown color={palette.mutedText} size={14} style={{ marginLeft: 4 }} />
+                </Pressable>
               </View>
 
               <View style={styles.headerActions}>
-                <Pressable onPress={clearHistory}>
-                  <Text style={[styles.clearText, { color: palette.mutedText }]}>Clear</Text>
+                <Pressable onPress={startNewChat} hitSlop={8}>
+                  <MessageSquarePlus color={palette.primary} size={18} />
                 </Pressable>
+                {currentThreadId && (
+                  <Pressable onPress={archiveCurrentThread} hitSlop={8}>
+                    <Archive color={palette.mutedText} size={16} />
+                  </Pressable>
+                )}
                 <Pressable onPress={toggleChat} style={styles.closeBtn}>
                   <X color={palette.text} size={16} />
                 </Pressable>
               </View>
             </View>
 
+            {/* Thread list dropdown */}
+            {isThreadListOpen && (
+              <View style={[styles.threadList, { backgroundColor: palette.card, borderColor: palette.border }]}>
+                <Pressable
+                  onPress={startNewChat}
+                  style={[styles.threadRow, { borderColor: palette.border }]}
+                >
+                  <MessageSquarePlus color={palette.primary} size={14} />
+                  <Text style={[styles.threadRowText, { color: palette.primary, fontWeight: '700' }]}>
+                    New Chat
+                  </Text>
+                </Pressable>
+                <FlatList
+                  data={threads}
+                  keyExtractor={(item) => item.id}
+                  style={{ maxHeight: 200 }}
+                  renderItem={({ item }) => (
+                    <Pressable
+                      onPress={() => switchThread(item.id)}
+                      style={[
+                        styles.threadRow,
+                        { borderColor: palette.border },
+                        item.id === currentThreadId && { backgroundColor: `${palette.primary}11` },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.threadRowText,
+                          { color: item.id === currentThreadId ? palette.primary : palette.text },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.title}
+                      </Text>
+                      {item.last_message_at && (
+                        <Text style={[styles.threadDate, { color: palette.mutedText }]}>
+                          {formatThreadDate(item.last_message_at)}
+                        </Text>
+                      )}
+                    </Pressable>
+                  )}
+                />
+              </View>
+            )}
+
+            {/* Messages */}
             <ScrollView
               ref={scrollRef}
               style={styles.messagesList}
@@ -96,7 +177,9 @@ export function AICoachChat() {
                     style={{ width: 80, height: 80, marginBottom: 8 }}
                   />
                   <Text style={[styles.emptyTitle, { color: palette.text }]}>Hey, I'm your coach.</Text>
-                  <Text style={[styles.emptySub, { color: palette.mutedText }]}>Ask me anything about training, nutrition, or recovery.</Text>
+                  <Text style={[styles.emptySub, { color: palette.mutedText }]}>
+                    Ask me anything about training, nutrition, or recovery.
+                  </Text>
                   {SUGGESTED_PROMPTS.map((prompt) => (
                     <Pressable
                       key={prompt}
@@ -127,9 +210,7 @@ export function AICoachChat() {
                     <View
                       style={[
                         styles.bubble,
-                        {
-                          backgroundColor: message.role === 'user' ? palette.primary : palette.card,
-                        },
+                        { backgroundColor: message.role === 'user' ? palette.primary : palette.card },
                         message.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant,
                       ]}
                     >
@@ -173,7 +254,13 @@ export function AICoachChat() {
                       style={{ width: 26, height: 26 }}
                     />
                   </View>
-                  <View style={[styles.bubble, styles.bubbleAssistant, { backgroundColor: palette.card, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                  <View
+                    style={[
+                      styles.bubble,
+                      styles.bubbleAssistant,
+                      { backgroundColor: palette.card, flexDirection: 'row', alignItems: 'center', gap: 6 },
+                    ]}
+                  >
                     <LottieView
                       source={require('@/assets/animations/chatbot.json')}
                       autoPlay
@@ -186,13 +273,17 @@ export function AICoachChat() {
               )}
             </ScrollView>
 
-            <View style={[styles.inputWrap, { borderColor: palette.border }]}> 
+            {/* Input */}
+            <View style={[styles.inputWrap, { borderColor: palette.border }]}>
               <TextInput
                 multiline
                 numberOfLines={3}
-                placeholder="What\'s on your mind?"
+                placeholder="What's on your mind?"
                 placeholderTextColor={palette.mutedText}
-                style={[styles.input, { backgroundColor: palette.card, color: palette.text, borderColor: palette.border }]}
+                style={[
+                  styles.input,
+                  { backgroundColor: palette.card, color: palette.text, borderColor: palette.border },
+                ]}
                 value={inputValue}
                 onChangeText={(v) => setInputValue(sanitizeGeneralText(v, MAX_LONG_TEXT))}
                 maxLength={MAX_LONG_TEXT}
@@ -210,6 +301,18 @@ export function AICoachChat() {
       </View>
     </Modal>
   );
+}
+
+function formatThreadDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 const styles = StyleSheet.create({
@@ -238,7 +341,13 @@ const styles = StyleSheet.create({
   headerLeft: {
     alignItems: 'center',
     flexDirection: 'row',
+    flex: 1,
     gap: 10,
+  },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flex: 1,
   },
   botIcon: {
     alignItems: 'center',
@@ -250,6 +359,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 14,
     fontWeight: '700',
+    maxWidth: 160,
   },
   headerSub: {
     fontSize: 10,
@@ -261,17 +371,34 @@ const styles = StyleSheet.create({
   headerActions: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 10,
-  },
-  clearText: {
-    fontSize: 12,
-    fontWeight: '600',
+    gap: 12,
   },
   closeBtn: {
     padding: 4,
   },
+  threadList: {
+    borderBottomWidth: 1,
+    maxHeight: 260,
+  },
+  threadRow: {
+    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  threadRowText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  threadDate: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
   messagesList: {
-    maxHeight: Dimensions.get('window').height * 0.6,
+    maxHeight: Dimensions.get('window').height * 0.55,
   },
   messagesWrap: {
     flexGrow: 1,

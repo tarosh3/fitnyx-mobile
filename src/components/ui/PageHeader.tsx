@@ -22,7 +22,7 @@ export function PageHeader({ title, subtitle, backTo, onBackPress }: PageHeaderP
       return;
     }
 
-    const canGoBack = typeof (router as any).canGoBack === 'function' ? (router as any).canGoBack() : false;
+    const canGoBack = router.canGoBack();
     if (canGoBack) {
       router.back();
       return;

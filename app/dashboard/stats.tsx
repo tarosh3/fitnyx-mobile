@@ -228,6 +228,27 @@ export default function StatsScreen() {
 
   const [error, setError] = useState<string | null>(null);
 
+  // Sanitizers: only digits and one decimal point, capped length
+  const sanitizeWeight = (text: string) => {
+    const digits = text.replace(/[^0-9.]/g, '');
+    const parts = digits.split('.');
+    const whole = parts[0].slice(0, 3); // max 999
+    if (parts.length > 1) {
+      return whole + '.' + parts.slice(1).join('').slice(0, 1);
+    }
+    return whole;
+  };
+
+  const sanitizeHeight = (text: string) => {
+    const digits = text.replace(/[^0-9.]/g, '');
+    const parts = digits.split('.');
+    const whole = parts[0].slice(0, 3); // max 999
+    if (parts.length > 1) {
+      return whole + '.' + parts.slice(1).join('').slice(0, 1);
+    }
+    return whole;
+  };
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -286,14 +307,38 @@ export default function StatsScreen() {
     }
     const weightKg = weightUnit === 'kg' ? weightValue : lbsToKg(weightValue);
     const heightCm = heightUnit === 'cm' ? heightValue : ftToCm(heightValue);
+
+    // Range validation (kg: 20-350, cm: 50-300)
+    if (weightKg < 20 || weightKg > 350) {
+      Alert.alert('Invalid weight', 'Weight must be between 20–350 kg (44–772 lbs).');
+      return;
+    }
+    if (heightCm < 50 || heightCm > 300) {
+      Alert.alert('Invalid height', 'Height must be between 50–300 cm (1.6–9.8 ft).');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const payload = { weight_kg: Number(weightKg.toFixed(2)), height_cm: Number(heightCm.toFixed(2)), source: 'user' };
-      if (isOnline) await saveMetric(payload);
-      else await addToOfflineQueue({ type: 'UPDATE_STATS', payload });
-      await loadData();
-      if (!isOnline) Alert.alert('Saved offline', 'Your stats will sync once you are back online.');
+      if (isOnline) {
+        await saveMetric(payload);
+        await loadData();
+      } else {
+        await addToOfflineQueue({ type: 'UPDATE_STATS', payload });
+        // Optimistically update local state so the UI reflects the save
+        const now = new Date().toISOString();
+        const optimistic: Metric = {
+          id: `offline-${Date.now()}`,
+          weight_kg: payload.weight_kg,
+          height_cm: payload.height_cm,
+          source: 'user',
+          recorded_at: now,
+        };
+        setLatest(optimistic);
+        setHistory((prev) => [optimistic, ...prev]);
+        Alert.alert('Saved offline', 'Your stats will sync once you are back online.');
+      }
     } catch (saveError: any) {
       setError(saveError?.message || 'Failed to save metrics.');
     } finally {
@@ -334,7 +379,7 @@ export default function StatsScreen() {
   return (
     <Screen scroll={false} style={{ backgroundColor: palette.background }}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backButton}>
           <ChevronLeft color={palette.text} size={24} />
         </Pressable>
         <View>
@@ -391,6 +436,8 @@ export default function StatsScreen() {
                   value={weight}
                   keyboardType="decimal-pad"
                   onChangeText={setWeight}
+                  sanitize={sanitizeWeight}
+                  maxLength={5}
                   placeholder="0.0"
                   style={styles.premiumInput}
                 />
@@ -419,6 +466,8 @@ export default function StatsScreen() {
                   value={height}
                   keyboardType="decimal-pad"
                   onChangeText={setHeight}
+                  sanitize={sanitizeHeight}
+                  maxLength={5}
                   placeholder="0.0"
                   style={styles.premiumInput}
                 />

@@ -10,23 +10,28 @@
     "splash": {
       "image": "./assets/images/splash-v2.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#050505"
     },
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fitnyx.app",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#050505",
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#000000",
+        "backgroundColor": "#050505",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.fitnyx.app",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#050505",
+      "permissions": ["FOREGROUND_SERVICE"]
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +40,10 @@
     },
     "plugins": [
       "expo-router",
-      "expo-video"
+      "expo-video",
+      "expo-dev-client",
+      "./plugins/withNotifeeRepo",
+      "expo-live-activity"
     ],
     "experiments": {
       "typedRoutes": true
