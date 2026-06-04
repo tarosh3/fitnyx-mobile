@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/src/lib/api';
+import { API_BASE_URL, _invalidateBackendSessionIdCache } from '@/src/lib/api';
 import { secureStorage } from '@/src/lib/secureStorage';
 import { supabase } from '@/src/lib/supabase';
 
@@ -45,6 +45,7 @@ export async function registerSession(accessToken?: string): Promise<string> {
   }
   const sessionId = result.session_id;
   await secureStorage.setItem(SESSION_ID_KEY, sessionId);
+  _invalidateBackendSessionIdCache(sessionId);
   return sessionId;
 }
 
@@ -56,4 +57,5 @@ export async function getSessionId(): Promise<string | null> {
 /** Clear the stored session ID on logout. */
 export async function clearSessionId(): Promise<void> {
   await secureStorage.removeItem(SESSION_ID_KEY);
+  _invalidateBackendSessionIdCache(null);
 }

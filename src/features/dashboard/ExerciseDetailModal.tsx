@@ -22,7 +22,7 @@ export function ExerciseDetailModal({ exercise, isOpen, onClose, onSelectExercis
   const videoUrl = exercise?.video_url || (exercise?.media_url?.toLowerCase().endsWith('.mp4') ? exercise?.media_url : null);
   const imageUrl = exercise?.media_url && !exercise?.media_url.toLowerCase().endsWith('.mp4') ? exercise?.media_url : (exercise?.video_url ? null : exercise?.media_url);
 
-  const player = useVideoPlayer(videoUrl || '', (p) => {
+  const player = useVideoPlayer(videoUrl || null, (p) => {
     p.loop = true;
     p.muted = true;
     p.play();

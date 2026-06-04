@@ -1,14 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sentry from '@sentry/react-native';
 import type { User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
-import { saveMetric } from '@/src/lib/api';
+import { _registerAuthFailureHandler, saveMetric } from '@/src/lib/api';
 import { clearSessionId, getSessionId, registerSession } from '@/src/lib/api/auth';
 import { getOnboardingStatus } from '@/src/lib/api/onboarding';
-import { getProfile } from '@/src/lib/api/users';
+import { getProfile, type UserProfile } from '@/src/lib/api/users';
 import { cacheClear, cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { clearOfflineQueue, getOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { clearAllOfflineData } from '@/src/lib/offline/offlineStore';
@@ -29,6 +30,7 @@ interface AuthContextType {
   onboardingComplete: boolean;
   markOnboardingComplete: () => void;
   avatarUrl: string | null;
+  userProfile: UserProfile | null;
 }
 
 const ONBOARDING_EXEMPT_PATHS = [
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -106,15 +109,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const applyProfile = (profile: UserProfile) => {
+    setUserProfile(profile);
+    setAvatarUrl(profile.avatar_url ?? null);
+  };
+
   const fetchUserProfile = async (userId: string) => {
     const cacheKey = cacheKeys.userProfile(userId);
-    const cached = await cacheGet<{ avatar_url?: string }>(cacheKey);
+    const cached = await cacheGet<UserProfile>(cacheKey);
 
     if (cached) {
-      setAvatarUrl(cached.avatar_url ?? null);
+      applyProfile(cached);
       getProfile()
         .then((profile) => {
-          setAvatarUrl(profile.avatar_url ?? null);
+          applyProfile(profile);
           cacheSet(cacheKey, profile, cacheTTL.DAY);
         })
         .catch(() => undefined);
@@ -123,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const profile = await getProfile();
-      setAvatarUrl(profile.avatar_url ?? null);
+      applyProfile(profile);
       cacheSet(cacheKey, profile, cacheTTL.DAY);
     } catch (error) {
       console.warn('Failed to load profile', error);
@@ -138,42 +146,126 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [pathname, loading, user, onboardingComplete]);
 
   // Initialize auth and listen for state changes (runs once)
+  // A single in-flight promise dedupes concurrent registerSession calls so
+  // initialize() + onAuthStateChange (TOKEN_REFRESHED) can't both register
+  // and end up with two backend sessions.
+  const registrationInFlightRef = useRef<Promise<void> | null>(null);
+
+  const ensureSessionRegistered = async (accessToken?: string | null) => {
+    if (!accessToken) return;
+    if (registrationInFlightRef.current) {
+      await registrationInFlightRef.current;
+      return;
+    }
+    const existing = await getSessionId();
+    if (existing) return;
+
+    const task = (async () => {
+      try {
+        await registerSession(accessToken);
+      } catch (e) {
+        console.warn('Session registration failed:', e);
+      }
+    })();
+    registrationInFlightRef.current = task;
+    try {
+      await task;
+    } finally {
+      registrationInFlightRef.current = null;
+    }
+  };
+
   useEffect(() => {
+    const isRefreshTokenError = (err: unknown): boolean => {
+      const msg = (err as { message?: string })?.message ?? '';
+      return (
+        msg.includes('Invalid Refresh Token') ||
+        msg.includes('Refresh Token Not Found') ||
+        msg.includes('refresh_token_not_found') ||
+        msg.includes('invalid_grant')
+      );
+    };
+
+    const clearStaleSession = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // ignore — best-effort wipe
+      }
+      await clearSessionId().catch(() => undefined);
+    };
+
     const initialize = async () => {
       try {
         const {
-          data: { session },
-          error,
+          data: { session: storedSession },
+          error: getError,
         } = await supabase.auth.getSession();
 
-        if (error) throw error;
-
-        const currentUser = session?.user ?? null;
-
-        if (currentUser && session?.access_token) {
-          // Register backend session BEFORE setting user state.
-          // Setting user triggers child providers (WorkoutProvider, AICoachProvider)
-          // to fire API calls — they need X-Session-ID to exist first.
-          const existingSessionId = await getSessionId();
-          if (!existingSessionId) {
-            try {
-              await registerSession(session.access_token);
-            } catch (e) {
-              console.warn('Session registration during init failed:', e);
-            }
+        if (getError) {
+          if (isRefreshTokenError(getError)) {
+            await clearStaleSession();
+            setUser(null);
+            router.replace('/login');
+            return;
           }
-          setUser(currentUser);
-          fetchUserProfile(currentUser.id);
-          await checkOnboarding(currentUser);
-        } else {
-          setUser(currentUser);
+          throw getError;
         }
+
+        if (!storedSession) {
+          setUser(null);
+          return;
+        }
+
+        // Stored session exists. Verify the refresh token is still valid by
+        // forcing a refresh now. If the token chain is broken, surface it
+        // immediately rather than failing later inside every API call.
+        const nowSec = Math.floor(Date.now() / 1000);
+        const accessExpired = storedSession.expires_at ? storedSession.expires_at - nowSec < 60 : true;
+        let workingSession = storedSession;
+        if (accessExpired) {
+          const { data: { session: refreshed }, error: refreshErr } =
+            await supabase.auth.refreshSession();
+          if (refreshErr || !refreshed) {
+            await clearStaleSession();
+            setUser(null);
+            router.replace('/login');
+            return;
+          }
+          workingSession = refreshed;
+        }
+
+        const currentUser = workingSession.user;
+        await ensureSessionRegistered(workingSession.access_token);
+        Sentry.setUser({ id: currentUser.id, email: currentUser.email });
+        setUser(currentUser);
+        fetchUserProfile(currentUser.id);
+        await checkOnboarding(currentUser);
       } catch (error) {
-        console.error('Auth check failed', error);
+        if (isRefreshTokenError(error)) {
+          await clearStaleSession();
+          setUser(null);
+          router.replace('/login');
+        } else {
+          console.error('Auth check failed', error);
+        }
       } finally {
         setLoading(false);
       }
     };
+
+    // Allow deep modules (fetchWithAuth) to trigger forced sign-out when
+    // they discover the session is gone or refresh has failed.
+    _registerAuthFailureHandler(() => {
+      clearStaleSession().finally(() => {
+        setUser(null);
+        setOnboardingComplete(false);
+        setAvatarUrl(null);
+        setUserProfile(null);
+        setLoading(false);
+        router.replace('/login');
+      });
+    });
 
     initialize();
 
@@ -186,9 +278,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'INITIAL_SESSION') return;
 
       if (event === 'SIGNED_OUT') {
+        Sentry.setUser(null);
         setUser(null);
         setOnboardingComplete(false);
         setAvatarUrl(null);
+        setUserProfile(null);
         setLoading(false);
         return;
       }
@@ -198,16 +292,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         setLoading(true);
         try {
-          // Register session BEFORE setUser — child providers react to user
-          // state and immediately fire API calls that need X-Session-ID.
-          const hasSessionId = await getSessionId();
-          if (!hasSessionId) {
-            try {
-              await registerSession(session?.access_token);
-            } catch (e) {
-              console.warn('Failed to register session:', e);
-            }
-          }
+          await ensureSessionRegistered(session?.access_token);
+          Sentry.setUser({ id: currentUser.id, email: currentUser.email });
           setUser(currentUser);
           fetchUserProfile(currentUser.id);
           await checkOnboarding(currentUser);
@@ -295,8 +381,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       onboardingComplete,
       markOnboardingComplete,
       avatarUrl,
+      userProfile,
     }),
-    [user, loading, onboardingComplete, avatarUrl, isAuthOpen, authMode]
+    [user, loading, onboardingComplete, avatarUrl, userProfile, isAuthOpen, authMode]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

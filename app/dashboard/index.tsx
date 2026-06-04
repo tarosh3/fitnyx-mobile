@@ -10,7 +10,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 export default function DashboardScreen() {
   const router = useRouter();
   const palette = useThemeColors();
-  const { user, loading, avatarUrl } = useAuth();
+  const { user, loading, avatarUrl, userProfile } = useAuth();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -28,7 +28,7 @@ export default function DashboardScreen() {
 
   return (
     <Screen contentContainerStyle={styles.content}>
-      <MobileDashboard user={user} avatarUrl={avatarUrl} />
+      <MobileDashboard user={user} avatarUrl={avatarUrl} userProfile={userProfile} />
     </Screen>
   );
 }

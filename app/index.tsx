@@ -9,7 +9,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 
 export default function HomeScreen() {
   const palette = useThemeColors();
-  const { user, loading, avatarUrl } = useAuth();
+  const { user, loading, avatarUrl, userProfile } = useAuth();
 
   if (loading) {
     return (
@@ -22,7 +22,7 @@ export default function HomeScreen() {
   if (user) {
     return (
       <Screen scroll={true}>
-        <MobileHome user={user} avatarUrl={avatarUrl} />
+        <MobileHome user={user} avatarUrl={avatarUrl} userProfile={userProfile} />
       </Screen>
     );
   }

@@ -10,6 +10,28 @@ export interface FitnessProfile {
   preferred_intensity: string;
   motivations: string;
   equipment_access?: string;
+
+  // Extended fields (post-onboarding edits via /fitness-profile)
+  target_weight_kg?: number;
+  weekly_workout_target?: number;
+  preferred_workout_type?: string[];
+  workout_duration_min?: number;
+  preferred_days?: string[];
+  preferred_time?: string;
+  dietary_preferences?: string[];
+  body_type?: string;
+  years_training?: number;
+}
+
+export async function getFitnessProfile(): Promise<FitnessProfile> {
+  return fetchWithAuth('/fitness-profile');
+}
+
+export async function updateFitnessProfile(data: Partial<FitnessProfile>): Promise<FitnessProfile> {
+  return fetchWithAuth('/fitness-profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
 
 export interface OnboardingData {

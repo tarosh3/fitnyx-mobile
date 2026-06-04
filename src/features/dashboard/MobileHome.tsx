@@ -15,19 +15,22 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 const NEON_LIME = '#5fc793';
 
+import type { UserProfile } from '@/src/lib/api/users';
+
 interface MobileHomeProps {
     user: any;
     avatarUrl?: string | null;
+    userProfile?: UserProfile | null;
 }
 
-export function MobileHome({ user, avatarUrl }: MobileHomeProps) {
+export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
     const { openCenteredChat } = useAICoach();
     const metrics = useRetentionMetrics(user?.id);
     const activity = useActivityData(metrics.sessions);
     const palette = useThemeColors();
     const styles = getStyles(palette);
 
-    const userName = (user?.user_metadata?.first_name || user?.user_metadata?.username || 'Athlete');
+    const userName = (userProfile?.first_name || userProfile?.username || user?.user_metadata?.first_name || 'Athlete');
 
     if (metrics.loading) {
         return (

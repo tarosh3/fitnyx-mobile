@@ -35,6 +35,13 @@ yarn-error.*
 .env.*
 .env*.local
 
+# Firebase config (supply to EAS via file secret — do not commit)
+GoogleService-Info.plist
+google-services.json
+
+# backups / scratch
+*.bak
+
 # typescript
 *.tsbuildinfo
 

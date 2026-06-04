@@ -1,0 +1,46 @@
+{
+  "cli": {
+    "version": ">= 13.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "http://localhost:8080",
+        "EXPO_PUBLIC_API_URL": "http://localhost:8080/api/v1",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://bgtsrwplmaijxxdobobe.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_iD8cRe6ypM7Lo5mEXf1Lag_7oAY6U0q",
+        "SENTRY_ALLOW_FAILURE": "true",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://fitnyx.onrender.com",
+        "EXPO_PUBLIC_API_URL": "https://fitnyx.onrender.com/api/v1",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://bgtsrwplmaijxxdobobe.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_iD8cRe6ypM7Lo5mEXf1Lag_7oAY6U0q",
+        "SENTRY_ALLOW_FAILURE": "true",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://fitnyx.onrender.com",
+        "EXPO_PUBLIC_API_URL": "https://fitnyx.onrender.com/api/v1",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://bgtsrwplmaijxxdobobe.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_iD8cRe6ypM7Lo5mEXf1Lag_7oAY6U0q",
+        "SENTRY_ALLOW_FAILURE": "true",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

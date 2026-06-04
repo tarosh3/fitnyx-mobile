@@ -4,7 +4,6 @@ import {
   Dumbbell,
   Play,
   Search,
-  Settings,
   SlidersHorizontal
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -47,7 +46,7 @@ function getThumbnail(exercise: Exercise): string | undefined {
 
 export default function ExercisesScreen() {
   const palette = useThemeColors();
-  const { user, avatarUrl } = useAuth();
+  const { user, avatarUrl, userProfile } = useAuth();
   const router = useRouter();
   const styles = useMemo(() => getStyles(palette), [palette]);
 
@@ -185,7 +184,8 @@ export default function ExercisesScreen() {
   );
 
   const userName =
-    user?.user_metadata?.username ||
+    userProfile?.username ||
+    userProfile?.first_name ||
     user?.user_metadata?.first_name ||
     user?.email?.split('@')[0] ||
     'Guest';
@@ -194,11 +194,11 @@ export default function ExercisesScreen() {
 
   const headerElement = (
     <View style={styles.headerContainer}>
-      <View style={styles.userHeaderRow}>
+      <Pressable onPress={() => router.push('/fitness-profile' as any)} style={styles.userHeaderRow}>
         <View style={styles.userInfoLeft}>
           <View style={styles.avatarWrap}>
-            {avatarUrl || user?.user_metadata?.avatar_url ? (
-              <Image source={{ uri: avatarUrl || user?.user_metadata?.avatar_url }} style={styles.avatarImage} />
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             ) : (
               <Text style={{ color: palette.text, fontSize: 16, fontWeight: '800' }}>
                 {userName.charAt(0).toUpperCase()}
@@ -210,10 +210,7 @@ export default function ExercisesScreen() {
             <Text style={styles.greetingSub}>{todayDateStr.toUpperCase()}</Text>
           </View>
         </View>
-        <Pressable style={styles.mascotBtn}>
-          <Settings color={palette.text} size={24} />
-        </Pressable>
-      </View>
+      </Pressable>
 
       <View style={styles.challengeCard}>
         <View style={{ flex: 1 }}>

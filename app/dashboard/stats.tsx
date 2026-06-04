@@ -1,49 +1,119 @@
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import { Activity, ChevronLeft, List, TrendingUp } from 'lucide-react-native';
+import {
+  Activity,
+  ChevronDown,
+  ChevronLeft,
+  ChevronUp,
+  Plus,
+  Ruler,
+  Scale,
+  Target,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, {
+  Circle,
+  Defs,
+  Line as SvgLine,
+  LinearGradient,
+  Path,
+  Stop,
+  Text as SvgText,
+} from 'react-native-svg';
 
-import { Input } from '@/src/components/ui/Input';
-import { Screen } from '@/src/components/ui/Screen';
-import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
+import { Button } from '@/src/components/ui/Button';
+import { Field } from '@/src/components/ui/Field';
+import { PressableScale } from '@/src/components/ui/PressableScale';
+import { SectionHeader } from '@/src/components/ui/SectionHeader';
+import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { StatTile } from '@/src/components/ui/StatTile';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { fetchLatestMetric, fetchMetricsHistory, fetchWithAuth, saveMetric } from '@/src/lib/api';
-import { addToOfflineQueue } from '@/src/lib/cache/indexeddb';
+import {
+  deleteMetric,
+  fetchLatestMetric,
+  fetchMetricsHistory,
+  saveMetric,
+} from '@/src/lib/api';
+import { getFitnessProfile } from '@/src/lib/api/onboarding';
+import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { useAuth } from '@/src/providers/AuthProvider';
+import {
+  cmToFt,
+  ftInToCm,
+  kgToLbs,
+  lbsToKg,
+  useHeightUnit,
+  useWeightUnit,
+} from '@/src/lib/prefs';
+import { elevation, radii, spacing, type as t } from '@/src/styles/tokens';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const NEON_LIME = '#5fc793';
-const CHART_HEIGHT = 180;
-const CHART_PADDING_TOP = 40;
-const CHART_PADDING_BOTTOM = 40;
-const CHART_INNER_PADDING = 34; // Equal padding on left and right inside the SVG
-
-interface Metric {
+type Metric = {
   id: string;
   weight_kg: number | null;
   height_cm: number | null;
+  body_fat_pct?: number | null;
+  measurements?: Record<string, number> | null;
+  notes?: string;
   source?: string;
   recorded_at: string;
+};
+
+type Range = '7d' | '30d' | '90d' | '1y';
+type BodyType = 'ectomorph' | 'mesomorph' | 'endomorph';
+
+const BODY_TYPES: { value: BodyType; label: string; tagline: string }[] = [
+  { value: 'ectomorph', label: 'Ectomorph', tagline: 'Lean' },
+  { value: 'mesomorph', label: 'Mesomorph', tagline: 'Athletic' },
+  { value: 'endomorph', label: 'Endomorph', tagline: 'Soft' },
+];
+
+const MEASUREMENT_PARTS = [
+  { key: 'chest_cm', label: 'Chest' },
+  { key: 'waist_cm', label: 'Waist' },
+  { key: 'hips_cm', label: 'Hips' },
+  { key: 'arms_cm', label: 'Arms' },
+  { key: 'thigh_cm', label: 'Thigh' },
+  { key: 'neck_cm', label: 'Neck' },
+];
+
+function bmiOf(weightKg?: number | null, heightCm?: number | null): number | null {
+  if (!weightKg || !heightCm) return null;
+  const m = heightCm / 100;
+  if (m <= 0) return null;
+  return Number((weightKg / (m * m)).toFixed(1));
 }
 
-const WEIGHT_UNITS = ['kg', 'lbs'] as const;
-const HEIGHT_UNITS = ['cm', 'ft'] as const;
+function bmiCategory(bmi: number): string {
+  if (bmi < 18.5) return 'Underweight';
+  if (bmi < 25) return 'Healthy';
+  if (bmi < 30) return 'Overweight';
+  return 'Obese';
+}
 
-type WeightUnit = (typeof WEIGHT_UNITS)[number];
-type HeightUnit = (typeof HEIGHT_UNITS)[number];
-type ViewMode = 'CHART' | 'HISTORY';
+function withinRange(d: Date, range: Range): boolean {
+  const dayMs = 86400000;
+  const span =
+    range === '7d' ? 7 * dayMs : range === '30d' ? 30 * dayMs : range === '90d' ? 90 * dayMs : 365 * dayMs;
+  return Date.now() - d.getTime() <= span;
+}
 
-function kgToLbs(value: number) { return value * 2.20462; }
-function lbsToKg(value: number) { return value / 2.20462; }
-function cmToFt(value: number) { return value / 30.48; }
-function ftToCm(value: number) { return value * 30.48; }
-
-function bmiFor(weightKg?: number | null, heightCm?: number | null) {
-  if (!weightKg || !heightCm) return null;
-  const hm = heightCm / 100;
-  if (hm <= 0) return null;
-  return Number((weightKg / (hm * hm)).toFixed(1));
+function formatDateShort(s: string) {
+  return new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function normalizeHistory(payload: any): Metric[] {
@@ -52,853 +122,1113 @@ function normalizeHistory(payload: any): Metric[] {
   return [];
 }
 
-function formatDate(dateString: string) {
-  const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-}
+// =====================================================================
+// Chart with Y axis + X axis labels + target line
+// =====================================================================
 
-const WeightChart = ({ data, unit, palette, styles }: { data: Metric[], unit: WeightUnit, palette: any, styles: any }) => {
+const CHART_HEIGHT = 220;
+const CHART_PAD_TOP = 28;
+const CHART_PAD_BOTTOM = 36;
+const Y_AXIS_W = 34;
+const CHART_PAD_RIGHT = 12;
+
+function WeightChart({
+  data,
+  weightUnit,
+  targetWeightKg,
+  primary,
+  border,
+  cardBg,
+  text,
+  mutedText,
+  warning,
+}: {
+  data: Metric[];
+  weightUnit: 'kg' | 'lbs';
+  targetWeightKg?: number;
+  primary: string;
+  border: string;
+  cardBg: string;
+  text: string;
+  mutedText: string;
+  warning: string;
+}) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [width, setWidth] = useState(0);
   const pointsRef = useRef<{ x: number; y: number; value: number; date: string }[]>([]);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (evt) => {
-        const touchX = evt.nativeEvent.locationX;
-        const currentPoints = pointsRef.current;
-        if (!currentPoints || currentPoints.length === 0) return;
-
-        let closestIndex = 0;
-        let minDistance = Math.abs(touchX - currentPoints[0].x);
-
-        currentPoints.forEach((p, i) => {
-          const distance = Math.abs(touchX - p.x);
-          if (distance < minDistance) {
-            minDistance = distance;
-            closestIndex = i;
+      onPanResponderMove: (e) => {
+        const tx = e.nativeEvent.locationX;
+        const ps = pointsRef.current;
+        if (ps.length === 0) return;
+        let idx = 0;
+        let min = Math.abs(tx - ps[0].x);
+        ps.forEach((p, i) => {
+          const dist = Math.abs(tx - p.x);
+          if (dist < min) {
+            min = dist;
+            idx = i;
           }
         });
-        setActiveIndex(closestIndex);
+        setActiveIndex(idx);
       },
       onPanResponderRelease: () => setActiveIndex(null),
     })
   ).current;
 
+  // sort + project series with target weight in domain
+  const { points, yMin, yMax, yMid, targetY, xLabels } = useMemo(() => {
+    if (width === 0 || data.length < 2) {
+      return { points: [], yMin: 0, yMax: 0, yMid: 0, targetY: null as number | null, xLabels: [] as { x: number; label: string }[] };
+    }
+    const series = data
+      .filter((m) => m.weight_kg != null)
+      .map((m) => ({
+        value: weightUnit === 'kg' ? (m.weight_kg as number) : kgToLbs(m.weight_kg as number),
+        recorded_at: m.recorded_at,
+      }))
+      .sort((a, b) => +new Date(a.recorded_at) - +new Date(b.recorded_at));
+    if (series.length < 2) {
+      return { points: [], yMin: 0, yMax: 0, yMid: 0, targetY: null, xLabels: [] };
+    }
+    const values = series.map((s) => s.value);
+    const target = targetWeightKg != null ? (weightUnit === 'kg' ? targetWeightKg : kgToLbs(targetWeightKg)) : null;
+    const candidatePool = [...values];
+    if (target != null) candidatePool.push(target);
+    const min = Math.min(...candidatePool);
+    const max = Math.max(...candidatePool);
+    const range = max - min || 1;
+    const buffer = range * 0.18;
+    const yMinV = min - buffer;
+    const yMaxV = max + buffer;
+    const yRange = yMaxV - yMinV;
+    const innerW = width - Y_AXIS_W - CHART_PAD_RIGHT;
+    const innerH = CHART_HEIGHT - CHART_PAD_TOP - CHART_PAD_BOTTOM;
+
+    const pts = series.map((s, i) => {
+      const x = (i / (series.length - 1)) * innerW + Y_AXIS_W;
+      const y = CHART_HEIGHT - CHART_PAD_BOTTOM - ((s.value - yMinV) / yRange) * innerH;
+      return { x, y, value: s.value, date: s.recorded_at };
+    });
+
+    const tY = target != null ? CHART_HEIGHT - CHART_PAD_BOTTOM - ((target - yMinV) / yRange) * innerH : null;
+
+    // Spread x labels across 4-5 evenly-spaced indices
+    const labelCount = Math.min(5, series.length);
+    const step = Math.max(1, Math.floor((series.length - 1) / (labelCount - 1)));
+    const labels: { x: number; label: string }[] = [];
+    for (let i = 0; i < series.length; i += step) {
+      labels.push({ x: pts[i].x, label: formatDateShort(series[i].recorded_at) });
+    }
+    if (labels[labels.length - 1].x !== pts[pts.length - 1].x) {
+      labels.push({ x: pts[pts.length - 1].x, label: formatDateShort(series[series.length - 1].recorded_at) });
+    }
+
+    return { points: pts, yMin: yMinV, yMax: yMaxV, yMid: (yMinV + yMaxV) / 2, targetY: tY, xLabels: labels };
+  }, [data, weightUnit, width, targetWeightKg]);
+
+  pointsRef.current = points;
+
   if (data.length < 2) {
     return (
-      <View style={styles.chartEmpty}>
-        <Activity color={palette.border} size={48} />
-        <Text style={styles.chartEmptyText}>Log at least 2 entries to see your progress chart</Text>
+      <View style={[styles.chartEmpty, { backgroundColor: cardBg, borderColor: border }]}>
+        <Activity size={36} color={border} />
+        <Text style={[styles.chartEmptyText, { color: mutedText }]}>
+          Log at least 2 entries to see your trend
+        </Text>
       </View>
     );
   }
-
-  const sortedData = data
-    .slice()
-    .sort((a, b) => +new Date(a.recorded_at) - +new Date(b.recorded_at))
-    .slice(-7);
-
-  const chartData = sortedData.map(m => (unit === 'kg' ? m.weight_kg! : kgToLbs(m.weight_kg!)));
-
-  const min = Math.min(...chartData);
-  const max = Math.max(...chartData);
-  const range = max - min || 1;
-  const paddingBuffer = range * 0.2;
-  const yMin = min - paddingBuffer;
-  const yMax = max + paddingBuffer;
-  const yRange = yMax - yMin;
-
-  if (containerWidth === 0) {
+  if (width === 0) {
     return (
       <View
-        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-        style={[styles.chartWrapper, { height: CHART_HEIGHT + 60, justifyContent: 'center' }]}
+        style={[styles.chartFrame, { backgroundColor: cardBg, borderColor: border, height: CHART_HEIGHT + 16 }]}
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       />
     );
   }
+  if (points.length === 0) return null;
 
-  const svgWidth = containerWidth - 24;
-  const chartAreaWidth = svgWidth - (CHART_INNER_PADDING * 2);
-  const chartAreaHeight = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
-
-  const points = chartData.map((val, i) => {
-    const x = (i / (chartData.length - 1)) * chartAreaWidth + CHART_INNER_PADDING;
-    const y = CHART_HEIGHT - CHART_PADDING_BOTTOM - ((val - yMin) / yRange) * chartAreaHeight;
-    return { x, y, value: val, date: sortedData[i].recorded_at };
-  });
-
-  // Update ref so PanResponder can access latest points
-  pointsRef.current = points;
-
-  const yLabels = [yMin + yRange * 0.75, yMin + yRange * 0.5, yMin + yRange * 0.25];
-
-  const pathData = points.reduce((acc, point, i) =>
-    i === 0 ? `M ${point.x} ${point.y}` : `${acc} L ${point.x} ${point.y}`, ''
-  );
-
-  const areaData = `${pathData} L ${points[points.length - 1].x} ${CHART_HEIGHT - CHART_PADDING_BOTTOM} L ${points[0].x} ${CHART_HEIGHT - CHART_PADDING_BOTTOM} Z`;
+  const path = points.reduce((acc, p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`), '');
+  const area = `${path} L ${points[points.length - 1].x} ${CHART_HEIGHT - CHART_PAD_BOTTOM} L ${points[0].x} ${CHART_HEIGHT - CHART_PAD_BOTTOM} Z`;
 
   return (
-    <View style={styles.chartWrapper} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
-      <View style={styles.chartContainer} {...panResponder.panHandlers}>
-        <View style={styles.yAxis}>
-          <Text style={styles.yLabel}>{yMax.toFixed(0)}</Text>
-          <Text style={styles.yLabel}>{((yMax + yMin) / 2).toFixed(0)}</Text>
-          <Text style={styles.yLabel}>{yMin.toFixed(0)}</Text>
-        </View>
-
-        <Svg width={svgWidth} height={CHART_HEIGHT}>
+    <View
+      style={[styles.chartFrame, { backgroundColor: cardBg, borderColor: border }]}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+    >
+      <View {...panResponder.panHandlers}>
+        <Svg width={width} height={CHART_HEIGHT}>
           <Defs>
-            <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={NEON_LIME} stopOpacity="0.8" />
-              <Stop offset="1" stopColor={NEON_LIME} stopOpacity="0" />
+            <LinearGradient id="weight-grad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={primary} stopOpacity="0.45" />
+              <Stop offset="1" stopColor={primary} stopOpacity="0" />
             </LinearGradient>
           </Defs>
 
-          {/* Grid lines */}
-          <Line x1={CHART_INNER_PADDING} y1={CHART_PADDING_TOP} x2={svgWidth - CHART_INNER_PADDING} y2={CHART_PADDING_TOP} stroke={palette.border} strokeWidth="1" />
-          <Line x1={CHART_INNER_PADDING} y1={CHART_HEIGHT - CHART_PADDING_BOTTOM} x2={svgWidth - CHART_INNER_PADDING} y2={CHART_HEIGHT - CHART_PADDING_BOTTOM} stroke={palette.border} strokeWidth="1" />
+          {/* horizontal grid lines */}
+          <SvgLine
+            x1={Y_AXIS_W}
+            y1={CHART_PAD_TOP}
+            x2={width - CHART_PAD_RIGHT}
+            y2={CHART_PAD_TOP}
+            stroke={border}
+            strokeDasharray="3 6"
+          />
+          <SvgLine
+            x1={Y_AXIS_W}
+            y1={(CHART_PAD_TOP + (CHART_HEIGHT - CHART_PAD_BOTTOM)) / 2}
+            x2={width - CHART_PAD_RIGHT}
+            y2={(CHART_PAD_TOP + (CHART_HEIGHT - CHART_PAD_BOTTOM)) / 2}
+            stroke={border}
+            strokeDasharray="3 6"
+            opacity={0.5}
+          />
+          <SvgLine
+            x1={Y_AXIS_W}
+            y1={CHART_HEIGHT - CHART_PAD_BOTTOM}
+            x2={width - CHART_PAD_RIGHT}
+            y2={CHART_HEIGHT - CHART_PAD_BOTTOM}
+            stroke={border}
+          />
 
-          <Path d={areaData} fill="url(#gradient)" />
-          <Path d={pathData} stroke={NEON_LIME} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          {/* Y axis labels */}
+          <SvgText x={Y_AXIS_W - 6} y={CHART_PAD_TOP + 4} fill={mutedText} fontSize={10} textAnchor="end">
+            {yMax.toFixed(0)}
+          </SvgText>
+          <SvgText x={Y_AXIS_W - 6} y={(CHART_PAD_TOP + (CHART_HEIGHT - CHART_PAD_BOTTOM)) / 2 + 4} fill={mutedText} fontSize={10} textAnchor="end">
+            {yMid.toFixed(0)}
+          </SvgText>
+          <SvgText x={Y_AXIS_W - 6} y={CHART_HEIGHT - CHART_PAD_BOTTOM + 4} fill={mutedText} fontSize={10} textAnchor="end">
+            {yMin.toFixed(0)}
+          </SvgText>
 
+          {/* Target weight line */}
+          {targetY != null ? (
+            <>
+              <SvgLine
+                x1={Y_AXIS_W}
+                y1={targetY}
+                x2={width - CHART_PAD_RIGHT}
+                y2={targetY}
+                stroke={warning}
+                strokeWidth={1.5}
+                strokeDasharray="6 4"
+              />
+              <SvgText x={width - CHART_PAD_RIGHT - 2} y={targetY - 4} fill={warning} fontSize={10} textAnchor="end" fontWeight="700">
+                TARGET
+              </SvgText>
+            </>
+          ) : null}
+
+          {/* Area + line */}
+          <Path d={area} fill="url(#weight-grad)" />
+          <Path d={path} stroke={primary} strokeWidth={3} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           {points.map((p, i) => (
-            <Circle key={i} cx={p.x} cy={p.y} r="4" fill={palette.background} stroke={NEON_LIME} strokeWidth="2" />
+            <Circle key={i} cx={p.x} cy={p.y} r={4} fill={cardBg} stroke={primary} strokeWidth={2} />
           ))}
 
-          {activeIndex !== null && (
+          {/* X axis labels */}
+          {xLabels.map((l, i) => (
+            <SvgText
+              key={i}
+              x={l.x}
+              y={CHART_HEIGHT - 12}
+              fill={mutedText}
+              fontSize={10}
+              textAnchor="middle"
+            >
+              {l.label}
+            </SvgText>
+          ))}
+
+          {activeIndex !== null ? (
             <>
-              <Line
+              <SvgLine
                 x1={points[activeIndex].x}
-                y1={CHART_PADDING_TOP}
+                y1={CHART_PAD_TOP}
                 x2={points[activeIndex].x}
-                y2={CHART_HEIGHT - CHART_PADDING_BOTTOM}
-                stroke={NEON_LIME}
-                strokeWidth="1"
-                strokeDasharray="4, 4"
+                y2={CHART_HEIGHT - CHART_PAD_BOTTOM}
+                stroke={primary}
+                strokeDasharray="3 4"
               />
-              <Circle cx={points[activeIndex].x} cy={points[activeIndex].y} r="6" fill={NEON_LIME} />
+              <Circle cx={points[activeIndex].x} cy={points[activeIndex].y} r={7} fill={primary} />
             </>
-          )}
+          ) : null}
         </Svg>
 
-        {activeIndex !== null && (
-          <BlurView intensity={20} tint="light" style={[styles.tooltip, { left: Math.max(10, Math.min(svgWidth - 110, points[activeIndex].x - 50)) }]}>
-            <Text style={styles.tooltipDate}>{formatDate(points[activeIndex].date)}</Text>
-            <Text style={styles.tooltipValue}>{points[activeIndex].value.toFixed(1)} {unit}</Text>
-          </BlurView>
-        )}
-
-        <View style={styles.chartLabels}>
-          {sortedData.map((m, i) => (
-            <Text key={i} style={[styles.chartXLabel, { left: points[i].x - 20 }]}>
-              {new Date(m.recorded_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+        {activeIndex !== null ? (
+          <View
+            style={[
+              styles.tooltip,
+              {
+                backgroundColor: cardBg,
+                borderColor: primary,
+                left: Math.max(8, Math.min(width - 130, points[activeIndex].x - 60)),
+              },
+            ]}
+          >
+            <Text style={[styles.tooltipDate, { color: mutedText }]}>
+              {formatDateShort(points[activeIndex].date)}
             </Text>
-          ))}
-        </View>
+            <Text style={[styles.tooltipValue, { color: text }]}>
+              {points[activeIndex].value.toFixed(1)} {weightUnit}
+            </Text>
+          </View>
+        ) : null}
       </View>
-      <Text style={styles.chartInstruction}>Touch and slide to explore details</Text>
     </View>
   );
-};
+}
+
+// =====================================================================
+// Screen
+// =====================================================================
 
 export default function StatsScreen() {
-  const palette = useThemeColors();
-  const styles = getStyles(palette);
+  const c = useThemeColors();
   const router = useRouter();
-  const { isOnline } = useNetworkStatus();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  const [weightUnit, setWeightUnit] = useWeightUnit();
+  const [heightUnit, setHeightUnit] = useHeightUnit();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [latest, setLatest] = useState<Metric | null>(null);
   const [history, setHistory] = useState<Metric[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('CHART');
+  const [targetWeightKg, setTargetWeightKg] = useState<number | undefined>(undefined);
 
-  const [weightUnit, setWeightUnit] = useState<WeightUnit>('kg');
-  const [heightUnit, setHeightUnit] = useState<HeightUnit>('cm');
+  const [range, setRange] = useState<Range>('30d');
+  const [tab, setTab] = useState<'chart' | 'history'>('chart');
+  const [logOpen, setLogOpen] = useState(false);
+
+  // form
   const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
-  const [bodyType, setBodyType] = useState('Mesomorph');
+  const [heightCm, setHeightCmInput] = useState('');
+  const [heightFt, setHeightFt] = useState('');
+  const [heightIn, setHeightIn] = useState('');
+  const [bodyType, setBodyType] = useState<BodyType>('mesomorph');
+  const [measurementsExpanded, setMeasurementsExpanded] = useState(false);
+  const [measurements, setMeasurements] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState('');
 
-  const [error, setError] = useState<string | null>(null);
+  const filtered = useMemo(
+    () => history.filter((m) => withinRange(new Date(m.recorded_at), range)),
+    [history, range]
+  );
 
-  // Sanitizers: only digits and one decimal point, capped length
-  const sanitizeWeight = (text: string) => {
-    const digits = text.replace(/[^0-9.]/g, '');
-    const parts = digits.split('.');
-    const whole = parts[0].slice(0, 3); // max 999
-    if (parts.length > 1) {
-      return whole + '.' + parts.slice(1).join('').slice(0, 1);
+  const delta = useMemo(() => {
+    const sorted = [...history].sort(
+      (a, b) => +new Date(b.recorded_at) - +new Date(a.recorded_at)
+    );
+    if (sorted.length < 2) return null;
+    const cur = sorted[0]?.weight_kg;
+    const prev = sorted[1]?.weight_kg;
+    if (cur == null || prev == null) return null;
+    return cur - prev;
+  }, [history]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const hydrate = async () => {
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const [cachedLatest, cachedHist, cachedFitness] = await Promise.all([
+          cacheGet<Metric | null>(cacheKeys.bodyMetricsLatest(userId)),
+          cacheGet<Metric[]>(cacheKeys.bodyMetricsHistory(userId)),
+          cacheGet<{ target_weight_kg?: number }>(cacheKeys.fitnessProfile(userId)),
+        ]);
+        if (cancelled) return;
+        if (cachedLatest) setLatest(cachedLatest);
+        if (cachedHist?.length) setHistory(normalizeHistory(cachedHist));
+        if (cachedFitness?.target_weight_kg && cachedFitness.target_weight_kg > 0) {
+          setTargetWeightKg(cachedFitness.target_weight_kg);
+        }
+        // Always flip loading off after hydrate so we never get stuck on a spinner;
+        // loadData refreshes in the background.
+        setLoading(false);
+      } catch {
+        setLoading(false);
+      }
+    };
+    hydrate().finally(() => {
+      if (userId) loadData();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!logOpen) return;
+    if (latest?.weight_kg != null) {
+      const w = weightUnit === 'kg' ? latest.weight_kg : kgToLbs(latest.weight_kg);
+      setWeight(w.toFixed(1));
     }
-    return whole;
-  };
-
-  const sanitizeHeight = (text: string) => {
-    const digits = text.replace(/[^0-9.]/g, '');
-    const parts = digits.split('.');
-    const whole = parts[0].slice(0, 3); // max 999
-    if (parts.length > 1) {
-      return whole + '.' + parts.slice(1).join('').slice(0, 1);
+    if (latest?.height_cm != null) {
+      if (heightUnit === 'cm') {
+        setHeightCmInput(latest.height_cm.toFixed(0));
+      } else {
+        const { ft, in: inches } = cmToFt(latest.height_cm);
+        setHeightFt(String(ft));
+        setHeightIn(String(inches));
+      }
     }
-    return whole;
-  };
+  }, [logOpen, latest, weightUnit, heightUnit]);
 
   const loadData = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const [latestMetric, metricsPayload] = await Promise.all([fetchLatestMetric(), fetchMetricsHistory()]);
-      const normalizedHistory = normalizeHistory(metricsPayload);
+      const [latestMetric, hist, fitness] = await Promise.all([
+        fetchLatestMetric(),
+        fetchMetricsHistory(),
+        getFitnessProfile().catch(() => null),
+      ]);
       setLatest(latestMetric || null);
-      setHistory(normalizedHistory);
-
-      if (latestMetric?.weight_kg != null) {
-        const value = weightUnit === 'kg' ? latestMetric.weight_kg : kgToLbs(latestMetric.weight_kg);
-        setWeight(value.toFixed(1));
+      setHistory(normalizeHistory(hist));
+      const tw = fitness?.target_weight_kg;
+      setTargetWeightKg(typeof tw === 'number' && tw > 0 ? tw : undefined);
+      if (userId) {
+        cacheSet(cacheKeys.bodyMetricsLatest(userId), latestMetric ?? null, cacheTTL.LONG).catch(() => undefined);
+        cacheSet(cacheKeys.bodyMetricsHistory(userId), hist, cacheTTL.LONG).catch(() => undefined);
+        if (fitness) {
+          cacheSet(cacheKeys.fitnessProfile(userId), fitness, cacheTTL.LONG).catch(() => undefined);
+        }
       }
-
-      if (latestMetric?.height_cm != null) {
-        const value = heightUnit === 'cm' ? latestMetric.height_cm : cmToFt(latestMetric.height_cm);
-        setHeight(value.toFixed(heightUnit === 'cm' ? 1 : 2));
+    } catch (err) {
+      console.error('Failed to load metrics', err);
+      // Don't alert if we already have cached data on screen
+      if (loading) {
+        Alert.alert('Error', 'Unable to load body stats.');
       }
-    } catch (loadError) {
-      console.error('Failed to load metrics', loadError);
-      setError('Unable to load body stats right now.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadData(); }, []);
-
-  useEffect(() => {
-    if (!latest) return;
-    if (latest.weight_kg != null) {
-      const value = weightUnit === 'kg' ? latest.weight_kg : kgToLbs(latest.weight_kg);
-      setWeight(value.toFixed(1));
-    }
-    if (latest.height_cm != null) {
-      const value = heightUnit === 'cm' ? latest.height_cm : cmToFt(latest.height_cm);
-      setHeight(value.toFixed(heightUnit === 'cm' ? 1 : 2));
-    }
-  }, [heightUnit, latest, weightUnit]);
-
-  const bmi = useMemo(() => {
-    const weightValue = Number(weight);
-    const heightValue = Number(height);
-    if (!Number.isFinite(weightValue) || !Number.isFinite(heightValue) || weightValue <= 0 || heightValue <= 0) return null;
-    const metricWeight = weightUnit === 'kg' ? weightValue : lbsToKg(weightValue);
-    const metricHeight = heightUnit === 'cm' ? heightValue : ftToCm(heightValue);
-    return bmiFor(metricWeight, metricHeight);
-  }, [height, heightUnit, weight, weightUnit]);
-
-  const saveCurrentMetric = async () => {
-    const weightValue = Number(weight);
-    const heightValue = Number(height);
-    if (!Number.isFinite(weightValue) || !Number.isFinite(heightValue) || weightValue <= 0 || heightValue <= 0) {
-      Alert.alert('Invalid input', 'Please enter valid height and weight values.');
-      return;
-    }
-    const weightKg = weightUnit === 'kg' ? weightValue : lbsToKg(weightValue);
-    const heightCm = heightUnit === 'cm' ? heightValue : ftToCm(heightValue);
-
-    // Range validation (kg: 20-350, cm: 50-300)
-    if (weightKg < 20 || weightKg > 350) {
-      Alert.alert('Invalid weight', 'Weight must be between 20–350 kg (44–772 lbs).');
-      return;
-    }
-    if (heightCm < 50 || heightCm > 300) {
-      Alert.alert('Invalid height', 'Height must be between 50–300 cm (1.6–9.8 ft).');
-      return;
-    }
+  const handleSave = async () => {
     setSaving(true);
-    setError(null);
     try {
-      const payload = { weight_kg: Number(weightKg.toFixed(2)), height_cm: Number(heightCm.toFixed(2)), source: 'user' };
-      if (isOnline) {
-        await saveMetric(payload);
-        await loadData();
+      const weightKg = weightUnit === 'kg' ? parseFloat(weight) : lbsToKg(parseFloat(weight));
+      let heightInCm: number | undefined;
+      if (heightUnit === 'cm') {
+        const v = parseFloat(heightCm);
+        heightInCm = isNaN(v) ? undefined : v;
       } else {
-        await addToOfflineQueue({ type: 'UPDATE_STATS', payload });
-        // Optimistically update local state so the UI reflects the save
-        const now = new Date().toISOString();
-        const optimistic: Metric = {
-          id: `offline-${Date.now()}`,
-          weight_kg: payload.weight_kg,
-          height_cm: payload.height_cm,
-          source: 'user',
-          recorded_at: now,
-        };
-        setLatest(optimistic);
-        setHistory((prev) => [optimistic, ...prev]);
-        Alert.alert('Saved offline', 'Your stats will sync once you are back online.');
+        const ft = parseFloat(heightFt);
+        const inches = parseFloat(heightIn || '0');
+        if (!isNaN(ft)) heightInCm = ftInToCm(ft, isNaN(inches) ? 0 : inches);
       }
-    } catch (saveError: any) {
-      setError(saveError?.message || 'Failed to save metrics.');
+
+      if (isNaN(weightKg) && heightInCm == null) {
+        Alert.alert('Missing data', 'Enter weight or height.');
+        setSaving(false);
+        return;
+      }
+
+      const measurementsClean: Record<string, number> = {};
+      for (const [k, v] of Object.entries(measurements)) {
+        const n = parseFloat(v);
+        if (!isNaN(n) && n > 0) measurementsClean[k] = n;
+      }
+
+      await saveMetric({
+        weight_kg: isNaN(weightKg) ? undefined : weightKg,
+        height_cm: heightInCm,
+        measurements: Object.keys(measurementsClean).length ? measurementsClean : undefined,
+        notes: notes.trim() || undefined,
+        source: 'user',
+      });
+
+      setMeasurements({});
+      setNotes('');
+      setMeasurementsExpanded(false);
+      setLogOpen(false);
+      await loadData();
+    } catch (err) {
+      console.error('Failed to save metric', err);
+      Alert.alert('Error', 'Could not save. Try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  const deleteMetric = (id: string) => {
-    Alert.alert('Delete entry', 'This will permanently remove the selected metric entry.', [
+  const handleDelete = (id: string) => {
+    Alert.alert('Delete entry', 'Remove this measurement permanently?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
-            await fetchWithAuth(`/metrics/${id}`, { method: 'DELETE' });
+            await deleteMetric(id);
             await loadData();
-          } catch (deleteError) {
-            setError('Failed to delete metric entry.');
+          } catch {
+            Alert.alert('Error', 'Could not delete.');
           }
         },
       },
     ]);
   };
 
-  const displayWeightValue = (kg: number | null) => {
-    if (kg == null) return '--';
-    const value = weightUnit === 'kg' ? kg : kgToLbs(kg);
-    return value.toFixed(1);
-  };
+  if (loading) {
+    return (
+      <View style={[styles.flexCenter, { backgroundColor: c.background }]}>
+        <ActivityIndicator size="large" color={c.primary} />
+      </View>
+    );
+  }
 
-  const displayHeightValue = (cm: number | null) => {
-    if (cm == null) return '--';
-    const value = heightUnit === 'cm' ? cm : cmToFt(cm);
-    return value.toFixed(heightUnit === 'cm' ? 1 : 2);
-  };
+  const currentBmi = bmiOf(latest?.weight_kg, latest?.height_cm);
+
+  const weightDisplay = latest?.weight_kg != null
+    ? weightUnit === 'kg'
+      ? latest.weight_kg.toFixed(1)
+      : kgToLbs(latest.weight_kg).toFixed(1)
+    : '—';
+
+  const heightDisplay = latest?.height_cm != null
+    ? heightUnit === 'cm'
+      ? `${Math.round(latest.height_cm)}`
+      : (() => {
+          const { ft, in: inches } = cmToFt(latest.height_cm);
+          return `${ft}′${inches}″`;
+        })()
+    : '—';
 
   return (
-    <Screen scroll={false} style={{ backgroundColor: palette.background }}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backButton}>
-          <ChevronLeft color={palette.text} size={24} />
-        </Pressable>
-        <View>
-          <Text style={styles.headerTitle}>BODY STATS</Text>
-          <Text style={styles.headerSubtitle}>Track your transformation</Text>
+    <View style={{ flex: 1, backgroundColor: c.background }}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.sm }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <PressableScale
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
+            style={[styles.backBtn, { backgroundColor: c.surface, borderColor: c.border }]}
+          >
+            <ChevronLeft size={22} color={c.text} />
+          </PressableScale>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.eyebrow, { color: c.mutedText }]}>BODY STATS</Text>
+            <Text style={[styles.h1, { color: c.text }]}>Your progress</Text>
+          </View>
         </View>
-      </View>
 
-      {loading ? (
-        <View style={styles.loaderWrap}>
-          <ActivityIndicator color={NEON_LIME} size="large" />
+        {/* Hero */}
+        <View
+          style={[
+            styles.hero,
+            { backgroundColor: c.card, borderColor: c.border },
+            elevation.md,
+          ]}
+        >
+          <Text style={[styles.eyebrow, { color: c.mutedText }]}>CURRENT WEIGHT</Text>
+          <View style={styles.heroValueRow}>
+            <Text style={[styles.heroValue, { color: c.text }]}>{weightDisplay}</Text>
+            <Text style={[styles.heroUnit, { color: c.primary }]}>{weightUnit}</Text>
+          </View>
+          {delta != null ? (
+            <View style={styles.deltaRow}>
+              {delta < 0 ? (
+                <TrendingDown size={14} color={c.success} strokeWidth={2.4} />
+              ) : delta > 0 ? (
+                <TrendingUp size={14} color={c.warning} strokeWidth={2.4} />
+              ) : (
+                <Activity size={14} color={c.mutedText} strokeWidth={2.4} />
+              )}
+              <Text
+                style={[
+                  styles.deltaText,
+                  { color: delta < 0 ? c.success : delta > 0 ? c.warning : c.mutedText },
+                ]}
+              >
+                {Math.abs(weightUnit === 'kg' ? delta : kgToLbs(delta)).toFixed(1)} {weightUnit} vs last entry
+              </Text>
+            </View>
+          ) : (
+            <Text style={[styles.deltaText, { color: c.mutedText }]}>
+              Log more entries to see trend
+            </Text>
+          )}
+          {targetWeightKg != null ? (
+            <View style={styles.deltaRow}>
+              <Target size={12} color={c.warning} strokeWidth={2.4} />
+              <Text style={[styles.deltaText, { color: c.warning }]}>
+                Target: {(weightUnit === 'kg' ? targetWeightKg : kgToLbs(targetWeightKg)).toFixed(1)} {weightUnit}
+              </Text>
+            </View>
+          ) : null}
         </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <BlurView intensity={10} tint="light" style={styles.snapshotContainer}>
-            <Text style={styles.sectionLabel}>CURRENT SNAPSHOT</Text>
 
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>WEIGHT</Text>
-                <Text style={styles.summaryValue}>{displayWeightValue(latest?.weight_kg ?? null)}<Text style={styles.summaryUnit}>{weightUnit}</Text></Text>
-              </View>
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>HEIGHT</Text>
-                <Text style={styles.summaryValue}>{displayHeightValue(latest?.height_cm ?? null)}<Text style={styles.summaryUnit}>{heightUnit}</Text></Text>
-              </View>
-              <View style={[styles.summaryCard, { borderRightWidth: 0 }]}>
-                <Text style={styles.summaryLabel}>BMI</Text>
-                <Text style={styles.summaryValue}>{latest ? bmiFor(latest.weight_kg, latest.height_cm) : '--'}</Text>
-              </View>
+        {/* Quick stats */}
+        <View style={styles.tilesRow}>
+          <StatTile label="Height" value={heightDisplay} unit={heightUnit === 'cm' ? 'cm' : ''} />
+          <StatTile
+            label="BMI"
+            value={currentBmi ? currentBmi.toFixed(1) : '—'}
+            delta={currentBmi ? { direction: 'neutral', text: bmiCategory(currentBmi) } : undefined}
+            accent
+          />
+        </View>
+
+        {/* Tabs */}
+        <SectionHeader
+          eyebrow="Progress"
+          trailing={
+            <View style={{ width: 200 }}>
+              <SegmentedControl
+                options={[
+                  { label: 'Chart', value: 'chart' },
+                  { label: 'History', value: 'history' },
+                ]}
+                value={tab}
+                onChange={setTab}
+              />
             </View>
+          }
+        />
 
-            <View style={styles.inputGrid}>
-              <View style={styles.inputCol}>
-                <View style={styles.fieldHeader}>
-                  <Text style={styles.fieldLabel}>WEIGHT UNIT</Text>
-                </View>
-                <View style={styles.unitSelector}>
-                  {WEIGHT_UNITS.map(unit => {
-                    const active = weightUnit === unit;
-                    return (
-                      <Pressable
-                        key={unit}
-                        onPress={() => setWeightUnit(unit)}
-                        style={[styles.unitBtn, active && styles.unitBtnActive]}
-                      >
-                        <Text style={[styles.unitBtnText, active && styles.unitBtnTextActive]}>{unit.toUpperCase()}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>WEIGHT</Text>
-                <Input
-                  value={weight}
-                  keyboardType="decimal-pad"
-                  onChangeText={setWeight}
-                  sanitize={sanitizeWeight}
-                  maxLength={5}
-                  placeholder="0.0"
-                  style={styles.premiumInput}
-                />
-              </View>
-
-              <View style={styles.inputCol}>
-                <View style={styles.fieldHeader}>
-                  <Text style={styles.fieldLabel}>HEIGHT UNIT</Text>
-                </View>
-                <View style={styles.unitSelector}>
-                  {HEIGHT_UNITS.map(unit => {
-                    const active = heightUnit === unit;
-                    return (
-                      <Pressable
-                        key={unit}
-                        onPress={() => setHeightUnit(unit)}
-                        style={[styles.unitBtn, active && styles.unitBtnActive]}
-                      >
-                        <Text style={[styles.unitBtnText, active && styles.unitBtnTextActive]}>{unit.toUpperCase()}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>HEIGHT</Text>
-                <Input
-                  value={height}
-                  keyboardType="decimal-pad"
-                  onChangeText={setHeight}
-                  sanitize={sanitizeHeight}
-                  maxLength={5}
-                  placeholder="0.0"
-                  style={styles.premiumInput}
-                />
-              </View>
+        {tab === 'chart' ? (
+          <>
+            <View style={styles.rangeWrap}>
+              <SegmentedControl
+                options={[
+                  { label: '7D', value: '7d' },
+                  { label: '30D', value: '30d' },
+                  { label: '90D', value: '90d' },
+                  { label: '1Y', value: '1y' },
+                ]}
+                value={range}
+                onChange={setRange}
+              />
             </View>
-
-            <View style={styles.bodyTypeSection}>
-              <Text style={styles.fieldLabel}>BODY TYPE</Text>
-              <View style={styles.bodyTypeGrid}>
-                {['Ectomorph', 'Mesomorph', 'Endomorph'].map((type) => {
-                  const active = bodyType === type;
-                  return (
-                    <Pressable
-                      key={type}
-                      onPress={() => setBodyType(type)}
-                      style={[styles.bodyTypeBtn, active && styles.bodyTypeBtnActive]}
+            <View style={{ paddingHorizontal: spacing.base }}>
+              <WeightChart
+                data={filtered}
+                weightUnit={weightUnit}
+                targetWeightKg={targetWeightKg}
+                primary={c.primary}
+                border={c.border}
+                cardBg={c.card}
+                text={c.text}
+                mutedText={c.mutedText}
+                warning={c.warning}
+              />
+            </View>
+          </>
+        ) : (
+          // History — capped height container, scroll inside
+          <View
+            style={[
+              styles.historyContainer,
+              { backgroundColor: c.card, borderColor: c.border },
+            ]}
+          >
+            {history.length === 0 ? (
+              <View style={styles.historyEmpty}>
+                <Activity size={28} color={c.border} />
+                <Text style={[styles.chartEmptyText, { color: c.mutedText }]}>No entries yet</Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={{ maxHeight: 320 }}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ gap: spacing.xs }}
+              >
+                {[...history]
+                  .sort((a, b) => +new Date(b.recorded_at) - +new Date(a.recorded_at))
+                  .map((m, idx) => (
+                    <View
+                      key={m.id}
+                      style={[
+                        styles.historyRow,
+                        idx > 0 && {
+                          borderTopWidth: StyleSheet.hairlineWidth,
+                          borderTopColor: c.border,
+                          paddingTop: spacing.sm,
+                        },
+                      ]}
                     >
-                      <Text style={[styles.bodyTypeBtnText, active && styles.bodyTypeBtnTextActive]}>{type.toUpperCase()}</Text>
-                    </Pressable>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[styles.historyDate, { color: c.text }]}>
+                          {new Date(m.recorded_at).toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </Text>
+                        <Text style={[styles.historyMeta, { color: c.mutedText }]}>
+                          {m.weight_kg != null
+                            ? `${weightUnit === 'kg' ? m.weight_kg.toFixed(1) : kgToLbs(m.weight_kg).toFixed(1)} ${weightUnit}`
+                            : '—'}
+                          {m.notes ? ` · ${m.notes.slice(0, 28)}${m.notes.length > 28 ? '…' : ''}` : ''}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => handleDelete(m.id)}
+                        hitSlop={10}
+                        style={{ padding: spacing.xs }}
+                      >
+                        <Trash2 size={18} color={c.destructive} strokeWidth={1.8} />
+                      </Pressable>
+                    </View>
+                  ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
+
+        {/* Log entry CTA */}
+        <View style={{ paddingHorizontal: spacing.base, paddingTop: spacing.lg }}>
+          <Button title="+ Log new entry" onPress={() => setLogOpen(true)} />
+        </View>
+
+        <View style={{ height: spacing['2xl'] }} />
+      </ScrollView>
+
+      {/* Log bottom sheet */}
+      <Modal
+        visible={logOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setLogOpen(false)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setLogOpen(false)} />
+        <View style={[styles.sheet, { backgroundColor: c.card, borderColor: c.border }]}>
+          <View style={[styles.sheetHandle, { backgroundColor: c.border }]} />
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: c.text }]}>Log new entry</Text>
+            <Pressable onPress={() => setLogOpen(false)}>
+              <Text style={[styles.sheetCancel, { color: c.mutedText }]}>Cancel</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView
+            style={{ maxHeight: '85%' }}
+            contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.lg }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Weight */}
+            <View style={{ gap: spacing.xs }}>
+              <View style={styles.fieldHeader}>
+                <Text style={[styles.eyebrow, { color: c.mutedText }]}>WEIGHT</Text>
+                <View style={{ width: 130 }}>
+                  <SegmentedControl
+                    options={[
+                      { label: 'KG', value: 'kg' },
+                      { label: 'LBS', value: 'lbs' },
+                    ]}
+                    value={weightUnit}
+                    onChange={setWeightUnit}
+                  />
+                </View>
+              </View>
+              <Field
+                value={weight}
+                onChangeText={(v) => setWeight(v.replace(/[^0-9.]/g, '').slice(0, 6))}
+                keyboardType="decimal-pad"
+                placeholder={weightUnit === 'kg' ? '74.0' : '163.0'}
+                leading={<Scale size={18} color={c.mutedText} strokeWidth={1.8} />}
+              />
+            </View>
+
+            {/* Height */}
+            <View style={{ gap: spacing.xs }}>
+              <View style={styles.fieldHeader}>
+                <Text style={[styles.eyebrow, { color: c.mutedText }]}>HEIGHT</Text>
+                <View style={{ width: 130 }}>
+                  <SegmentedControl
+                    options={[
+                      { label: 'CM', value: 'cm' },
+                      { label: 'FT', value: 'ft' },
+                    ]}
+                    value={heightUnit}
+                    onChange={setHeightUnit}
+                  />
+                </View>
+              </View>
+              {heightUnit === 'cm' ? (
+                <Field
+                  value={heightCm}
+                  onChangeText={(v) => setHeightCmInput(v.replace(/[^0-9.]/g, '').slice(0, 5))}
+                  keyboardType="decimal-pad"
+                  placeholder="180"
+                  leading={<Ruler size={18} color={c.mutedText} strokeWidth={1.8} />}
+                />
+              ) : (
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Field
+                      value={heightFt}
+                      onChangeText={(v) => setHeightFt(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                      keyboardType="number-pad"
+                      placeholder="5"
+                      helper="feet"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Field
+                      value={heightIn}
+                      onChangeText={(v) => setHeightIn(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                      keyboardType="number-pad"
+                      placeholder="11"
+                      helper="inches"
+                    />
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Body type */}
+            <View style={{ gap: spacing.xs }}>
+              <Text style={[styles.eyebrow, { color: c.mutedText }]}>BODY TYPE</Text>
+              <View style={styles.bodyTypeRow}>
+                {BODY_TYPES.map((bt) => {
+                  const active = bodyType === bt.value;
+                  return (
+                    <PressableScale
+                      key={bt.value}
+                      onPress={() => setBodyType(bt.value)}
+                      style={[
+                        styles.bodyTypeCard,
+                        {
+                          backgroundColor: active ? `${c.primary}1A` : c.surface,
+                          borderColor: active ? c.primary : c.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.bodyTypeLabel, { color: active ? c.primary : c.text }]}>
+                        {bt.label}
+                      </Text>
+                      <Text style={[styles.bodyTypeTag, { color: c.mutedText }]}>{bt.tagline}</Text>
+                    </PressableScale>
                   );
                 })}
               </View>
             </View>
 
+            {/* Measurements expandable */}
             <Pressable
-              onPress={saveCurrentMetric}
-              disabled={saving}
-              style={({ pressed }) => [
-                styles.saveButton,
-                pressed && { opacity: 0.8, transform: [{ scale: 0.99 }] },
-                saving && { opacity: 0.5 }
-              ]}
+              onPress={() => setMeasurementsExpanded((v) => !v)}
+              style={[styles.expandHeader, { borderColor: c.border }]}
             >
-              {saving ? <ActivityIndicator color={palette.background} /> : <Text style={styles.saveButtonText}>SAVE STATS</Text>}
+              <View>
+                <Text style={[styles.eyebrow, { color: c.mutedText }]}>MEASUREMENTS</Text>
+                <Text style={[styles.expandHint, { color: c.text }]}>Tape measure (optional)</Text>
+              </View>
+              {measurementsExpanded ? (
+                <ChevronUp size={18} color={c.mutedText} />
+              ) : (
+                <ChevronDown size={18} color={c.mutedText} />
+              )}
             </Pressable>
-          </BlurView>
 
-          <View style={styles.historySection}>
-            <View style={styles.historyHeader}>
-              <Text style={styles.sectionLabel}>PROGRESS ANALYSIS</Text>
-              <View style={styles.modeToggle}>
-                <Pressable
-                  onPress={() => setViewMode('CHART')}
-                  style={[styles.toggleBtn, viewMode === 'CHART' && styles.toggleBtnActive]}
-                >
-                  <TrendingUp color={viewMode === 'CHART' ? palette.background : palette.mutedText} size={16} />
-                </Pressable>
-                <Pressable
-                  onPress={() => setViewMode('HISTORY')}
-                  style={[styles.toggleBtn, viewMode === 'HISTORY' && styles.toggleBtnActive]}
-                >
-                  <List color={viewMode === 'HISTORY' ? palette.background : palette.mutedText} size={16} />
-                </Pressable>
+            {measurementsExpanded ? (
+              <View style={{ gap: spacing.sm }}>
+                {MEASUREMENT_PARTS.map((p) => (
+                  <View key={p.key} style={styles.measureRow}>
+                    <Text style={[styles.measureLabel, { color: c.text }]}>{p.label}</Text>
+                    <View style={{ width: 110 }}>
+                      <Field
+                        value={measurements[p.key] || ''}
+                        onChangeText={(v) =>
+                          setMeasurements((prev) => ({
+                            ...prev,
+                            [p.key]: v.replace(/[^0-9.]/g, '').slice(0, 5),
+                          }))
+                        }
+                        keyboardType="decimal-pad"
+                        placeholder="cm"
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {/* Notes */}
+            <View style={{ gap: spacing.xs }}>
+              <Text style={[styles.eyebrow, { color: c.mutedText }]}>NOTES (OPTIONAL)</Text>
+              <View style={[styles.notesBox, { backgroundColor: c.surface, borderColor: c.border }]}>
+                <TextInput
+                  value={notes}
+                  onChangeText={(v) => v.length <= 200 && setNotes(v)}
+                  placeholder="How did this measurement go?"
+                  placeholderTextColor={c.mutedText}
+                  multiline
+                  textAlignVertical="top"
+                  style={[styles.notesInput, { color: c.text }]}
+                  maxLength={200}
+                />
               </View>
             </View>
 
-            {viewMode === 'CHART' ? (
-              <WeightChart data={history} unit={weightUnit} palette={palette} styles={styles} />
-            ) : (
-              <View>
-                {history.length === 0 ? (
-                  <Text style={styles.emptyText}>No entries yet.</Text>
-                ) : (
-                  history
-                    .slice()
-                    .sort((a, b) => +new Date(b.recorded_at) - +new Date(a.recorded_at))
-                    .map((metric) => {
-                      const rowBmi = bmiFor(metric.weight_kg, metric.height_cm);
-                      return (
-                        <View key={metric.id} style={styles.historyRow}>
-                          <View style={styles.historyMain}>
-                            <Text style={styles.historyDate}>{formatDate(metric.recorded_at)}</Text>
-                            <Text style={styles.historyStats}>
-                              {displayWeightValue(metric.weight_kg)} {weightUnit} • BMI {rowBmi ? rowBmi.toFixed(1) : '--'}
-                            </Text>
-                          </View>
-                          <Pressable onPress={() => deleteMetric(metric.id)} style={styles.deleteButton}>
-                            <Text style={styles.deleteText}>Delete</Text>
-                          </Pressable>
-                        </View>
-                      );
-                    })
-                )}
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      )}
-    </Screen>
+            <Button
+              title={saving ? 'Saving…' : 'Save Entry'}
+              onPress={handleSave}
+              loading={saving}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
-const getStyles = (palette: any) => StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    marginBottom: 16,
-    gap: 12,
+const styles = StyleSheet.create({
+  scroll: {
+    paddingBottom: spacing['3xl'],
+    gap: spacing.sm,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: palette.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: palette.text,
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: palette.mutedText,
-    fontWeight: '600',
-  },
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 40,
-  },
-  loaderWrap: {
+  flexCenter: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  snapshotContainer: {
-    borderRadius: 24,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 16,
-    overflow: 'hidden',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.base,
   },
-  sectionLabel: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: palette.mutedText,
-    letterSpacing: 1.5,
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  eyebrow: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.xs,
+    letterSpacing: t.tracking.eyebrow,
     textTransform: 'uppercase',
   },
-  summaryRow: {
-    flexDirection: 'row',
-    marginTop: 16,
-    marginBottom: 24,
-    backgroundColor: palette.surface,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: palette.border,
+  h1: {
+    fontFamily: t.weight.extrabold,
+    fontSize: t.size.h1,
+    letterSpacing: t.tracking.tight,
+    marginTop: 2,
   },
-  summaryCard: {
-    flex: 1,
+  hero: {
+    marginHorizontal: spacing.base,
+    padding: spacing.lg,
+    borderRadius: radii['2xl'],
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+  },
+  heroValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+  },
+  heroValue: {
+    fontFamily: t.weight.extrabold,
+    fontSize: 56,
+    letterSpacing: -1.5,
+  },
+  heroUnit: {
+    fontFamily: t.weight.bold,
+    fontSize: t.size.body,
+    letterSpacing: t.tracking.wide,
+    textTransform: 'uppercase',
+  },
+  deltaRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: palette.border,
+    gap: spacing.xs,
+    marginTop: spacing.xs,
   },
-  summaryLabel: {
-    fontSize: 7,
-    fontWeight: '900',
-    color: palette.mutedText,
-    letterSpacing: 1,
-    marginBottom: 2,
+  deltaText: {
+    fontFamily: t.weight.medium,
+    fontSize: t.size.xs,
   },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: palette.text,
-  },
-  summaryUnit: {
-    fontSize: 9,
-    color: NEON_LIME,
-    marginLeft: 2,
-  },
-  inputGrid: {
+  tilesRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.base,
   },
-  inputCol: {
+  rangeWrap: {
+    paddingHorizontal: spacing.base,
+  },
+  chartFrame: {
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: spacing.sm,
+    overflow: 'hidden',
+  },
+  chartEmpty: {
+    marginHorizontal: spacing.base,
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 160,
+  },
+  chartEmptyText: {
+    fontFamily: t.weight.medium,
+    fontSize: t.size.sm,
+    textAlign: 'center',
+  },
+  tooltip: {
+    position: 'absolute',
+    top: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  tooltipDate: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.micro,
+    letterSpacing: t.tracking.eyebrow,
+    textTransform: 'uppercase',
+  },
+  tooltipValue: {
+    fontFamily: t.weight.bold,
+    fontSize: t.size.body,
+  },
+  historyContainer: {
+    marginHorizontal: spacing.base,
+    padding: spacing.base,
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  historyEmpty: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    gap: spacing.sm,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  historyDate: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.body,
+  },
+  historyMeta: {
+    fontFamily: t.weight.medium,
+    fontSize: t.size.xs,
+  },
+  // sheet
+  sheetBackdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  sheet: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing['3xl'],
+    borderTopLeftRadius: radii['2xl'],
+    borderTopRightRadius: radii['2xl'],
+    borderWidth: StyleSheet.hairlineWidth,
+    maxHeight: '92%',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 999,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  sheetTitle: {
+    fontFamily: t.weight.bold,
+    fontSize: t.size.h3,
+  },
+  sheetCancel: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.body,
   },
   fieldHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
   },
-  fieldLabel: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: palette.mutedText,
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  unitSelector: {
+  row: {
     flexDirection: 'row',
-    backgroundColor: palette.surface,
-    borderRadius: 10,
-    padding: 3,
-    gap: 3,
+    gap: spacing.sm,
   },
-  unitBtn: {
+  bodyTypeRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  bodyTypeCard: {
     flex: 1,
-    height: 28,
-    borderRadius: 7,
+    padding: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
+    gap: 2,
+    minHeight: 60,
     justifyContent: 'center',
   },
-  unitBtnActive: {
-    backgroundColor: NEON_LIME,
+  bodyTypeLabel: {
+    fontFamily: t.weight.bold,
+    fontSize: t.size.sm,
   },
-  unitBtnText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: palette.mutedText,
-  },
-  unitBtnTextActive: {
-    color: '#000000',
-  },
-  premiumInput: {
-    backgroundColor: palette.surface,
-    borderColor: palette.border,
-    height: 48,
-    borderRadius: 12,
-    fontSize: 16,
-    fontWeight: '700',
-    color: palette.text,
-    paddingHorizontal: 12,
-  },
-  bodyTypeSection: {
-    marginBottom: 24,
-  },
-  bodyTypeGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  bodyTypeBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.surface,
-  },
-  bodyTypeBtnActive: {
-    borderColor: NEON_LIME,
-    backgroundColor: 'rgba(128, 242, 13, 0.05)',
-  },
-  bodyTypeBtnText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: palette.mutedText,
-    letterSpacing: 0.5,
-  },
-  bodyTypeBtnTextActive: {
-    color: NEON_LIME,
-  },
-  saveButton: {
-    height: 56,
-    backgroundColor: NEON_LIME,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButtonText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: palette.background,
-    letterSpacing: 1,
-  },
-  historySection: {
-    marginTop: 32,
-    paddingHorizontal: 4,
-  },
-  historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: palette.surface,
-    borderRadius: 10,
-    padding: 3,
-    gap: 3,
-  },
-  toggleBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleBtnActive: {
-    backgroundColor: NEON_LIME,
-  },
-  chartWrapper: {
-    backgroundColor: palette.card,
-    borderRadius: 20,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  chartContainer: {
-    height: CHART_HEIGHT,
-    position: 'relative',
-  },
-  yAxis: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    height: CHART_HEIGHT - CHART_PADDING_BOTTOM,
-    justifyContent: 'space-between',
-    paddingTop: CHART_PADDING_TOP,
-    paddingBottom: 0,
-    zIndex: 1,
-  },
-  yLabel: {
-    fontSize: 8,
-    color: palette.mutedText,
-    fontWeight: '900',
-    textAlign: 'center',
-    width: CHART_INNER_PADDING,
-  },
-  chartLabels: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: CHART_PADDING_BOTTOM,
-  },
-  chartXLabel: {
-    position: 'absolute',
-    bottom: 5,
-    fontSize: 7,
-    color: palette.mutedText,
-    fontWeight: '900',
-    width: 40,
+  bodyTypeTag: {
+    fontFamily: t.weight.regular,
+    fontSize: t.size.micro,
     textAlign: 'center',
   },
-  chartInstruction: {
-    fontSize: 8,
-    color: palette.mutedText,
-    textAlign: 'center',
-    marginTop: 12,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  tooltip: {
-    position: 'absolute',
-    top: 10,
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    zIndex: 10,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  tooltipDate: {
-    fontSize: 8,
-    color: palette.mutedText,
-    fontWeight: '900',
-    marginBottom: 2,
-  },
-  tooltipValue: {
-    fontSize: 12,
-    color: NEON_LIME,
-    fontWeight: '900',
-  },
-  chartEmpty: {
-    height: CHART_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: palette.card,
-    borderRadius: 20,
-    gap: 8,
-  },
-  chartEmptyText: {
-    color: palette.mutedText,
-    fontSize: 10,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-    fontWeight: '600',
-  },
-  emptyText: {
-    color: palette.mutedText,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  historyRow: {
+  expandHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  historyMain: {
+  expandHint: {
+    fontFamily: t.weight.medium,
+    fontSize: t.size.sm,
+  },
+  measureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  measureLabel: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.body,
     flex: 1,
   },
-  historyDate: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: palette.text,
-    marginBottom: 2,
+  notesBox: {
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: spacing.md,
+    minHeight: 80,
   },
-  historyStats: {
-    fontSize: 10,
-    color: palette.mutedText,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  deleteText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#FF4B4B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  notesInput: {
+    fontFamily: t.weight.regular,
+    fontSize: t.size.body,
+    minHeight: 60,
   },
 });
