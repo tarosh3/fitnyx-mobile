@@ -143,6 +143,17 @@ export default function WaterScreen() {
           <Droplet size={12} color={c.primary} />
           <Text style={[styles.tapText, { color: c.mutedText }]}>Tap glass to add 250ml</Text>
         </View>
+        <View style={[styles.levelTrack, { backgroundColor: c.border }]}>
+          <View
+            style={[
+              styles.levelFill,
+              {
+                width: `${Math.min(100, Math.round(pct * 100))}%`,
+                backgroundColor: goalReached ? c.success : c.primary,
+              },
+            ]}
+          />
+        </View>
       </Pressable>
 
       {/* Quick add row */}
@@ -437,6 +448,14 @@ const styles = StyleSheet.create({
     fontSize: t.size.xs,
     letterSpacing: t.tracking.wide,
   },
+  levelTrack: {
+    width: 200,
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  levelFill: { height: '100%', borderRadius: 3 },
   presetRow: {
     flexDirection: 'row',
     gap: spacing.sm,
