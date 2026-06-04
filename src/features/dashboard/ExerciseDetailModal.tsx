@@ -1,7 +1,7 @@
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Lightbulb, TrendingUp, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 
 import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
@@ -19,6 +19,9 @@ interface ExerciseDetailModalProps {
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 const NEON_LIME = '#5fc793';
+// Modal content has 24px horizontal padding; the chart card adds a little more.
+// Give the chart an explicit width so it renders reliably inside the ScrollView.
+const CHART_WIDTH = Dimensions.get('window').width - 96;
 
 export function ExerciseDetailModal({ exercise, isOpen, onClose, onSelectExercise }: ExerciseDetailModalProps) {
   const palette = useThemeColors();
@@ -267,8 +270,10 @@ function ExerciseProgress({ uuid }: { uuid: string }) {
             yAxisTextStyle={{ color: palette.mutedText, fontSize: 9 }}
             xAxisLabelTextStyle={{ color: palette.mutedText, fontSize: 9 }}
             noOfSections={3}
-            adjustToWidth
+            width={CHART_WIDTH}
             height={150}
+            initialSpacing={8}
+            endSpacing={8}
           />
         </View>
       ) : null}
