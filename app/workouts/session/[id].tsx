@@ -587,14 +587,20 @@ export default function WorkoutSessionScreen() {
                     {index + 1}. {entry.exerciseDetails?.title?.toUpperCase() || entry.exercise.exercise?.title?.toUpperCase() || 'EXERCISE'}
                   </Text>
                   <View style={styles.exMetaRow}>
-                    <Text style={styles.exMetaText}>
-                      TARGET: {entry.exercise.target_sets || '-'} SETS × {entry.exercise.target_reps || '-'} REPS
-                    </Text>
-                    {entry.exercise.target_weight_kg ? (
-                      <Text style={[styles.exMetaText, { color: NEON_LIME }]}>
-                        {' '}@ {entry.exercise.target_weight_kg}KG
-                      </Text>
-                    ) : null}
+                    {entry.exercise.id?.startsWith('adhoc-') ? (
+                      <Text style={[styles.exMetaText, { color: NEON_LIME }]}>EXTRA · LOG YOUR SETS</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.exMetaText}>
+                          TARGET: {entry.exercise.target_sets || '-'} SETS × {entry.exercise.target_reps || '-'} REPS
+                        </Text>
+                        {entry.exercise.target_weight_kg ? (
+                          <Text style={[styles.exMetaText, { color: NEON_LIME }]}>
+                            {' '}@ {entry.exercise.target_weight_kg}KG
+                          </Text>
+                        ) : null}
+                      </>
+                    )}
                   </View>
                 </View>
 

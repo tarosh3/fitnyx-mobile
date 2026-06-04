@@ -18,8 +18,6 @@ import { fetchExercises } from '@/src/lib/api/exercises';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
 import type { Exercise } from '@/src/types/exercise';
 
-const CATEGORIES = ['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
-
 interface Props {
   visible: boolean;
   onClose: () => void;
@@ -32,7 +30,6 @@ export function AddExerciseSheet({ visible, onClose, onAdd, existingUuids = [] }
   const c = useThemeColors();
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search, 300);
-  const [category, setCategory] = useState('All');
   const [results, setResults] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Record<string, Exercise>>({});
@@ -44,26 +41,20 @@ export function AddExerciseSheet({ visible, onClose, onAdd, existingUuids = [] }
     if (!visible) return;
     let cancelled = false;
     setLoading(true);
-    fetchExercises({
-      page: 1,
-      limit: 30,
-      search: debounced,
-      muscle: category === 'All' ? '' : category.toLowerCase(),
-    })
+    fetchExercises({ page: 1, limit: 30, search: debounced })
       .then((res) => !cancelled && setResults(res.data || []))
       .catch(() => !cancelled && setResults([]))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [visible, debounced, category]);
+  }, [visible, debounced]);
 
   // Reset transient state whenever the sheet closes.
   useEffect(() => {
     if (!visible) {
       setSelected({});
       setSearch('');
-      setCategory('All');
     }
   }, [visible]);
 
@@ -108,27 +99,6 @@ export function AddExerciseSheet({ visible, onClose, onAdd, existingUuids = [] }
             placeholderTextColor={c.mutedText}
             style={[styles.searchInput, { color: c.text }]}
             autoCorrect={false}
-          />
-        </View>
-
-        <View style={styles.chipsRow}>
-          <FlatList
-            horizontal
-            data={CATEGORIES}
-            keyExtractor={(x) => x}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsContent}
-            renderItem={({ item }) => {
-              const active = category === item;
-              return (
-                <Pressable
-                  onPress={() => setCategory(item)}
-                  style={[styles.chip, { backgroundColor: active ? c.primary : c.surface, borderColor: active ? c.primary : c.border }]}
-                >
-                  <Text style={[styles.chipText, { color: active ? c.primaryText : c.mutedText }]}>{item}</Text>
-                </Pressable>
-              );
-            }}
           />
         </View>
 
@@ -243,16 +213,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   searchInput: { flex: 1, fontFamily: t.weight.medium, fontSize: t.size.body, padding: 0 },
-  chipsRow: { marginTop: spacing.md },
-  chipsContent: { gap: spacing.sm, paddingHorizontal: spacing.lg },
-  chip: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  chipText: { fontFamily: t.weight.bold, fontSize: t.size.sm },
-  list: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md, gap: spacing.sm },
+  list: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.md, gap: spacing.sm },
   empty: { fontFamily: t.weight.regular, fontSize: t.size.sm, textAlign: 'center', marginTop: spacing.xl },
   row: {
     flexDirection: 'row',
