@@ -81,6 +81,8 @@ export default function RemindersScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const { items, refresh } = useReminders();
+  const activeCount = items.filter((r) => r.enabled).length;
+  const pausedCount = items.length - activeCount;
   const [editor, setEditor] = useState<Reminder | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Reminder | null>(null);
@@ -155,6 +157,22 @@ export default function RemindersScreen() {
         </View>
       ) : (
         <>
+          <View style={[styles.summaryCard, { backgroundColor: c.card, borderColor: c.border }]}>
+            <View style={[styles.summaryIcon, { backgroundColor: `${c.primary}1A` }]}>
+              <Bell size={18} color={c.primary} strokeWidth={1.8} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.summaryTitle, { color: c.text }]}>
+                <Text style={{ color: c.primary }}>{activeCount} active</Text>
+                {pausedCount > 0 ? `  ·  ${pausedCount} paused` : ''}
+              </Text>
+              <Text style={[styles.summarySub, { color: c.mutedText }]}>
+                {activeCount > 0
+                  ? 'Notifications scheduled for your habits'
+                  : 'All reminders are paused'}
+              </Text>
+            </View>
+          </View>
           <SectionHeader eyebrow="Active" title="Your reminders" />
           <View style={[styles.listCard, { backgroundColor: c.card, borderColor: c.border }]}>
             {items.map((r, i) => {
@@ -168,10 +186,10 @@ export default function RemindersScreen() {
                     i < items.length - 1 ? { borderBottomColor: c.border, borderBottomWidth: StyleSheet.hairlineWidth } : null,
                   ]}
                 >
-                  <View style={[styles.iconWrap, { backgroundColor: `${meta.tint}1F` }]}>
+                  <View style={[styles.iconWrap, { backgroundColor: `${meta.tint}1F`, opacity: r.enabled ? 1 : 0.4 }]}>
                     {meta.icon(meta.tint)}
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex: 1, opacity: r.enabled ? 1 : 0.4 }}>
                     <Text style={[styles.itemLabel, { color: c.text }]}>{r.label}</Text>
                     <Text style={[styles.itemSub, { color: c.mutedText }]}>
                       {describeSchedule(r.schedule)}
@@ -728,6 +746,25 @@ const styles = StyleSheet.create({
   },
   itemLabel: { fontFamily: t.weight.semibold, fontSize: t.size.body },
   itemSub: { fontFamily: t.weight.regular, fontSize: t.size.xs, marginTop: 2 },
+  summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.xs,
+    padding: spacing.base,
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  summaryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTitle: { fontFamily: t.weight.bold, fontSize: t.size.body },
+  summarySub: { fontFamily: t.weight.regular, fontSize: t.size.xs, marginTop: 2 },
   itemActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   sheet: {

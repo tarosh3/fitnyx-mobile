@@ -420,7 +420,7 @@ const getStyles = (palette: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(128, 242, 13, 0.1)',
+    backgroundColor: 'rgba(95, 199, 147, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
@@ -470,7 +470,7 @@ const getStyles = (palette: any) => StyleSheet.create({
   },
   descriptorBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(128, 242, 13, 0.1)',
+    backgroundColor: 'rgba(95, 199, 147, 0.12)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,

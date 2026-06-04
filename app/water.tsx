@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Droplet, Minus, Plus, Settings2, Trash2 } from 'lucide-react-native';
+import { Check, ChevronLeft, Droplet, Minus, Plus, Settings2, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
@@ -100,6 +100,12 @@ export default function WaterScreen() {
   const totalLabel = `${(totalMl / 1000).toFixed(2)} L`;
   const goalLabel = `${(goalMl / 1000).toFixed(1)} L`;
   const pctLabel = `${Math.round(pct * 100)}%`;
+  const goalReached = pct >= 1;
+  const loggedDays = monthData.filter((d) => d.total > 0);
+  const avgMl = loggedDays.length
+    ? loggedDays.reduce((sum, d) => sum + d.total, 0) / loggedDays.length
+    : 0;
+  const avgLabel = `${(avgMl / 1000).toFixed(1)} L`;
 
   return (
     <Screen scroll contentContainerStyle={styles.screen}>
@@ -160,7 +166,28 @@ export default function WaterScreen() {
       </View>
 
       {/* Today log */}
-      <SectionHeader eyebrow="Today" title="Entries" />
+      <SectionHeader
+        eyebrow="Today"
+        title="Entries"
+        trailing={
+          day.entries.length > 0 ? (
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: `${goalReached ? c.success : c.primary}1A`,
+                  borderColor: `${goalReached ? c.success : c.primary}55`,
+                },
+              ]}
+            >
+              <Check size={12} color={goalReached ? c.success : c.primary} />
+              <Text style={[styles.statusBadgeText, { color: goalReached ? c.success : c.primary }]}>
+                {goalReached ? 'Goal reached' : 'On track'}
+              </Text>
+            </View>
+          ) : undefined
+        }
+      />
       <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
         {day.entries.length === 0 ? (
           <Text style={[styles.emptyText, { color: c.mutedText }]}>
@@ -197,7 +224,19 @@ export default function WaterScreen() {
       </View>
 
       {/* Monthly graph */}
-      <SectionHeader eyebrow="This month" title={monthLabel} subtitle="Daily intake vs goal" />
+      <SectionHeader
+        eyebrow="This month"
+        title={monthLabel}
+        subtitle="Daily intake vs goal"
+        trailing={
+          avgMl > 0 ? (
+            <View style={styles.avgPill}>
+              <Text style={[styles.avgLabel, { color: c.mutedText }]}>AVG</Text>
+              <Text style={[styles.avgValue, { color: c.text }]}>{avgLabel}</Text>
+            </View>
+          ) : undefined
+        }
+      />
       <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border, paddingVertical: spacing.lg, paddingHorizontal: spacing.sm }]}>
         <BarChart
           data={chartData}
@@ -438,6 +477,19 @@ const styles = StyleSheet.create({
   },
   entryAmount: { fontFamily: t.weight.semibold, fontSize: t.size.body },
   entryTime: { fontFamily: t.weight.regular, fontSize: t.size.xs },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  statusBadgeText: { fontFamily: t.weight.bold, fontSize: t.size.xs },
+  avgPill: { alignItems: 'flex-end' },
+  avgLabel: { fontFamily: t.weight.semibold, fontSize: 10, letterSpacing: t.tracking.eyebrow },
+  avgValue: { fontFamily: t.weight.extrabold, fontSize: t.size.body },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
     paddingHorizontal: spacing.lg,

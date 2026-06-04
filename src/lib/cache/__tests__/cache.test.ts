@@ -96,9 +96,11 @@ describe('cache', () => {
       // cacheInvalidatePrefix only clears the in-memory layer.
       // cacheGet will still find data via the persistent idb layer.
       // Verify the non-matching key is untouched in memory.
-      expect(isStale('user:1', 0)).toBe(true); // removed from memory
-      expect(isStale('user:2', 0)).toBe(true); // removed from memory
-      expect(isStale('plans:1', 0)).toBe(false); // still in memory
+      expect(isStale('user:1', 0)).toBe(true); // removed from memory (no entry)
+      expect(isStale('user:2', 0)).toBe(true); // removed from memory (no entry)
+      // Use the entry's TTL as the stale window so this isn't racy under real
+      // timers — staleTime 0 would flake the instant >=1ms elapsed since set.
+      expect(isStale('plans:1', 60_000)).toBe(false); // still fresh in memory
     });
   });
 
