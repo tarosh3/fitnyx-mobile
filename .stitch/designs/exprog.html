@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chart-container {
+            height: 120px;
+            position: relative;
+        }
+        .mint-gradient {
+            background: linear-gradient(180deg, rgba(115, 218, 165, 0.1) 0%, rgba(115, 218, 165, 0) 100%);
+        }
+        body {
+            background-color: #0A0A0A;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#73daa5",
+                        "on-secondary": "#113725",
+                        "secondary-fixed-dim": "#a7d0b6",
+                        "surface-bright": "#38393a",
+                        "on-surface-variant": "#bdcabf",
+                        "surface-container": "#1e2020",
+                        "tertiary-fixed-dim": "#ffb3ae",
+                        "secondary-fixed": "#c3ecd1",
+                        "on-background": "#e2e2e2",
+                        "on-secondary-fixed": "#002112",
+                        "tertiary-fixed": "#ffdad7",
+                        "surface-container-low": "#1a1c1c",
+                        "surface-variant": "#333535",
+                        "on-tertiary": "#5c1818",
+                        "surface-container-lowest": "#0c0f0f",
+                        "inverse-primary": "#006c46",
+                        "on-surface": "#e2e2e2",
+                        "on-primary": "#003822",
+                        "surface": "#121414",
+                        "secondary-container": "#294e3a",
+                        "on-tertiary-fixed": "#3f0306",
+                        "on-primary-fixed-variant": "#005234",
+                        "on-secondary-container": "#96bea5",
+                        "outline-variant": "#3e4942",
+                        "outline": "#87948a",
+                        "inverse-on-surface": "#2f3131",
+                        "on-tertiary-fixed-variant": "#7a2e2c",
+                        "surface-dim": "#121414",
+                        "on-secondary-fixed-variant": "#294e3a",
+                        "tertiary-container": "#ff9791",
+                        "error-container": "#93000a",
+                        "surface-container-high": "#282a2b",
+                        "surface-tint": "#73daa5",
+                        "error": "#ffb4ab",
+                        "background": "#121414",
+                        "tertiary": "#ffc0bb",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#782d2b",
+                        "primary-container": "#5fc793",
+                        "primary-fixed": "#8ff7c0",
+                        "on-error": "#690005",
+                        "on-primary-fixed": "#002112",
+                        "on-primary-container": "#005033",
+                        "inverse-surface": "#e2e2e2",
+                        "secondary": "#a7d0b6",
+                        "primary": "#7ce3ad",
+                        "surface-container-highest": "#333535"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "24px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "12px",
+                        "container-margin": "20px",
+                        "xl": "32px",
+                        "gutter": "16px",
+                        "lg": "24px",
+                        "huge": "48px",
+                        "xs": "8px",
+                        "base": "4px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "eyebrow-uppercase": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-large": ["Inter"],
+                        "display-data": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-main": ["Inter"],
+                        "label-bold": ["Inter"]
+                    },
+                    "fontSize": {
+                        "eyebrow-uppercase": ["12px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-large": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-data": ["64px", {"lineHeight": "1", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "body-main": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-bold": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-background flex items-center justify-between px-container-margin h-16">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Barbell Bench Press</h1>
+<button class="transition-opacity duration-200 hover:opacity-80 text-on-surface-variant">
+<span class="material-symbols-outlined">close</span>
+</button>
+</header>
+<main class="pt-20 pb-32 px-container-margin max-w-screen-md mx-auto">
+<!-- Hero Exercise Video -->
+<section class="mb-xl">
+<div class="aspect-video w-full rounded-2xl bg-surface-container overflow-hidden border border-outline-variant relative">
+<img class="w-full h-full object-cover opacity-60" data-alt="A focused professional athlete performing a heavy barbell bench press in a dimly lit, high-performance technical gym. The lighting is dramatic and moody, emphasizing muscle definition and metallic textures of the equipment. The color palette is strictly dark grays and blacks with a clean, high-contrast finish, reflecting a technical minimalism aesthetic. High-shutter speed captures the intensity and precise form of the movement." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7K16YL89lMm5fLybt2WTZh4k0_6ZmsQB1AznkMhMzksGE7twRpfrJtKX4ITEcfzYPPlfFVBv-3XtmQrDryRDtkz4RoJ99sfslX3MdhQ-ZnVcDJ3fU21ziFATiMutXEZDwg4HAuhpHsTEedxCJw36NT8CqN8w72cXOj7F74Kg8RwzqPMx7zbImG-cC0S0XOCYRkq-qMXzCzcs9LeGIR3aYW3WxBOfkcnueBHu20SnQ3No1HMkvKWhtIxxR_GL-MU8L5RLpOt8pHw"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-16 h-16 rounded-full bg-primary/20 backdrop-blur-md flex items-center justify-center border border-primary/30">
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Your Progress Section -->
+<section class="mb-xl">
+<h2 class="font-eyebrow-uppercase text-eyebrow-uppercase text-on-surface-variant mb-md uppercase tracking-widest">YOUR PROGRESS</h2>
+<div class="grid grid-cols-3 gap-gutter mb-lg">
+<div class="bg-[#1B1B1B] p-md rounded-2xl border border-[#2A2A2A]">
+<p class="font-eyebrow-uppercase text-[10px] text-on-surface-variant uppercase mb-xs">Best</p>
+<div class="flex items-baseline gap-1">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-extrabold text-primary">60</span>
+<span class="text-on-surface-variant text-xs">kg</span>
+</div>
+</div>
+<div class="bg-[#1B1B1B] p-md rounded-2xl border border-[#2A2A2A]">
+<p class="font-eyebrow-uppercase text-[10px] text-on-surface-variant uppercase mb-xs">Est. 1RM</p>
+<div class="flex items-baseline gap-1">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-extrabold text-primary">72</span>
+<span class="text-on-surface-variant text-xs">kg</span>
+</div>
+</div>
+<div class="bg-[#1B1B1B] p-md rounded-2xl border border-[#2A2A2A]">
+<p class="font-eyebrow-uppercase text-[10px] text-on-surface-variant uppercase mb-xs">Sessions</p>
+<div class="flex items-baseline gap-1">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-extrabold text-primary">12</span>
+</div>
+</div>
+</div>
+<!-- Progression Chart -->
+<div class="bg-[#1B1B1B] p-lg rounded-2xl border border-[#2A2A2A] overflow-hidden">
+<div class="chart-container w-full">
+<svg class="w-full h-full preserve-3d" viewbox="0 0 400 120">
+<path d="M0 100 Q 50 90, 100 85 T 200 60 T 300 45 T 400 20 L 400 120 L 0 120 Z" fill="url(#mintGrad)" opacity="0.15"></path>
+<path d="M0 100 Q 50 90, 100 85 T 200 60 T 300 45 T 400 20" fill="none" stroke="#5fc793" stroke-linecap="round" stroke-width="2"></path>
+<line stroke="#3e4942" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="400" y1="110" y2="110"></line>
+<defs>
+<lineargradient id="mintGrad" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#5fc793;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#5fc793;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+<circle cx="400" cy="20" fill="#5fc793" r="4"></circle>
+</svg>
+</div>
+<div class="flex justify-between mt-sm">
+<span class="text-[10px] text-on-surface-variant font-label-bold">MAR</span>
+<span class="text-[10px] text-on-surface-variant font-label-bold">APR</span>
+<span class="text-[10px] text-on-surface-variant font-label-bold">MAY</span>
+<span class="text-[10px] text-primary font-label-bold">JUN</span>
+</div>
+</div>
+</section>
+<!-- History Section -->
+<section class="mb-xl">
+<h2 class="font-eyebrow-uppercase text-eyebrow-uppercase text-on-surface-variant mb-md uppercase tracking-widest">HISTORY</h2>
+<div class="flex flex-col gap-sm">
+<!-- History Item 1 -->
+<div class="bg-[#1B1B1B] p-md rounded-2xl border border-[#2A2A2A] flex justify-between items-center">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-label-bold text-on-surface">Mon 2 Jun</span>
+<div class="flex items-center bg-[#2A2A2A] px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">arrow_upward</span>
+<span class="text-[10px] text-primary font-bold ml-1">PR</span>
+</div>
+</div>
+<div class="flex gap-2">
+<span class="bg-[#141414] border border-[#2A2A2A] text-[12px] px-2 py-1 rounded-lg text-on-surface-variant">60kg x 8</span>
+<span class="bg-[#141414] border border-[#2A2A2A] text-[12px] px-2 py-1 rounded-lg text-on-surface-variant">62.5kg x 6</span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-eyebrow-uppercase text-[10px] text-on-surface-variant uppercase">Volume</p>
+<p class="font-label-bold text-on-surface">1.9k kg</p>
+</div>
+</div>
+<!-- History Item 2 -->
+<div class="bg-[#1B1B1B] p-md rounded-2xl border border-[#2A2A2A] flex justify-between items-center">
+<div class="flex flex-col gap-1">
+<span class="font-label-bold text-on-surface">Thu 29 May</span>
+<div class="flex gap-2">
+<span class="bg-[#141414] border border-[#2A2A2A] text-[12px] px-2 py-1 rounded-lg text-on-surface-variant">57.5kg x 10</span>
+<span class="bg-[#141414] border border-[#2A2A2A] text-[12px] px-2 py-1 rounded-lg text-on-surface-variant">57.5kg x 10</span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-eyebrow-uppercase text-[10px] text-on-surface-variant uppercase">Volume</p>
+<p class="font-label-bold text-on-surface">1.7k kg</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Targeted Muscles -->
+<section class="mb-xl">
+<h2 class="font-eyebrow-uppercase text-eyebrow-uppercase text-on-surface-variant mb-md uppercase tracking-widest">TARGETED MUSCLES</h2>
+<div class="flex flex-wrap gap-sm">
+<span class="bg-[#2A2A2A] text-primary border border-primary/20 px-4 py-2 rounded-full font-label-bold">Chest</span>
+<span class="bg-[#1B1B1B] text-on-surface-variant border border-[#2A2A2A] px-4 py-2 rounded-full font-label-bold">Triceps</span>
+<span class="bg-[#1B1B1B] text-on-surface-variant border border-[#2A2A2A] px-4 py-2 rounded-full font-label-bold">Shoulders</span>
+</div>
+</section>
+<!-- Instructions -->
+<section class="mb-xl">
+<h2 class="font-eyebrow-uppercase text-eyebrow-uppercase text-on-surface-variant mb-md uppercase tracking-widest">INSTRUCTIONS</h2>
+<div class="bg-[#1B1B1B] p-lg rounded-2xl border border-[#2A2A2A]">
+<ul class="flex flex-col gap-md text-on-surface-variant font-body-main">
+<li class="flex gap-md">
+<span class="font-bold text-primary">01.</span>
+<span>Lie flat on your back on a bench. Grip the bar with hands just wider than shoulder-width apart.</span>
+</li>
+<li class="flex gap-md">
+<span class="font-bold text-primary">02.</span>
+<span>Bring the bar down to your chest, keeping elbows at a 45-degree angle.</span>
+</li>
+<li class="flex gap-md">
+<span class="font-bold text-primary">03.</span>
+<span>Press the bar back up to the starting position until your arms are fully extended.</span>
+</li>
+</ul>
+</div>
+</section>
+<!-- Alternatives -->
+<section class="mb-huge">
+<h2 class="font-eyebrow-uppercase text-eyebrow-uppercase text-on-surface-variant mb-md uppercase tracking-widest">ALTERNATIVES</h2>
+<div class="flex flex-wrap gap-sm">
+<button class="bg-background border border-outline-variant text-on-surface px-6 py-3 rounded-full font-label-bold transition-all hover:bg-surface-variant">Dumbbell Press</button>
+<button class="bg-background border border-outline-variant text-on-surface px-6 py-3 rounded-full font-label-bold transition-all hover:bg-surface-variant">Machine Press</button>
+</div>
+</section>
+</main>
+<!-- Bottom Nav Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center py-sm px-container-margin bg-surface-container rounded-t-xl border-t border-outline-variant">
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+<span class="font-label-bold text-[10px]">Workout</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed-dim transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-bold text-[10px]">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed-dim transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-bold text-[10px]">History</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed-dim transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-bold text-[10px]">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for chips
+        document.querySelectorAll('button, a').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const ripple = document.createElement('div');
+                ripple.classList.add('ripple');
+                el.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+    </script>
+</body></html>

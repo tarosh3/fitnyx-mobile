@@ -12,6 +12,7 @@ import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { Input } from '@/src/components/ui/Input';
 import { Screen } from '@/src/components/ui/Screen';
 import { ExerciseDetailModal } from '@/src/features/dashboard/ExerciseDetailModal';
+import { AddExerciseSheet } from '@/src/features/workouts/AddExerciseSheet';
 import { ExerciseMedia } from '@/src/features/workouts/ExerciseMedia';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -53,6 +54,19 @@ interface ExerciseWithLogs {
   exercise: WorkoutDayExercise;
   exerciseDetails: Exercise | null;
   logs: ExerciseLog[];
+}
+
+// Synthesize a plan-day-exercise shape for an ad-hoc exercise (extra work not
+// in the saved plan) so the existing logging UI can handle it unchanged.
+function makeAdHocPlanned(exerciseUuid: string, order: number): WorkoutDayExercise {
+  return {
+    id: `adhoc-${exerciseUuid}`,
+    day_id: '',
+    exercise_uuid: exerciseUuid,
+    exercise_order: order,
+    target_sets: 3,
+    created_at: new Date().toISOString(),
+  };
 }
 
 function kgToLbs(value: number) {
@@ -154,6 +168,7 @@ export default function WorkoutSessionScreen() {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [exercises, setExercises] = useState<ExerciseWithLogs[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
 
   const [activeExerciseUuid, setActiveExerciseUuid] = useState<string | null>(null);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -261,7 +276,22 @@ export default function WorkoutSessionScreen() {
         })
       );
 
-      setExercises(merged);
+      // Include ad-hoc exercises logged this session but not in the plan day,
+      // so extra work persists across reloads/refreshes.
+      const plannedUuids = new Set(dayExerciseList.map((e) => e.exercise_uuid));
+      const adHocUuids = Array.from(byExercise.keys()).filter((u) => !plannedUuids.has(u));
+      const adHoc: ExerciseWithLogs[] = await Promise.all(
+        adHocUuids.map(async (uuid, i) => {
+          const details = await fetchExerciseWithCache(uuid);
+          return {
+            exercise: makeAdHocPlanned(uuid, dayExerciseList.length + i),
+            exerciseDetails: details,
+            logs: byExercise.get(uuid) || [],
+          };
+        })
+      );
+
+      setExercises([...merged, ...adHoc]);
 
       // Cache exercise data and videos for offline use (only when online)
       if (!isOffline) {
@@ -687,6 +717,32 @@ export default function WorkoutSessionScreen() {
         })}
       </View>
 
+      {session?.status === 'in_progress' || session?.status === 'paused' ? (
+        <Pressable onPress={() => setAddOpen(true)} style={styles.addExerciseBtn}>
+          <Plus size={18} color={NEON_LIME} />
+          <Text style={styles.addExerciseBtnText}>ADD EXERCISE</Text>
+        </Pressable>
+      ) : null}
+
+      <AddExerciseSheet
+        visible={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdd={(picked) =>
+          setExercises((prev) => {
+            const have = new Set(prev.map((e) => e.exercise.exercise_uuid));
+            const additions = picked
+              .filter((ex) => !have.has(ex.uuid))
+              .map((ex, i) => ({
+                exercise: makeAdHocPlanned(ex.uuid, prev.length + i),
+                exerciseDetails: ex,
+                logs: [] as ExerciseLog[],
+              }));
+            return [...prev, ...additions];
+          })
+        }
+        existingUuids={exercises.map((e) => e.exercise.exercise_uuid)}
+      />
+
       <ExerciseDetailModal
         exercise={selectedExercise}
         isOpen={infoOpen}
@@ -940,6 +996,27 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.2)',
     fontSize: 11,
     fontWeight: '800',
+    letterSpacing: 1,
+  },
+  addExerciseBtn: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 12,
+    height: 54,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(95, 199, 147, 0.5)',
+    backgroundColor: 'rgba(95, 199, 147, 0.06)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  addExerciseBtnText: {
+    color: NEON_LIME,
+    fontSize: 13,
+    fontWeight: '900',
     letterSpacing: 1,
   },
   addSetBtn: {
