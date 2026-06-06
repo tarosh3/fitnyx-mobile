@@ -57,7 +57,8 @@ export function RestTimer({ seconds, onDismiss }: Props) {
   };
 
   const done = remaining === 0;
-  const pct = total > 0 ? Math.min(1, (total - remaining) / total) : 1;
+  // Drain the bar as time runs out (full -> empty).
+  const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
 
   return (
     <View style={[styles.wrap, { backgroundColor: c.card, borderColor: done ? c.primary : c.border }]}>

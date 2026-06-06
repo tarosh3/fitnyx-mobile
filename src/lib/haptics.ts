@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 function run(fn: () => Promise<void>) {
   if (Platform.OS === 'web') return;
   try {
-    void fn();
+    void fn().catch(() => {});
   } catch {
     // ignore — haptics are best-effort
   }

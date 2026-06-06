@@ -1,7 +1,7 @@
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Lightbulb, TrendingUp, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 
 import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
@@ -19,9 +19,6 @@ interface ExerciseDetailModalProps {
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 const NEON_LIME = '#5fc793';
-// Modal content has 24px horizontal padding; the chart card adds a little more.
-// Give the chart an explicit width so it renders reliably inside the ScrollView.
-const CHART_WIDTH = Dimensions.get('window').width - 96;
 
 export function ExerciseDetailModal({ exercise, isOpen, onClose, onSelectExercise }: ExerciseDetailModalProps) {
   const palette = useThemeColors();
@@ -177,6 +174,7 @@ function fmtKg(n: number | null | undefined): string {
 function ExerciseProgress({ uuid }: { uuid: string }) {
   const palette = useThemeColors();
   const styles = getStyles(palette);
+  const { width } = useWindowDimensions();
   const [history, setHistory] = useState<ExerciseHistory | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -193,7 +191,7 @@ function ExerciseProgress({ uuid }: { uuid: string }) {
         const fresh = await fetchExerciseHistory(uuid);
         if (!cancelled) {
           setHistory(fresh);
-          idbSet(key, fresh, cacheTTL.SHORT).catch(() => {});
+          idbSet(key, fresh, cacheTTL.MEDIUM).catch(() => {});
         }
       } catch {
         // keep cached / empty
@@ -230,6 +228,10 @@ function ExerciseProgress({ uuid }: { uuid: string }) {
     .filter((d) => d.max_weight_kg != null)
     .map((d) => ({ value: d.max_weight_kg as number, label: shortDate(d.date) }));
   const recent = [...days].reverse();
+  // Badge only the single most-recent day that hit the all-time best.
+  const bestDayId = recent.find(
+    (d) => summary.best_weight_kg != null && d.max_weight_kg === summary.best_weight_kg
+  )?.session_id;
 
   return (
     <View style={styles.section}>
@@ -270,7 +272,7 @@ function ExerciseProgress({ uuid }: { uuid: string }) {
             yAxisTextStyle={{ color: palette.mutedText, fontSize: 9 }}
             xAxisLabelTextStyle={{ color: palette.mutedText, fontSize: 9 }}
             noOfSections={3}
-            width={CHART_WIDTH}
+            width={width - 96}
             height={150}
             initialSpacing={8}
             endSpacing={8}
@@ -280,7 +282,7 @@ function ExerciseProgress({ uuid }: { uuid: string }) {
 
       <View style={styles.historyList}>
         {recent.map((d) => {
-          const isPR = summary.best_weight_kg != null && d.max_weight_kg === summary.best_weight_kg;
+          const isPR = d.session_id === bestDayId;
           return (
             <View key={d.session_id} style={styles.dayCard}>
               <View style={styles.dayHeader}>

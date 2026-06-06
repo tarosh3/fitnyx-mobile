@@ -1,5 +1,5 @@
 import { X } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -41,6 +41,11 @@ export function PlateCalculator({ visible, weightKg, onClose }: Props) {
   const c = useThemeColors();
   const [bar, setBar] = useState(20);
 
+  // Reset to the standard 20kg bar each time the calculator opens.
+  useEffect(() => {
+    if (visible) setBar(20);
+  }, [visible]);
+
   const plates = useMemo(() => computePlates(weightKg, bar), [weightKg, bar]);
   const loaded = bar + plates.reduce((s, p) => s + p.plate * p.count * 2, 0);
   const remainder = Math.round((weightKg - loaded) * 100) / 100;
@@ -81,7 +86,7 @@ export function PlateCalculator({ visible, weightKg, onClose }: Props) {
           <Text style={[styles.label, { color: c.mutedText }]}>PER SIDE</Text>
           {plates.length === 0 ? (
             <Text style={[styles.empty, { color: c.mutedText }]}>
-              {weightKg <= bar ? 'Just the bar.' : 'Below bar weight.'}
+              {weightKg <= bar ? 'Just the bar.' : 'Under one plate per side.'}
             </Text>
           ) : (
             <View style={styles.plateList}>

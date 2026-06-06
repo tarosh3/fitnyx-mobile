@@ -177,6 +177,13 @@ export default function WorkoutSessionScreen() {
   const [plateWeight, setPlateWeight] = useState<number | null>(null);
   const [prInfo, setPrInfo] = useState<{ weight: number; name: string } | null>(null);
 
+  // Auto-dismiss the PR celebration (cleanup-safe — clears on unmount/change).
+  useEffect(() => {
+    if (!prInfo) return;
+    const id = setTimeout(() => setPrInfo(null), 2600);
+    return () => clearTimeout(id);
+  }, [prInfo]);
+
   const [activeExerciseUuid, setActiveExerciseUuid] = useState<string | null>(null);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [reps, setReps] = useState('10');
@@ -415,10 +422,9 @@ export default function WorkoutSessionScreen() {
         // this set beats the all-time best, and an auto rest timer.
         haptic.light();
         const loggedEntry = exercises.find((e) => e.exercise.exercise_uuid === exerciseUuid);
-        if (created.is_pr) {
+        if (created.is_pr && weightKg != null) {
           haptic.success();
-          setPrInfo({ weight: weightKg ?? 0, name: loggedEntry?.exerciseDetails?.title || 'New PR' });
-          setTimeout(() => setPrInfo(null), 2600);
+          setPrInfo({ weight: weightKg, name: loggedEntry?.exerciseDetails?.title || 'New PR' });
         }
         const restSecs =
           loggedEntry?.exercise.rest_seconds && loggedEntry.exercise.rest_seconds > 0
@@ -557,7 +563,8 @@ export default function WorkoutSessionScreen() {
   }
 
   return (
-    <Screen style={{ backgroundColor: DEPTH_BG }}>
+    <View style={styles.root}>
+      <Screen style={{ backgroundColor: DEPTH_BG }}>
       <View style={styles.header}>
         <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backBtn}>
           <ChevronLeft size={24} color="#fff" />
@@ -806,20 +813,22 @@ export default function WorkoutSessionScreen() {
         weightKg={plateWeight ?? 0}
         onClose={() => setPlateWeight(null)}
       />
+      </Screen>
 
+      {/* Overlays live OUTSIDE Screen's ScrollView so they're fixed to the viewport. */}
       {prInfo ? (
         <Pressable style={styles.prBackdrop} onPress={() => setPrInfo(null)}>
           <View style={styles.prCard}>
             <Text style={styles.prEmoji}>🎉</Text>
             <Text style={styles.prTitle}>NEW PR</Text>
-            <Text style={styles.prWeight}>{prInfo.weight} kg</Text>
+            {prInfo.weight > 0 ? <Text style={styles.prWeight}>{prInfo.weight} kg</Text> : null}
             <Text style={styles.prName} numberOfLines={1}>{prInfo.name}</Text>
           </View>
         </Pressable>
       ) : null}
 
       {rest ? <RestTimer key={rest.key} seconds={rest.seconds} onDismiss={() => setRest(null)} /> : null}
-    </Screen>
+    </View>
   );
 }
 
@@ -1078,6 +1087,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
   },
+  root: { flex: 1, backgroundColor: DEPTH_BG },
   plateBtn: {
     width: 48,
     height: 48,
