@@ -19,6 +19,10 @@ import { ExerciseMedia } from '@/src/features/workouts/ExerciseMedia';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { haptic } from '@/src/lib/haptics';
+import { computeSuggestion } from '@/src/lib/progression';
+import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
+import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
+import { cacheKeys, cacheTTL } from '@/src/lib/cache/keys';
 import { getDayExercises, WorkoutDayExercise } from '@/src/lib/api/workoutPlans';
 import {
   ExerciseLog,
@@ -46,6 +50,7 @@ import {
   Play,
   Plus,
   Trash2,
+  TrendingUp,
   XCircle
 } from 'lucide-react-native';
 
@@ -185,6 +190,10 @@ export default function WorkoutSessionScreen() {
   }, [prInfo]);
 
   const [activeExerciseUuid, setActiveExerciseUuid] = useState<string | null>(null);
+  const [rpe, setRpe] = useState<number | null>(null);
+  const [lastPerf, setLastPerf] = useState<Record<string, { weightKg: number; reps: number; rpe?: number | null }>>({});
+  const [setBaseline, setSetBaseline] = useState<{ weightKg: number; reps: number; rpe?: number | null } | null>(null);
+  const [suggestion, setSuggestion] = useState<{ weightKg: number; reps: number } | null>(null);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [reps, setReps] = useState('10');
   const [weight, setWeight] = useState('0');
@@ -305,7 +314,38 @@ export default function WorkoutSessionScreen() {
         })
       );
 
-      setExercises([...merged, ...adHoc]);
+      const all = [...merged, ...adHoc];
+      setExercises(all);
+
+      // Prefetch last-performance per exercise (cached) for smart set suggestions.
+      all.forEach((e) => {
+        const uuid = e.exercise.exercise_uuid;
+        (async () => {
+          try {
+            const key = cacheKeys.exerciseHistory(uuid);
+            let hist = await idbGet<ExerciseHistory>(key);
+            if (!hist) {
+              hist = await fetchExerciseHistory(uuid);
+              idbSet(key, hist, cacheTTL.MEDIUM).catch(() => {});
+            }
+            const lastDay = hist?.days?.[hist.days.length - 1];
+            if (!lastDay) return;
+            let top: { weight_kg: number | null; reps: number; rpe?: number | null } | null = null;
+            for (const s of lastDay.sets) {
+              if (s.weight_kg == null) continue;
+              if (!top || s.weight_kg > (top.weight_kg ?? 0)) top = s;
+            }
+            if (top && top.weight_kg != null) {
+              const w = top.weight_kg;
+              const r = top.reps;
+              const rp = top.rpe ?? null;
+              setLastPerf((prev) => ({ ...prev, [uuid]: { weightKg: w, reps: r, rpe: rp } }));
+            }
+          } catch {
+            // best-effort
+          }
+        })();
+      });
 
       // Cache exercise data and videos for offline use (only when online)
       if (!isOffline) {
@@ -330,17 +370,51 @@ export default function WorkoutSessionScreen() {
 
   const openAddSet = (exerciseUuid: string, log?: ExerciseLog) => {
     setActiveExerciseUuid(exerciseUuid);
+    setRpe(null);
 
     if (log) {
       setEditingLogId(log.id);
       setReps(String(log.reps));
       const logWeight = log.weight_kg || 0;
       setWeight(String(weightUnit === 'kg' ? logWeight : Number(kgToLbs(logWeight).toFixed(1))));
-    } else {
-      setEditingLogId(null);
-      setReps('10');
-      setWeight('0');
+      setSetBaseline(null);
+      setSuggestion(null);
+      return;
     }
+
+    setEditingLogId(null);
+
+    // Baseline for prefill + suggestion: last set THIS session, else last performance.
+    const entry = exercises.find((e) => e.exercise.exercise_uuid === exerciseUuid);
+    const sessionLogs = entry?.logs ?? [];
+    const lastSession = sessionLogs[sessionLogs.length - 1];
+    let baseline: { weightKg: number; reps: number; rpe?: number | null } | null = null;
+    if (lastSession && lastSession.weight_kg != null) {
+      baseline = { weightKg: lastSession.weight_kg, reps: lastSession.reps, rpe: lastSession.rpe ?? null };
+    } else if (lastPerf[exerciseUuid]) {
+      baseline = lastPerf[exerciseUuid];
+    }
+
+    const targetReps = entry?.exercise.target_reps && entry.exercise.target_reps > 0 ? entry.exercise.target_reps : 8;
+    setSetBaseline(baseline);
+    setSuggestion(computeSuggestion(baseline, targetReps));
+
+    if (baseline) {
+      setReps(String(baseline.reps));
+      setWeight(String(weightUnit === 'kg' ? baseline.weightKg : Number(kgToLbs(baseline.weightKg).toFixed(1))));
+    } else {
+      const tReps = entry?.exercise.target_reps;
+      const tW = entry?.exercise.target_weight_kg;
+      setReps(tReps ? String(tReps) : '10');
+      setWeight(tW ? String(weightUnit === 'kg' ? tW : Number(kgToLbs(tW).toFixed(1))) : '0');
+    }
+  };
+
+  const applySuggestion = () => {
+    if (!suggestion) return;
+    setReps(String(suggestion.reps));
+    setWeight(String(weightUnit === 'kg' ? suggestion.weightKg : Number(kgToLbs(suggestion.weightKg).toFixed(1))));
+    haptic.light();
   };
 
   const closeSetEditor = () => {
@@ -348,6 +422,9 @@ export default function WorkoutSessionScreen() {
     setEditingLogId(null);
     setReps('10');
     setWeight('0');
+    setRpe(null);
+    setSetBaseline(null);
+    setSuggestion(null);
   };
 
   const submitSet = async (exerciseUuid: string) => {
@@ -405,6 +482,7 @@ export default function WorkoutSessionScreen() {
           actual_reps: repsNumber,
           actual_weight_kg: weightKg,
           actual_rest_seconds: 0,
+          rpe: rpe ?? undefined,
         });
 
         setExercises((prev) =>
@@ -671,6 +749,12 @@ export default function WorkoutSessionScreen() {
                           <Text style={styles.logMainText}>{log.reps} REPS</Text>
                           <View style={styles.metaDot} />
                           <Text style={styles.logSubText}>{displayWeight}</Text>
+                          {log.rpe ? (
+                            <>
+                              <View style={styles.metaDot} />
+                              <Text style={styles.logSubText}>RPE {log.rpe}</Text>
+                            </>
+                          ) : null}
                         </View>
                         <View style={styles.logActions}>
                           <Pressable onPress={() => openAddSet(exerciseUuid, log)} style={styles.logActionBtn}>
@@ -733,6 +817,43 @@ export default function WorkoutSessionScreen() {
                       </View>
                     </View>
                   </View>
+
+                  {!editingLogId && (suggestion || setBaseline) ? (
+                    <View style={styles.smartRow}>
+                      {suggestion ? (
+                        <Pressable onPress={applySuggestion} style={styles.suggestChip}>
+                          <TrendingUp size={13} color={NEON_LIME} />
+                          <Text style={styles.suggestText}>
+                            {weightUnit === 'kg' ? suggestion.weightKg : Number(kgToLbs(suggestion.weightKg).toFixed(1))} {weightUnit} × {suggestion.reps}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                      {setBaseline ? (
+                        <Text style={styles.lastHint}>
+                          Last: {weightUnit === 'kg' ? setBaseline.weightKg : Number(kgToLbs(setBaseline.weightKg).toFixed(1))} {weightUnit} × {setBaseline.reps}
+                          {setBaseline.rpe ? ` @${setBaseline.rpe}` : ''}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
+
+                  {!editingLogId ? (
+                    <View style={styles.rpeRow}>
+                      <Text style={styles.rpeLabel}>RPE</Text>
+                      {[6, 7, 8, 9, 10].map((v) => {
+                        const active = rpe === v;
+                        return (
+                          <Pressable
+                            key={v}
+                            onPress={() => setRpe(active ? null : v)}
+                            style={[styles.rpeChip, active && styles.rpeChipActive]}
+                          >
+                            <Text style={[styles.rpeChipText, active && styles.rpeChipTextActive]}>{v}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : null}
 
                   <View style={styles.editorActions}>
                     <Pressable
@@ -1088,6 +1209,35 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   root: { flex: 1, backgroundColor: DEPTH_BG },
+  smartRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' },
+  suggestChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(95,199,147,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(95,199,147,0.3)',
+  },
+  suggestText: { color: NEON_LIME, fontSize: 13, fontWeight: '900' },
+  lastHint: { color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: '600' },
+  rpeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' },
+  rpeLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '800', letterSpacing: 1, marginRight: 4 },
+  rpeChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+  },
+  rpeChipActive: { backgroundColor: NEON_LIME, borderColor: NEON_LIME },
+  rpeChipText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '800' },
+  rpeChipTextActive: { color: '#000', fontWeight: '900' },
   plateBtn: {
     width: 48,
     height: 48,

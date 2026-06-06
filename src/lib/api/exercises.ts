@@ -26,6 +26,7 @@ export interface ExerciseHistorySet {
   set_index: number;
   reps: number;
   weight_kg: number | null;
+  rpe?: number | null;
 }
 
 export interface ExerciseHistoryDay {

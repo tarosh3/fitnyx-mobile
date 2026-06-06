@@ -48,6 +48,7 @@ export interface LogExerciseInput {
   actual_reps: number;
   actual_weight_kg?: number;
   actual_rest_seconds?: number;
+  rpe?: number;
 }
 
 export async function logExerciseSet(sessionId: string, data: LogExerciseInput): Promise<ExerciseLog> {
