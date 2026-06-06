@@ -28,6 +28,7 @@ export interface ExerciseLog {
   is_warmup: boolean;
   rpe?: number;
   created_at: string;
+  is_pr?: boolean; // set by the log endpoint when this set beats the all-time best weight
 }
 
 export interface SessionWithLogs {

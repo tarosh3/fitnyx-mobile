@@ -12,10 +12,13 @@ import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { Input } from '@/src/components/ui/Input';
 import { Screen } from '@/src/components/ui/Screen';
 import { ExerciseDetailModal } from '@/src/features/dashboard/ExerciseDetailModal';
+import { PlateCalculator } from '@/src/components/workout/PlateCalculator';
+import { RestTimer } from '@/src/components/workout/RestTimer';
 import { AddExerciseSheet } from '@/src/features/workouts/AddExerciseSheet';
 import { ExerciseMedia } from '@/src/features/workouts/ExerciseMedia';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { haptic } from '@/src/lib/haptics';
 import { getDayExercises, WorkoutDayExercise } from '@/src/lib/api/workoutPlans';
 import {
   ExerciseLog,
@@ -33,6 +36,7 @@ import { getCachedDayExercises } from '@/src/lib/db';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 import { Exercise, RelatedExercise } from '@/src/types/exercise';
 import {
+  Calculator,
   CheckCircle2,
   ChevronLeft,
   Dumbbell,
@@ -169,6 +173,9 @@ export default function WorkoutSessionScreen() {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [exercises, setExercises] = useState<ExerciseWithLogs[]>([]);
   const [addOpen, setAddOpen] = useState(false);
+  const [rest, setRest] = useState<{ seconds: number; key: number } | null>(null);
+  const [plateWeight, setPlateWeight] = useState<number | null>(null);
+  const [prInfo, setPrInfo] = useState<{ weight: number; name: string } | null>(null);
 
   const [activeExerciseUuid, setActiveExerciseUuid] = useState<string | null>(null);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -403,6 +410,21 @@ export default function WorkoutSessionScreen() {
               : entry
           )
         );
+
+        // Premium feedback: a light haptic on every set, a PR celebration when
+        // this set beats the all-time best, and an auto rest timer.
+        haptic.light();
+        const loggedEntry = exercises.find((e) => e.exercise.exercise_uuid === exerciseUuid);
+        if (created.is_pr) {
+          haptic.success();
+          setPrInfo({ weight: weightKg ?? 0, name: loggedEntry?.exerciseDetails?.title || 'New PR' });
+          setTimeout(() => setPrInfo(null), 2600);
+        }
+        const restSecs =
+          loggedEntry?.exercise.rest_seconds && loggedEntry.exercise.rest_seconds > 0
+            ? loggedEntry.exercise.rest_seconds
+            : 90;
+        setRest({ seconds: restSecs, key: Date.now() });
       }
 
       closeSetEditor();
@@ -689,6 +711,18 @@ export default function WorkoutSessionScreen() {
                         >
                           <Text style={styles.unitSwitchText}>{weightUnit.toUpperCase()}</Text>
                         </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            const w = Number(weight);
+                            if (Number.isFinite(w) && w > 0) {
+                              setPlateWeight(weightUnit === 'kg' ? w : lbsToKg(w));
+                            }
+                          }}
+                          style={styles.plateBtn}
+                          hitSlop={6}
+                        >
+                          <Calculator size={16} color={NEON_LIME} />
+                        </Pressable>
                       </View>
                     </View>
                   </View>
@@ -766,6 +800,25 @@ export default function WorkoutSessionScreen() {
         showCancel={confirmConfig.showCancel}
         confirmLabel={confirmConfig.confirmLabel}
       />
+
+      <PlateCalculator
+        visible={plateWeight != null}
+        weightKg={plateWeight ?? 0}
+        onClose={() => setPlateWeight(null)}
+      />
+
+      {prInfo ? (
+        <Pressable style={styles.prBackdrop} onPress={() => setPrInfo(null)}>
+          <View style={styles.prCard}>
+            <Text style={styles.prEmoji}>🎉</Text>
+            <Text style={styles.prTitle}>NEW PR</Text>
+            <Text style={styles.prWeight}>{prInfo.weight} kg</Text>
+            <Text style={styles.prName} numberOfLines={1}>{prInfo.name}</Text>
+          </View>
+        </Pressable>
+      ) : null}
+
+      {rest ? <RestTimer key={rest.key} seconds={rest.seconds} onDismiss={() => setRest(null)} /> : null}
     </Screen>
   );
 }
@@ -1025,6 +1078,38 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
   },
+  plateBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(95,199,147,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(95,199,147,0.25)',
+    marginLeft: 8,
+  },
+  prBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  prCard: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 40,
+    borderRadius: 28,
+    backgroundColor: '#111111',
+    borderWidth: 1.5,
+    borderColor: NEON_LIME,
+    gap: 4,
+  },
+  prEmoji: { fontSize: 44, marginBottom: 4 },
+  prTitle: { color: NEON_LIME, fontSize: 14, fontWeight: '900', letterSpacing: 3 },
+  prWeight: { color: '#FFFFFF', fontSize: 44, fontWeight: '900', letterSpacing: -1 },
+  prName: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '700', maxWidth: 240, textAlign: 'center' },
   addSetBtn: {
     height: 52,
     borderRadius: 16,
