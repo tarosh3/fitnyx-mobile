@@ -34,6 +34,7 @@ import {
   View,
 } from 'react-native';
 
+import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { PressableScale } from '@/src/components/ui/PressableScale';
 import { Screen } from '@/src/components/ui/Screen';
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
@@ -62,6 +63,7 @@ export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
   const [weightUnit, setWeightUnit] = useWeightUnit();
   const [heightUnit, setHeightUnit] = useHeightUnit();
@@ -327,12 +329,7 @@ export default function SettingsScreen() {
           icon={<LogOut size={20} color={c.destructive} strokeWidth={1.8} />}
           label="Sign Out"
           destructive
-          onPress={() =>
-            Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Out', style: 'destructive', onPress: signOut },
-            ])
-          }
+          onPress={() => setSignOutOpen(true)}
           showChevron
         />
         <SettingRow
@@ -416,6 +413,20 @@ export default function SettingsScreen() {
           ))}
         </View>
       </PickerSheet>
+
+      <ConfirmModal
+        visible={signOutOpen}
+        variant="danger"
+        title="Sign out?"
+        message="You'll need to log back in to reach your workouts, water log and AI coach."
+        confirmLabel="Sign out"
+        cancelLabel="Stay"
+        onCancel={() => setSignOutOpen(false)}
+        onConfirm={() => {
+          setSignOutOpen(false);
+          signOut();
+        }}
+      />
     </Screen>
   );
 }

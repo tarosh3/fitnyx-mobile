@@ -5,7 +5,7 @@ const { withProjectBuildGradle } = require('@expo/config-plugins');
  */
 const withNotifeeRepo = (config) => {
   return withProjectBuildGradle(config, (config) => {
-    if (config.modResults.language === 'gradle') {
+    if (config.modResults.language === 'groovy') {
       config.modResults.contents = addNotifeeRepo(config.modResults.contents);
     }
     return config;
