@@ -18,6 +18,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { DietFoodItem, DietPlan } from '@/src/lib/api';
+import { MacroDonut } from '@/src/features/diet/MacroDonut';
 
 const NEON_LIME = '#5fc793';
 
@@ -162,25 +163,23 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
   const proteinG = parseMacroGrams(plan_data.macros.protein);
   const carbsG = parseMacroGrams(plan_data.macros.carbs);
   const fatsG = parseMacroGrams(plan_data.macros.fats);
-  const maxMacro = Math.max(proteinG, carbsG, fatsG, 1);
 
 
   return (
     <View style={styles.container}>
-      {/* Hero: Daily Goal */}
+      {/* Hero: Daily Goal — calorie donut split by macro energy share */}
       <BlurView intensity={20} tint="dark" style={styles.heroCard}>
-        <Text style={styles.heroOverline}>DAILY NUTRITION GOAL</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 12 }}>
-          <Text style={styles.heroCalories}>{plan_data.total_calories.toLocaleString()}</Text>
-          <Text style={styles.heroUnit}>kcal</Text>
-        </View>
-        <Text style={styles.heroSummary}>{plan_data.summary}</Text>
-
-        <View style={styles.macroGrid}>
-          <MacroBar label="Protein" value={plan_data.macros.protein} grams={proteinG} maxGrams={maxMacro} color="#38bdf8" icon={Zap} />
-          <MacroBar label="Carbs" value={plan_data.macros.carbs} grams={carbsG} maxGrams={maxMacro} color="#10b981" icon={Wheat} />
-          <MacroBar label="Fats" value={plan_data.macros.fats} grams={fatsG} maxGrams={maxMacro} color="#f59e0b" icon={Droplets} />
-        </View>
+        <Text style={[styles.heroOverline, { textAlign: 'center' }]}>DAILY NUTRITION GOAL</Text>
+        <MacroDonut
+          calories={plan_data.total_calories}
+          proteinG={proteinG}
+          carbsG={carbsG}
+          fatsG={fatsG}
+          mutedColor={palette.mutedText}
+          trackColor={palette.border}
+          textColor={palette.text}
+        />
+        <Text style={[styles.heroSummary, styles.heroSummaryCentered]}>{plan_data.summary}</Text>
       </BlurView>
 
       {/* Meal Schedule */}
@@ -327,6 +326,11 @@ const getStyles = (palette: any) => StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 24,
+  },
+  heroSummaryCentered: {
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 0,
   },
   macroGrid: {
     gap: 12,
