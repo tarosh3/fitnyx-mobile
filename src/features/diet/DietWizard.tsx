@@ -429,7 +429,7 @@ const getStyles = (palette: any) => StyleSheet.create({
     borderColor: palette.border,
   },
   optionActive: {
-    backgroundColor: 'rgba(128, 242, 13, 0.05)',
+    backgroundColor: 'rgba(95, 199, 147, 0.1)',
     borderColor: NEON_LIME,
   },
   optionText: {

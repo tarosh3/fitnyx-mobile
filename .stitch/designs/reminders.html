@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>FitNyx Reminders</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#73daa5",
+                    "surface-container-high": "#282a2b",
+                    "primary-fixed": "#8ff7c0",
+                    "surface-container-low": "#1a1c1c",
+                    "on-primary-fixed-variant": "#005234",
+                    "on-primary-container": "#005033",
+                    "on-background": "#e2e2e2",
+                    "on-primary-fixed": "#002112",
+                    "background": "#0A0A0A",
+                    "outline": "#87948a",
+                    "on-primary": "#003822",
+                    "surface-container-lowest": "#0c0f0f",
+                    "on-surface-variant": "#bdcabf",
+                    "on-secondary": "#313030",
+                    "on-secondary-fixed": "#1b1b1b",
+                    "on-secondary-container": "#b7b5b4",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#474746",
+                    "surface": "#121414",
+                    "on-tertiary-container": "#782d2b",
+                    "outline-variant": "#2A2A2A",
+                    "on-tertiary-fixed-variant": "#7a2e2c",
+                    "surface-bright": "#38393a",
+                    "error": "#ffb4ab",
+                    "secondary-fixed-dim": "#c8c6c5",
+                    "secondary": "#c8c6c5",
+                    "inverse-primary": "#006c46",
+                    "primary-container": "#5fc793",
+                    "inverse-surface": "#e2e2e2",
+                    "tertiary": "#ffc0bb",
+                    "surface-dim": "#121414",
+                    "surface-container-highest": "#333535",
+                    "on-tertiary": "#5c1818",
+                    "tertiary-container": "#ff9791",
+                    "surface-container": "#1B1B1B",
+                    "tertiary-fixed": "#ffdad7",
+                    "primary": "#7ce3ad",
+                    "on-surface": "#e2e2e2",
+                    "on-error": "#690005",
+                    "secondary-container": "#474746",
+                    "tertiary-fixed-dim": "#ffb3ae",
+                    "error-container": "#93000a",
+                    "inverse-on-surface": "#2f3131",
+                    "on-tertiary-fixed": "#3f0306",
+                    "primary-fixed-dim": "#73daa5",
+                    "secondary-fixed": "#e5e2e1",
+                    "surface-variant": "#333535"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "2xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-safe": "20px",
+                    "stack-md": "16px",
+                    "unit": "4px",
+                    "stack-sm": "8px",
+                    "gutter": "12px",
+                    "stack-lg": "24px"
+            },
+            "fontFamily": {
+                    "eyebrow-caps": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "display-stat": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "eyebrow-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "display-stat": ["48px", {"lineHeight": "48px", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                    "label-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "500"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0A;
+            color: #e2e2e2;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .ios-toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            appearance: none;
+            background: #2A2A2A;
+            outline: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .ios-toggle:checked {
+            background: #5fc793;
+        }
+        .ios-toggle:after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .ios-toggle:checked:after {
+            left: 22px;
+        }
+        .glass-blur {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .hairline-border {
+            border: 1px solid #2A2A2A;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md">
+<!-- Top Navigation (Shell) -->
+<header class="fixed top-0 w-full z-50 bg-background/80 glass-blur px-margin-safe h-16 flex items-center justify-between">
+<button aria-label="Go back" class="w-10 h-10 flex items-center justify-center rounded-full hairline-border bg-surface-container-low active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-on-surface" data-icon="arrow_back">arrow_back</span>
+</button>
+<div class="flex flex-col items-center">
+<span class="font-eyebrow-caps text-eyebrow-caps text-on-surface-variant uppercase tracking-widest">HABITS</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile leading-none">Reminders</h1>
+</div>
+<button aria-label="Add reminder" class="w-10 h-10 flex items-center justify-center rounded-full bg-primary-container text-on-primary-container active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</header>
+<main class="pt-24 pb-32 px-margin-safe space-y-stack-lg max-w-lg mx-auto">
+<!-- Summary Strip Card -->
+<section class="p-stack-md rounded-2xl bg-surface-container hairline-border flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications_active" style="font-variation-settings: 'FILL' 1;">notifications_active</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface"><span class="text-primary font-bold">3 active</span> — next in 25 min</p>
+<p class="font-label-sm text-on-surface-variant">Drink water</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]" data-icon="bell">notifications</span>
+</section>
+<!-- Reminders List -->
+<div class="space-y-stack-md">
+<h3 class="font-eyebrow-caps text-eyebrow-caps text-on-surface-variant ml-1">SCHEDULED</h3>
+<div class="bg-surface-container rounded-2xl hairline-border overflow-hidden">
+<!-- Workout -->
+<div class="flex items-center justify-between p-4 border-b border-outline-variant last:border-0">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 flex items-center justify-center rounded-2xl bg-[#5fc793]/10 text-[#5fc793]">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface">Workout</p>
+<p class="font-label-sm text-on-surface-variant">Daily, 7:00 AM</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<input checked="" class="ios-toggle" type="checkbox"/>
+<button class="text-on-surface-variant/40 hover:text-error transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Water -->
+<div class="flex items-center justify-between p-4 border-b border-outline-variant last:border-0">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 flex items-center justify-center rounded-2xl bg-[#64B5F6]/10 text-[#64B5F6]">
+<span class="material-symbols-outlined" data-icon="water_drop" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface">Water</p>
+<p class="font-label-sm text-on-surface-variant">Every 30 min, 8:00-22:00</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<input checked="" class="ios-toggle" type="checkbox"/>
+<button class="text-on-surface-variant/40 hover:text-error transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Lunch -->
+<div class="flex items-center justify-between p-4 border-b border-outline-variant last:border-0">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 flex items-center justify-center rounded-2xl bg-[#FFB74D]/10 text-[#FFB74D]">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface">Lunch</p>
+<p class="font-label-sm text-on-surface-variant">12:00, 15:00, 19:00</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<input checked="" class="ios-toggle" type="checkbox"/>
+<button class="text-on-surface-variant/40 hover:text-error transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Afternoon Snack (Disabled State) -->
+<div class="flex items-center justify-between p-4 border-b border-outline-variant last:border-0 opacity-40">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 flex items-center justify-center rounded-2xl bg-[#F06292]/10 text-[#F06292]">
+<span class="material-symbols-outlined" data-icon="cookie">cookie</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface">Afternoon Snack</p>
+<p class="font-label-sm text-on-surface-variant">16:30</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<input class="ios-toggle" type="checkbox"/>
+<button class="text-on-surface-variant/40">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Meditation (Disabled State) -->
+<div class="flex items-center justify-between p-4 opacity-40">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 flex items-center justify-center rounded-2xl bg-[#BA68C8]/10 text-[#BA68C8]">
+<span class="material-symbols-outlined" data-icon="notifications" style="font-variation-settings: 'FILL' 1;">notifications</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface">Meditation</p>
+<p class="font-label-sm text-on-surface-variant">21:00</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<input class="ios-toggle" type="checkbox"/>
+<button class="text-on-surface-variant/40">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty State Preview -->
+<div class="pt-8 text-center space-y-4">
+<h3 class="font-eyebrow-caps text-eyebrow-caps text-on-surface-variant">ARCHIVE PREVIEW</h3>
+<div class="bg-surface-container rounded-2xl hairline-border p-10 flex flex-col items-center gap-4">
+<div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-4xl" data-icon="notifications_off">notifications_off</span>
+</div>
+<div class="space-y-1">
+<p class="font-headline-lg-mobile text-on-surface">No other reminders</p>
+<p class="font-label-sm text-on-surface-variant max-w-[200px] mx-auto">Build consistency by setting up custom alerts for your daily rituals.</p>
+</div>
+<button class="mt-2 bg-primary-container text-on-primary-container px-6 py-3 rounded-full font-bold active:scale-95 transition-transform">
+                    Create reminder
+                </button>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Shell) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 pb-safe bg-surface-container-low border-t border-outline-variant z-50">
+<!-- Dashboard -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<!-- Hydration -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="water_drop">water_drop</span>
+<span class="font-label-sm text-label-sm">Hydration</span>
+</a>
+<!-- Activity (Active Selection Logic: Reminders are Activity-related or Central to Dashboard, but we choose Activity as closest semantic match for tracking habits) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl p-2 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+<span class="font-label-sm text-label-sm">Activity</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for list item removal (visual only)
+        document.querySelectorAll('button .material-symbols-outlined[data-icon="delete"]').forEach(btn => {
+            btn.parentElement.addEventListener('click', function() {
+                const row = this.closest('.flex.items-center.justify-between.p-4');
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(20px)';
+                row.style.transition = 'all 0.4s ease';
+                setTimeout(() => row.style.display = 'none', 400);
+            });
+        });
+
+        // Toggle state logic for visual feedback
+        document.querySelectorAll('.ios-toggle').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const rowContent = this.closest('.flex.items-center.justify-between.p-4');
+                if (!this.checked) {
+                    rowContent.classList.add('opacity-40');
+                } else {
+                    rowContent.classList.remove('opacity-40');
+                }
+            });
+        });
+    </script>
+</body></html>

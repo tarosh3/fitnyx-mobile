@@ -12,9 +12,17 @@ import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { Input } from '@/src/components/ui/Input';
 import { Screen } from '@/src/components/ui/Screen';
 import { ExerciseDetailModal } from '@/src/features/dashboard/ExerciseDetailModal';
+import { PlateCalculator } from '@/src/components/workout/PlateCalculator';
+import { RestTimer } from '@/src/components/workout/RestTimer';
+import { AddExerciseSheet } from '@/src/features/workouts/AddExerciseSheet';
 import { ExerciseMedia } from '@/src/features/workouts/ExerciseMedia';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { haptic } from '@/src/lib/haptics';
+import { computeSuggestion } from '@/src/lib/progression';
+import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
+import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
+import { cacheKeys, cacheTTL } from '@/src/lib/cache/keys';
 import { getDayExercises, WorkoutDayExercise } from '@/src/lib/api/workoutPlans';
 import {
   ExerciseLog,
@@ -32,6 +40,7 @@ import { getCachedDayExercises } from '@/src/lib/db';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 import { Exercise, RelatedExercise } from '@/src/types/exercise';
 import {
+  Calculator,
   CheckCircle2,
   ChevronLeft,
   Dumbbell,
@@ -41,6 +50,7 @@ import {
   Play,
   Plus,
   Trash2,
+  TrendingUp,
   XCircle
 } from 'lucide-react-native';
 
@@ -53,6 +63,19 @@ interface ExerciseWithLogs {
   exercise: WorkoutDayExercise;
   exerciseDetails: Exercise | null;
   logs: ExerciseLog[];
+}
+
+// Synthesize a plan-day-exercise shape for an ad-hoc exercise (extra work not
+// in the saved plan) so the existing logging UI can handle it unchanged.
+function makeAdHocPlanned(exerciseUuid: string, order: number): WorkoutDayExercise {
+  return {
+    id: `adhoc-${exerciseUuid}`,
+    day_id: '',
+    exercise_uuid: exerciseUuid,
+    exercise_order: order,
+    target_sets: 3,
+    created_at: new Date().toISOString(),
+  };
 }
 
 function kgToLbs(value: number) {
@@ -154,8 +177,23 @@ export default function WorkoutSessionScreen() {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [exercises, setExercises] = useState<ExerciseWithLogs[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [rest, setRest] = useState<{ seconds: number; key: number } | null>(null);
+  const [plateWeight, setPlateWeight] = useState<number | null>(null);
+  const [prInfo, setPrInfo] = useState<{ weight: number; name: string } | null>(null);
+
+  // Auto-dismiss the PR celebration (cleanup-safe — clears on unmount/change).
+  useEffect(() => {
+    if (!prInfo) return;
+    const id = setTimeout(() => setPrInfo(null), 2600);
+    return () => clearTimeout(id);
+  }, [prInfo]);
 
   const [activeExerciseUuid, setActiveExerciseUuid] = useState<string | null>(null);
+  const [rpe, setRpe] = useState<number | null>(null);
+  const [lastPerf, setLastPerf] = useState<Record<string, { weightKg: number; reps: number; rpe?: number | null }>>({});
+  const [setBaseline, setSetBaseline] = useState<{ weightKg: number; reps: number; rpe?: number | null } | null>(null);
+  const [suggestion, setSuggestion] = useState<{ weightKg: number; reps: number } | null>(null);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [reps, setReps] = useState('10');
   const [weight, setWeight] = useState('0');
@@ -261,7 +299,53 @@ export default function WorkoutSessionScreen() {
         })
       );
 
-      setExercises(merged);
+      // Include ad-hoc exercises logged this session but not in the plan day,
+      // so extra work persists across reloads/refreshes.
+      const plannedUuids = new Set(dayExerciseList.map((e) => e.exercise_uuid));
+      const adHocUuids = Array.from(byExercise.keys()).filter((u) => !plannedUuids.has(u));
+      const adHoc: ExerciseWithLogs[] = await Promise.all(
+        adHocUuids.map(async (uuid, i) => {
+          const details = await fetchExerciseWithCache(uuid);
+          return {
+            exercise: makeAdHocPlanned(uuid, dayExerciseList.length + i),
+            exerciseDetails: details,
+            logs: byExercise.get(uuid) || [],
+          };
+        })
+      );
+
+      const all = [...merged, ...adHoc];
+      setExercises(all);
+
+      // Prefetch last-performance per exercise (cached) for smart set suggestions.
+      all.forEach((e) => {
+        const uuid = e.exercise.exercise_uuid;
+        (async () => {
+          try {
+            const key = cacheKeys.exerciseHistory(uuid);
+            let hist = await idbGet<ExerciseHistory>(key);
+            if (!hist) {
+              hist = await fetchExerciseHistory(uuid);
+              idbSet(key, hist, cacheTTL.MEDIUM).catch(() => {});
+            }
+            const lastDay = hist?.days?.[hist.days.length - 1];
+            if (!lastDay) return;
+            let top: { weight_kg: number | null; reps: number; rpe?: number | null } | null = null;
+            for (const s of lastDay.sets) {
+              if (s.weight_kg == null) continue;
+              if (!top || s.weight_kg > (top.weight_kg ?? 0)) top = s;
+            }
+            if (top && top.weight_kg != null) {
+              const w = top.weight_kg;
+              const r = top.reps;
+              const rp = top.rpe ?? null;
+              setLastPerf((prev) => ({ ...prev, [uuid]: { weightKg: w, reps: r, rpe: rp } }));
+            }
+          } catch {
+            // best-effort
+          }
+        })();
+      });
 
       // Cache exercise data and videos for offline use (only when online)
       if (!isOffline) {
@@ -286,17 +370,51 @@ export default function WorkoutSessionScreen() {
 
   const openAddSet = (exerciseUuid: string, log?: ExerciseLog) => {
     setActiveExerciseUuid(exerciseUuid);
+    setRpe(null);
 
     if (log) {
       setEditingLogId(log.id);
       setReps(String(log.reps));
       const logWeight = log.weight_kg || 0;
       setWeight(String(weightUnit === 'kg' ? logWeight : Number(kgToLbs(logWeight).toFixed(1))));
-    } else {
-      setEditingLogId(null);
-      setReps('10');
-      setWeight('0');
+      setSetBaseline(null);
+      setSuggestion(null);
+      return;
     }
+
+    setEditingLogId(null);
+
+    // Baseline for prefill + suggestion: last set THIS session, else last performance.
+    const entry = exercises.find((e) => e.exercise.exercise_uuid === exerciseUuid);
+    const sessionLogs = entry?.logs ?? [];
+    const lastSession = sessionLogs[sessionLogs.length - 1];
+    let baseline: { weightKg: number; reps: number; rpe?: number | null } | null = null;
+    if (lastSession && lastSession.weight_kg != null) {
+      baseline = { weightKg: lastSession.weight_kg, reps: lastSession.reps, rpe: lastSession.rpe ?? null };
+    } else if (lastPerf[exerciseUuid]) {
+      baseline = lastPerf[exerciseUuid];
+    }
+
+    const targetReps = entry?.exercise.target_reps && entry.exercise.target_reps > 0 ? entry.exercise.target_reps : 8;
+    setSetBaseline(baseline);
+    setSuggestion(computeSuggestion(baseline, targetReps));
+
+    if (baseline) {
+      setReps(String(baseline.reps));
+      setWeight(String(weightUnit === 'kg' ? baseline.weightKg : Number(kgToLbs(baseline.weightKg).toFixed(1))));
+    } else {
+      const tReps = entry?.exercise.target_reps;
+      const tW = entry?.exercise.target_weight_kg;
+      setReps(tReps ? String(tReps) : '10');
+      setWeight(tW ? String(weightUnit === 'kg' ? tW : Number(kgToLbs(tW).toFixed(1))) : '0');
+    }
+  };
+
+  const applySuggestion = () => {
+    if (!suggestion) return;
+    setReps(String(suggestion.reps));
+    setWeight(String(weightUnit === 'kg' ? suggestion.weightKg : Number(kgToLbs(suggestion.weightKg).toFixed(1))));
+    haptic.light();
   };
 
   const closeSetEditor = () => {
@@ -304,6 +422,9 @@ export default function WorkoutSessionScreen() {
     setEditingLogId(null);
     setReps('10');
     setWeight('0');
+    setRpe(null);
+    setSetBaseline(null);
+    setSuggestion(null);
   };
 
   const submitSet = async (exerciseUuid: string) => {
@@ -361,6 +482,7 @@ export default function WorkoutSessionScreen() {
           actual_reps: repsNumber,
           actual_weight_kg: weightKg,
           actual_rest_seconds: 0,
+          rpe: rpe ?? undefined,
         });
 
         setExercises((prev) =>
@@ -373,6 +495,20 @@ export default function WorkoutSessionScreen() {
               : entry
           )
         );
+
+        // Premium feedback: a light haptic on every set, a PR celebration when
+        // this set beats the all-time best, and an auto rest timer.
+        haptic.light();
+        const loggedEntry = exercises.find((e) => e.exercise.exercise_uuid === exerciseUuid);
+        if (created.is_pr && weightKg != null) {
+          haptic.success();
+          setPrInfo({ weight: weightKg, name: loggedEntry?.exerciseDetails?.title || 'New PR' });
+        }
+        const restSecs =
+          loggedEntry?.exercise.rest_seconds && loggedEntry.exercise.rest_seconds > 0
+            ? loggedEntry.exercise.rest_seconds
+            : 90;
+        setRest({ seconds: restSecs, key: Date.now() });
       }
 
       closeSetEditor();
@@ -505,7 +641,8 @@ export default function WorkoutSessionScreen() {
   }
 
   return (
-    <Screen style={{ backgroundColor: DEPTH_BG }}>
+    <View style={styles.root}>
+      <Screen style={{ backgroundColor: DEPTH_BG }}>
       <View style={styles.header}>
         <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backBtn}>
           <ChevronLeft size={24} color="#fff" />
@@ -557,14 +694,20 @@ export default function WorkoutSessionScreen() {
                     {index + 1}. {entry.exerciseDetails?.title?.toUpperCase() || entry.exercise.exercise?.title?.toUpperCase() || 'EXERCISE'}
                   </Text>
                   <View style={styles.exMetaRow}>
-                    <Text style={styles.exMetaText}>
-                      TARGET: {entry.exercise.target_sets || '-'} SETS × {entry.exercise.target_reps || '-'} REPS
-                    </Text>
-                    {entry.exercise.target_weight_kg ? (
-                      <Text style={[styles.exMetaText, { color: NEON_LIME }]}>
-                        {' '}@ {entry.exercise.target_weight_kg}KG
-                      </Text>
-                    ) : null}
+                    {entry.exercise.id?.startsWith('adhoc-') ? (
+                      <Text style={[styles.exMetaText, { color: NEON_LIME }]}>EXTRA · LOG YOUR SETS</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.exMetaText}>
+                          TARGET: {entry.exercise.target_sets || '-'} SETS × {entry.exercise.target_reps || '-'} REPS
+                        </Text>
+                        {entry.exercise.target_weight_kg ? (
+                          <Text style={[styles.exMetaText, { color: NEON_LIME }]}>
+                            {' '}@ {entry.exercise.target_weight_kg}KG
+                          </Text>
+                        ) : null}
+                      </>
+                    )}
                   </View>
                 </View>
 
@@ -606,6 +749,12 @@ export default function WorkoutSessionScreen() {
                           <Text style={styles.logMainText}>{log.reps} REPS</Text>
                           <View style={styles.metaDot} />
                           <Text style={styles.logSubText}>{displayWeight}</Text>
+                          {log.rpe ? (
+                            <>
+                              <View style={styles.metaDot} />
+                              <Text style={styles.logSubText}>RPE {log.rpe}</Text>
+                            </>
+                          ) : null}
                         </View>
                         <View style={styles.logActions}>
                           <Pressable onPress={() => openAddSet(exerciseUuid, log)} style={styles.logActionBtn}>
@@ -653,9 +802,58 @@ export default function WorkoutSessionScreen() {
                         >
                           <Text style={styles.unitSwitchText}>{weightUnit.toUpperCase()}</Text>
                         </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            const w = Number(weight);
+                            if (Number.isFinite(w) && w > 0) {
+                              setPlateWeight(weightUnit === 'kg' ? w : lbsToKg(w));
+                            }
+                          }}
+                          style={styles.plateBtn}
+                          hitSlop={6}
+                        >
+                          <Calculator size={16} color={NEON_LIME} />
+                        </Pressable>
                       </View>
                     </View>
                   </View>
+
+                  {!editingLogId && (suggestion || setBaseline) ? (
+                    <View style={styles.smartRow}>
+                      {suggestion ? (
+                        <Pressable onPress={applySuggestion} style={styles.suggestChip}>
+                          <TrendingUp size={13} color={NEON_LIME} />
+                          <Text style={styles.suggestText}>
+                            {weightUnit === 'kg' ? suggestion.weightKg : Number(kgToLbs(suggestion.weightKg).toFixed(1))} {weightUnit} × {suggestion.reps}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                      {setBaseline ? (
+                        <Text style={styles.lastHint}>
+                          Last: {weightUnit === 'kg' ? setBaseline.weightKg : Number(kgToLbs(setBaseline.weightKg).toFixed(1))} {weightUnit} × {setBaseline.reps}
+                          {setBaseline.rpe ? ` @${setBaseline.rpe}` : ''}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
+
+                  {!editingLogId ? (
+                    <View style={styles.rpeRow}>
+                      <Text style={styles.rpeLabel}>RPE</Text>
+                      {[6, 7, 8, 9, 10].map((v) => {
+                        const active = rpe === v;
+                        return (
+                          <Pressable
+                            key={v}
+                            onPress={() => setRpe(active ? null : v)}
+                            style={[styles.rpeChip, active && styles.rpeChipActive]}
+                          >
+                            <Text style={[styles.rpeChipText, active && styles.rpeChipTextActive]}>{v}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : null}
 
                   <View style={styles.editorActions}>
                     <Pressable
@@ -687,6 +885,32 @@ export default function WorkoutSessionScreen() {
         })}
       </View>
 
+      {session?.status === 'in_progress' || session?.status === 'paused' ? (
+        <Pressable onPress={() => setAddOpen(true)} style={styles.addExerciseBtn}>
+          <Plus size={18} color={NEON_LIME} />
+          <Text style={styles.addExerciseBtnText}>ADD EXERCISE</Text>
+        </Pressable>
+      ) : null}
+
+      <AddExerciseSheet
+        visible={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdd={(picked) =>
+          setExercises((prev) => {
+            const have = new Set(prev.map((e) => e.exercise.exercise_uuid));
+            const additions = picked
+              .filter((ex) => !have.has(ex.uuid))
+              .map((ex, i) => ({
+                exercise: makeAdHocPlanned(ex.uuid, prev.length + i),
+                exerciseDetails: ex,
+                logs: [] as ExerciseLog[],
+              }));
+            return [...prev, ...additions];
+          })
+        }
+        existingUuids={exercises.map((e) => e.exercise.exercise_uuid)}
+      />
+
       <ExerciseDetailModal
         exercise={selectedExercise}
         isOpen={infoOpen}
@@ -704,7 +928,28 @@ export default function WorkoutSessionScreen() {
         showCancel={confirmConfig.showCancel}
         confirmLabel={confirmConfig.confirmLabel}
       />
-    </Screen>
+
+      <PlateCalculator
+        visible={plateWeight != null}
+        weightKg={plateWeight ?? 0}
+        onClose={() => setPlateWeight(null)}
+      />
+      </Screen>
+
+      {/* Overlays live OUTSIDE Screen's ScrollView so they're fixed to the viewport. */}
+      {prInfo ? (
+        <Pressable style={styles.prBackdrop} onPress={() => setPrInfo(null)}>
+          <View style={styles.prCard}>
+            <Text style={styles.prEmoji}>🎉</Text>
+            <Text style={styles.prTitle}>NEW PR</Text>
+            {prInfo.weight > 0 ? <Text style={styles.prWeight}>{prInfo.weight} kg</Text> : null}
+            <Text style={styles.prName} numberOfLines={1}>{prInfo.name}</Text>
+          </View>
+        </Pressable>
+      ) : null}
+
+      {rest ? <RestTimer key={rest.key} seconds={rest.seconds} onDismiss={() => setRest(null)} /> : null}
+    </View>
   );
 }
 
@@ -942,6 +1187,89 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1,
   },
+  addExerciseBtn: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 12,
+    height: 54,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(95, 199, 147, 0.5)',
+    backgroundColor: 'rgba(95, 199, 147, 0.06)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  addExerciseBtnText: {
+    color: NEON_LIME,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  root: { flex: 1, backgroundColor: DEPTH_BG },
+  smartRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' },
+  suggestChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(95,199,147,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(95,199,147,0.3)',
+  },
+  suggestText: { color: NEON_LIME, fontSize: 13, fontWeight: '900' },
+  lastHint: { color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: '600' },
+  rpeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' },
+  rpeLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '800', letterSpacing: 1, marginRight: 4 },
+  rpeChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+  },
+  rpeChipActive: { backgroundColor: NEON_LIME, borderColor: NEON_LIME },
+  rpeChipText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '800' },
+  rpeChipTextActive: { color: '#000', fontWeight: '900' },
+  plateBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(95,199,147,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(95,199,147,0.25)',
+    marginLeft: 8,
+  },
+  prBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  prCard: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 40,
+    borderRadius: 28,
+    backgroundColor: '#111111',
+    borderWidth: 1.5,
+    borderColor: NEON_LIME,
+    gap: 4,
+  },
+  prEmoji: { fontSize: 44, marginBottom: 4 },
+  prTitle: { color: NEON_LIME, fontSize: 14, fontWeight: '900', letterSpacing: 3 },
+  prWeight: { color: '#FFFFFF', fontSize: 44, fontWeight: '900', letterSpacing: -1 },
+  prName: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '700', maxWidth: 240, textAlign: 'center' },
   addSetBtn: {
     height: 52,
     borderRadius: 16,

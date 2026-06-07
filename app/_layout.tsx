@@ -1,6 +1,33 @@
 // Register notification background handler & foreground service at module level
 import '@/src/lib/notificationBackgroundHandler';
 
+import * as Sentry from '@sentry/react-native';
+import Constants from 'expo-constants';
+
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+const APP_VERSION = (Constants.expoConfig?.version ?? '0.0.0') as string;
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    release: `fitnyx-mobile@${APP_VERSION}`,
+    environment: __DEV__ ? 'development' : 'production',
+    enabled: !__DEV__ || process.env.EXPO_PUBLIC_SENTRY_ENABLE_DEV === 'true',
+    tracesSampleRate: 0.2,
+    attachStacktrace: true,
+    enableNative: true,
+    enableAutoSessionTracking: true,
+    sendDefaultPii: false,
+    beforeSend(event, hint) {
+      const err = hint?.originalException as Error | undefined;
+      const msg = err?.message ?? '';
+      if (msg.includes('Refresh Token Not Found')) return null;
+      if (msg.includes('Network request failed')) return null;
+      if (msg.includes('AbortError')) return null;
+      return event;
+    },
+  });
+}
+
 import { Anton_400Regular } from '@expo-google-fonts/anton';
 import {
   Inter_400Regular,
@@ -14,7 +41,15 @@ import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { BackHandler, ToastAndroid, View, StyleSheet } from 'react-native';
+import { AppState, BackHandler, LogBox, ToastAndroid, View, StyleSheet } from 'react-native';
+
+LogBox.ignoreLogs([
+  'AuthApiError: Invalid Refresh Token',
+  'Invalid Refresh Token: Refresh Token Not Found',
+  'Refresh Token Not Found',
+]);
+
+import { rescheduleAll as rescheduleAllReminders } from '@/src/lib/reminders';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
 
@@ -49,7 +84,7 @@ function DynamicStatusBar() {
   return <StatusBar style={theme === 'dark' ? 'light' : 'dark'} translucent={true} />;
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const pathname = usePathname();
   const router = useRouter();
   const [loaded, error] = useFonts({
@@ -114,6 +149,14 @@ export default function RootLayout() {
     return () => backHandler.remove();
   }, [pathname, router]);
 
+  useEffect(() => {
+    rescheduleAllReminders().catch(() => {});
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') rescheduleAllReminders().catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
+
   if (!loaded) {
     return null;
   }
@@ -163,13 +206,13 @@ function ThemedStack() {
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true, contentStyle: { backgroundColor: bg } }}>
-      <Stack.Screen name="index" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="index" options={{ gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="login" options={{ gestureEnabled: false }} />
       <Stack.Screen name="signup" options={{ gestureEnabled: false }} />
       <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="dashboard/index" />
-      <Stack.Screen name="exercises" />
-      <Stack.Screen name="dashboard/stats" />
+      <Stack.Screen name="dashboard/index" options={{ animation: 'fade' }} />
+      <Stack.Screen name="exercises" options={{ animation: 'fade' }} />
+      <Stack.Screen name="dashboard/stats" options={{ animation: 'fade' }} />
       <Stack.Screen name="dashboard/diet" />
       <Stack.Screen name="workouts/select" />
       <Stack.Screen name="workouts/customize" />
@@ -178,8 +221,10 @@ function ThemedStack() {
       <Stack.Screen name="workouts/session/[id]" />
       <Stack.Screen name="achievements" />
       <Stack.Screen name="profile" />
-      <Stack.Screen name="settings" />
+      <Stack.Screen name="settings" options={{ animation: 'fade' }} />
       <Stack.Screen name="settings/coach-memory" />
+      <Stack.Screen name="reminders" />
+      <Stack.Screen name="water" />
       <Stack.Screen name="auth/callback" />
       <Stack.Screen name="update-password" />
       <Stack.Screen name="email-verified" />
@@ -191,3 +236,5 @@ function ThemedStack() {
     </Stack>
   );
 }
+
+export default Sentry.wrap(RootLayout);

@@ -5,6 +5,11 @@ export const cacheKeys = {
   workoutPlans: (userId: string) => `plans:${userId}`,
   exercises: 'exercises:all',
   exerciseCategories: 'exercises:categories',
+  exerciseHistory: (uuid: string) => `exercise-history:${uuid}`,
+  dashboard: (userId: string) => `dashboard:${userId}`,
+  bodyMetricsLatest: (userId: string) => `bodyMetrics:latest:${userId}`,
+  bodyMetricsHistory: (userId: string) => `bodyMetrics:history:${userId}`,
+  fitnessProfile: (userId: string) => `fitnessProfile:${userId}`,
 } as const;
 
 export const cacheTTL = {

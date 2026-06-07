@@ -7,15 +7,17 @@ import { QuickActionsGrid } from './components/QuickActionsGrid';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchLatestMetric } from '@/src/lib/api';
+import type { UserProfile } from '@/src/lib/api/users';
 
 const NEON_LIME = '#5fc793';
 
 interface MobileDashboardProps {
   user: any;
   avatarUrl?: string | null;
+  userProfile?: UserProfile | null;
 }
 
-export function MobileDashboard({ user, avatarUrl }: MobileDashboardProps) {
+export function MobileDashboard({ user, avatarUrl, userProfile }: MobileDashboardProps) {
   const palette = useThemeColors();
 
   const { data: latestMetric, isLoading } = useQuery({
@@ -26,7 +28,7 @@ export function MobileDashboard({ user, avatarUrl }: MobileDashboardProps) {
     placeholderData: (prev: any) => prev,
   });
 
-  const userName = (user?.user_metadata?.username || user?.user_metadata?.first_name || 'Athlete');
+  const userName = (userProfile?.username || userProfile?.first_name || user?.user_metadata?.first_name || 'Athlete');
 
   if (isLoading) {
     return (

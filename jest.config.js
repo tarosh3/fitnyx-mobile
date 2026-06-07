@@ -6,7 +6,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|lucide-react-native|react-native-reanimated|react-native-screens|react-native-safe-area-context|react-native-svg|react-native-markdown-display|react-native-url-polyfill|expo-modules-core)/)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?[a-z0-9-]*|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@supabase/.*|lucide-react-native|react-native-reanimated|react-native-screens|react-native-safe-area-context|react-native-svg|react-native-markdown-display|react-native-url-polyfill|expo-modules-core)/)',
   ],
   testPathIgnorePatterns: [
     '/node_modules/',

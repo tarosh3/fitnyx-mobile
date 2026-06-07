@@ -5,11 +5,14 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // Re-require to pick up fresh mocks
-const { fetchWithAuth } = require('../api');
+const { fetchWithAuth, isAuthError, _resetAuthInvalidated } = require('../api');
 
 describe('fetchWithAuth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // The global auth-invalidation latch is module-level state; clear it between
+    // cases so a prior auth-failure test doesn't fast-fail the next one.
+    _resetAuthInvalidated();
     (supabase.auth.getSession as jest.Mock).mockResolvedValue({
       data: { session: { access_token: 'test-jwt-token' } },
       error: null,
@@ -115,5 +118,45 @@ describe('fetchWithAuth', () => {
     const [, options] = mockFetch.mock.calls[0];
     expect(options.method).toBe('POST');
     expect(options.body).toBe(JSON.stringify({ data: 'value' }));
+  });
+
+  it('throws a typed AuthError on SESSION_REVOKED', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            error: 'Session revoked. You may be logged in on another device.',
+            code: 'SESSION_REVOKED',
+          })
+        ),
+    });
+
+    try {
+      await fetchWithAuth('/test');
+      fail('Should have thrown');
+    } catch (err: any) {
+      expect(isAuthError(err)).toBe(true);
+      expect(err.code).toBe('SESSION_REVOKED');
+      expect(err.reason).toBe('session_revoked');
+    }
+  });
+
+  it('fast-fails later calls once auth is invalidated, without a second network hit', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      text: () => Promise.resolve(JSON.stringify({ code: 'SESSION_REVOKED' })),
+    });
+
+    await expect(fetchWithAuth('/first')).rejects.toThrow();
+    const callsAfterFirst = mockFetch.mock.calls.length;
+
+    // Latch is now set — this must short-circuit before touching the network.
+    await expect(fetchWithAuth('/second')).rejects.toThrow();
+    expect(mockFetch.mock.calls.length).toBe(callsAfterFirst);
   });
 });

@@ -1,8 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+
 import { WorkoutSession } from '@/src/lib/api/workoutSessions';
 import { WorkoutPlanDay } from '@/src/lib/api/workoutPlans';
 import { getDashboard, DashboardSession, DashboardPlan, DashboardPlanDay } from '@/src/lib/api/dashboard';
+import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
+
+type MetricsPayload = Omit<RetentionMetrics, 'loading' | 'activeSession'>;
 
 export interface RetentionMetrics {
   streakDays: number;
@@ -48,7 +53,7 @@ const DEFAULTS: RetentionMetrics = {
   loading: true,
 };
 
-async function fetchRetentionMetrics(): Promise<Omit<RetentionMetrics, 'loading' | 'activeSession'>> {
+async function fetchRetentionMetrics(userId?: string): Promise<MetricsPayload> {
   // Single server request replaces the previous 3-5 waterfall calls
   const dashboard = await getDashboard();
 
@@ -87,17 +92,62 @@ async function fetchRetentionMetrics(): Promise<Omit<RetentionMetrics, 'loading'
   };
 }
 
+async function persistMetrics(userId: string | undefined, payload: MetricsPayload): Promise<void> {
+  if (!userId) return;
+  try {
+    await cacheSet(cacheKeys.dashboard(userId), payload, cacheTTL.LONG);
+  } catch {
+    // ignore — cache write failure is non-fatal
+  }
+}
+
+async function hydrateMetrics(userId: string | undefined): Promise<MetricsPayload | null> {
+  if (!userId) return null;
+  try {
+    return (await cacheGet<MetricsPayload>(cacheKeys.dashboard(userId))) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function useRetentionMetrics(userId?: string) {
   const queryClient = useQueryClient();
   const { activeSession } = useWorkout();
+  const [hydrated, setHydrated] = useState<MetricsPayload | null>(null);
 
-  const { data, isLoading, isFetching, isError } = useQuery({
+  useEffect(() => {
+    let cancelled = false;
+    if (!userId) {
+      setHydrated(null);
+      return;
+    }
+    // Seed query cache from AsyncStorage so first paint shows last-known data
+    // instead of a spinner while the network round-trip completes.
+    hydrateMetrics(userId).then((cached) => {
+      if (cancelled || !cached) return;
+      const key = ['retentionMetrics', userId];
+      if (!queryClient.getQueryData(key)) {
+        queryClient.setQueryData(key, cached);
+      }
+      setHydrated(cached);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, queryClient]);
+
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['retentionMetrics', userId],
-    queryFn: fetchRetentionMetrics,
+    queryFn: async () => {
+      const payload = await fetchRetentionMetrics(userId);
+      persistMetrics(userId, payload);
+      return payload;
+    },
     enabled: !!userId,
     staleTime: 2 * 60 * 1000, // 2 min — tab switches won't refetch
     gcTime: 10 * 60 * 1000,
     placeholderData: (prev) => prev, // keep previous data visible during refetch
+    initialData: hydrated ?? undefined,
   });
 
   const refresh = async () => {

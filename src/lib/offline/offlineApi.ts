@@ -159,6 +159,7 @@ export async function offlineLogSet(sessionId: string, data: LogExerciseInput): 
     set_index: data.set_number,
     reps: data.actual_reps,
     weight_kg: data.actual_weight_kg,
+    rpe: data.rpe,
     is_warmup: false,
     created_at: now,
     _offline: true,
@@ -168,7 +169,7 @@ export async function offlineLogSet(sessionId: string, data: LogExerciseInput): 
 
   await addToOfflineQueue({
     type: 'LOG_SET',
-    payload: { sessionId, exerciseUuid: data.exercise_uuid, setNumber: data.set_number, reps: data.actual_reps, weightKg: data.actual_weight_kg },
+    payload: { sessionId, exerciseUuid: data.exercise_uuid, setNumber: data.set_number, reps: data.actual_reps, weightKg: data.actual_weight_kg, rpe: data.rpe },
   });
 
   return offlineLog;

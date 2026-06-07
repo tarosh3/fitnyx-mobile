@@ -17,9 +17,11 @@ interface AuthFormProps {
   initialMode?: 'login' | 'signup';
   onSuccess?: () => void;
   onSwitchMode?: (mode: 'login' | 'signup') => void;
+  /** Informational banner shown above the form (e.g. "signed out on another device"). */
+  notice?: string | null;
 }
 
-export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: AuthFormProps) {
+export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode, notice }: AuthFormProps) {
   const router = useRouter();
   const palette = useThemeColors();
   const styles = getStyles(palette);
@@ -206,6 +208,12 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode }: Aut
 
   return (
     <View style={styles.formContainer}>
+      {notice && !error && (
+        <View style={styles.noticeBox}>
+          <Text style={styles.noticeText}>{notice}</Text>
+        </View>
+      )}
+
       {error && (
         <View style={[styles.errorBox, { borderColor: palette.destructive + '44' }]}>
           <Text style={styles.errorText}>{error}</Text>
@@ -336,6 +344,20 @@ const getStyles = (palette: any) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: 'rgba(239, 68, 68, 0.05)',
+  },
+  noticeBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  noticeText: {
+    color: '#E5E7EB',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
   },
   errorText: {
     color: '#EF4444',

@@ -1,39 +1,89 @@
-import { BlurView } from 'expo-blur';
-import { useRouter } from 'expo-router';
 import notifee, { AuthorizationStatus } from '@notifee/react-native';
-import { Bell, Brain, ChevronLeft, ChevronRight, FileText, LogOut, Moon, Shield, Sun, User } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Dimensions, Image, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import {
+  Activity,
+  AlarmClock,
+  Bell,
+  Brain,
+  ChevronLeft,
+  Droplet,
+  FileText,
+  Globe,
+  HelpCircle,
+  LogOut,
+  Mail,
+  Moon,
+  Ruler,
+  Share2,
+  Shield,
+  Star,
+  User,
+  UserCog,
+} from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
+import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
+import { PressableScale } from '@/src/components/ui/PressableScale';
 import { Screen } from '@/src/components/ui/Screen';
+import { SectionHeader } from '@/src/components/ui/SectionHeader';
+import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { SettingGroup } from '@/src/components/ui/SettingGroup';
+import { SettingRow } from '@/src/components/ui/SettingRow';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { formatHeight, formatWeight, useHeightUnit, useLanguage, useWeightUnit } from '@/src/lib/prefs';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { elevation, radii, spacing, type as t } from '@/src/styles/tokens';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+type Language = 'en' | 'hi' | 'hi_en';
+const LANG_LABEL: Record<Language, string> = {
+  en: 'English',
+  hi: 'हिन्दी',
+  hi_en: 'Hinglish',
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const palette = useThemeColors();
+  const c = useThemeColors();
   const { theme, toggleTheme } = useTheme();
-  const { user, avatarUrl, signOut } = useAuth();
+  const { user, avatarUrl, userProfile, signOut } = useAuth();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [unitsOpen, setUnitsOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
-  // Check actual device notification permission on mount
+  const [weightUnit, setWeightUnit] = useWeightUnit();
+  const [heightUnit, setHeightUnit] = useHeightUnit();
+  const [language, setLanguage] = useLanguage();
+
   const checkPermission = useCallback(async () => {
     try {
       const settings = await notifee.getNotificationSettings();
       setNotificationsEnabled(
         settings.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
-        settings.authorizationStatus === AuthorizationStatus.PROVISIONAL
+          settings.authorizationStatus === AuthorizationStatus.PROVISIONAL
       );
     } catch {
       setNotificationsEnabled(false);
     }
   }, []);
 
-  useEffect(() => { checkPermission(); }, [checkPermission]);
+  useEffect(() => {
+    checkPermission();
+  }, [checkPermission]);
 
   const handleToggleNotifications = async (value: boolean) => {
     if (value) {
@@ -42,359 +92,532 @@ export default function SettingsScreen() {
         settings.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
         settings.authorizationStatus === AuthorizationStatus.PROVISIONAL;
       setNotificationsEnabled(granted);
-      if (!granted) {
-        Alert.alert(
-          'Notifications Disabled',
-          'Please enable notifications in your device settings.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => {
-              if (Platform.OS === 'ios') Linking.openURL('app-settings:');
-              else Linking.openSettings();
-            }},
-          ]
-        );
-      }
+      if (!granted) openSystemSettings('Notifications Disabled');
     } else {
-      // Can't revoke programmatically — direct user to settings
-      Alert.alert(
-        'Disable Notifications',
-        'To disable notifications, please turn them off in your device settings.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => {
-            if (Platform.OS === 'ios') Linking.openURL('app-settings:');
-            else Linking.openSettings();
-          }},
-        ]
-      );
+      openSystemSettings('Disable Notifications');
     }
   };
 
-  // Neon Lime Accent
-  const neonLime = palette.primary;
+  function openSystemSettings(title: string) {
+    Alert.alert(
+      title,
+      'To change this, open device settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open Settings',
+          onPress: () => {
+            if (Platform.OS === 'ios') Linking.openURL('app-settings:');
+            else Linking.openSettings();
+          },
+        },
+      ]
+    );
+  }
 
-  const firstName = user?.user_metadata?.first_name || 'User';
-  const lastName = user?.user_metadata?.last_name || '';
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: 'Train smarter with FitNyx — your AI fitness coach. https://fitnyx.app',
+      });
+    } catch {
+      /* user cancelled */
+    }
+  };
+
+  const handleRate = () => {
+    const url =
+      Platform.OS === 'ios'
+        ? 'itms-apps://itunes.apple.com/app/idYOUR_APP_ID?action=write-review'
+        : 'market://details?id=com.fitnyx.app';
+    Linking.openURL(url).catch(() => Alert.alert('Could not open store'));
+  };
+
+  const handleContact = () => {
+    Linking.openURL('mailto:support@fitnyx.app?subject=FitNyx Support');
+  };
+
+  const firstName = userProfile?.first_name || user?.user_metadata?.first_name || 'User';
+  const lastName = userProfile?.last_name || user?.user_metadata?.last_name || '';
   const fullName = `${firstName} ${lastName}`.trim();
-  const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'fitnyx-user';
+  const username =
+    userProfile?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'fitnyx-user';
 
-  const styles = React.useMemo(() => getStyles(palette, neonLime), [palette, neonLime]);
+  const unitSummary = useMemo(
+    () => `${weightUnit.toUpperCase()} · ${heightUnit.toUpperCase()}`,
+    [weightUnit, heightUnit]
+  );
 
   return (
-    <Screen scroll={true} contentContainerStyle={[styles.screenContent, { backgroundColor: palette.background }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backButton}>
-          <ChevronLeft color={palette.text} size={24} />
-        </Pressable>
-        <View>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <Text style={styles.headerSubtitle}>PREFERENCES & ACCOUNT</Text>
+    <Screen scroll contentContainerStyle={[styles.screen, { backgroundColor: c.background }]}>
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <PressableScale
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/dashboard'))}
+          style={[styles.backBtn, { backgroundColor: c.surface, borderColor: c.border }]}
+        >
+          <ChevronLeft size={22} color={c.text} />
+        </PressableScale>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.eyebrow, { color: c.mutedText }]}>PREFERENCES & ACCOUNT</Text>
+          <Text style={[styles.h1, { color: c.text }]}>Settings</Text>
         </View>
       </View>
 
-      <Pressable onPress={() => router.push('/profile')} style={styles.profileSection}>
-        <View style={[styles.avatarContainer, { borderColor: neonLime }]}>
+      {/* Profile card */}
+      <PressableScale
+        onPress={() => router.push('/profile')}
+        style={[styles.profileCard, { backgroundColor: c.card, borderColor: c.border }, elevation.sm]}
+      >
+        <View style={[styles.avatarRing, { borderColor: c.primary }]}>
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
           ) : (
-            <User color={neonLime} size={32} strokeWidth={1.5} />
+            <View style={[styles.avatarFallback, { backgroundColor: c.surface }]}>
+              <User color={c.primary} size={28} strokeWidth={1.8} />
+            </View>
           )}
         </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.fullName}>{fullName || 'FitNyx User'}</Text>
-          <Text style={styles.username}>@{username}</Text>
+        <View style={styles.profileText}>
+          <Text style={[styles.profileName, { color: c.text }]}>{fullName || 'FitNyx User'}</Text>
+          <Text style={[styles.profileHandle, { color: c.mutedText }]}>@{username}</Text>
+          {userProfile?.bio ? (
+            <Text style={[styles.profileBio, { color: c.mutedText }]} numberOfLines={1}>
+              {userProfile.bio}
+            </Text>
+          ) : null}
         </View>
-        <View style={styles.editBadge}>
-          <Text style={[styles.editText, { color: neonLime }]}>EDIT</Text>
+        <View style={[styles.editPill, { backgroundColor: `${c.primary}1A` }]}>
+          <Text style={[styles.editPillText, { color: c.primary }]}>EDIT</Text>
         </View>
-      </Pressable>
+      </PressableScale>
 
-      <View style={styles.groupsContainer}>
-        <View style={styles.groupLabelContainer}>
-          <Text style={styles.groupLabel}>PREFERENCES</Text>
-        </View>
-        <BlurView intensity={10} tint={theme === 'dark' ? 'dark' : 'light'} style={styles.glassCard}>
-          <Row
-            styles={styles} palette={palette}
-            icon={<Bell color={palette.text} size={20} strokeWidth={1.5} />}
-            label="Notifications"
-            right={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={handleToggleNotifications}
-                trackColor={{ false: palette.border, true: `${neonLime}44` }}
-                thumbColor={notificationsEnabled ? neonLime : '#f4f4f5'}
-              />
-            }
-          />
-          <View style={styles.divider} />
-          <Row
-            styles={styles} palette={palette}
-            icon={<Brain color={palette.text} size={20} strokeWidth={1.5} />}
-            label="Coach Memory"
-            onPress={() => router.push('/settings/coach-memory' as any)}
-          />
-          <View style={styles.divider} />
-          <Row
-            styles={styles} palette={palette}
-            icon={theme === 'dark' ? <Moon color={palette.text} size={20} strokeWidth={1.5} /> : <Sun color={palette.text} size={20} strokeWidth={1.5} />}
-            label="Dark Mode"
-            right={
-              <Switch
-                value={theme === 'dark'}
-                onValueChange={toggleTheme}
-                trackColor={{ false: palette.border, true: `${neonLime}44` }}
-                thumbColor={theme === 'dark' ? neonLime : '#f4f4f5'}
-              />
-            }
-          />
-        </BlurView>
+      {/* ACCOUNT */}
+      <SectionHeader eyebrow="Account" />
+      <SettingGroup>
+        <SettingRow
+          icon={<UserCog size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Edit Profile"
+          description="Name, username, bio, contact"
+          onPress={() => router.push('/profile')}
+          showChevron
+        />
+        <SettingRow
+          icon={<Activity size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Fitness Profile"
+          description="Goals, experience, equipment"
+          onPress={() => router.push('/fitness-profile' as any)}
+          showChevron
+        />
+        <SettingRow
+          icon={<Ruler size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Body Stats"
+          description="Weight, measurements, progress"
+          onPress={() => router.push('/dashboard/stats')}
+          showChevron
+        />
+      </SettingGroup>
 
-        <View style={[styles.groupLabelContainer, { marginTop: 32 }]}>
-          <Text style={styles.groupLabel}>LEGAL</Text>
-        </View>
-        <BlurView intensity={10} tint={theme === 'dark' ? 'dark' : 'light'} style={styles.glassCard}>
-          <Row
-            styles={styles} palette={palette}
-            icon={<FileText color={palette.text} size={20} strokeWidth={1.5} />}
-            label="Terms of Service"
-            onPress={() => router.push('/terms-of-service')}
-          />
-          <View style={styles.divider} />
-          <Row
-            styles={styles} palette={palette}
-            icon={<Shield color={palette.text} size={20} strokeWidth={1.5} />}
-            label="Privacy Policy"
-            onPress={() => router.push('/privacy-policy')}
-          />
-        </BlurView>
+      {/* HABITS */}
+      <SectionHeader eyebrow="Habits" />
+      <SettingGroup>
+        <SettingRow
+          icon={<AlarmClock size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Reminders"
+          description="Workout, water, food, snack, custom"
+          onPress={() => router.push('/reminders' as any)}
+          showChevron
+        />
+        <SettingRow
+          icon={<Droplet size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Water Tracker"
+          description="Log intake, daily goal, monthly graph"
+          onPress={() => router.push('/water' as any)}
+          showChevron
+        />
+      </SettingGroup>
 
-        <View style={[styles.groupLabelContainer, { marginTop: 32 }]}>
-          <Text style={styles.groupLabel}>ACCOUNT</Text>
-        </View>
-        <BlurView intensity={10} tint={theme === 'dark' ? 'dark' : 'light'} style={styles.glassCard}>
-          <Row
-            styles={styles} palette={palette}
-            icon={<Shield color="#EF4444" size={20} strokeWidth={1.5} />}
-            label="Delete Account"
-            onPress={() => router.push('/delete-account')}
-            danger
-          />
-        </BlurView>
-      </View>
+      {/* PREFERENCES */}
+      <SectionHeader eyebrow="Preferences" />
+      <SettingGroup>
+        <SettingRow
+          icon={<Bell size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Notifications"
+          description="Reminders, AI coach pings"
+          switchValue={notificationsEnabled}
+          onSwitchChange={handleToggleNotifications}
+        />
+        <SettingRow
+          icon={<Moon size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Dark Mode"
+          switchValue={theme === 'dark'}
+          onSwitchChange={toggleTheme}
+        />
+        <SettingRow
+          icon={<Ruler size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Units of Measurement"
+          value={unitSummary}
+          onPress={() => setUnitsOpen(true)}
+          showChevron
+        />
+        <SettingRow
+          icon={<Globe size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Language"
+          value={LANG_LABEL[language]}
+          onPress={() => setLangOpen(true)}
+          showChevron
+        />
+        <SettingRow
+          icon={<Brain size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Coach Memory"
+          description="What Filo remembers about you"
+          onPress={() => router.push('/settings/coach-memory' as any)}
+          showChevron
+        />
+      </SettingGroup>
 
-      <Pressable
-        onPress={async () => {
-          await signOut();
-        }}
-        style={({ pressed }) => [
-          styles.logoutButton,
-          { opacity: pressed ? 0.7 : 1 }
-        ]}
-      >
-        <LogOut color="#EF4444" size={20} strokeWidth={2} />
-        <Text style={styles.logoutText}>LOG OUT</Text>
-      </Pressable>
+      {/* SUPPORT */}
+      <SectionHeader eyebrow="Support" />
+      <SettingGroup>
+        <SettingRow
+          icon={<HelpCircle size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Help & FAQ"
+          onPress={() => Linking.openURL('https://fitnyx.app/help')}
+          showChevron
+        />
+        <SettingRow
+          icon={<Mail size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Contact Support"
+          onPress={handleContact}
+          showChevron
+        />
+        <SettingRow
+          icon={<Star size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Rate the App"
+          onPress={handleRate}
+          showChevron
+        />
+        <SettingRow
+          icon={<Share2 size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Share FitNyx"
+          onPress={handleShare}
+          showChevron
+        />
+      </SettingGroup>
 
-      <View style={styles.footerBrand}>
+      {/* LEGAL */}
+      <SectionHeader eyebrow="Legal" />
+      <SettingGroup>
+        <SettingRow
+          icon={<FileText size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Terms of Service"
+          onPress={() => router.push('/terms-of-service')}
+          showChevron
+        />
+        <SettingRow
+          icon={<Shield size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Privacy Policy"
+          onPress={() => router.push('/privacy-policy')}
+          showChevron
+        />
+      </SettingGroup>
+
+      {/* DANGER */}
+      <SectionHeader eyebrow="Danger Zone" />
+      <SettingGroup>
+        <SettingRow
+          icon={<LogOut size={20} color={c.destructive} strokeWidth={1.8} />}
+          label="Sign Out"
+          destructive
+          onPress={() => setSignOutOpen(true)}
+          showChevron
+        />
+        <SettingRow
+          icon={<Shield size={20} color={c.destructive} strokeWidth={1.8} />}
+          label="Delete Account"
+          description="Permanent. Cannot be undone."
+          destructive
+          onPress={() => router.push('/delete-account')}
+          showChevron
+        />
+      </SettingGroup>
+
+      {/* Footer */}
+      <View style={styles.footer}>
         <Image
           source={require('@/assets/images/fitnyx_logo_4k_transparent.png')}
           style={styles.footerLogo}
           resizeMode="contain"
         />
-        <Text style={styles.versionText}>v1.0.0 — FITNYX</Text>
+        <Text style={[styles.versionText, { color: c.mutedText }]}>v1.0.0 — FITNYX</Text>
       </View>
+
+      {/* Units sheet */}
+      <PickerSheet visible={unitsOpen} onClose={() => setUnitsOpen(false)} title="Units">
+        <View style={{ gap: spacing.lg }}>
+          <View style={{ gap: spacing.sm }}>
+            <Text style={[styles.eyebrow, { color: c.mutedText }]}>WEIGHT</Text>
+            <SegmentedControl
+              options={[
+                { label: 'Kilograms', value: 'kg' },
+                { label: 'Pounds', value: 'lbs' },
+              ]}
+              value={weightUnit}
+              onChange={setWeightUnit}
+            />
+            <Text style={[styles.helper, { color: c.mutedText }]}>
+              Preview: {formatWeight(74, weightUnit)}
+            </Text>
+          </View>
+
+          <View style={{ gap: spacing.sm }}>
+            <Text style={[styles.eyebrow, { color: c.mutedText }]}>HEIGHT</Text>
+            <SegmentedControl
+              options={[
+                { label: 'Centimeters', value: 'cm' },
+                { label: 'Feet & inches', value: 'ft' },
+              ]}
+              value={heightUnit}
+              onChange={setHeightUnit}
+            />
+            <Text style={[styles.helper, { color: c.mutedText }]}>
+              Preview: {formatHeight(180, heightUnit)}
+            </Text>
+          </View>
+        </View>
+      </PickerSheet>
+
+      {/* Language sheet */}
+      <PickerSheet visible={langOpen} onClose={() => setLangOpen(false)} title="Language">
+        <View style={{ gap: spacing.sm }}>
+          {(['en', 'hi', 'hi_en'] as const).map((code) => (
+            <Pressable
+              key={code}
+              onPress={() => {
+                setLanguage(code);
+                setLangOpen(false);
+              }}
+              style={[
+                styles.langRow,
+                {
+                  backgroundColor: language === code ? `${c.primary}1A` : c.surface,
+                  borderColor: language === code ? c.primary : c.border,
+                },
+              ]}
+            >
+              <Text style={[styles.langLabel, { color: c.text }]}>{LANG_LABEL[code]}</Text>
+              {language === code ? (
+                <View style={[styles.langDot, { backgroundColor: c.primary }]} />
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
+      </PickerSheet>
+
+      <ConfirmModal
+        visible={signOutOpen}
+        variant="danger"
+        title="Sign out?"
+        message="You'll need to log back in to reach your workouts, water log and AI coach."
+        confirmLabel="Sign out"
+        cancelLabel="Stay"
+        onCancel={() => setSignOutOpen(false)}
+        onConfirm={() => {
+          setSignOutOpen(false);
+          signOut();
+        }}
+      />
     </Screen>
   );
 }
 
-function Row({
-  icon,
-  label,
-  right,
-  onPress,
-  danger,
-  styles,
-  palette,
+function PickerSheet({
+  visible,
+  onClose,
+  title,
+  children,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  right?: React.ReactNode;
-  onPress?: () => void;
-  danger?: boolean;
-  styles: any;
-  palette: any;
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
 }) {
+  const c = useThemeColors();
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={styles.row}>
-      <View style={styles.rowLeft}>
-        <View style={styles.iconWrapper}>{icon}</View>
-        <Text style={[styles.rowLabel, danger && styles.dangerText]}>{label}</Text>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.sheetBackdrop} onPress={onClose} />
+      <View style={[styles.sheet, { backgroundColor: c.card, borderColor: c.border }]}>
+        <View style={[styles.sheetHandle, { backgroundColor: c.border }]} />
+        <View style={styles.sheetHeader}>
+          <Text style={[styles.sheetTitle, { color: c.text }]}>{title}</Text>
+          <Pressable onPress={onClose}>
+            <Text style={[styles.sheetDone, { color: c.primary }]}>Done</Text>
+          </Pressable>
+        </View>
+        <View style={{ marginTop: spacing.lg }}>{children}</View>
       </View>
-      {right || (onPress ? <ChevronRight color={palette.mutedText} size={20} /> : null)}
-    </Pressable>
+    </Modal>
   );
 }
 
-const getStyles = (palette: any, neonLime: string) => StyleSheet.create({
-  screenContent: {
-    paddingBottom: 40,
+const styles = StyleSheet.create({
+  screen: {
+    paddingBottom: spacing['3xl'],
+    paddingHorizontal: 0,
+    gap: spacing.xs,
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
-    gap: 12,
+    gap: spacing.md,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.base,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: palette.surface,
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  headerTitle: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: palette.text,
-    letterSpacing: -1,
+  eyebrow: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.xs,
+    letterSpacing: t.tracking.eyebrow,
+    textTransform: 'uppercase',
   },
-  headerSubtitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: palette.mutedText,
-    letterSpacing: 2,
-    marginTop: 4,
-  },
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  avatarContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 3,
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 36,
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  fullName: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: palette.text,
-  },
-  username: {
-    fontSize: 14,
-    color: palette.mutedText,
+  h1: {
+    fontFamily: t.weight.extrabold,
+    fontSize: t.size.h1,
+    letterSpacing: t.tracking.tight,
     marginTop: 2,
   },
-  editBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: palette.surface,
+  helper: {
+    fontFamily: t.weight.regular,
+    fontSize: t.size.xs,
   },
-  editText: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1,
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.xs,
+    padding: spacing.base,
+    borderRadius: radii.xl,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  groupsContainer: {
-    marginBottom: 40,
+  avatarRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    padding: 3,
   },
-  groupLabelContainer: {
-    marginBottom: 12,
-    marginLeft: 4,
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
   },
-  groupLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: palette.mutedText,
-    letterSpacing: 1.5,
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  glassCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.card,
+  profileText: {
+    flex: 1,
+    gap: 2,
   },
-  row: {
+  profileName: {
+    fontFamily: t.weight.bold,
+    fontSize: t.size.h3,
+    letterSpacing: t.tracking.tight,
+  },
+  profileHandle: {
+    fontFamily: t.weight.medium,
+    fontSize: t.size.sm,
+  },
+  profileBio: {
+    fontFamily: t.weight.regular,
+    fontSize: t.size.xs,
+    marginTop: 2,
+  },
+  editPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
+  editPillText: {
+    fontFamily: t.weight.extrabold,
+    fontSize: t.size.micro,
+    letterSpacing: t.tracking.eyebrow,
+  },
+  footer: {
+    marginTop: spacing['3xl'],
+    alignItems: 'center',
+    opacity: 0.5,
+    gap: spacing.md,
+  },
+  footerLogo: {
+    width: 96,
+    height: 32,
+  },
+  versionText: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.micro,
+    letterSpacing: t.tracking.eyebrow,
+    textTransform: 'uppercase',
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  sheet: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing['3xl'],
+    borderTopLeftRadius: radii['2xl'],
+    borderTopRightRadius: radii['2xl'],
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 999,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sheetTitle: {
+    fontFamily: t.weight.bold,
+    fontSize: t.size.h3,
+  },
+  sheetDone: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.body,
+  },
+  langRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    padding: spacing.base,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  langLabel: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.body,
   },
-  iconWrapper: {
-    width: 24,
-    alignItems: 'center',
-  },
-  rowLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: palette.text,
-    marginLeft: 14,
-  },
-  dangerText: {
-    color: palette.destructive,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: palette.border,
-    marginHorizontal: 20,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 64,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: palette.destructive,
-    backgroundColor: 'transparent',
-    gap: 12,
-  },
-  logoutText: {
-    color: palette.destructive,
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-  },
-  footerBrand: {
-    marginTop: 64,
-    alignItems: 'center',
-    opacity: 0.6,
-  },
-  footerLogo: {
-    width: 120,
-    height: 40,
-  },
-  versionText: {
-    color: palette.mutedText,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginTop: 16,
-    textTransform: 'uppercase',
+  langDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 });

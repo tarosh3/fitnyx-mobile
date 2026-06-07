@@ -212,7 +212,7 @@ export function AuthLanding() {
             {/* Bottom Section: Panel — zIndex:20 renders wave on top of the carousel */}
             <Animated.View style={[styles.panelContainer, rPanelStyle]}>
 
-                <View style={[StyleSheet.absoluteFill, { overflow: 'visible', top: -60 }]}>
+                <View style={[StyleSheet.absoluteFill, { overflow: 'visible', top: -Math.max(SCREEN_HEIGHT * 0.11, 80) }]}>
                     <View style={{ width: '100%', height: 300 }}>
                         <Svg viewBox="0 0 1440 300" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                             {/* Stacked strokes mimicking neon glow for Android cross-compatibility */}
@@ -227,7 +227,7 @@ export function AuthLanding() {
                     <View style={{ flex: 1, backgroundColor: '#111111', marginTop: -2 }} />
                 </View>
 
-                <Animated.View style={[styles.panelContentWrapper, rPanelPaddingStyle, { paddingBottom: insets.bottom + 8 }]}>
+                <Animated.View style={[styles.panelContentWrapper, rPanelPaddingStyle, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}>
 
                     {authState === 'IDLE' ? (
                         <View style={styles.idleContent}>

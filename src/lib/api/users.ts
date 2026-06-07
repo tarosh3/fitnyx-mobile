@@ -9,6 +9,7 @@ export interface UpdateProfileData {
   phone?: string;
   avatar_url?: string;
   theme_preference?: 'dark' | 'light';
+  bio?: string;
 }
 
 export interface UserProfile {
@@ -17,9 +18,11 @@ export interface UserProfile {
   username: string;
   first_name?: string;
   last_name?: string;
+  phone?: string;
   avatar_url?: string;
   gender?: string;
   dob?: string;
+  bio?: string;
   onboarding_complete: boolean;
   subscription_tier: string;
 }

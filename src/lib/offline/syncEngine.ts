@@ -59,6 +59,7 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
         set_number: payload.setNumber,
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
+        rpe: payload.rpe,
       });
       break;
     }

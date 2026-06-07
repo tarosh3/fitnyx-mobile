@@ -29,6 +29,14 @@ jest.mock('expo-router', () => ({
   Redirect: 'Redirect',
 }));
 
+// Mock expo-secure-store (native module — unavailable in the jest environment)
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(() => Promise.resolve(null)),
+  setItemAsync: jest.fn(() => Promise.resolve()),
+  deleteItemAsync: jest.fn(() => Promise.resolve()),
+  WHEN_UNLOCKED: 'whenUnlocked',
+}));
+
 // Mock Supabase client
 jest.mock('@/src/lib/supabase', () => ({
   supabase: {

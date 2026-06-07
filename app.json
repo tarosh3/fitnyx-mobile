@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fitnyx.app",
       "backgroundColor": "#050505",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "CADisableMinimumFrameDurationOnPhone": true
       }
@@ -31,7 +32,31 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.fitnyx.app",
       "backgroundColor": "#050505",
-      "permissions": ["FOREGROUND_SERVICE"]
+      "permissions": [
+        "FOREGROUND_SERVICE",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM",
+        "USE_EXACT_ALARM",
+        "VIBRATE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [
+            {
+              "scheme": "fitnyxmobile",
+              "host": "auth",
+              "pathPrefix": "/callback"
+            },
+            {
+              "scheme": "fitnyxmobile"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -43,10 +68,40 @@
       "expo-video",
       "expo-dev-client",
       "./plugins/withNotifeeRepo",
-      "expo-live-activity"
+      "./plugins/withNotifIcon",
+      "expo-live-activity",
+      "@sentry/react-native/expo",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "LiveActivity",
+                  "bundleIdentifier": "com.fitnyx.app.LiveActivity",
+                  "entitlements": {}
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "1dca1118-e477-40fe-9e29-df941784fb68"
+      }
+    },
+    "owner": "tarosh3"
   }
 }

@@ -28,6 +28,7 @@ export interface ExerciseLog {
   is_warmup: boolean;
   rpe?: number;
   created_at: string;
+  is_pr?: boolean; // set by the log endpoint when this set beats the all-time best weight
 }
 
 export interface SessionWithLogs {
@@ -47,6 +48,7 @@ export interface LogExerciseInput {
   actual_reps: number;
   actual_weight_kg?: number;
   actual_rest_seconds?: number;
+  rpe?: number;
 }
 
 export async function logExerciseSet(sessionId: string, data: LogExerciseInput): Promise<ExerciseLog> {

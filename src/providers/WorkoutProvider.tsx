@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { AppState } from 'react-native';
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
+import { isAuthError } from '@/src/lib/api';
 import {
   getActiveSession,
   ActiveSessionResponse,
@@ -101,6 +102,11 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       } catch (error) {
+        if (isAuthError(error)) {
+          // Signed out elsewhere — the global handler is redirecting. Stop quietly.
+          setLoading(false);
+          return;
+        }
         console.warn('Failed to fetch active session', error);
         // On API failure, don't clear the active session — fall through to offline fallback
       }
@@ -271,8 +277,9 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       const confirmed = await offlinePauseSession(activeSession.id);
       setActiveSession(confirmed); // Sync with server-confirmed state
     } catch (error) {
-      console.error('Failed to pause session', error);
       setActiveSession(previousSession); // Revert on failure
+      if (isAuthError(error)) return; // signed out elsewhere — handled globally
+      console.error('Failed to pause session', error);
     }
   };
 
@@ -293,8 +300,9 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       const confirmed = await offlineResumeSession(activeSession.id);
       setActiveSession(confirmed); // Sync with server-confirmed state
     } catch (error) {
-      console.error('Failed to resume session', error);
       setActiveSession(previousSession); // Revert on failure
+      if (isAuthError(error)) return; // signed out elsewhere — handled globally
+      console.error('Failed to resume session', error);
     }
   };
 
@@ -305,6 +313,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       setActiveSession(null);
       await WorkoutNotification.dismiss();
     } catch (error) {
+      if (isAuthError(error)) return; // signed out elsewhere — handled globally
       console.error('Failed to finish session', error);
       throw error;
     }
@@ -328,6 +337,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       setActiveSession(null);
       await WorkoutNotification.dismiss();
     } catch (error) {
+      if (isAuthError(error)) return; // signed out elsewhere — handled globally
       console.error('Failed to abandon session', error);
       throw error;
     }
