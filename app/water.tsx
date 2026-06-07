@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Check, ChevronLeft, Droplet, Minus, Plus, Settings2, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Modal,
   Pressable,
   StyleSheet,
@@ -26,7 +27,7 @@ import { WaterGlass } from '@/src/components/water/WaterGlass';
 import { Screen } from '@/src/components/ui/Screen';
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { getMonthTotals, useWaterToday } from '@/src/lib/water';
+import { getMonthTotals, useWaterToday, WATER_LIMITS } from '@/src/lib/water';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
 
 const PRESETS = [200, 300, 500];
@@ -34,13 +35,14 @@ const PRESETS = [200, 300, 500];
 export default function WaterScreen() {
   const router = useRouter();
   const c = useThemeColors();
-  const { day, goalMl, totalMl, add, remove, setGoal } = useWaterToday();
+  const { day, goalMl, totalMl, add, remove, clearAll, setGoal } = useWaterToday();
 
   const [customOpen, setCustomOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState('250');
   const [goalDraft, setGoalDraft] = useState(String(goalMl));
   const [removeTarget, setRemoveTarget] = useState<{ id: string; label: string } | null>(null);
+  const [clearAllOpen, setClearAllOpen] = useState(false);
 
   const [monthData, setMonthData] = useState<{ date: string; total: number }[]>([]);
   const now = new Date();
@@ -67,13 +69,29 @@ export default function WaterScreen() {
       withTiming(1.04, { duration: 120, easing: Easing.out(Easing.quad) }),
       withSpring(1, { damping: 9, stiffness: 220 })
     );
-    await add(ml);
+    const res = await add(ml);
+    if (res.status === 'daily-cap') {
+      Alert.alert(
+        'Daily limit reached',
+        `You've reached the ${WATER_LIMITS.MAX_DAILY_ML / 1000} L safety cap for one day.`
+      );
+    } else if (res.status === 'entry-limit') {
+      Alert.alert(
+        'Too many entries',
+        `You can log water up to ${WATER_LIMITS.MAX_ENTRIES_PER_DAY} times a day.`
+      );
+    } else if (res.status === 'clamped') {
+      Alert.alert(
+        'Amount capped',
+        `Logged ${res.addedMl} ml — a single log is capped at ${WATER_LIMITS.MAX_ENTRY_ML} ml and the day at ${WATER_LIMITS.MAX_DAILY_ML / 1000} L.`
+      );
+    }
   };
 
   const handleCustomAdd = async () => {
     const n = Number(customAmount);
     if (!Number.isFinite(n) || n <= 0) return;
-    await handleAdd(n);
+    await handleAdd(Math.min(n, WATER_LIMITS.MAX_ENTRY_ML));
     setCustomOpen(false);
   };
 
@@ -205,10 +223,24 @@ export default function WaterScreen() {
             No entries yet. Tap the cup or a preset to log water.
           </Text>
         ) : (
-          day.entries
-            .slice()
-            .reverse()
-            .map((e) => {
+          <>
+            <View style={styles.entriesTopRow}>
+              <Text style={[styles.entriesCount, { color: c.mutedText }]}>
+                {day.entries.length} {day.entries.length === 1 ? 'log' : 'logs'} · {totalLabel}
+              </Text>
+              <Pressable
+                onPress={() => setClearAllOpen(true)}
+                hitSlop={8}
+                style={[styles.clearAllBtn, { borderColor: `${c.destructive}55` }]}
+              >
+                <Trash2 size={13} color={c.destructive} />
+                <Text style={[styles.clearAllText, { color: c.destructive }]}>Clear all</Text>
+              </Pressable>
+            </View>
+            {day.entries
+              .slice()
+              .reverse()
+              .map((e) => {
               const time = new Date(e.loggedAt).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -230,7 +262,8 @@ export default function WaterScreen() {
                   </Pressable>
                 </View>
               );
-            })
+              })}
+          </>
         )}
       </View>
 
@@ -285,13 +318,25 @@ export default function WaterScreen() {
 
       {/* Custom amount sheet */}
       <Sheet visible={customOpen} onClose={() => setCustomOpen(false)} title="Add custom amount">
-        <Stepper value={customAmount} onChange={setCustomAmount} />
+        <Stepper value={customAmount} onChange={setCustomAmount} max={WATER_LIMITS.MAX_ENTRY_ML} />
+        <Text style={[styles.sheetHint, { color: c.mutedText }]}>
+          Up to {WATER_LIMITS.MAX_ENTRY_ML} ml per log.
+        </Text>
         <Button title="Log water" onPress={handleCustomAdd} />
       </Sheet>
 
       {/* Goal sheet */}
       <Sheet visible={goalOpen} onClose={() => setGoalOpen(false)} title="Daily goal">
-        <Stepper value={goalDraft} onChange={setGoalDraft} step={250} />
+        <Stepper
+          value={goalDraft}
+          onChange={setGoalDraft}
+          step={250}
+          min={WATER_LIMITS.MIN_GOAL_ML}
+          max={WATER_LIMITS.MAX_GOAL_ML}
+        />
+        <Text style={[styles.sheetHint, { color: c.mutedText }]}>
+          Between {WATER_LIMITS.MIN_GOAL_ML / 1000} L and {WATER_LIMITS.MAX_GOAL_ML / 1000} L.
+        </Text>
         <Button title="Save goal" onPress={handleSaveGoal} />
       </Sheet>
 
@@ -307,6 +352,21 @@ export default function WaterScreen() {
           setRemoveTarget(null);
         }}
       />
+
+      <ConfirmModal
+        visible={clearAllOpen}
+        title="Clear today's water?"
+        message={`This removes all ${day.entries.length} ${
+          day.entries.length === 1 ? 'entry' : 'entries'
+        } logged today. This can't be undone.`}
+        confirmLabel="Clear all"
+        variant="danger"
+        onCancel={() => setClearAllOpen(false)}
+        onConfirm={async () => {
+          await clearAll();
+          setClearAllOpen(false);
+        }}
+      />
     </Screen>
   );
 }
@@ -315,16 +375,34 @@ function Stepper({
   value,
   onChange,
   step = 50,
+  min = 0,
+  max,
 }: {
   value: string;
   onChange: (v: string) => void;
   step?: number;
+  min?: number;
+  max?: number;
 }) {
   const c = useThemeColors();
+  const clamp = (n: number) => {
+    let v = Math.max(min, n);
+    if (max != null) v = Math.min(max, v);
+    return v;
+  };
   const change = (delta: number) => {
     const base = Number(value);
     const safe = Number.isFinite(base) ? base : 0;
-    onChange(String(Math.max(0, safe + delta)));
+    onChange(String(clamp(safe + delta)));
+  };
+  const handleText = (txt: string) => {
+    if (txt === '') return onChange('');
+    const n = Number(txt);
+    if (!Number.isFinite(n)) return;
+    // Clamp the upper bound while typing so an absurd value can't be entered; the
+    // lower bound is enforced on save so partial input (e.g. "5") isn't blocked.
+    const v = max != null ? Math.min(max, Math.round(n)) : Math.round(n);
+    onChange(String(v));
   };
   return (
     <View style={[styles.stepper, { backgroundColor: c.surface, borderColor: c.border }]}>
@@ -334,8 +412,9 @@ function Stepper({
       <View style={styles.stepValueWrap}>
         <TextInput
           value={value}
-          onChangeText={onChange}
+          onChangeText={handleText}
           keyboardType="number-pad"
+          maxLength={5}
           style={[styles.stepInput, { color: c.text }]}
         />
         <Text style={[styles.stepUnit, { color: c.mutedText }]}>ml</Text>
@@ -480,6 +559,34 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   emptyText: { fontFamily: t.weight.regular, fontSize: t.size.sm, textAlign: 'center', paddingVertical: spacing.md },
+  entriesTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.xs,
+  },
+  entriesCount: {
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.xs,
+    letterSpacing: t.tracking.wide,
+    textTransform: 'uppercase',
+  },
+  clearAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  clearAllText: { fontFamily: t.weight.bold, fontSize: t.size.xs },
+  sheetHint: {
+    fontFamily: t.weight.regular,
+    fontSize: t.size.xs,
+    textAlign: 'center',
+    marginTop: -spacing.xs,
+  },
   entryRow: {
     flexDirection: 'row',
     alignItems: 'center',

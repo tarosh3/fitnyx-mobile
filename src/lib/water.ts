@@ -18,6 +18,25 @@ const ENTRIES_PREFIX = 'fitnyx:water:day:';
 const GOAL_KEY = 'fitnyx:water:goal-ml';
 const DEFAULT_GOAL_ML = 2500;
 
+// Hard limits — enforced here in the data layer so every entry point (tap,
+// presets, custom input) is capped. The app can't be driven to absurd values
+// regardless of any UI bug.
+export const WATER_LIMITS = {
+  MIN_ENTRY_ML: 1,
+  MAX_ENTRY_ML: 2000, // a single log
+  MAX_DAILY_ML: 10000, // total per day — safety ceiling
+  MAX_ENTRIES_PER_DAY: 50, // stop log-spam from bloating storage
+  MIN_GOAL_ML: 500,
+  MAX_GOAL_ML: 6000,
+} as const;
+
+export type AddStatus = 'ok' | 'clamped' | 'daily-cap' | 'entry-limit' | 'invalid';
+export interface AddResult {
+  day: DayLog;
+  status: AddStatus;
+  addedMl: number;
+}
+
 export function ymd(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -28,11 +47,15 @@ export function ymd(d: Date = new Date()): string {
 export async function getGoalMl(): Promise<number> {
   const raw = await AsyncStorage.getItem(GOAL_KEY);
   const n = raw ? Number(raw) : NaN;
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_GOAL_ML;
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_GOAL_ML;
+  // Clamp on read too, so a pre-existing out-of-range value can't slip through.
+  return Math.min(WATER_LIMITS.MAX_GOAL_ML, Math.max(WATER_LIMITS.MIN_GOAL_ML, Math.round(n)));
 }
 
 export async function setGoalMl(ml: number): Promise<void> {
-  await AsyncStorage.setItem(GOAL_KEY, String(Math.max(250, Math.round(ml))));
+  const safe = Number.isFinite(ml) ? Math.round(ml) : DEFAULT_GOAL_ML;
+  const clamped = Math.min(WATER_LIMITS.MAX_GOAL_ML, Math.max(WATER_LIMITS.MIN_GOAL_ML, safe));
+  await AsyncStorage.setItem(GOAL_KEY, String(clamped));
 }
 
 export async function getDay(date: string): Promise<DayLog> {
@@ -46,20 +69,35 @@ export async function getDay(date: string): Promise<DayLog> {
   }
 }
 
-export async function addEntry(amountMl: number, when: Date = new Date()): Promise<DayLog> {
-  if (!Number.isFinite(amountMl) || amountMl <= 0) {
-    return getDay(ymd(when));
-  }
+export async function addEntry(amountMl: number, when: Date = new Date()): Promise<AddResult> {
   const date = ymd(when);
   const day = await getDay(date);
+
+  if (!Number.isFinite(amountMl) || amountMl <= 0) {
+    return { day, status: 'invalid', addedMl: 0 };
+  }
+  if (day.entries.length >= WATER_LIMITS.MAX_ENTRIES_PER_DAY) {
+    return { day, status: 'entry-limit', addedMl: 0 };
+  }
+
+  // Cap the single log, then cap so the running daily total can't exceed the ceiling.
+  const requested = Math.min(Math.round(amountMl), WATER_LIMITS.MAX_ENTRY_ML);
+  const remaining = WATER_LIMITS.MAX_DAILY_ML - sumMl(day);
+  if (remaining <= 0) {
+    return { day, status: 'daily-cap', addedMl: 0 };
+  }
+
+  const addedMl = Math.min(requested, remaining);
   const entry: WaterEntry = {
     id: `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-    amountMl: Math.round(amountMl),
+    amountMl: addedMl,
     loggedAt: when.toISOString(),
   };
   const next: DayLog = { date, entries: [...day.entries, entry] };
   await AsyncStorage.setItem(ENTRIES_PREFIX + date, JSON.stringify(next));
-  return next;
+
+  const status: AddStatus = addedMl < Math.round(amountMl) ? 'clamped' : 'ok';
+  return { day: next, status, addedMl };
 }
 
 export async function removeEntry(date: string, entryId: string): Promise<DayLog> {
@@ -67,6 +105,12 @@ export async function removeEntry(date: string, entryId: string): Promise<DayLog
   const next: DayLog = { ...day, entries: day.entries.filter((e) => e.id !== entryId) };
   await AsyncStorage.setItem(ENTRIES_PREFIX + date, JSON.stringify(next));
   return next;
+}
+
+/** Bulk-delete: wipe every entry logged on the given day. */
+export async function clearDay(date: string): Promise<DayLog> {
+  await AsyncStorage.removeItem(ENTRIES_PREFIX + date);
+  return { date, entries: [] };
 }
 
 export function sumMl(day: DayLog): number {
@@ -114,13 +158,19 @@ export function useWaterToday() {
     refresh();
   }, [refresh]);
 
-  const add = useCallback(async (ml: number) => {
-    const next = await addEntry(ml);
-    setDay(next);
+  const add = useCallback(async (ml: number): Promise<AddResult> => {
+    const res = await addEntry(ml);
+    setDay(res.day);
+    return res;
   }, []);
 
   const remove = useCallback(async (id: string) => {
     const next = await removeEntry(ymd(), id);
+    setDay(next);
+  }, []);
+
+  const clearAll = useCallback(async () => {
+    const next = await clearDay(ymd());
     setDay(next);
   }, []);
 
@@ -129,5 +179,5 @@ export function useWaterToday() {
     setGoalState(await getGoalMl());
   }, []);
 
-  return { day, goalMl, totalMl: sumMl(day), loading, refresh, add, remove, setGoal } as const;
+  return { day, goalMl, totalMl: sumMl(day), loading, refresh, add, remove, clearAll, setGoal } as const;
 }
