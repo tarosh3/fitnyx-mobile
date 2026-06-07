@@ -9,6 +9,7 @@ import {
   listThreads,
   sendThreadMessage,
 } from '@/src/lib/api/agent';
+import { isAuthError } from '@/src/lib/api';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 export type AICoachMessage = {
@@ -134,6 +135,7 @@ export function AICoachProvider({ children }: { children: ReactNode }) {
         return null;
       });
     } catch (error) {
+      if (isAuthError(error)) return; // signed out elsewhere — handled globally
       console.warn('Failed to load threads', error);
     }
   };
@@ -147,8 +149,9 @@ export function AICoachProvider({ children }: { children: ReactNode }) {
       }));
       setMessagesFor(threadId, formatted);
     } catch (error) {
-      console.warn('Failed to load thread messages', error);
       setMessagesFor(threadId, []);
+      if (isAuthError(error)) return; // signed out elsewhere — handled globally
+      console.warn('Failed to load thread messages', error);
     }
   };
 

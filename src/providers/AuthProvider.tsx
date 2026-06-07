@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
-import { _registerAuthFailureHandler, saveMetric } from '@/src/lib/api';
+import { _registerAuthFailureHandler, isAuthError, saveMetric } from '@/src/lib/api';
 import { clearSessionId, getSessionId, registerSession } from '@/src/lib/api/auth';
 import { getOnboardingStatus } from '@/src/lib/api/onboarding';
 import { getProfile, type UserProfile } from '@/src/lib/api/users';
@@ -134,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       applyProfile(profile);
       cacheSet(cacheKey, profile, cacheTTL.DAY);
     } catch (error) {
+      if (isAuthError(error)) return; // signed out elsewhere — handled globally
       console.warn('Failed to load profile', error);
     }
   };
@@ -150,6 +151,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // initialize() + onAuthStateChange (TOKEN_REFRESHED) can't both register
   // and end up with two backend sessions.
   const registrationInFlightRef = useRef<Promise<void> | null>(null);
+
+  // Guards the global auth-failure handler so parallel 401s during boot drive
+  // exactly one sign-out + redirect. Reset to false on each successful sign-in.
+  const authFailureHandledRef = useRef(false);
 
   const ensureSessionRegistered = async (accessToken?: string | null) => {
     if (!accessToken) return;
@@ -238,6 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const currentUser = workingSession.user;
         await ensureSessionRegistered(workingSession.access_token);
         Sentry.setUser({ id: currentUser.id, email: currentUser.email });
+        authFailureHandledRef.current = false; // fresh session — re-arm the failure handler
         setUser(currentUser);
         fetchUserProfile(currentUser.id);
         await checkOnboarding(currentUser);
@@ -256,14 +262,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Allow deep modules (fetchWithAuth) to trigger forced sign-out when
     // they discover the session is gone or refresh has failed.
-    _registerAuthFailureHandler(() => {
+    _registerAuthFailureHandler((reason) => {
+      // Only the first failure drives sign-out + redirect; parallel 401s during
+      // boot would otherwise each clear state and re-navigate.
+      if (authFailureHandledRef.current) return;
+      authFailureHandledRef.current = true;
       clearStaleSession().finally(() => {
         setUser(null);
         setOnboardingComplete(false);
         setAvatarUrl(null);
         setUserProfile(null);
         setLoading(false);
-        router.replace('/login');
+        router.replace(reason ? `/login?reason=${reason}` : '/login');
       });
     });
 
@@ -294,6 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await ensureSessionRegistered(session?.access_token);
           Sentry.setUser({ id: currentUser.id, email: currentUser.email });
+          authFailureHandledRef.current = false; // fresh session — re-arm the failure handler
           setUser(currentUser);
           fetchUserProfile(currentUser.id);
           await checkOnboarding(currentUser);
