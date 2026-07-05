@@ -1,3 +1,5 @@
+import { getDailyInsight } from '@/src/lib/api/agent';
+import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
 import { useAICoach } from '@/src/providers/AICoachProvider';
@@ -5,6 +7,7 @@ import { BlurView } from 'expo-blur';
 import { Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
 import { LevelProgress } from './components/LevelProgress';
@@ -29,8 +32,44 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
     const activity = useActivityData(metrics.sessions);
     const palette = useThemeColors();
     const styles = getStyles(palette);
+    const insets = useSafeAreaInsets();
 
     const userName = (userProfile?.first_name || userProfile?.username || user?.user_metadata?.first_name || 'Athlete');
+
+    // The dashboard endpoint only returns a daily insight if one is already
+    // cached for today — it never generates one. So when it's empty, hit the
+    // generating endpoint, and always settle on real text (never a stuck
+    // "Analysing..." placeholder). The generated insight is cached per-user
+    // for a day so remounting the dashboard doesn't refire the AI call and
+    // burn the 10 req/min rate limit. The dashboard payload's own insight
+    // always takes precedence when present.
+    const FALLBACK_INSIGHT = 'Consistency beats intensity — show up today.';
+    const [insight, setInsight] = React.useState('');
+    const userId: string | undefined = user?.id;
+    React.useEffect(() => {
+        if (metrics.dailyInsight) { setInsight(metrics.dailyInsight); return; }
+        if (metrics.loading) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                if (userId) {
+                    const cached = await cacheGet<string>(cacheKeys.dailyInsight(userId));
+                    if (cached) {
+                        if (!cancelled) setInsight(cached);
+                        return;
+                    }
+                }
+                const r = await getDailyInsight();
+                if (r?.insight && userId) {
+                    cacheSet(cacheKeys.dailyInsight(userId), r.insight, cacheTTL.DAY).catch(() => undefined);
+                }
+                if (!cancelled) setInsight(r?.insight || FALLBACK_INSIGHT);
+            } catch {
+                if (!cancelled) setInsight(FALLBACK_INSIGHT);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [metrics.dailyInsight, metrics.loading, userId]);
 
     if (metrics.loading) {
         return (
@@ -60,7 +99,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
 
     return (
         <ScrollView style={[styles.container, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
-            <View style={styles.content}>
+            <View style={[styles.content, { paddingBottom: 100 + insets.bottom }]}>
                 <ProfileHeader
                     userName={userName}
                     avatarUrl={avatarUrl}
@@ -97,8 +136,8 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
                                         <Text style={styles.aiTitle}>AI COACH INSIGHT</Text>
                                         <View style={styles.aiPulseDot} />
                                     </View>
-                                    <Text style={styles.aiText} numberOfLines={1}>
-                                        "{metrics.dailyInsight || "Analysing your recent performance..."}"
+                                    <Text style={styles.aiText} numberOfLines={2}>
+                                        "{insight || "Analysing your recent performance..."}"
                                     </Text>
                                 </View>
                                 <Sparkles color="rgba(255,255,255,0.05)" size={48} style={styles.aiBgIcon} />

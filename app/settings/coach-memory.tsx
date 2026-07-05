@@ -151,10 +151,10 @@ export default function CoachMemoryScreen() {
         ]}
       >
         {isSaving ? (
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={palette.primaryText} />
         ) : (
           <>
-            <Save color="#fff" size={18} />
+            <Save color={palette.primaryText} size={18} />
             <Text style={styles.saveText}>Save</Text>
           </>
         )}
@@ -259,7 +259,8 @@ const getStyles = (palette: any) =>
       gap: 8,
     },
     saveText: {
-      color: '#fff',
+      // Dark-on-mint matches Button's primary variant; white on #5fc793 is ~1.9:1 contrast.
+      color: palette.primaryText,
       fontSize: 15,
       fontWeight: '700',
       letterSpacing: 0.5,

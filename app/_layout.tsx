@@ -1,4 +1,4 @@
-// Register notification background handler & foreground service at module level
+// Register notification background handler at module level
 import '@/src/lib/notificationBackgroundHandler';
 
 import * as Sentry from '@sentry/react-native';
@@ -41,7 +41,7 @@ import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { AppState, BackHandler, LogBox, ToastAndroid, View, StyleSheet } from 'react-native';
+import { AppState, BackHandler, LogBox, Pressable, Text, ToastAndroid, View, StyleSheet } from 'react-native';
 
 LogBox.ignoreLogs([
   'AuthApiError: Invalid Refresh Token',
@@ -51,6 +51,7 @@ LogBox.ignoreLogs([
 
 import { rescheduleAll as rescheduleAllReminders } from '@/src/lib/reminders';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { enableScreens } from 'react-native-screens';
 
 // Set native screen background to black to prevent white flash during transitions
@@ -68,9 +69,46 @@ import { AuthProvider } from '@/src/providers/AuthProvider';
 import { QueryProvider } from '@/src/providers/QueryProvider';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { WorkoutProvider } from '@/src/providers/WorkoutProvider';
-import AnimatedSplash from '@/src/screens/SplashScreen';
+import { AnimatedSplash } from '@/src/screens/SplashScreen';
 
 SplashScreen.preventAutoHideAsync();
+
+/**
+ * Root render-error fallback. Deliberately standalone (hardcoded dark styling,
+ * system font) so it renders even when providers/fonts themselves crashed.
+ */
+function RootErrorFallback({ resetError }: { resetError: () => void }) {
+  return (
+    <View style={errorStyles.wrap}>
+      <Text style={errorStyles.title}>Something went wrong</Text>
+      <Text style={errorStyles.subtitle}>An unexpected error occurred. Your data is safe.</Text>
+      <Pressable onPress={resetError} style={errorStyles.button}>
+        <Text style={errorStyles.buttonText}>Try again</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  wrap: {
+    flex: 1,
+    backgroundColor: '#050505',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 8,
+  },
+  title: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
+  subtitle: { color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' },
+  button: {
+    marginTop: 16,
+    backgroundColor: '#5fc793',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  buttonText: { color: '#050505', fontSize: 14, fontWeight: '800' },
+});
 
 function DynamicStatusBar() {
   const { theme } = useTheme();
@@ -163,6 +201,8 @@ function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <Sentry.ErrorBoundary fallback={({ resetError }) => <RootErrorFallback resetError={resetError} />}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <QueryProvider>
         <AuthProvider>
           <ThemeProvider defaultTheme="dark" storageKey="fitnyx-theme">
@@ -195,6 +235,8 @@ function RootLayout() {
           </ThemeProvider>
         </AuthProvider>
       </QueryProvider>
+      </SafeAreaProvider>
+      </Sentry.ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

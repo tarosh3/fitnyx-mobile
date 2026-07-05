@@ -362,7 +362,7 @@ const getStyles = (palette: any) => StyleSheet.create({
     alignItems: 'center',
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: 'rgba(108,242,13,0.3)',
+    borderColor: 'rgba(95,199,147,0.4)',
     height: 48,
     justifyContent: 'center',
     overflow: 'hidden',

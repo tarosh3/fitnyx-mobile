@@ -301,7 +301,8 @@ export default function WaterScreen() {
           formatYLabel={(v) => {
             const n = Number(v);
             if (!Number.isFinite(n)) return v;
-            return n >= 1000 ? `${(n / 1000).toFixed(1)}L` : `${Math.round(n)}`;
+            // Consistent units across the whole axis (litres), not ml for small values.
+            return n === 0 ? '0' : `${(n / 1000).toFixed(1)}L`;
           }}
           showReferenceLine1
           referenceLine1Position={goalMl}

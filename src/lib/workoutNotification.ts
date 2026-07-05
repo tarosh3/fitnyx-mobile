@@ -89,7 +89,9 @@ export async function showActiveWorkout(
       body: isPaused ? `Paused at ${formatElapsed(elapsedSec)}` : undefined,
       android: {
         channelId: CHANNEL_ID,
-        asForegroundService: true,
+        // Plain sticky notification — NOT a foreground service. Notifee's
+        // foreground service is declared shortService, which Android 14+
+        // kills after ~3 minutes and crashes the app mid-workout.
         category: AndroidCategory.SERVICE,
         ongoing: true,
         autoCancel: false,
@@ -169,7 +171,7 @@ export async function updateTimer(
       body: isPaused ? `Paused at ${formatElapsed(elapsedSec)}` : undefined,
       android: {
         channelId: CHANNEL_ID,
-        asForegroundService: true,
+        // Plain sticky notification — see showActiveWorkout for why no foreground service.
         category: AndroidCategory.SERVICE,
         ongoing: true,
         autoCancel: false,
@@ -223,9 +225,6 @@ export async function updateTimer(
 }
 
 export async function dismiss(): Promise<void> {
-  if (Platform.OS === 'android') {
-    await notifee.stopForegroundService();
-  }
   await notifee.cancelNotification(NOTIFICATION_ID);
 
   // Stop Live Activity on iOS

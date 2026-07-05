@@ -47,13 +47,17 @@ export function RestTimer({ seconds, onDismiss }: Props) {
     }
   }, [remaining, onDismiss]);
 
+  // Grow the bar's denominator when extending past the original duration, so
+  // the drain bar never overflows.
+  useEffect(() => {
+    setTotal((tot) => Math.max(tot, remaining));
+  }, [remaining]);
+
   const adjust = (delta: number) => {
     finished.current = false;
-    setRemaining((r) => {
-      const next = Math.max(1, r + delta);
-      setTotal((tot) => Math.max(tot, next));
-      return next;
-    });
+    // Functional updater — reading `remaining` from the render closure would
+    // overwrite a tick that landed between render and press.
+    setRemaining((r) => Math.max(1, r + delta));
   };
 
   const done = remaining === 0;

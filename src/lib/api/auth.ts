@@ -39,11 +39,22 @@ export async function registerSession(accessToken?: string): Promise<string> {
     },
   });
   const text = await response.text();
-  const result = text ? JSON.parse(text) : null;
+  // Safely parse JSON — a proxy/gateway may return an HTML error page (e.g. 502)
+  let result: { session_id?: string; error?: string } | null = null;
+  if (text) {
+    try {
+      result = JSON.parse(text);
+    } catch {
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+    }
+  }
   if (!response.ok) {
     throw new Error(result?.error || `API call failed: ${response.statusText}`);
   }
-  const sessionId = result.session_id;
+  const sessionId = result?.session_id;
+  if (!sessionId) {
+    throw new Error('Session registration returned no session_id');
+  }
   await secureStorage.setItem(SESSION_ID_KEY, sessionId);
   _invalidateBackendSessionIdCache(sessionId);
   // A live session is back — clear the global auth-invalidation latch so

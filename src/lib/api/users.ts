@@ -37,3 +37,10 @@ export async function updateProfile(data: UpdateProfileData) {
 export async function getProfile(): Promise<UserProfile> {
   return fetchWithAuth('/users/me');
 }
+
+// Schedules the account for permanent deletion after a 30-day grace window
+// and revokes all backend sessions. Logging back in within the window cancels
+// it. Caller is responsible for local purge via signOut().
+export async function deleteAccount() {
+  return fetchWithAuth('/users/me', { method: 'DELETE' });
+}

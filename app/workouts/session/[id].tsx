@@ -180,7 +180,7 @@ export default function WorkoutSessionScreen() {
   const [addOpen, setAddOpen] = useState(false);
   const [rest, setRest] = useState<{ seconds: number; key: number } | null>(null);
   const [plateWeight, setPlateWeight] = useState<number | null>(null);
-  const [prInfo, setPrInfo] = useState<{ weight: number; name: string } | null>(null);
+  const [prInfo, setPrInfo] = useState<{ weight: number; unit: 'kg' | 'lbs'; name: string } | null>(null);
 
   // Auto-dismiss the PR celebration (cleanup-safe — clears on unmount/change).
   useEffect(() => {
@@ -502,7 +502,11 @@ export default function WorkoutSessionScreen() {
         const loggedEntry = exercises.find((e) => e.exercise.exercise_uuid === exerciseUuid);
         if (created.is_pr && weightKg != null) {
           haptic.success();
-          setPrInfo({ weight: weightKg, name: loggedEntry?.exerciseDetails?.title || 'New PR' });
+          setPrInfo({
+            weight: weightUnit === 'kg' ? weightKg : Number(kgToLbs(weightKg).toFixed(1)),
+            unit: weightUnit,
+            name: loggedEntry?.exerciseDetails?.title || 'New PR',
+          });
         }
         const restSecs =
           loggedEntry?.exercise.rest_seconds && loggedEntry.exercise.rest_seconds > 0
@@ -772,8 +776,9 @@ export default function WorkoutSessionScreen() {
 
               {editingThis ? (
                 <View style={styles.editorBox}>
+                  {/* Reps + Weight — two clean, equal fields */}
                   <View style={styles.editorFields}>
-                    <View style={styles.fieldItemReps}>
+                    <View style={styles.fieldItem}>
                       <Text style={styles.fieldLabel}>REPS</Text>
                       <Input
                         value={reps}
@@ -784,39 +789,43 @@ export default function WorkoutSessionScreen() {
                         style={styles.editorInput}
                       />
                     </View>
-                    <View style={styles.fieldItemWeight}>
-                      <Text style={styles.fieldLabel}>WEIGHT ({weightUnit.toUpperCase()})</Text>
-                      <View style={styles.weightInputRow}>
-                        <Input
-                          value={weight}
-                          onChangeText={setWeight}
-                          sanitize={sanitizeWeight}
-                          keyboardType="decimal-pad"
-                          maxLength={5}
-                          containerStyle={{ flex: 1, minWidth: 0 }}
-                          style={styles.editorInput}
-                        />
+                    <View style={styles.fieldItem}>
+                      <View style={styles.fieldLabelRow}>
+                        <Text style={styles.fieldLabel}>WEIGHT</Text>
                         <Pressable
                           onPress={() => setWeightUnit(weightUnit === 'kg' ? 'lbs' : 'kg')}
-                          style={styles.unitSwitch}
+                          style={styles.unitToggle}
+                          hitSlop={8}
                         >
-                          <Text style={styles.unitSwitchText}>{weightUnit.toUpperCase()}</Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => {
-                            const w = Number(weight);
-                            if (Number.isFinite(w) && w > 0) {
-                              setPlateWeight(weightUnit === 'kg' ? w : lbsToKg(w));
-                            }
-                          }}
-                          style={styles.plateBtn}
-                          hitSlop={6}
-                        >
-                          <Calculator size={16} color={NEON_LIME} />
+                          <Text style={styles.unitToggleText}>{weightUnit.toUpperCase()} ⇄</Text>
                         </Pressable>
                       </View>
+                      <Input
+                        value={weight}
+                        onChangeText={setWeight}
+                        sanitize={sanitizeWeight}
+                        keyboardType="decimal-pad"
+                        maxLength={6}
+                        style={styles.editorInput}
+                      />
                     </View>
                   </View>
+
+                  {/* Plate calculator — clearly labelled, shown once a weight is entered */}
+                  {Number(weight) > 0 ? (
+                    <Pressable
+                      onPress={() => {
+                        const w = Number(weight);
+                        if (Number.isFinite(w) && w > 0) {
+                          setPlateWeight(weightUnit === 'kg' ? w : lbsToKg(w));
+                        }
+                      }}
+                      style={styles.plateCalcBtn}
+                    >
+                      <Calculator size={15} color={NEON_LIME} />
+                      <Text style={styles.plateCalcText}>PLATE CALCULATOR</Text>
+                    </Pressable>
+                  ) : null}
 
                   {!editingLogId && (suggestion || setBaseline) ? (
                     <View style={styles.smartRow}>
@@ -826,32 +835,37 @@ export default function WorkoutSessionScreen() {
                           <Text style={styles.suggestText}>
                             {weightUnit === 'kg' ? suggestion.weightKg : Number(kgToLbs(suggestion.weightKg).toFixed(1))} {weightUnit} × {suggestion.reps}
                           </Text>
+                          <Text style={styles.suggestTapHint}>· TAP</Text>
                         </Pressable>
                       ) : null}
                       {setBaseline ? (
                         <Text style={styles.lastHint}>
-                          Last: {weightUnit === 'kg' ? setBaseline.weightKg : Number(kgToLbs(setBaseline.weightKg).toFixed(1))} {weightUnit} × {setBaseline.reps}
-                          {setBaseline.rpe ? ` @${setBaseline.rpe}` : ''}
+                          Last: {weightUnit === 'kg' ? setBaseline.weightKg : Number(kgToLbs(setBaseline.weightKg).toFixed(1))} {weightUnit} × {setBaseline.reps}{setBaseline.rpe ? ` @${setBaseline.rpe}` : ''}
                         </Text>
                       ) : null}
                     </View>
                   ) : null}
 
                   {!editingLogId ? (
-                    <View style={styles.rpeRow}>
-                      <Text style={styles.rpeLabel}>RPE</Text>
-                      {[6, 7, 8, 9, 10].map((v) => {
-                        const active = rpe === v;
-                        return (
-                          <Pressable
-                            key={v}
-                            onPress={() => setRpe(active ? null : v)}
-                            style={[styles.rpeChip, active && styles.rpeChipActive]}
-                          >
-                            <Text style={[styles.rpeChipText, active && styles.rpeChipTextActive]}>{v}</Text>
-                          </Pressable>
-                        );
-                      })}
+                    <View style={styles.rpeBlock}>
+                      <View style={styles.rpeHeaderRow}>
+                        <Text style={styles.rpeLabel}>RPE</Text>
+                        <Text style={styles.rpeHint}>effort · 6 easy → 10 max</Text>
+                      </View>
+                      <View style={styles.rpeRow}>
+                        {[6, 7, 8, 9, 10].map((v) => {
+                          const active = rpe === v;
+                          return (
+                            <Pressable
+                              key={v}
+                              onPress={() => setRpe(active ? null : v)}
+                              style={[styles.rpeChip, active && styles.rpeChipActive]}
+                            >
+                              <Text style={[styles.rpeChipText, active && styles.rpeChipTextActive]}>{v}</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
                     </View>
                   ) : null}
 
@@ -865,7 +879,7 @@ export default function WorkoutSessionScreen() {
                         <ActivityIndicator size="small" color="#000" />
                       ) : (
                         <Text style={styles.submitSetBtnText}>
-                          {editingLogId ? 'UPDATE SESSION DATA' : 'CONFIRM SET'}
+                          {editingLogId ? 'UPDATE SET' : 'CONFIRM SET'}
                         </Text>
                       )}
                     </Pressable>
@@ -942,7 +956,7 @@ export default function WorkoutSessionScreen() {
           <View style={styles.prCard}>
             <Text style={styles.prEmoji}>🎉</Text>
             <Text style={styles.prTitle}>NEW PR</Text>
-            {prInfo.weight > 0 ? <Text style={styles.prWeight}>{prInfo.weight} kg</Text> : null}
+            {prInfo.weight > 0 ? <Text style={styles.prWeight}>{prInfo.weight} {prInfo.unit}</Text> : null}
             <Text style={styles.prName} numberOfLines={1}>{prInfo.name}</Text>
           </View>
         </Pressable>
@@ -1209,7 +1223,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   root: { flex: 1, backgroundColor: DEPTH_BG },
-  smartRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' },
+  smartRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   suggestChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1222,12 +1236,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(95,199,147,0.3)',
   },
   suggestText: { color: NEON_LIME, fontSize: 13, fontWeight: '900' },
+  suggestTapHint: { color: 'rgba(95,199,147,0.55)', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
   lastHint: { color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: '600' },
-  rpeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' },
-  rpeLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '800', letterSpacing: 1, marginRight: 4 },
+  rpeBlock: { gap: 10 },
+  rpeHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rpeHint: { color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: '600' },
+  rpeRow: { flexDirection: 'row', gap: 8 },
+  rpeLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   rpeChip: {
-    width: 40,
-    height: 40,
+    flex: 1,
+    height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1238,17 +1256,6 @@ const styles = StyleSheet.create({
   rpeChipActive: { backgroundColor: NEON_LIME, borderColor: NEON_LIME },
   rpeChipText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '800' },
   rpeChipTextActive: { color: '#000', fontWeight: '900' },
-  plateBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(95,199,147,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(95,199,147,0.25)',
-    marginLeft: 8,
-  },
   prBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -1299,19 +1306,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  fieldItemReps: {
-    flex: 2,
+  fieldItem: {
+    flex: 1,
     gap: 8,
   },
-  fieldItemWeight: {
-    flex: 3,
-    gap: 8,
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 16,
   },
   fieldLabel: {
     color: 'rgba(255,255,255,0.4)',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  unitToggle: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(95,199,147,0.1)',
+  },
+  unitToggleText: {
+    color: NEON_LIME,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   editorInput: {
     backgroundColor: 'rgba(0,0,0,0.2)',
@@ -1321,26 +1342,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  weightInputRow: {
+  plateCalcBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  unitSwitch: {
-    width: 44,
-    minWidth: 44,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(95,199,147,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(95,199,147,0.2)',
   },
-  unitSwitchText: {
+  plateCalcText: {
     color: NEON_LIME,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
+    letterSpacing: 1,
   },
   editorActions: {
     gap: 10,

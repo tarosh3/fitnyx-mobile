@@ -58,6 +58,18 @@ export function isAuthError(error: unknown): error is AuthError {
 export function _resetAuthInvalidated() {
   authInvalidated = false;
   authFailureReason = null;
+  authFailureRedirectSuppressed = false;
+}
+
+// Set by deliberate sign-out flows (account deletion) before the backend revokes
+// all sessions. Concurrent in-flight calls then 401 with SESSION_REVOKED; without
+// this latch the global handler would race the flow's own signOut() and land the
+// user on /login?reason=session_revoked ("logged in elsewhere") right after they
+// deleted their account. Cleared on SIGNED_OUT, on registerSession, or explicitly
+// with `false` when the flow fails before signing out.
+let authFailureRedirectSuppressed = false;
+export function _suppressAuthFailureRedirect(suppress: boolean = true) {
+  authFailureRedirectSuppressed = suppress;
 }
 
 // Centralizes the one-time sign-out trigger. Re-entrant calls only re-wipe the
@@ -71,7 +83,9 @@ function invalidateAuth(reason: AuthFailureReason) {
   if (authInvalidated) return;
   authInvalidated = true;
   authFailureReason = reason;
-  onAuthFailureCallback?.(reason);
+  if (!authFailureRedirectSuppressed) {
+    onAuthFailureCallback?.(reason);
+  }
 }
 
 supabase.auth.onAuthStateChange((event, session) => {
@@ -81,6 +95,7 @@ supabase.auth.onAuthStateChange((event, session) => {
     cachedBackendSessionId = null;
     authInvalidated = false;
     authFailureReason = null;
+    authFailureRedirectSuppressed = false;
     return;
   }
   if (session?.access_token) {

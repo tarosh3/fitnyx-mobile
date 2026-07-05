@@ -13,6 +13,8 @@ import { getProfile, type UserProfile } from '@/src/lib/api/users';
 import { cacheClear, cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { clearOfflineQueue, getOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { clearAllOfflineData } from '@/src/lib/offline/offlineStore';
+import { clearAllReminders } from '@/src/lib/reminders';
+import { clearAllWaterData } from '@/src/lib/water';
 import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
 import { supabase } from '@/src/lib/supabase';
 
@@ -198,6 +200,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // ignore — best-effort wipe
       }
       await clearSessionId().catch(() => undefined);
+      // Forced sign-outs (revoked session, dead refresh token) must purge the
+      // same local data as a manual sign-out — otherwise the next account on
+      // this device inherits the previous user's caches, water log, reminders.
+      await cacheClear().catch(() => undefined);
+      await clearAllOfflineData().catch(() => undefined);
+      await clearOfflineQueue().catch(() => undefined);
+      await clearAllWaterData().catch(() => undefined);
+      await clearAllReminders().catch(() => undefined);
     };
 
     const initialize = async () => {
@@ -242,7 +252,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const currentUser = workingSession.user;
         await ensureSessionRegistered(workingSession.access_token);
-        Sentry.setUser({ id: currentUser.id, email: currentUser.email });
+        // id only — never send email to Sentry (privacy-label liability)
+        Sentry.setUser({ id: currentUser.id });
         authFailureHandledRef.current = false; // fresh session — re-arm the failure handler
         setUser(currentUser);
         fetchUserProfile(currentUser.id);
@@ -303,7 +314,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
         try {
           await ensureSessionRegistered(session?.access_token);
-          Sentry.setUser({ id: currentUser.id, email: currentUser.email });
+          // id only — never send email to Sentry (privacy-label liability)
+          Sentry.setUser({ id: currentUser.id });
           authFailureHandledRef.current = false; // fresh session — re-arm the failure handler
           setUser(currentUser);
           fetchUserProfile(currentUser.id);
@@ -355,6 +367,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await cacheClear();
     await clearAllOfflineData();
     await clearOfflineQueue();
+    await clearAllWaterData().catch(() => undefined);
+    await clearAllReminders().catch(() => undefined);
     await supabase.auth.signOut();
     setUser(null);
     router.replace('/');

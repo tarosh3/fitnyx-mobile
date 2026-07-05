@@ -21,9 +21,21 @@ Whenever you make a mistake, get corrected, or discover something new about this
 npx expo start            # Start dev server
 npx expo run:ios          # Run on iOS simulator
 npx expo run:android      # Run on Android emulator
+npm test                  # Jest tests (jest-expo preset)
+npm run test:watch        # Jest watch mode
+npm run test:coverage     # Jest with coverage
+npx tsc --noEmit          # Type-check (same as CI)
 ```
 
-No lint or test commands configured in package.json yet.
+No eslint/prettier configured yet.
+
+**CI**: `.github/workflows/ci.yml` runs `tsc --noEmit`, `npm test`, and `npx expo export --platform web` on push/PR to main/staging. Run all three locally before pushing.
+
+**Builds**: `eas.json` profiles — `development` (dev client, localhost backend), `preview` (internal Android APK, prod backend), `production` (autoIncrement). Prod backend: `https://fitnyx.onrender.com`. Bundle ID: `com.fitnyx.app`.
+
+**Backend** (from `/Users/taroshmathuria/FitNyx/backend`): `go run ./cmd/server` (loads `.env` via godotenv), `make test`, `make test-cover`.
+
+**Project skills** (`.claude/skills/`): `run-app`, `build-apk`, `test-app`, `debug-app` — use these for running, building APKs, testing, and debugging workflows.
 
 ---
 
@@ -51,13 +63,13 @@ No lint or test commands configured in package.json yet.
 
 **API (`src/lib/api.ts` + `src/lib/api/`):**
 All authenticated calls via `fetchWithAuth()` — attaches Supabase JWT automatically.
-Domain modules: `auth`, `exercises`, `onboarding`, `users`, `username`, `workoutPlans`, `workoutSessions`, `agent`.
+Domain modules: `auth`, `dashboard`, `exercises`, `onboarding`, `users`, `username`, `workoutPlans`, `workoutSessions`, `agent`.
 
 **Cache (`src/lib/cache/`):**
 Two layers: in-memory Map (fast) + AsyncStorage via indexeddb.ts (persisted).
 - Use `cacheGet` / `cacheSet` / `cacheInvalidate` from `src/lib/cache/index.ts`
 - Keys defined in `src/lib/cache/keys.ts` — TTLs: SHORT 1m, MEDIUM 5m, LONG 30m, DAY 24h
-- Use `useCachedQuery` hook for stale-while-revalidate in components
+- Component data fetching: `cacheGet` first, fetch on miss, `cacheSet` the result (see `useRetentionMetrics`) — there is NO `useCachedQuery` hook in this codebase (audit 2026-07-05 confirmed zero references; don't invent it)
 
 **Offline (`src/lib/db.ts`):**
 AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:offline-queue`. Replayed by AuthProvider on reconnect.
@@ -98,19 +110,41 @@ Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, Ba
 - `useThemeColors()` for every color — never hardcode hex values
 - Named exports only — never default exports
 - Cache keys in `src/lib/cache/keys.ts` — never inline strings
-- `useCachedQuery` for data fetching in components
+- Cached data fetching in components: `cacheGet` → fetch on miss → `cacheSet` (no `useCachedQuery` hook exists)
 - Components over ~150 lines should be split
 
 ---
 
-## How to work — follow this every time
+## God Mode — working rules (follow every time)
 
-1. **Read before writing** — check relevant files before making changes, never assume structure
-2. **Find the pattern** — look for a similar existing feature and match it exactly
-3. **Extend, don't create** — add to existing modules before making new files
-4. **Check the API module** — before writing any API call, check `src/lib/api/` first
-5. **Small steps** — make one logical change at a time, don't rewrite large sections unprompted
-6. **Ask, don't guess** — if the right approach is unclear, ask before writing code
+**Zero guesswork**
+- Never edit from assumed contents — Read the actual file first
+- Function/API/type not in context → grep for it; never infer signatures
+- Ambiguous requirement or constraint → ask, don't guess
+- Plan fails or bug appears → discard the assumption, check logs/actual state; zero ego
+
+**Cross-repo sync** (mobile ↔ Go backend ↔ admin dashboard)
+- Before editing, state which repos are impacted and any breaking changes
+- API request/response shapes must stay aligned: Go handlers ↔ mobile `src/lib/api/*` types
+- DB schema is owned by the Go backend (SQL migrations) — admin Prisma and mobile follow, never lead (see `db-migrate` skill)
+
+**Execution loop — every task**
+1. **Discovery**: read/grep the actual state of all relevant repos
+2. **Impact analysis**: list repos/services touched + potential breaking changes
+3. **Plan**: multi-file or non-trivial change → list files + blast radius before editing; public API contract change → wait for user confirmation
+4. **Implement + verify**: task is incomplete until checks pass
+
+**Scope discipline**
+- Smallest change that solves the problem — no drive-by refactors, no speculative abstraction, no reformatting untouched lines, no placeholder TODOs
+- Fix needs a big change → state why before writing it
+- Find the pattern: match a similar existing feature exactly; extend existing modules before creating new files
+- Check `src/lib/api/` before writing any API call
+
+**Done = verified**
+- Mobile: `npx tsc --noEmit && npm test` · Backend: `make test` · Admin: `npm run build`
+- Report failures honestly — never paper over a red test
+
+**Output style**: 1–2 sentences per action; let diffs and passing tests speak.
 
 ---
 
