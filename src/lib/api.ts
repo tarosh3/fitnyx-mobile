@@ -28,7 +28,7 @@ let inflightSessionFetch: Promise<string | null> | null = null;
 // every fetchWithAuth fails fast and quiet (no network, no per-caller error log)
 // instead of each provider independently hitting a 401 and logging its own error.
 // Cleared on the next successful registerSession (api/auth.ts) or local SIGNED_OUT.
-export type AuthFailureReason = 'session_revoked' | 'expired';
+export type AuthFailureReason = 'session_revoked' | 'expired' | 'invite_required' | 'invite_expired';
 
 let authInvalidated = false;
 let authFailureReason: AuthFailureReason | null = null;
@@ -51,6 +51,29 @@ export function isAuthError(error: unknown): error is AuthError {
   return (
     error instanceof AuthError ||
     (typeof error === 'object' && error !== null && (error as { isAuthError?: boolean }).isAuthError === true)
+  );
+}
+
+/**
+ * Thrown by registerSession when the backend refuses to create a session
+ * because the user has no live invite-access window (403 INVITE_REQUIRED /
+ * INVITE_EXPIRED). Defined here (not api/auth.ts) so fetchWithAuth can detect
+ * it without an import cycle.
+ */
+export class InviteGateError extends Error {
+  readonly isInviteGateError = true;
+  code: 'INVITE_REQUIRED' | 'INVITE_EXPIRED';
+  constructor(message: string, code: 'INVITE_REQUIRED' | 'INVITE_EXPIRED') {
+    super(message);
+    this.name = 'InviteGateError';
+    this.code = code;
+  }
+}
+
+export function isInviteGateError(error: unknown): error is InviteGateError {
+  return (
+    error instanceof InviteGateError ||
+    (typeof error === 'object' && error !== null && (error as { isInviteGateError?: boolean }).isInviteGateError === true)
   );
 }
 
@@ -267,7 +290,11 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (currentSession?.access_token) {
           // Re-register so subsequent calls (and this one, if idempotent) succeed.
-          const { registerSession } = await import('@/src/lib/api/auth');
+          // Lazy require (not import()) — avoids the static circular import
+          // with api/auth.ts and, unlike native dynamic import, runs under
+          // jest without --experimental-vm-modules.
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { registerSession } = require('@/src/lib/api/auth') as typeof import('@/src/lib/api/auth');
           await registerSession(currentSession.access_token);
           reRegistered = true;
           const newSessionId = await secureStorage.getItem(SESSION_ID_KEY);
@@ -295,7 +322,15 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
             }
           }
         }
-      } catch {
+      } catch (reRegisterError) {
+        // The gate refused a new session: without this latch every poller
+        // (WorkoutProvider etc.) would loop re-register → 403 forever.
+        if (isInviteGateError(reRegisterError)) {
+          const reason: AuthFailureReason =
+            reRegisterError.code === 'INVITE_EXPIRED' ? 'invite_expired' : 'invite_required';
+          invalidateAuth(reason);
+          throw new AuthError(reRegisterError.message, reRegisterError.code, reason);
+        }
         reRegistered = false;
       }
 

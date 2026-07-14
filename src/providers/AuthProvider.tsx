@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
-import { _registerAuthFailureHandler, isAuthError, saveMetric } from '@/src/lib/api';
+import { _registerAuthFailureHandler, isAuthError, isInviteGateError, saveMetric } from '@/src/lib/api';
 import { clearSessionId, getSessionId, registerSession } from '@/src/lib/api/auth';
 import { getOnboardingStatus } from '@/src/lib/api/onboarding';
 import { getProfile, type UserProfile } from '@/src/lib/api/users';
@@ -21,6 +21,10 @@ import { supabase } from '@/src/lib/supabase';
 // Durable key that persists indefinitely (not subject to TTL expiry)
 const ONBOARDING_DONE_KEY = 'fitnyx:onboarding-complete';
 
+// Outcome of backend session registration: 'ok' also covers already-registered;
+// the invite states park the user on the gate screens.
+type GateStatus = 'ok' | 'failed' | 'invite_required' | 'invite_expired';
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -33,6 +37,8 @@ interface AuthContextType {
   markOnboardingComplete: () => void;
   avatarUrl: string | null;
   userProfile: UserProfile | null;
+  /** Called by the invite screens after a successful redeem + re-registration. */
+  onInviteRedeemed: () => Promise<void>;
 }
 
 const ONBOARDING_EXEMPT_PATHS = [
@@ -46,6 +52,8 @@ const ONBOARDING_EXEMPT_PATHS = [
   '/delete-account',
   '/login',
   '/signup',
+  '/invite',
+  '/access-expired',
 ];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,6 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  // Non-null while the backend refuses a session pending invite redemption.
+  // Drives the re-park effect below so the user can't wander off the gate
+  // screens (hardware back, deep links, stale nav history).
+  const [inviteGate, setInviteGate] = useState<'invite_required' | 'invite_expired' | null>(null);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -141,45 +153,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Redirect to onboarding if needed (reacts to path changes)
+  // Redirect to onboarding if needed (reacts to path changes). Gated users are
+  // excluded — the invite re-park effect owns their navigation.
   useEffect(() => {
-    if (!loading && user && !onboardingComplete && !ONBOARDING_EXEMPT_PATHS.includes(pathname)) {
+    if (!loading && user && !inviteGate && !onboardingComplete && !ONBOARDING_EXEMPT_PATHS.includes(pathname)) {
       router.replace('/onboarding');
     }
-  }, [pathname, loading, user, onboardingComplete]);
+  }, [pathname, loading, user, onboardingComplete, inviteGate]);
+
+  // Pin gated users to their gate screen. Navigating only when the pathname
+  // differs also prevents remount churn when TOKEN_REFRESHED re-triggers the
+  // gate while the user is already parked (mid-typed code would be wiped).
+  useEffect(() => {
+    if (loading || !user || !inviteGate) return;
+    const target = inviteGate === 'invite_expired' ? '/access-expired' : '/invite';
+    if (pathname !== target) {
+      router.replace(target);
+    }
+  }, [pathname, loading, user, inviteGate]);
 
   // Initialize auth and listen for state changes (runs once)
   // A single in-flight promise dedupes concurrent registerSession calls so
   // initialize() + onAuthStateChange (TOKEN_REFRESHED) can't both register
   // and end up with two backend sessions.
-  const registrationInFlightRef = useRef<Promise<void> | null>(null);
+  const registrationInFlightRef = useRef<Promise<GateStatus> | null>(null);
 
   // Guards the global auth-failure handler so parallel 401s during boot drive
   // exactly one sign-out + redirect. Reset to false on each successful sign-in.
   const authFailureHandledRef = useRef(false);
 
-  const ensureSessionRegistered = async (accessToken?: string | null) => {
-    if (!accessToken) return;
+  const ensureSessionRegistered = async (accessToken?: string | null): Promise<GateStatus> => {
+    if (!accessToken) return 'failed';
     if (registrationInFlightRef.current) {
-      await registrationInFlightRef.current;
-      return;
+      return registrationInFlightRef.current;
     }
     const existing = await getSessionId();
-    if (existing) return;
+    if (existing) return 'ok';
 
-    const task = (async () => {
+    const task = (async (): Promise<GateStatus> => {
       try {
         await registerSession(accessToken);
+        return 'ok';
       } catch (e) {
+        // Invite gate: the backend refuses a session until a code is redeemed
+        // (or a fresh one, when access expired). Surfaced so callers route to
+        // the gate screens instead of proceeding into 401 churn.
+        if (isInviteGateError(e)) {
+          return e.code === 'INVITE_EXPIRED' ? 'invite_expired' : 'invite_required';
+        }
         console.warn('Session registration failed:', e);
+        return 'failed';
       }
     })();
     registrationInFlightRef.current = task;
     try {
-      await task;
+      return await task;
     } finally {
       registrationInFlightRef.current = null;
     }
+  };
+
+  // Shared handling for a gated registration: keep the Supabase user (their
+  // JWT is required to redeem), skip profile/onboarding fetches (they would
+  // just 401 against the missing backend session). Navigation happens in the
+  // re-park effect, driven by the inviteGate state set here.
+  const routeToGate = (gate: 'invite_required' | 'invite_expired', currentUser: User) => {
+    Sentry.setUser({ id: currentUser.id });
+    setUser(currentUser);
+    setInviteGate(gate);
   };
 
   useEffect(() => {
@@ -251,10 +292,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const currentUser = workingSession.user;
-        await ensureSessionRegistered(workingSession.access_token);
+        const gate = await ensureSessionRegistered(workingSession.access_token);
+        if (gate === 'invite_required' || gate === 'invite_expired') {
+          routeToGate(gate, currentUser);
+          return;
+        }
         // id only — never send email to Sentry (privacy-label liability)
         Sentry.setUser({ id: currentUser.id });
         authFailureHandledRef.current = false; // fresh session — re-arm the failure handler
+        setInviteGate(null);
         setUser(currentUser);
         fetchUserProfile(currentUser.id);
         await checkOnboarding(currentUser);
@@ -278,6 +324,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // boot would otherwise each clear state and re-navigate.
       if (authFailureHandledRef.current) return;
       authFailureHandledRef.current = true;
+
+      // Invite gate reasons: do NOT sign out locally — the Supabase JWT is
+      // exactly what the gate screens need to redeem a code. Setting the gate
+      // state parks them via the re-park effect.
+      if (reason === 'invite_required' || reason === 'invite_expired') {
+        setInviteGate(reason);
+        setLoading(false);
+        return;
+      }
+
       clearStaleSession().finally(() => {
         setUser(null);
         setOnboardingComplete(false);
@@ -301,6 +357,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT') {
         Sentry.setUser(null);
         setUser(null);
+        setInviteGate(null);
         setOnboardingComplete(false);
         setAvatarUrl(null);
         setUserProfile(null);
@@ -313,10 +370,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         setLoading(true);
         try {
-          await ensureSessionRegistered(session?.access_token);
+          const gate = await ensureSessionRegistered(session?.access_token);
+          if (gate === 'invite_required' || gate === 'invite_expired') {
+            routeToGate(gate, currentUser);
+            return;
+          }
           // id only — never send email to Sentry (privacy-label liability)
           Sentry.setUser({ id: currentUser.id });
           authFailureHandledRef.current = false; // fresh session — re-arm the failure handler
+          setInviteGate(null);
           setUser(currentUser);
           fetchUserProfile(currentUser.id);
           await checkOnboarding(currentUser);
@@ -394,6 +456,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // After the invite screens redeem a code and re-register the session:
+  // clear the gate (so the re-park effect stands down), re-arm the failure
+  // handler, load what the gate skipped, and enter the app.
+  const onInviteRedeemed = async () => {
+    setInviteGate(null);
+    authFailureHandledRef.current = false;
+    const currentUser = user;
+    if (!currentUser) {
+      router.replace('/login');
+      return;
+    }
+    fetchUserProfile(currentUser.id);
+    const complete = await checkOnboarding(currentUser);
+    router.replace(complete ? '/dashboard' : '/onboarding');
+  };
+
   const value = useMemo<AuthContextType>(
     () => ({
       user,
@@ -407,6 +485,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       markOnboardingComplete,
       avatarUrl,
       userProfile,
+      onInviteRedeemed,
     }),
     [user, loading, onboardingComplete, avatarUrl, userProfile, isAuthOpen, authMode]
   );
