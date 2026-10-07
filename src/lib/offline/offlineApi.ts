@@ -9,6 +9,7 @@ import {
   LogExerciseInput,
   StartSessionInput,
   getWorkoutSession,
+  localDateKey,
   SessionWithLogs,
 } from '@/src/lib/api/workoutSessions';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue, idbSet } from '@/src/lib/cache/indexeddb';
@@ -77,7 +78,7 @@ export async function offlineStartSession(input: StartSessionInput): Promise<Wor
     user_id: '',
     plan_id: input.workout_plan_id,
     day_id: input.workout_day_id,
-    workout_date: now.split('T')[0],
+    workout_date: localDateKey(new Date(now)),
     started_at: now,
     status: 'in_progress',
     total_duration_sec: 0,
