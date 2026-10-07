@@ -117,6 +117,10 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
   }
 }
 
+export function isTransientStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
 let syncInProgress = false;
 
 export async function processOfflineQueue(): Promise<SyncResult> {
@@ -152,13 +156,16 @@ async function processOfflineQueueInternal(): Promise<SyncResult> {
       // Keep in queue for retry if:
       // - Session not yet synced (dependency ordering)
       // - No HTTP status (network/transient error)
-      if (message.includes('not yet synced') || !status) {
+      // - Timeout, rate limit or server error — the mutation itself is fine.
+      //   Replaying a whole offline workout can exceed the 60 req/min limit;
+      //   dropping on 429 would silently lose sets.
+      if (message.includes('not yet synced') || !status || isTransientStatus(status)) {
         result.failed++;
         result.errors.push({ mutation, error: message });
         continue;
       }
 
-      // Hard server rejection (4xx) — remove from queue, mutation is invalid
+      // Hard client rejection (other 4xx) — remove from queue, mutation is invalid
       console.warn(`Sync failed for ${mutation.type} (${status}):`, message);
       await removeFromOfflineQueue(mutation.id);
       result.failed++;
