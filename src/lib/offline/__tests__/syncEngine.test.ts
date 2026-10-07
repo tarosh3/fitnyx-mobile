@@ -79,3 +79,54 @@ describe('isTransientStatus', () => {
     expect([400, 401, 403, 404, 409, 422].some(isTransientStatus)).toBe(false);
   });
 });
+
+describe('processOfflineQueue — rejected offline session start', () => {
+  const { sessionAction } = jest.requireMock('@/src/lib/api/workoutSessions') as { sessionAction: jest.Mock };
+  const { getIdMapping, clearPersistedSession } = jest.requireMock('@/src/lib/offline/offlineStore') as {
+    getIdMapping: jest.Mock;
+    clearPersistedSession: jest.Mock;
+  };
+
+  beforeEach(() => {
+    mockQueue.length = 0;
+    mockLogSet.mockReset();
+    sessionAction.mockReset();
+    clearPersistedSession.mockClear();
+    getIdMapping.mockResolvedValue(null);
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  it('drops the sets and actions of a start the server rejects', async () => {
+    const t = Date.now();
+    mockQueue.push(
+      { id: 's', type: 'START_SESSION', payload: { tempId: 'offline-1', startedAt: 'x' }, timestamp: t },
+      { id: 'l', type: 'LOG_SET', payload: { sessionId: 'offline-1', exerciseUuid: 'e', setNumber: 1, reps: 5 }, timestamp: t + 1 },
+      { id: 'f', type: 'FINISH_SESSION', payload: { sessionId: 'offline-1', timestamp: 'x' }, timestamp: t + 2 },
+      { id: 'other', type: 'LOG_SET', payload: { sessionId: 'real-2', exerciseUuid: 'e', setNumber: 1, reps: 5 }, timestamp: t + 3 },
+    );
+    sessionAction.mockRejectedValue(httpError(400));
+    mockLogSet.mockResolvedValue({ id: 'log' });
+
+    await processOfflineQueue();
+
+    expect(mockQueue).toHaveLength(0);
+    expect(clearPersistedSession).toHaveBeenCalledWith('offline-1');
+    // Unrelated session's set still synced.
+    expect(mockLogSet).toHaveBeenCalledTimes(1);
+    expect(mockLogSet.mock.calls[0][0]).toBe('real-2');
+  });
+
+  it('keeps everything queued when the start fails transiently', async () => {
+    const t = Date.now();
+    mockQueue.push(
+      { id: 's', type: 'START_SESSION', payload: { tempId: 'offline-1', startedAt: 'x' }, timestamp: t },
+      { id: 'l', type: 'LOG_SET', payload: { sessionId: 'offline-1', exerciseUuid: 'e', setNumber: 1, reps: 5 }, timestamp: t + 1 },
+    );
+    sessionAction.mockRejectedValue(httpError(503));
+
+    await processOfflineQueue();
+
+    expect(mockQueue.map((m) => m.id)).toEqual(['s', 'l']);
+    expect(clearPersistedSession).not.toHaveBeenCalled();
+  });
+});
