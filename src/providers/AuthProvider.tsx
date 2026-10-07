@@ -73,6 +73,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
+  // Mirrors user?.id for the once-registered auth listener (its closure would
+  // otherwise only ever see the initial null user).
+  const currentUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    currentUserIdRef.current = user?.id ?? null;
+  }, [user]);
+
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
@@ -366,6 +373,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const currentUser = session?.user ?? null;
+
+      // Routine hourly/on-resume refresh for the user already in the app with a
+      // registered backend session: nothing to re-check. Flipping loading here
+      // unmounted Home/Dashboard behind a spinner on every refresh.
+      if (
+        event === 'TOKEN_REFRESHED' &&
+        currentUser &&
+        currentUser.id === currentUserIdRef.current &&
+        (await getSessionId())
+      ) {
+        return;
+      }
 
       if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         setLoading(true);
