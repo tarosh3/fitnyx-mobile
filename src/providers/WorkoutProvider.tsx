@@ -17,7 +17,9 @@ import {
 import {
   getActiveOfflineSessionId,
   getOfflineSession,
+  isOfflineId,
   persistSessionState,
+  setActiveOfflineSessionId,
 } from '@/src/lib/offline/offlineStore';
 import * as WorkoutNotification from '@/src/lib/workoutNotification';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -86,15 +88,20 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
           // Persist for crash recovery
           persistSessionState(response.session, response.exercise_logs || []).catch(() => {});
         } else {
-          // Check for offline-started session that hasn't synced yet
+          // Check for offline-started session that hasn't synced yet. A real
+          // (server) id here is stale — the server just said it isn't active
+          // (e.g. finished from the notification while backgrounded) — so drop
+          // the pointer instead of resurrecting it.
           const offlineId = await getActiveOfflineSessionId();
-          if (offlineId) {
+          if (offlineId && isOfflineId(offlineId)) {
             const offlineSession = await getOfflineSession(offlineId);
             if (offlineSession && (offlineSession.status === 'in_progress' || offlineSession.status === 'paused')) {
               setActiveSession(offlineSession);
               setLoading(false);
               return;
             }
+          } else if (offlineId) {
+            await setActiveOfflineSessionId(null);
           }
           setActiveSession(null);
           setElapsedTime(0);
