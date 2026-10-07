@@ -565,7 +565,7 @@ export default function WorkoutSessionScreen() {
       console.error('Failed to update pause state', actionError);
       setError('Failed to update session state.');
     }
-  }, [sessionId, session?.status]);
+  }, [sessionId, session?.status, pauseActiveSession, resumeActiveSession]);
 
   const completeWorkout = useCallback(async () => {
     if (!sessionId) return;
@@ -582,7 +582,7 @@ export default function WorkoutSessionScreen() {
     } finally {
       setFinishing(false);
     }
-  }, [sessionId]);
+  }, [sessionId, finishActiveSession, router]);
 
   const abandonWorkout = useCallback(() => {
     if (!sessionId) return;
@@ -604,7 +604,7 @@ export default function WorkoutSessionScreen() {
         }
       },
     });
-  }, [sessionId]);
+  }, [sessionId, abandonActiveSession, router]);
 
   const onSelectRelated = async (exercise: RelatedExercise) => {
     try {
