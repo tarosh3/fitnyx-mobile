@@ -82,31 +82,52 @@ export interface OfflineMutation {
   timestamp: number;
 }
 
+const QUEUE_KEY = 'offline-mutation-queue';
+const QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Every queue write is read-modify-write of one AsyncStorage value. Without
+// serialization, a set logged while the sync engine removes an entry can
+// interleave (both read [A,B], each writes its own version) and drop or
+// resurrect mutations. All writers go through this chain.
+let queueLock: Promise<unknown> = Promise.resolve();
+function withQueueLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queueLock.then(fn, fn);
+  queueLock = run.catch(() => undefined);
+  return run;
+}
+
+/** Atomically rewrite the queue. The mutator must not call other queue writers (deadlock). */
+export function updateOfflineQueue(
+  mutator: (queue: OfflineMutation[]) => OfflineMutation[],
+): Promise<void> {
+  return withQueueLock(async () => {
+    const queue = (await idbGet<OfflineMutation[]>(QUEUE_KEY)) ?? [];
+    const next = mutator(queue);
+    if (next.length === 0) {
+      await idbDelete(QUEUE_KEY);
+      return;
+    }
+    await idbSet(QUEUE_KEY, next, QUEUE_TTL_MS);
+  });
+}
+
 export async function addToOfflineQueue(mutation: Omit<OfflineMutation, 'id' | 'timestamp'>): Promise<void> {
-  const queue = (await idbGet<OfflineMutation[]>('offline-mutation-queue')) ?? [];
   const next: OfflineMutation = {
     ...mutation,
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     timestamp: Date.now(),
   };
-  queue.push(next);
-  await idbSet('offline-mutation-queue', queue, 7 * 24 * 60 * 60 * 1000);
+  await updateOfflineQueue((queue) => [...queue, next]);
 }
 
 export async function getOfflineQueue(): Promise<OfflineMutation[]> {
-  return (await idbGet<OfflineMutation[]>('offline-mutation-queue')) ?? [];
+  return (await idbGet<OfflineMutation[]>(QUEUE_KEY)) ?? [];
 }
 
 export async function clearOfflineQueue(): Promise<void> {
-  await idbDelete('offline-mutation-queue');
+  await withQueueLock(() => idbDelete(QUEUE_KEY));
 }
 
 export async function removeFromOfflineQueue(id: string): Promise<void> {
-  const queue = await getOfflineQueue();
-  const next = queue.filter((item) => item.id !== id);
-  if (next.length === 0) {
-    await idbDelete('offline-mutation-queue');
-    return;
-  }
-  await idbSet('offline-mutation-queue', next, 7 * 24 * 60 * 60 * 1000);
+  await updateOfflineQueue((queue) => queue.filter((item) => item.id !== id));
 }

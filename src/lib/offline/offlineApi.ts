@@ -12,7 +12,7 @@ import {
   localDateKey,
   SessionWithLogs,
 } from '@/src/lib/api/workoutSessions';
-import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue, idbSet } from '@/src/lib/cache/indexeddb';
+import { addToOfflineQueue, updateOfflineQueue } from '@/src/lib/cache/indexeddb';
 import {
   generateOfflineId,
   isOfflineId,
@@ -252,27 +252,29 @@ export async function offlineDeleteLog(sessionId: string, logId: string): Promis
 
 // --- Queue helpers for offline-created logs ---
 
+const isQueuedLogSet = (
+  item: { type: string; payload: any },
+  sessionId: string,
+  exerciseUuid: string,
+  setNumber: number,
+) =>
+  item.type === 'LOG_SET' &&
+  item.payload.sessionId === sessionId &&
+  item.payload.exerciseUuid === exerciseUuid &&
+  item.payload.setNumber === setNumber;
+
 async function updateQueuedLogSet(
   sessionId: string,
   log: OfflineExerciseLog
 ): Promise<void> {
-  const queue = await getOfflineQueue();
-  for (const item of queue) {
-    if (
-      item.type === 'LOG_SET' &&
-      item.payload.sessionId === sessionId &&
-      item.payload.exerciseUuid === log.exercise_uuid &&
-      item.payload.setNumber === log.set_index
-    ) {
-      // Update the payload in-place with the new values
-      item.payload.reps = log.reps;
-      item.payload.weightKg = log.weight_kg;
-      // Rewrite the queue with updated item
-      const updated = queue.map((q) => (q.id === item.id ? item : q));
-      await idbSet('offline-mutation-queue', updated, 7 * 24 * 60 * 60 * 1000);
-      return;
-    }
-  }
+  // Rewrite the first matching LOG_SET with the edited values (under the queue lock).
+  await updateOfflineQueue((queue) => {
+    const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionId, log.exercise_uuid, log.set_index));
+    if (idx === -1) return queue;
+    const next = [...queue];
+    next[idx] = { ...queue[idx], payload: { ...queue[idx].payload, reps: log.reps, weightKg: log.weight_kg } };
+    return next;
+  });
 }
 
 async function removeQueuedLogSetByData(
@@ -280,18 +282,10 @@ async function removeQueuedLogSetByData(
   exerciseUuid: string,
   setNumber: number
 ): Promise<void> {
-  const queue = await getOfflineQueue();
-  for (const item of queue) {
-    if (
-      item.type === 'LOG_SET' &&
-      item.payload.sessionId === sessionId &&
-      item.payload.exerciseUuid === exerciseUuid &&
-      item.payload.setNumber === setNumber
-    ) {
-      await removeFromOfflineQueue(item.id);
-      return;
-    }
-  }
+  await updateOfflineQueue((queue) => {
+    const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionId, exerciseUuid, setNumber));
+    return idx === -1 ? queue : queue.filter((_, i) => i !== idx);
+  });
 }
 
 // --- Session Actions (pause/resume/finish/abandon) ---
