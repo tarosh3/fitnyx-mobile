@@ -29,7 +29,13 @@ export function RecordingSummaryView({ type, stats, elapsedSec, saving, error, o
       <RouteMap route={stats.route} vehicleRanges={stats.vehicleRanges} style={styles.map} />
 
       {stats.vehicleDetected ? (
-        <VehicleBanner message={`${formatDistance(stats.vehicleDistanceM)} looked like vehicle travel and won't count.`} />
+        <VehicleBanner
+          message={
+            stats.xpEligible
+              ? `${formatDistance(stats.vehicleDistanceM)} looked like vehicle travel and won't count.`
+              : `Most of this Roam (${formatDistance(stats.vehicleDistanceM)}) looked like vehicle travel, so it won't earn XP.`
+          }
+        />
       ) : null}
 
       <View style={[styles.panel, { backgroundColor: palette.card, borderColor: palette.border }]}>

@@ -12,7 +12,10 @@ export function useRoamActivities(userId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false); // nothing to load without a signed-in user
+      return;
+    }
     const key = cacheKeys.roamActivities(userId);
     const cached = await cacheGet<ActivityListResponse>(key);
     if (cached) {

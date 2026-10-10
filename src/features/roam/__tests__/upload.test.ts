@@ -14,6 +14,7 @@ import { buildActivityInput, saveRoam } from '@/src/features/roam/upload';
 const T0 = Date.UTC(2026, 9, 10, 0, 30); // local date depends on TZ; asserted loosely
 const meta: RecordingMeta = {
   clientId: '7b0c6f7e-2f5a-4f6d-9a0e-1c2d3e4f5a6b',
+  userId: 'u1',
   type: 'run',
   startedAtMs: T0,
   status: 'paused',
@@ -52,6 +53,11 @@ describe('buildActivityInput', () => {
     const input = buildActivityInput(meta, late, T0 + 20 * 3600 * 1000)!;
     expect(new Date(input.ended_at).getTime() - T0).toBeLessThanOrEqual(12 * 3600 * 1000);
     expect(input.points).toHaveLength(3);
+  });
+
+  it('ends at the finish (pause) time, not when the user taps Save', () => {
+    const input = buildActivityInput({ ...meta, pausedAtMs: T0 + 75_000 }, pts, T0 + 300_000)!;
+    expect(input.ended_at).toBe(new Date(T0 + 75_000).toISOString());
   });
 
   it('returns null with fewer than 2 points', () => {

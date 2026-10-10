@@ -16,6 +16,8 @@ const CHUNK_SIZE = 500;
 
 export interface RecordingMeta {
   clientId: string;
+  /** Account that started it — a recording never surfaces for anyone else. */
+  userId: string | null;
   type: ActivityType;
   startedAtMs: number;
   status: 'recording' | 'paused';
@@ -61,11 +63,27 @@ export function getRecording(): Promise<RecordingMeta | null> {
   return readJson<RecordingMeta>(KEYS.meta);
 }
 
-export function startRecording(type: ActivityType, nowMs = Date.now()): Promise<RecordingMeta> {
+/**
+ * The recording if it belongs to userId. One left by a different account
+ * (signed out without saving, someone else signed in) is discarded, so it
+ * can't leak across accounts; a forced sign-out of the same user keeps it.
+ */
+export async function getRecordingFor(userId: string | null | undefined): Promise<RecordingMeta | null> {
+  const meta = await getRecording();
+  if (!meta || !userId) return null;
+  if (meta.userId && meta.userId !== userId) {
+    await clearRecording();
+    return null;
+  }
+  return meta;
+}
+
+export function startRecording(type: ActivityType, userId: string | null, nowMs = Date.now()): Promise<RecordingMeta> {
   return serial(async () => {
     await clearChunks();
     const meta: RecordingMeta = {
       clientId: uuidV4(),
+      userId,
       type,
       startedAtMs: nowMs,
       status: 'recording',

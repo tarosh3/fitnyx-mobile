@@ -5,7 +5,7 @@ import { computeStats, type ActivityType, type RoamPoint, type RoamStats } from 
 import {
   activeElapsedMs,
   clearRecording,
-  getRecording,
+  getRecordingFor,
   loadPoints,
   pauseRecording,
   resumeRecording,
@@ -14,6 +14,7 @@ import {
   type RecordingMeta,
 } from '@/src/features/roam/recordingStore';
 import { requestRoamPermission, startLocationUpdates, stopLocationUpdates, type PermissionResult } from '@/src/features/roam/tracking';
+import { useAuth } from '@/src/providers/AuthProvider';
 
 export interface RoamRecording {
   meta: RecordingMeta | null;
@@ -32,17 +33,27 @@ export interface RoamRecording {
 
 /** Live view over the persisted recording (survives app restarts). */
 export function useRoamRecording(): RoamRecording {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [meta, setMeta] = useState<RecordingMeta | null>(null);
   const [points, setPoints] = useState<RoamPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
 
   const reload = useCallback(async () => {
-    const [m, p] = await Promise.all([getRecording(), loadPoints()]);
+    const m = await getRecordingFor(userId);
+    // Only once we know who's signed in: a null user may just be auth still
+    // restoring, and stopping GPS then would kill a live run.
+    if (!m && userId) await stopLocationUpdates(); // another account's leftover GPS
+    // Still recording: (re)start GPS. A kill or crash takes Android's location
+    // foreground service down while the task registration survives, so this
+    // forces a restart — otherwise the run stops gaining distance once the
+    // screen locks.
+    if (m?.status === 'recording') startLocationUpdates(m.type, true).catch(() => undefined);
     setMeta(m);
-    setPoints(p);
+    setPoints(m ? await loadPoints() : []);
     setLoading(false);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     reload();
@@ -72,7 +83,7 @@ export function useRoamRecording(): RoamRecording {
   const start = useCallback(async (type: ActivityType) => {
     const permission = await requestRoamPermission();
     if (permission !== 'granted') return permission;
-    const m = await startRecording(type);
+    const m = await startRecording(type, userId);
     setMeta(m);
     setPoints([]);
     try {
@@ -83,7 +94,7 @@ export function useRoamRecording(): RoamRecording {
       throw error;
     }
     return permission;
-  }, []);
+  }, [userId]);
 
   const pause = useCallback(async () => {
     await stopLocationUpdates(); // saves battery while paused

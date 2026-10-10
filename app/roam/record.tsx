@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -11,6 +12,7 @@ import { RecordingSummaryView } from '@/src/features/roam/components/RecordingSu
 import { clearRecording } from '@/src/features/roam/recordingStore';
 import { saveRoam } from '@/src/features/roam/upload';
 import { useRoamRecording } from '@/src/features/roam/useRoamRecording';
+import { retentionMetricsKey } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { cacheInvalidate, cacheKeys } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -21,6 +23,7 @@ export default function RoamRecordScreen() {
   const palette = useThemeColors();
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const recording = useRoamRecording();
   const [phase, setPhase] = useState<'live' | 'summary'>('live');
   const [saving, setSaving] = useState(false);
@@ -54,7 +57,11 @@ export default function RoamRecordScreen() {
         return;
       }
       await clearRecording();
-      if (user?.id) await cacheInvalidate(cacheKeys.roamActivities(user.id));
+      if (user?.id) {
+        await cacheInvalidate(cacheKeys.roamActivities(user.id));
+        // Home's XP total includes Roam XP — don't wait out its staleTime.
+        if (outcome.status === 'saved') queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user.id) });
+      }
       if (outcome.status === 'saved') router.replace(`/roam/${outcome.activity.id}`);
       else setModal('queued');
     } catch (e) {

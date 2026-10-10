@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -12,6 +13,7 @@ import { RouteMap } from '@/src/features/roam/components/RouteMap';
 import { SplitsList } from '@/src/features/roam/components/SplitsList';
 import { VehicleBanner } from '@/src/features/roam/components/VehicleBanner';
 import { decodePolyline, formatDistance } from '@/src/features/roam/geo';
+import { retentionMetricsKey } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { isAuthError } from '@/src/lib/api';
 import { deleteActivity, getActivity, type ActivityDetail } from '@/src/lib/api/activities';
@@ -22,6 +24,7 @@ export default function RoamDetailScreen() {
   const palette = useThemeColors();
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const activityId = Array.isArray(id) ? id[0] : id;
   const [activity, setActivity] = useState<ActivityDetail | null>(null);
@@ -62,6 +65,7 @@ export default function RoamDetailScreen() {
       await deleteActivity(activityId);
       await cacheInvalidate(cacheKeys.roamActivity(user.id, activityId));
       await cacheInvalidate(cacheKeys.roamActivities(user.id));
+      queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user.id) }); // its XP is gone
       router.replace('/roam');
     } catch {
       setError('Could not delete this Roam. Try again.');

@@ -58,8 +58,7 @@ const ONBOARDING_EXEMPT_PATHS = [
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Stop GPS and drop any in-progress Roam so the next account on this device
-// doesn't inherit it. Lazy require keeps the native location modules out of
+// Deliberate sign-out: stop GPS and drop any in-progress Roam. Lazy require keeps the native location modules out of
 // this provider's import graph (and its tests).
 async function clearRoamOnSignOut(): Promise<void> {
   try {
@@ -270,7 +269,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await clearOfflineQueue().catch(() => undefined);
       await clearAllWaterData().catch(() => undefined);
       await clearAllReminders().catch(() => undefined);
-      await clearRoamOnSignOut();
+      // Not clearRoamOnSignOut(): a forced sign-out mid-run must not delete
+      // the user's unsaved Roam. It's scoped to their account
+      // (getRecordingFor), so it reappears only if they sign back in.
     };
 
     const initialize = async () => {

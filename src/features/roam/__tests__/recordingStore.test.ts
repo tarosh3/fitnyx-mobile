@@ -5,6 +5,7 @@ import {
   appendFixes,
   clearRecording,
   getRecording,
+  getRecordingFor,
   loadPoints,
   pauseRecording,
   resumeRecording,
@@ -27,7 +28,7 @@ beforeEach(async () => {
 
 describe('recordingStore', () => {
   it('persists fixes as [lat, lng, t, acc, segment] relative to the start', async () => {
-    await startRecording('run', T0);
+    await startRecording('run', 'u1', T0);
     await appendFixes([fix(0), fix(2.5), fix(5, 19.08, 72.88, null)]);
     expect(await loadPoints()).toEqual([
       [19.07, 72.87, 0, 5, 0],
@@ -38,7 +39,7 @@ describe('recordingStore', () => {
   });
 
   it('ignores fixes while paused and starts a new segment on resume', async () => {
-    await startRecording('walk', T0);
+    await startRecording('walk', 'u1', T0);
     await appendFixes([fix(1)]);
     await pauseRecording(T0 + 10_000);
     await appendFixes([fix(20)]); // late batch after pause — dropped
@@ -55,7 +56,7 @@ describe('recordingStore', () => {
   });
 
   it('spills into new chunks past 500 points without losing any', async () => {
-    await startRecording('cycle', T0);
+    await startRecording('cycle', 'u1', T0);
     for (let batch = 0; batch < 3; batch++) {
       await appendFixes(Array.from({ length: 400 }, (_, i) => fix(batch * 400 + i)));
     }
@@ -68,11 +69,25 @@ describe('recordingStore', () => {
   it('notifies subscribers and clears everything', async () => {
     const seen: number[] = [];
     const unsubscribe = subscribe((added) => seen.push(added.length));
-    await startRecording('run', T0);
+    await startRecording('run', 'u1', T0);
     await appendFixes([fix(1), fix(2)]);
     unsubscribe();
     expect(seen).toEqual([2]);
     await clearRecording();
+    expect(await getRecording()).toBeNull();
+    expect(await loadPoints()).toEqual([]);
+  });
+
+  it('is scoped to the account that started it', async () => {
+    await startRecording('run', 'u1', T0);
+    await appendFixes([fix(1), fix(2)]);
+    // Same user (e.g. after a forced sign-out and back in): still there.
+    expect((await getRecordingFor('u1'))?.pointCount).toBe(2);
+    // Auth still restoring: hidden but NOT deleted.
+    expect(await getRecordingFor(null)).toBeNull();
+    expect(await getRecording()).not.toBeNull();
+    // A different account: discarded, nothing leaks.
+    expect(await getRecordingFor('u2')).toBeNull();
     expect(await getRecording()).toBeNull();
     expect(await loadPoints()).toEqual([]);
   });

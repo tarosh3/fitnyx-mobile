@@ -10,7 +10,7 @@ import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { ActivityRow } from '@/src/features/roam/components/ActivityRow';
 import { WeekSummary } from '@/src/features/roam/components/WeekSummary';
 import type { ActivityType } from '@/src/features/roam/geo';
-import { getRecording } from '@/src/features/roam/recordingStore';
+import { getRecordingFor } from '@/src/features/roam/recordingStore';
 import { useRoamActivities } from '@/src/features/roam/useRoamActivities';
 import { useRoamRecording } from '@/src/features/roam/useRoamRecording';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -35,8 +35,8 @@ export default function RoamScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      getRecording().then((m) => setInProgress(m != null));
-    }, []),
+      getRecordingFor(user?.id).then((m) => setInProgress(m != null));
+    }, [user?.id]),
   );
 
   const onStart = async () => {

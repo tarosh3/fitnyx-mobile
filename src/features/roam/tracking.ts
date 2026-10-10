@@ -46,9 +46,14 @@ export async function requestRoamPermission(): Promise<PermissionResult> {
   return asked.canAskAgain ? 'denied' : 'blocked';
 }
 
-export async function startLocationUpdates(type: ActivityType): Promise<void> {
+/**
+ * `force` re-registers even when the task looks started: after the app is
+ * killed, Android restores the task registration but not its foreground
+ * service, so fixes would stop the moment the app leaves the screen.
+ */
+export async function startLocationUpdates(type: ActivityType, force = false): Promise<void> {
   if (!supported) throw new Error('Roam needs the FitNyx app on iOS or Android');
-  if (await Location.hasStartedLocationUpdatesAsync(ROAM_LOCATION_TASK)) return;
+  if (!force && (await Location.hasStartedLocationUpdatesAsync(ROAM_LOCATION_TASK))) return;
   await Location.startLocationUpdatesAsync(ROAM_LOCATION_TASK, {
     // Cycling covers ground fast enough to need the most precise fixes.
     accuracy: type === 'cycle' ? Location.Accuracy.BestForNavigation : Location.Accuracy.High,

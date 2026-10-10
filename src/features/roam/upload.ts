@@ -20,7 +20,9 @@ export function buildActivityInput(
   points: RoamPoint[],
   nowMs = Date.now(),
 ): CreateActivityInput | null {
-  const endedMs = Math.min(nowMs, meta.startedAtMs + MAX_DURATION_MS);
+  // Finish pauses the recording, so pausedAtMs is when the Roam ended — time
+  // spent on the review screen (or waiting to sync offline) doesn't count.
+  const endedMs = Math.min(meta.pausedAtMs ?? nowMs, meta.startedAtMs + MAX_DURATION_MS);
   const maxT = (endedMs - meta.startedAtMs) / 1000;
   const kept = points.filter((p) => p[2] <= maxT);
   if (kept.length < 2 || endedMs <= meta.startedAtMs) return null;
