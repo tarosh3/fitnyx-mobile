@@ -125,6 +125,14 @@ export interface SessionHistoryResponse {
   };
 }
 
+/** Device-local calendar date (YYYY-MM-DD) — toISOString() would give the UTC date. */
+export function localDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export async function sessionAction(
   action: SessionAction,
   options?: { planId?: string; dayId?: string; sessionId?: string; timestamp?: string; startedAt?: string }
@@ -138,6 +146,12 @@ export async function sessionAction(
       session_id: options?.sessionId,
       timestamp: options?.timestamp,
       started_at: options?.startedAt,
+      // Local date of the start (offline replays use the original start time),
+      // so a 5 AM IST workout isn't filed under yesterday's UTC date.
+      workout_date:
+        action === 'start'
+          ? localDateKey(options?.startedAt ? new Date(options.startedAt) : new Date())
+          : undefined,
     }),
   });
 }

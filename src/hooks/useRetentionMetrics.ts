@@ -58,7 +58,12 @@ async function fetchRetentionMetrics(userId?: string): Promise<MetricsPayload> {
   const dashboard = await getDashboard();
 
   const sessions = dashboard.sessions || [];
-  const { streak, xp, level, weeklyStats } = calculateStats(sessions);
+  const stats = calculateStats(sessions);
+  const { streak, weeklyStats } = stats;
+  // Prefer the server's lifetime total: `sessions` is only the last 50, so a
+  // client-side sum stops growing (and can drop) past 50 workouts.
+  const xp = dashboard.lifetime_xp && dashboard.lifetime_xp > 0 ? dashboard.lifetime_xp : stats.xp;
+  const level = Math.floor(xp / 1500) + 1;
 
   // Plan progress: how many unique days in this plan have been completed
   let planProgress = 0;

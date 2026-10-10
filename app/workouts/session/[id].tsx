@@ -374,6 +374,7 @@ export default function WorkoutSessionScreen() {
 
     if (log) {
       setEditingLogId(log.id);
+      setRpe(log.rpe ?? null);
       setReps(String(log.reps));
       const logWeight = log.weight_kg || 0;
       setWeight(String(weightUnit === 'kg' ? logWeight : Number(kgToLbs(logWeight).toFixed(1))));
@@ -458,7 +459,9 @@ export default function WorkoutSessionScreen() {
       if (editingLogId) {
         const updated = await offlineUpdateLog(sessionId, editingLogId, {
           actual_reps: repsNumber,
-          actual_weight_kg: weightKg,
+          // 0 tells the backend "no weight" — undefined would leave the old value.
+          actual_weight_kg: weightKg ?? 0,
+          rpe: rpe ?? undefined,
         });
 
         setExercises((prev) =>
@@ -565,7 +568,7 @@ export default function WorkoutSessionScreen() {
       console.error('Failed to update pause state', actionError);
       setError('Failed to update session state.');
     }
-  }, [sessionId, session?.status]);
+  }, [sessionId, session?.status, pauseActiveSession, resumeActiveSession]);
 
   const completeWorkout = useCallback(async () => {
     if (!sessionId) return;
@@ -582,7 +585,7 @@ export default function WorkoutSessionScreen() {
     } finally {
       setFinishing(false);
     }
-  }, [sessionId]);
+  }, [sessionId, finishActiveSession, router]);
 
   const abandonWorkout = useCallback(() => {
     if (!sessionId) return;
@@ -604,7 +607,7 @@ export default function WorkoutSessionScreen() {
         }
       },
     });
-  }, [sessionId]);
+  }, [sessionId, abandonActiveSession, router]);
 
   const onSelectRelated = async (exercise: RelatedExercise) => {
     try {

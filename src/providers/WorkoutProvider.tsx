@@ -13,11 +13,14 @@ import {
   offlineResumeSession,
   offlineFinishSession,
   offlineAbandonSession,
+  offlineGetSession,
 } from '@/src/lib/offline/offlineApi';
 import {
   getActiveOfflineSessionId,
   getOfflineSession,
+  isOfflineId,
   persistSessionState,
+  setActiveOfflineSessionId,
 } from '@/src/lib/offline/offlineStore';
 import * as WorkoutNotification from '@/src/lib/workoutNotification';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -86,15 +89,20 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
           // Persist for crash recovery
           persistSessionState(response.session, response.exercise_logs || []).catch(() => {});
         } else {
-          // Check for offline-started session that hasn't synced yet
+          // Check for offline-started session that hasn't synced yet. A real
+          // (server) id here is stale — the server just said it isn't active
+          // (e.g. finished from the notification while backgrounded) — so drop
+          // the pointer instead of resurrecting it.
           const offlineId = await getActiveOfflineSessionId();
-          if (offlineId) {
+          if (offlineId && isOfflineId(offlineId)) {
             const offlineSession = await getOfflineSession(offlineId);
             if (offlineSession && (offlineSession.status === 'in_progress' || offlineSession.status === 'paused')) {
               setActiveSession(offlineSession);
               setLoading(false);
               return;
             }
+          } else if (offlineId) {
+            await setActiveOfflineSessionId(null);
           }
           setActiveSession(null);
           setElapsedTime(0);
@@ -138,7 +146,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     refreshActiveSession();
   }, [refreshActiveSession]);
 
-  // Auto-abandon after 12 hours
+  // Auto-close a session left running for 12 hours (forgot to tap Finish)
   const MAX_SESSION_SECONDS = 12 * 60 * 60;
   const autoAbandonTriggered = useRef(false);
 
@@ -162,11 +170,11 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       const total = baseTime + currentInterval;
       setElapsedTime(total);
 
-      // Auto-abandon if session exceeds 12 hours
+      // Auto-close if the session exceeds 12 hours
       if (total >= MAX_SESSION_SECONDS && !autoAbandonTriggered.current) {
         autoAbandonTriggered.current = true;
-        abandonActiveSessionInternal().catch((err) =>
-          console.error('Auto-abandon after 12h failed', err)
+        autoCloseStaleSession().catch((err) =>
+          console.error('Auto-close after 12h failed', err)
         );
       }
     };
@@ -341,6 +349,42 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to abandon session', error);
       throw error;
     }
+  };
+
+  // A session still running after 12h means the user forgot to finish it.
+  // Abandoning threw the whole workout out of history and streaks; instead
+  // finish it at the time of its last logged set (so duration/calories aren't
+  // 12h). Only abandon when nothing was logged, or the server refuses the
+  // finish (e.g. the last set is beyond its 7-day timestamp window).
+  const autoCloseStaleSession = async () => {
+    if (!activeSession) return;
+    const session = activeSession;
+
+    let lastSetAt = 0;
+    try {
+      const { exercise_logs } = await offlineGetSession(session.id);
+      for (const log of exercise_logs || []) {
+        const t = new Date(log.created_at).getTime();
+        if (Number.isFinite(t) && t > lastSetAt) lastSetAt = t;
+      }
+    } catch {
+      // No logs available — treat as an empty session.
+    }
+
+    if (lastSetAt > 0) {
+      // Finishing before the last resume would make the server reject it.
+      const floor = new Date(session.last_resumed_at || session.started_at).getTime();
+      try {
+        await offlineFinishSession(session.id, new Date(Math.max(lastSetAt, floor)).toISOString());
+        setActiveSession(null);
+        await WorkoutNotification.dismiss();
+        return;
+      } catch (error) {
+        if (isAuthError(error)) return;
+        console.warn('Auto-finish of stale session failed, abandoning instead', error);
+      }
+    }
+    await abandonActiveSessionInternal();
   };
 
   const pauseActiveSession = useCallback(async () => {

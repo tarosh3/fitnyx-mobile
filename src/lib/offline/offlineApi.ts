@@ -9,9 +9,10 @@ import {
   LogExerciseInput,
   StartSessionInput,
   getWorkoutSession,
+  localDateKey,
   SessionWithLogs,
 } from '@/src/lib/api/workoutSessions';
-import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue, idbSet } from '@/src/lib/cache/indexeddb';
+import { addToOfflineQueue, updateOfflineQueue } from '@/src/lib/cache/indexeddb';
 import {
   generateOfflineId,
   isOfflineId,
@@ -77,7 +78,7 @@ export async function offlineStartSession(input: StartSessionInput): Promise<Wor
     user_id: '',
     plan_id: input.workout_plan_id,
     day_id: input.workout_day_id,
-    workout_date: now.split('T')[0],
+    workout_date: localDateKey(new Date(now)),
     started_at: now,
     status: 'in_progress',
     total_duration_sec: 0,
@@ -180,7 +181,7 @@ export async function offlineLogSet(sessionId: string, data: LogExerciseInput): 
 export async function offlineUpdateLog(
   sessionId: string,
   logId: string,
-  data: { actual_reps?: number; actual_weight_kg?: number }
+  data: { actual_reps?: number; actual_weight_kg?: number; rpe?: number }
 ): Promise<ExerciseLog> {
   const online = await checkOnline();
 
@@ -192,11 +193,15 @@ export async function offlineUpdateLog(
     }
   }
 
-  // Offline update
-  const updated = await updateOfflineLog(sessionId, logId, {
-    reps: data.actual_reps,
-    weight_kg: data.actual_weight_kg,
-  });
+  // Offline update. Only provided fields are written; weight 0 = bodyweight
+  // (stored as no weight, matching the server).
+  const updates: Partial<OfflineExerciseLog> = {};
+  if (data.actual_reps !== undefined) updates.reps = data.actual_reps;
+  if (data.actual_weight_kg !== undefined) {
+    updates.weight_kg = data.actual_weight_kg === 0 ? undefined : data.actual_weight_kg;
+  }
+  if (data.rpe !== undefined) updates.rpe = data.rpe;
+  const updated = await updateOfflineLog(sessionId, logId, updates);
 
   if (!updated) throw new Error('Log not found in offline store');
 
@@ -207,7 +212,7 @@ export async function offlineUpdateLog(
   } else {
     await addToOfflineQueue({
       type: 'UPDATE_SET',
-      payload: { sessionId, logId, reps: data.actual_reps, weightKg: data.actual_weight_kg },
+      payload: { sessionId, logId, reps: data.actual_reps, weightKg: data.actual_weight_kg, rpe: data.rpe },
     });
   }
 
@@ -251,27 +256,32 @@ export async function offlineDeleteLog(sessionId: string, logId: string): Promis
 
 // --- Queue helpers for offline-created logs ---
 
+const isQueuedLogSet = (
+  item: { type: string; payload: any },
+  sessionId: string,
+  exerciseUuid: string,
+  setNumber: number,
+) =>
+  item.type === 'LOG_SET' &&
+  item.payload.sessionId === sessionId &&
+  item.payload.exerciseUuid === exerciseUuid &&
+  item.payload.setNumber === setNumber;
+
 async function updateQueuedLogSet(
   sessionId: string,
   log: OfflineExerciseLog
 ): Promise<void> {
-  const queue = await getOfflineQueue();
-  for (const item of queue) {
-    if (
-      item.type === 'LOG_SET' &&
-      item.payload.sessionId === sessionId &&
-      item.payload.exerciseUuid === log.exercise_uuid &&
-      item.payload.setNumber === log.set_index
-    ) {
-      // Update the payload in-place with the new values
-      item.payload.reps = log.reps;
-      item.payload.weightKg = log.weight_kg;
-      // Rewrite the queue with updated item
-      const updated = queue.map((q) => (q.id === item.id ? item : q));
-      await idbSet('offline-mutation-queue', updated, 7 * 24 * 60 * 60 * 1000);
-      return;
-    }
-  }
+  // Rewrite the first matching LOG_SET with the edited values (under the queue lock).
+  await updateOfflineQueue((queue) => {
+    const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionId, log.exercise_uuid, log.set_index));
+    if (idx === -1) return queue;
+    const next = [...queue];
+    next[idx] = {
+      ...queue[idx],
+      payload: { ...queue[idx].payload, reps: log.reps, weightKg: log.weight_kg, rpe: log.rpe },
+    };
+    return next;
+  });
 }
 
 async function removeQueuedLogSetByData(
@@ -279,31 +289,25 @@ async function removeQueuedLogSetByData(
   exerciseUuid: string,
   setNumber: number
 ): Promise<void> {
-  const queue = await getOfflineQueue();
-  for (const item of queue) {
-    if (
-      item.type === 'LOG_SET' &&
-      item.payload.sessionId === sessionId &&
-      item.payload.exerciseUuid === exerciseUuid &&
-      item.payload.setNumber === setNumber
-    ) {
-      await removeFromOfflineQueue(item.id);
-      return;
-    }
-  }
+  await updateOfflineQueue((queue) => {
+    const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionId, exerciseUuid, setNumber));
+    return idx === -1 ? queue : queue.filter((_, i) => i !== idx);
+  });
 }
 
 // --- Session Actions (pause/resume/finish/abandon) ---
 
 async function offlineSessionAction(
   actionType: 'pause' | 'resume' | 'finish' | 'abandon',
-  sessionId: string
+  sessionId: string,
+  /** When the action actually happened (ISO). Defaults to now. */
+  at?: string
 ): Promise<WorkoutSession | null> {
   const online = await checkOnline();
 
   if (online && !isOfflineId(sessionId)) {
     try {
-      const result = await sessionAction(actionType, { sessionId });
+      const result = await sessionAction(actionType, { sessionId, timestamp: at });
       // Sync local offline state so stale sessions don't resurrect
       if (actionType === 'finish' || actionType === 'abandon') {
         await setActiveOfflineSessionId(null);
@@ -311,7 +315,7 @@ async function offlineSessionAction(
         const localSession = await getOfflineSession(sessionId);
         if (localSession) {
           localSession.status = actionType === 'finish' ? 'completed' : 'abandoned';
-          localSession.finished_at = new Date().toISOString();
+          localSession.finished_at = at ?? new Date().toISOString();
           await saveOfflineSession(localSession);
         }
       } else if (actionType === 'pause' || actionType === 'resume') {
@@ -364,7 +368,7 @@ async function offlineSessionAction(
     // We can't update its state locally, but we can still queue the mutation for sync
     await addToOfflineQueue({
       type: `${actionType.toUpperCase()}_SESSION` as any,
-      payload: { sessionId, timestamp: new Date().toISOString() },
+      payload: { sessionId, timestamp: at ?? new Date().toISOString() },
     });
     if (actionType === 'finish' || actionType === 'abandon') {
       await setActiveOfflineSessionId(null);
@@ -372,12 +376,13 @@ async function offlineSessionAction(
     return null;
   }
 
-  const now = new Date().toISOString();
+  const now = at ?? new Date().toISOString();
+  const nowMs = new Date(now).getTime();
 
   switch (actionType) {
     case 'pause': {
       const lastResumed = new Date(session.last_resumed_at || session.started_at).getTime();
-      const additionalSec = Math.floor((Date.now() - lastResumed) / 1000);
+      const additionalSec = Math.floor((nowMs - lastResumed) / 1000);
       session.status = 'paused';
       session.paused_at = now;
       session.total_duration_sec += additionalSec;
@@ -391,7 +396,7 @@ async function offlineSessionAction(
     case 'finish': {
       if (session.status !== 'paused') {
         const lastResumed = new Date(session.last_resumed_at || session.started_at).getTime();
-        const additionalSec = Math.floor((Date.now() - lastResumed) / 1000);
+        const additionalSec = Math.floor((nowMs - lastResumed) / 1000);
         session.total_duration_sec += additionalSec;
       }
       session.status = 'completed';
@@ -402,7 +407,7 @@ async function offlineSessionAction(
     case 'abandon': {
       if (session.status !== 'paused') {
         const lastResumed = new Date(session.last_resumed_at || session.started_at).getTime();
-        const additionalSec = Math.floor((Date.now() - lastResumed) / 1000);
+        const additionalSec = Math.floor((nowMs - lastResumed) / 1000);
         session.total_duration_sec += additionalSec;
       }
       session.status = 'abandoned';
@@ -437,8 +442,8 @@ export async function offlineResumeSession(sessionId: string): Promise<WorkoutSe
   return result;
 }
 
-export async function offlineFinishSession(sessionId: string): Promise<WorkoutSession> {
-  const result = await offlineSessionAction('finish', sessionId);
+export async function offlineFinishSession(sessionId: string, finishedAt?: string): Promise<WorkoutSession> {
+  const result = await offlineSessionAction('finish', sessionId, finishedAt);
   if (!result) throw new Error('Failed to finish session');
   return result;
 }

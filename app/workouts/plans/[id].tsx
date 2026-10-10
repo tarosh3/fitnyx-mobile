@@ -155,8 +155,9 @@ export default function PlanDetailsScreen() {
       });
       router.push(`/workouts/session/${session.id}`);
     } catch (startError: any) {
-      if (startError?.status === 409 && startError?.data?.session_id) {
-        router.push(`/workouts/session/${startError.data.session_id}`);
+      // Backend 409 body: { error, session } — redirect into the running session.
+      if (startError?.status === 409 && startError?.data?.session?.id) {
+        router.push(`/workouts/session/${startError.data.session.id}`);
         return;
       }
 

@@ -1,5 +1,6 @@
 import notifee, { EventType } from '@notifee/react-native';
 import { pauseSession, resumeSession, finishSession, getActiveSession } from '@/src/lib/api/workoutSessions';
+import { clearPersistedSession } from '@/src/lib/offline/offlineStore';
 
 /**
  * Handles notification action presses when the app is backgrounded.
@@ -40,6 +41,9 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
         if (session.status === 'in_progress' || session.status === 'paused') {
           await finishSession(session.id);
         }
+        // Drop the crash-recovery copy too — otherwise WorkoutProvider's offline
+        // fallback resurrects this finished session as active on next foreground.
+        await clearPersistedSession(session.id);
         const { dismiss } = require('@/src/lib/workoutNotification');
         await dismiss();
         break;

@@ -31,8 +31,10 @@ interface DietPlanViewProps {
 
 // ─── Helpers ──────────────────────────────────────────────
 
-function parseMacroGrams(value: string): number {
-  const match = value.match(/([\d.]+)/);
+// Plans come from an LLM and are cached on device — tolerate numbers/missing
+// values instead of crashing the screen on every open.
+function parseMacroGrams(value: unknown): number {
+  const match = String(value ?? '').match(/([\d.]+)/);
   return match ? Number(match[1]) : 0;
 }
 
@@ -160,9 +162,9 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
   const { plan_data } = plan;
   const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
 
-  const proteinG = parseMacroGrams(plan_data.macros.protein);
-  const carbsG = parseMacroGrams(plan_data.macros.carbs);
-  const fatsG = parseMacroGrams(plan_data.macros.fats);
+  const proteinG = parseMacroGrams(plan_data.macros?.protein);
+  const carbsG = parseMacroGrams(plan_data.macros?.carbs);
+  const fatsG = parseMacroGrams(plan_data.macros?.fats);
 
 
   return (
@@ -185,7 +187,7 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
       {/* Meal Schedule */}
       <View style={{ gap: 16 }}>
         <Text style={styles.sectionTitle}>MEAL SCHEDULE</Text>
-        {plan_data.meals.map((meal, idx) => {
+        {(plan_data.meals ?? []).map((meal, idx) => {
           const isExpanded = expandedIndex === idx;
           const alternatives = getAlternatives(meal);
 
@@ -197,10 +199,10 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
               >
                 <View style={styles.mealLeft}>
                   <View style={styles.emojiContainer}>
-                    <Text style={styles.mealEmoji}>{getMealEmoji(meal.name)}</Text>
+                    <Text style={styles.mealEmoji}>{getMealEmoji(meal.name ?? '')}</Text>
                   </View>
                   <View>
-                    <Text style={styles.mealName}>{meal.name.toUpperCase()}</Text>
+                    <Text style={styles.mealName}>{(meal.name ?? 'Meal').toUpperCase()}</Text>
                     <Text style={styles.mealTime}>{meal.time}</Text>
                   </View>
                 </View>
@@ -219,7 +221,7 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
 
                   {/* Main Items */}
                   <View style={styles.itemsSection}>
-                    {meal.items.map((item, i) => (
+                    {(meal.items ?? []).map((item, i) => (
                       <FoodItemCard key={i} item={normalizeFoodItem(item)} />
                     ))}
                   </View>
@@ -227,15 +229,15 @@ export function DietPlanView({ plan, onRegenerate, onEditPreferences, isLoading 
                   {/* Meal Macros */}
                   <View style={styles.mealMacros}>
                     <View style={styles.macroStatCard}>
-                      <Text style={styles.macroStatVal}>{meal.macros.p}</Text>
+                      <Text style={styles.macroStatVal}>{meal.macros?.p ?? '—'}</Text>
                       <Text style={styles.macroStatKey}>PROTEIN</Text>
                     </View>
                     <View style={styles.macroStatCard}>
-                      <Text style={styles.macroStatVal}>{meal.macros.c}</Text>
+                      <Text style={styles.macroStatVal}>{meal.macros?.c ?? '—'}</Text>
                       <Text style={styles.macroStatKey}>CARBS</Text>
                     </View>
                     <View style={styles.macroStatCard}>
-                      <Text style={styles.macroStatVal}>{meal.macros.f}</Text>
+                      <Text style={styles.macroStatVal}>{meal.macros?.f ?? '—'}</Text>
                       <Text style={styles.macroStatKey}>FATS</Text>
                     </View>
                   </View>

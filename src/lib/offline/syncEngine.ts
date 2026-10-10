@@ -71,6 +71,7 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       await updateExerciseLog(payload.logId, {
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
+        rpe: payload.rpe,
       });
       break;
     }
@@ -117,6 +118,10 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
   }
 }
 
+export function isTransientStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
 let syncInProgress = false;
 
 export async function processOfflineQueue(): Promise<SyncResult> {
@@ -139,8 +144,17 @@ async function processOfflineQueueInternal(): Promise<SyncResult> {
   const sorted = [...queue].sort((a, b) => a.timestamp - b.timestamp);
 
   const result: SyncResult = { processed: 0, failed: 0, errors: [] };
+  // Offline sessions whose START the server permanently rejected — their sets
+  // and actions can never sync, so they're dropped instead of retried forever.
+  const rejectedSessions = new Set<string>();
 
   for (const mutation of sorted) {
+    if (mutation.payload?.sessionId && rejectedSessions.has(mutation.payload.sessionId)) {
+      await removeFromOfflineQueue(mutation.id);
+      result.failed++;
+      result.errors.push({ mutation, error: 'Session start was rejected by the server' });
+      continue;
+    }
     try {
       await processMutation(mutation);
       await removeFromOfflineQueue(mutation.id);
@@ -152,15 +166,22 @@ async function processOfflineQueueInternal(): Promise<SyncResult> {
       // Keep in queue for retry if:
       // - Session not yet synced (dependency ordering)
       // - No HTTP status (network/transient error)
-      if (message.includes('not yet synced') || !status) {
+      // - Timeout, rate limit or server error — the mutation itself is fine.
+      //   Replaying a whole offline workout can exceed the 60 req/min limit;
+      //   dropping on 429 would silently lose sets.
+      if (message.includes('not yet synced') || !status || isTransientStatus(status)) {
         result.failed++;
         result.errors.push({ mutation, error: message });
         continue;
       }
 
-      // Hard server rejection (4xx) — remove from queue, mutation is invalid
+      // Hard client rejection (other 4xx) — remove from queue, mutation is invalid
       console.warn(`Sync failed for ${mutation.type} (${status}):`, message);
       await removeFromOfflineQueue(mutation.id);
+      if (mutation.type === 'START_SESSION' && mutation.payload?.tempId) {
+        rejectedSessions.add(mutation.payload.tempId);
+        await clearPersistedSession(mutation.payload.tempId);
+      }
       result.failed++;
       result.errors.push({ mutation, error: message });
     }

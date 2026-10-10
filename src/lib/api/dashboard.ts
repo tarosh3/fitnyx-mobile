@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '@/src/lib/api';
+import { localDateKey } from '@/src/lib/api/workoutSessions';
 
 export interface DashboardExerciseSummary {
   exercise_uuid: string;
@@ -44,8 +45,11 @@ export interface DashboardResponse {
   current_day_index: number;
   total_days: number;
   daily_insight: string;
+  /** XP over every completed session (sessions above is capped at 50). Absent on older backends. */
+  lifetime_xp?: number;
 }
 
 export async function getDashboard(): Promise<DashboardResponse> {
-  return fetchWithAuth('/dashboard');
+  // date scopes the cached daily insight to the user's local day.
+  return fetchWithAuth(`/dashboard?date=${localDateKey(new Date())}`);
 }
