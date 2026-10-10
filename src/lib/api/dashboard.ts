@@ -44,6 +44,8 @@ export interface DashboardResponse {
   current_day_index: number;
   total_days: number;
   daily_insight: string;
+  /** XP over every completed session (sessions above is capped at 50). Absent on older backends. */
+  lifetime_xp?: number;
 }
 
 export async function getDashboard(): Promise<DashboardResponse> {
