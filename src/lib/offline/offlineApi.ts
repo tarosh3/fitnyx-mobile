@@ -299,13 +299,15 @@ async function removeQueuedLogSetByData(
 
 async function offlineSessionAction(
   actionType: 'pause' | 'resume' | 'finish' | 'abandon',
-  sessionId: string
+  sessionId: string,
+  /** When the action actually happened (ISO). Defaults to now. */
+  at?: string
 ): Promise<WorkoutSession | null> {
   const online = await checkOnline();
 
   if (online && !isOfflineId(sessionId)) {
     try {
-      const result = await sessionAction(actionType, { sessionId });
+      const result = await sessionAction(actionType, { sessionId, timestamp: at });
       // Sync local offline state so stale sessions don't resurrect
       if (actionType === 'finish' || actionType === 'abandon') {
         await setActiveOfflineSessionId(null);
@@ -313,7 +315,7 @@ async function offlineSessionAction(
         const localSession = await getOfflineSession(sessionId);
         if (localSession) {
           localSession.status = actionType === 'finish' ? 'completed' : 'abandoned';
-          localSession.finished_at = new Date().toISOString();
+          localSession.finished_at = at ?? new Date().toISOString();
           await saveOfflineSession(localSession);
         }
       } else if (actionType === 'pause' || actionType === 'resume') {
@@ -366,7 +368,7 @@ async function offlineSessionAction(
     // We can't update its state locally, but we can still queue the mutation for sync
     await addToOfflineQueue({
       type: `${actionType.toUpperCase()}_SESSION` as any,
-      payload: { sessionId, timestamp: new Date().toISOString() },
+      payload: { sessionId, timestamp: at ?? new Date().toISOString() },
     });
     if (actionType === 'finish' || actionType === 'abandon') {
       await setActiveOfflineSessionId(null);
@@ -374,12 +376,13 @@ async function offlineSessionAction(
     return null;
   }
 
-  const now = new Date().toISOString();
+  const now = at ?? new Date().toISOString();
+  const nowMs = new Date(now).getTime();
 
   switch (actionType) {
     case 'pause': {
       const lastResumed = new Date(session.last_resumed_at || session.started_at).getTime();
-      const additionalSec = Math.floor((Date.now() - lastResumed) / 1000);
+      const additionalSec = Math.floor((nowMs - lastResumed) / 1000);
       session.status = 'paused';
       session.paused_at = now;
       session.total_duration_sec += additionalSec;
@@ -393,7 +396,7 @@ async function offlineSessionAction(
     case 'finish': {
       if (session.status !== 'paused') {
         const lastResumed = new Date(session.last_resumed_at || session.started_at).getTime();
-        const additionalSec = Math.floor((Date.now() - lastResumed) / 1000);
+        const additionalSec = Math.floor((nowMs - lastResumed) / 1000);
         session.total_duration_sec += additionalSec;
       }
       session.status = 'completed';
@@ -404,7 +407,7 @@ async function offlineSessionAction(
     case 'abandon': {
       if (session.status !== 'paused') {
         const lastResumed = new Date(session.last_resumed_at || session.started_at).getTime();
-        const additionalSec = Math.floor((Date.now() - lastResumed) / 1000);
+        const additionalSec = Math.floor((nowMs - lastResumed) / 1000);
         session.total_duration_sec += additionalSec;
       }
       session.status = 'abandoned';
@@ -439,8 +442,8 @@ export async function offlineResumeSession(sessionId: string): Promise<WorkoutSe
   return result;
 }
 
-export async function offlineFinishSession(sessionId: string): Promise<WorkoutSession> {
-  const result = await offlineSessionAction('finish', sessionId);
+export async function offlineFinishSession(sessionId: string, finishedAt?: string): Promise<WorkoutSession> {
+  const result = await offlineSessionAction('finish', sessionId, finishedAt);
   if (!result) throw new Error('Failed to finish session');
   return result;
 }

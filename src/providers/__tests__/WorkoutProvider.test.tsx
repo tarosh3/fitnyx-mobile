@@ -16,11 +16,14 @@ jest.mock('@/src/lib/offline/offlineStore', () => ({
   }),
 }));
 const mockFinish = jest.fn(async (..._a: unknown[]) => ({}));
+const mockAbandon = jest.fn(async (..._a: unknown[]) => ({}));
+const mockGetSession = jest.fn(async (..._a: unknown[]) => ({ session: {}, exercise_logs: [] as any[] }));
 jest.mock('@/src/lib/offline/offlineApi', () => ({
   offlinePauseSession: jest.fn(),
   offlineResumeSession: jest.fn(),
   offlineFinishSession: (...a: unknown[]) => mockFinish(...a),
-  offlineAbandonSession: jest.fn(),
+  offlineAbandonSession: (...a: unknown[]) => mockAbandon(...a),
+  offlineGetSession: (...a: unknown[]) => mockGetSession(...a),
 }));
 jest.mock('@/src/lib/api/workoutSessions', () => ({
   getActiveSession: jest.fn(async () => ({ active: false, session: null })),
@@ -102,6 +105,70 @@ describe('WorkoutProvider active-session fallback', () => {
       await ctx!.finishActiveSession();
     });
     expect(mockFinish).toHaveBeenCalledWith('s1');
+    r.unmount();
+  });
+});
+
+describe('WorkoutProvider 12h auto-close', () => {
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+  const stale = () => ({
+    id: 's-stale',
+    status: 'in_progress',
+    started_at: hoursAgo(13),
+    last_resumed_at: hoursAgo(13),
+    total_duration_sec: 0,
+  });
+
+  beforeEach(() => {
+    mockStore.activeId = null;
+    mockStore.sessions = {};
+    mockFinish.mockClear();
+    mockAbandon.mockClear();
+    mockGetSession.mockReset();
+  });
+
+  it('finishes a forgotten session at its last logged set instead of abandoning', async () => {
+    const lastSet = hoursAgo(12);
+    mockGetSession.mockResolvedValue({
+      session: {},
+      exercise_logs: [{ created_at: hoursAgo(12.5) }, { created_at: lastSet }],
+    });
+    const r = await mount();
+    await act(async () => {
+      ctx!.setActiveSession(stale() as any);
+    });
+    await act(async () => {});
+
+    expect(mockFinish).toHaveBeenCalledWith('s-stale', new Date(lastSet).toISOString());
+    expect(mockAbandon).not.toHaveBeenCalled();
+    expect(ctx!.activeSession).toBeNull();
+    r.unmount();
+  });
+
+  it('abandons a forgotten session with no logged sets', async () => {
+    mockGetSession.mockResolvedValue({ session: {}, exercise_logs: [] });
+    const r = await mount();
+    await act(async () => {
+      ctx!.setActiveSession(stale() as any);
+    });
+    await act(async () => {});
+
+    expect(mockFinish).not.toHaveBeenCalled();
+    expect(mockAbandon).toHaveBeenCalledWith('s-stale');
+    r.unmount();
+  });
+
+  it('falls back to abandon when the server rejects the finish', async () => {
+    mockGetSession.mockResolvedValue({ session: {}, exercise_logs: [{ created_at: hoursAgo(12) }] });
+    mockFinish.mockRejectedValueOnce(Object.assign(new Error('too old'), { status: 400 }));
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const r = await mount();
+    await act(async () => {
+      ctx!.setActiveSession(stale() as any);
+    });
+    await act(async () => {});
+
+    expect(mockAbandon).toHaveBeenCalledWith('s-stale');
     r.unmount();
   });
 });
