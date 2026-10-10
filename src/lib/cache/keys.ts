@@ -7,7 +7,8 @@ export const cacheKeys = {
   exerciseCategories: 'exercises:categories',
   exerciseHistory: (uuid: string) => `exercise-history:${uuid}`,
   dashboard: (userId: string) => `dashboard:${userId}`,
-  dailyInsight: (userId: string) => `daily-insight:${userId}`,
+  // Per local day, so yesterday's insight is never served after midnight.
+  dailyInsight: (userId: string, date: string) => `daily-insight:${userId}:${date}`,
   bodyMetricsLatest: (userId: string) => `bodyMetrics:latest:${userId}`,
   bodyMetricsHistory: (userId: string) => `bodyMetrics:history:${userId}`,
   fitnessProfile: (userId: string) => `fitnessProfile:${userId}`,

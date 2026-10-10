@@ -1,4 +1,5 @@
 import { fetchWithAuth } from '@/src/lib/api';
+import { localDateKey } from '@/src/lib/api/workoutSessions';
 
 // --- AI Profile ---
 
@@ -89,5 +90,6 @@ export async function clearThread(threadId: string): Promise<void> {
 // --- Daily Insight ---
 
 export async function getDailyInsight(): Promise<{ insight: string }> {
-  return fetchWithAuth('/agent/daily-insight');
+  // The insight is per local calendar day; without the date the server uses UTC.
+  return fetchWithAuth(`/agent/daily-insight?date=${localDateKey(new Date())}`);
 }

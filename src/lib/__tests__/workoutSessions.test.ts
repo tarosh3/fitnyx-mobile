@@ -26,3 +26,19 @@ describe('sessionAction workout_date', () => {
     expect(sentBody().workout_date).toBeUndefined();
   });
 });
+
+describe('day-scoped endpoints send the local date', () => {
+  beforeEach(() => mockFetchWithAuth.mockClear());
+
+  it('daily insight and dashboard include ?date=<local YYYY-MM-DD>', async () => {
+    const { getDailyInsight } = require('@/src/lib/api/agent');
+    const { getDashboard } = require('@/src/lib/api/dashboard');
+    const today = localDateKey(new Date());
+
+    await getDailyInsight();
+    await getDashboard();
+
+    expect(mockFetchWithAuth.mock.calls[0][0]).toBe(`/agent/daily-insight?date=${today}`);
+    expect(mockFetchWithAuth.mock.calls[1][0]).toBe(`/dashboard?date=${today}`);
+  });
+});

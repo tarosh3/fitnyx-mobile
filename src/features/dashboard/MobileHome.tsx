@@ -1,4 +1,5 @@
 import { getDailyInsight } from '@/src/lib/api/agent';
+import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
@@ -53,7 +54,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         (async () => {
             try {
                 if (userId) {
-                    const cached = await cacheGet<string>(cacheKeys.dailyInsight(userId));
+                    const cached = await cacheGet<string>(cacheKeys.dailyInsight(userId, localDateKey(new Date())));
                     if (cached) {
                         if (!cancelled) setInsight(cached);
                         return;
@@ -61,7 +62,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
                 }
                 const r = await getDailyInsight();
                 if (r?.insight && userId) {
-                    cacheSet(cacheKeys.dailyInsight(userId), r.insight, cacheTTL.DAY).catch(() => undefined);
+                    cacheSet(cacheKeys.dailyInsight(userId, localDateKey(new Date())), r.insight, cacheTTL.DAY).catch(() => undefined);
                 }
                 if (!cancelled) setInsight(r?.insight || FALLBACK_INSIGHT);
             } catch {
