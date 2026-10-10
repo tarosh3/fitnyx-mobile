@@ -5,6 +5,7 @@ import { DashboardStats } from './components/DashboardStats';
 import { ProfileHeader } from './components/ProfileHeader';
 import { QuickActionsGrid } from './components/QuickActionsGrid';
 
+import { RoamStatsCard } from '@/src/features/roam/components/RoamStatsCard';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchLatestMetric } from '@/src/lib/api';
 import type { UserProfile } from '@/src/lib/api/users';
@@ -54,6 +55,8 @@ export function MobileDashboard({ user, avatarUrl, userProfile }: MobileDashboar
             : null}
           height={latestMetric?.height_cm ?? null}
         />
+
+        <RoamStatsCard userId={user?.id} />
 
         <QuickActionsGrid />
 

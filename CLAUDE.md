@@ -63,7 +63,7 @@ No eslint/prettier configured yet.
 
 **API (`src/lib/api.ts` + `src/lib/api/`):**
 All authenticated calls via `fetchWithAuth()` — attaches Supabase JWT automatically.
-Domain modules: `auth`, `dashboard`, `exercises`, `onboarding`, `users`, `username`, `workoutPlans`, `workoutSessions`, `agent`.
+Domain modules: `auth`, `dashboard`, `exercises`, `onboarding`, `users`, `username`, `workoutPlans`, `workoutSessions`, `agent`, `activities` (Roam).
 
 **Cache (`src/lib/cache/`):**
 Two layers: in-memory Map (fast) + AsyncStorage via indexeddb.ts (persisted).
@@ -73,6 +73,12 @@ Two layers: in-memory Map (fast) + AsyncStorage via indexeddb.ts (persisted).
 
 **Offline (`src/lib/db.ts`):**
 AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:offline-queue`. Replayed by AuthProvider on reconnect.
+
+**Roam (`src/features/roam/`, screens `app/roam/`)** — GPS-tracked run / walk / ride:
+- Background GPS task is defined in `tracking.ts`, imported at the top of `app/_layout.tsx` (must stay there — the OS delivers locations to a task defined at startup). Tracking only starts from the foreground, so only "While using the app" permission is requested; never add `ACCESS_BACKGROUND_LOCATION` (it triggers Google Play's background-location declaration).
+- The in-progress recording is persisted in `recordingStore.ts` (chunked AsyncStorage, serialized writes), not React state.
+- `geo.ts` mirrors the backend's `internal/activity/metrics.go` (thresholds, vehicle detection, splits). **Change both together**; the backend is authoritative for saved numbers and XP.
+- Maps: MapLibre (`RouteMap.tsx`; `RouteMap.web.tsx` placeholder for the web export) with OpenFreeMap tiles — style URLs live only in `mapStyle.ts`.
 
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
@@ -89,7 +95,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `home` · `onboarding` · `workouts`
+`auth` · `dashboard` · `diet` · `home` · `onboarding` · `roam` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
