@@ -138,3 +138,23 @@ describe('fetchWithAuth invite latch', () => {
     await expect(fetchWithAuth('/dashboard')).resolves.toEqual({ data: 'welcome back' });
   });
 });
+
+describe('registerSession timeout', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('aborts a stalled request instead of hanging app launch', async () => {
+    jest.useFakeTimers();
+    // A fetch that never answers on its own — only the abort signal ends it.
+    mockFetch.mockImplementation(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () => reject(new Error('Aborted')));
+        }),
+    );
+
+    const pending = registerSession('some-token');
+    const assertion = expect(pending).rejects.toThrow('Aborted');
+    jest.advanceTimersByTime(20_000);
+    await assertion;
+  });
+});

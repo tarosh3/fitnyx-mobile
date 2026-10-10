@@ -3,6 +3,8 @@ import { secureStorage } from '@/src/lib/secureStorage';
 import { supabase } from '@/src/lib/supabase';
 
 const SESSION_ID_KEY = 'fitnyx-session-id';
+// Covers a Render cold start (~10s) with headroom.
+const REGISTER_TIMEOUT_MS = 20_000;
 
 export async function getAuthToken(): Promise<string> {
   const { data, error } = await supabase.auth.getSession();
@@ -31,14 +33,26 @@ export async function registerSession(accessToken?: string): Promise<string> {
 
   // Token is sent only in the Authorization header — never in the body,
   // to prevent it from appearing in server request logs.
-  const response = await fetch(`${API_BASE_URL}/auth/session`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  const text = await response.text();
+  // Bounded: app launch awaits this before hiding the splash, and a plain
+  // fetch has no timeout — a stalled network or cold backend would hang the
+  // splash forever. On abort the caller's "registration failed" path runs.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REGISTER_TIMEOUT_MS);
+  let response: Response;
+  let text: string;
+  try {
+    response = await fetch(`${API_BASE_URL}/auth/session`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
+    text = await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
   // Safely parse JSON — a proxy/gateway may return an HTML error page (e.g. 502)
   let result: { session_id?: string; error?: string; code?: string } | null = null;
   if (text) {
