@@ -181,7 +181,7 @@ export async function offlineLogSet(sessionId: string, data: LogExerciseInput): 
 export async function offlineUpdateLog(
   sessionId: string,
   logId: string,
-  data: { actual_reps?: number; actual_weight_kg?: number }
+  data: { actual_reps?: number; actual_weight_kg?: number; rpe?: number }
 ): Promise<ExerciseLog> {
   const online = await checkOnline();
 
@@ -193,11 +193,15 @@ export async function offlineUpdateLog(
     }
   }
 
-  // Offline update
-  const updated = await updateOfflineLog(sessionId, logId, {
-    reps: data.actual_reps,
-    weight_kg: data.actual_weight_kg,
-  });
+  // Offline update. Only provided fields are written; weight 0 = bodyweight
+  // (stored as no weight, matching the server).
+  const updates: Partial<OfflineExerciseLog> = {};
+  if (data.actual_reps !== undefined) updates.reps = data.actual_reps;
+  if (data.actual_weight_kg !== undefined) {
+    updates.weight_kg = data.actual_weight_kg === 0 ? undefined : data.actual_weight_kg;
+  }
+  if (data.rpe !== undefined) updates.rpe = data.rpe;
+  const updated = await updateOfflineLog(sessionId, logId, updates);
 
   if (!updated) throw new Error('Log not found in offline store');
 
@@ -208,7 +212,7 @@ export async function offlineUpdateLog(
   } else {
     await addToOfflineQueue({
       type: 'UPDATE_SET',
-      payload: { sessionId, logId, reps: data.actual_reps, weightKg: data.actual_weight_kg },
+      payload: { sessionId, logId, reps: data.actual_reps, weightKg: data.actual_weight_kg, rpe: data.rpe },
     });
   }
 
@@ -272,7 +276,10 @@ async function updateQueuedLogSet(
     const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionId, log.exercise_uuid, log.set_index));
     if (idx === -1) return queue;
     const next = [...queue];
-    next[idx] = { ...queue[idx], payload: { ...queue[idx].payload, reps: log.reps, weightKg: log.weight_kg } };
+    next[idx] = {
+      ...queue[idx],
+      payload: { ...queue[idx].payload, reps: log.reps, weightKg: log.weight_kg, rpe: log.rpe },
+    };
     return next;
   });
 }

@@ -71,6 +71,7 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       await updateExerciseLog(payload.logId, {
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
+        rpe: payload.rpe,
       });
       break;
     }

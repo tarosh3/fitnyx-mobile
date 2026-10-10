@@ -374,6 +374,7 @@ export default function WorkoutSessionScreen() {
 
     if (log) {
       setEditingLogId(log.id);
+      setRpe(log.rpe ?? null);
       setReps(String(log.reps));
       const logWeight = log.weight_kg || 0;
       setWeight(String(weightUnit === 'kg' ? logWeight : Number(kgToLbs(logWeight).toFixed(1))));
@@ -458,7 +459,9 @@ export default function WorkoutSessionScreen() {
       if (editingLogId) {
         const updated = await offlineUpdateLog(sessionId, editingLogId, {
           actual_reps: repsNumber,
-          actual_weight_kg: weightKg,
+          // 0 tells the backend "no weight" — undefined would leave the old value.
+          actual_weight_kg: weightKg ?? 0,
+          rpe: rpe ?? undefined,
         });
 
         setExercises((prev) =>

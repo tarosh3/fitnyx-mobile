@@ -16,9 +16,10 @@ jest.mock('@/src/lib/offline/offlineStore', () => ({
 }));
 jest.mock('@/src/lib/api', () => ({ saveMetric: jest.fn() }));
 const mockLogSet = jest.fn();
+const mockUpdateLog = jest.fn(async (..._a: unknown[]) => ({}));
 jest.mock('@/src/lib/api/workoutSessions', () => ({
   logExerciseSet: (...a: unknown[]) => mockLogSet(...a),
-  updateExerciseLog: jest.fn(),
+  updateExerciseLog: (...a: unknown[]) => mockUpdateLog(...a),
   deleteExerciseLog: jest.fn(),
   sessionAction: jest.fn(),
 }));
@@ -128,5 +129,25 @@ describe('processOfflineQueue — rejected offline session start', () => {
 
     expect(mockQueue.map((m) => m.id)).toEqual(['s', 'l']);
     expect(clearPersistedSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('processOfflineQueue — UPDATE_SET', () => {
+  beforeEach(() => {
+    mockQueue.length = 0;
+    mockUpdateLog.mockClear();
+  });
+
+  it('syncs an offline edit including RPE and a cleared (0) weight', async () => {
+    mockQueue.push({
+      id: 'u',
+      type: 'UPDATE_SET',
+      payload: { sessionId: 'real', logId: 'log-1', reps: 6, weightKg: 0, rpe: 9 },
+      timestamp: Date.now(),
+    });
+
+    await processOfflineQueue();
+
+    expect(mockUpdateLog).toHaveBeenCalledWith('log-1', { actual_reps: 6, actual_weight_kg: 0, rpe: 9 });
   });
 });
