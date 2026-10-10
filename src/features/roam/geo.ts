@@ -1,0 +1,235 @@
+// Live Roam metrics — a mirror of the backend's internal/activity/metrics.go.
+// The backend recomputes everything on save and is authoritative (distance,
+// time, XP); this copy only drives the live screen and the pre-save summary.
+// Keep thresholds and rules in sync with the Go file.
+
+export type ActivityType = 'run' | 'walk' | 'cycle';
+
+/** One GPS fix: [lat, lng, secondsSinceStart, accuracyMetres, segment]. */
+export type RoamPoint = [number, number, number, number, number];
+
+export const MAX_ACCURACY_M = 30;
+export const MIN_STEP_M = 3;
+export const STATIONARY_MPS = 0.3;
+export const VEHICLE_SUSTAIN_SEC = 20;
+export const GAP_SEC = 20;
+export const MAX_SPEED_MIN_DT_SEC = 3;
+export const MIN_ELIGIBLE_DISTANCE_M = 200;
+export const MIN_ELIGIBLE_MOVING_SEC = 60;
+
+/** Fastest sustainable human speed: 25 km/h on foot, 60 km/h on a bike. */
+export function humanMaxMps(type: ActivityType): number {
+  return (type === 'cycle' ? 60 : 25) / 3.6;
+}
+
+export interface RoamStats {
+  distanceM: number;
+  movingTimeSec: number;
+  avgSpeedMps: number;
+  maxSpeedMps: number;
+  avgPaceSecPerKm: number | null;
+  vehicleDistanceM: number;
+  vehicleDetected: boolean;
+  /** True when the most recent movement was at vehicle speed (live banner). */
+  inVehicleNow: boolean;
+  xpEligible: boolean;
+  /** Accepted fixes as [lng, lat] (map order) and vehicle index ranges into it. */
+  route: [number, number][];
+  vehicleRanges: [number, number][];
+  splits: { km: number; sec: number }[];
+}
+
+const EARTH_RADIUS_M = 6371000;
+
+export function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toRad;
+  const dLng = (lng2 - lng1) * toRad;
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+interface Interval {
+  from: number;
+  to: number;
+  d: number;
+  dt: number;
+  fast: boolean;
+}
+
+function acceptedFixes(points: RoamPoint[]): RoamPoint[] {
+  return points
+    .filter(
+      ([lat, lng, t, acc]) =>
+        acc <= MAX_ACCURACY_M &&
+        lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 &&
+        Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(t),
+    )
+    .sort((a, b) => a[2] - b[2]);
+}
+
+function buildIntervals(route: RoamPoint[], limit: number): Interval[] {
+  const out: Interval[] = [];
+  let anchor = -1;
+  route.forEach((p, i) => {
+    if (anchor < 0 || route[anchor][4] !== p[4]) {
+      anchor = i; // new segment: never bridge a pause
+      return;
+    }
+    const a = route[anchor];
+    const dt = p[2] - a[2];
+    if (dt <= 0) return;
+    const d = haversine(a[0], a[1], p[0], p[1]);
+    if (d < MIN_STEP_M) return; // jitter
+    out.push({ from: anchor, to: i, d, dt, fast: d / dt > limit });
+    anchor = i;
+  });
+  return out;
+}
+
+function vehicleFlags(intervals: Interval[]): boolean[] {
+  const vehicle = intervals.map(() => false);
+  for (let i = 0; i < intervals.length; ) {
+    if (!intervals[i].fast) {
+      i++;
+      continue;
+    }
+    let j = i;
+    let dur = 0;
+    let jump = false;
+    while (j < intervals.length && intervals[j].fast) {
+      dur += intervals[j].dt;
+      if (intervals[j].dt >= GAP_SEC) jump = true;
+      j++;
+    }
+    if (dur >= VEHICLE_SUSTAIN_SEC || jump) {
+      for (let k = i; k < j; k++) vehicle[k] = true;
+    }
+    i = j;
+  }
+  return vehicle;
+}
+
+/** Computes live metrics for a track (same rules as the backend). */
+export function computeStats(points: RoamPoint[], type: ActivityType): RoamStats {
+  const route = acceptedFixes(points);
+  const intervals = buildIntervals(route, humanMaxMps(type));
+  const vehicle = vehicleFlags(intervals);
+
+  const stats: RoamStats = {
+    distanceM: 0,
+    movingTimeSec: 0,
+    avgSpeedMps: 0,
+    maxSpeedMps: 0,
+    avgPaceSecPerKm: null,
+    vehicleDistanceM: 0,
+    vehicleDetected: false,
+    inVehicleNow: false,
+    xpEligible: false,
+    route: route.map(([lat, lng]) => [lng, lat]),
+    vehicleRanges: [],
+    splits: [],
+  };
+
+  let moving = 0;
+  let lastCrossT = 0;
+  let nextKm = 1;
+  intervals.forEach((iv, i) => {
+    if (vehicle[i]) {
+      stats.vehicleDistanceM += iv.d;
+      return;
+    }
+    if (iv.fast) return; // short burst: GPS glitch
+    const v = iv.d / iv.dt;
+    if (v < STATIONARY_MPS) return;
+    while (stats.distanceM + iv.d >= nextKm * 1000) {
+      const crossT = moving + ((nextKm * 1000 - stats.distanceM) / iv.d) * iv.dt;
+      stats.splits.push({ km: nextKm, sec: Math.round(crossT - lastCrossT) });
+      lastCrossT = crossT;
+      nextKm++;
+    }
+    stats.distanceM += iv.d;
+    moving += iv.dt;
+    if (iv.dt >= MAX_SPEED_MIN_DT_SEC && v > stats.maxSpeedMps) stats.maxSpeedMps = v;
+  });
+
+  // Vehicle index ranges (consecutive vehicle intervals collapsed).
+  for (let i = 0; i < intervals.length; i++) {
+    if (!vehicle[i]) continue;
+    const start = intervals[i].from;
+    while (i + 1 < intervals.length && vehicle[i + 1] && intervals[i + 1].from === intervals[i].to) i++;
+    stats.vehicleRanges.push([start, intervals[i].to]);
+  }
+
+  stats.movingTimeSec = Math.round(moving);
+  if (moving > 0) stats.avgSpeedMps = stats.distanceM / moving;
+  if (stats.distanceM >= 100 && moving > 0) {
+    stats.avgPaceSecPerKm = Math.round(moving / (stats.distanceM / 1000));
+  }
+  stats.vehicleDetected = stats.vehicleDistanceM > 0;
+  // Live banner: the latest movement is part of a (so-far) fast run. A run
+  // still under VEHICLE_SUSTAIN_SEC isn't flagged yet, so also check the tail.
+  const last = intervals.length - 1;
+  stats.inVehicleNow = last >= 0 && (vehicle[last] || trailingFastSec(intervals) >= VEHICLE_SUSTAIN_SEC);
+  stats.xpEligible =
+    stats.distanceM >= MIN_ELIGIBLE_DISTANCE_M &&
+    stats.movingTimeSec >= MIN_ELIGIBLE_MOVING_SEC &&
+    stats.vehicleDistanceM <= stats.distanceM;
+  return stats;
+}
+
+function trailingFastSec(intervals: Interval[]): number {
+  let sec = 0;
+  for (let i = intervals.length - 1; i >= 0 && intervals[i].fast; i--) sec += intervals[i].dt;
+  return sec;
+}
+
+/** Decodes a Google-encoded polyline (precision 5) to [lng, lat] pairs. */
+export function decodePolyline(encoded: string): [number, number][] {
+  const coords: [number, number][] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  const next = (): number => {
+    let result = 0;
+    let shift = 0;
+    let byte: number;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    return result & 1 ? ~(result >> 1) : result >> 1;
+  };
+  while (index < encoded.length) {
+    lat += next();
+    lng += next();
+    coords.push([lng / 1e5, lat / 1e5]);
+  }
+  return coords;
+}
+
+// --- Formatting ---
+
+export function formatDistance(m: number): string {
+  return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
+}
+
+export function formatDuration(sec: number): string {
+  const s = Math.max(0, Math.round(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
+export function formatPace(secPerKm: number | null): string {
+  if (secPerKm == null || !Number.isFinite(secPerKm) || secPerKm <= 0) return '--:--';
+  const s = Math.round(secPerKm);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} /km`;
+}
+
+export function formatSpeed(mps: number): string {
+  return `${(mps * 3.6).toFixed(1)} km/h`;
+}

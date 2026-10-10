@@ -58,6 +58,20 @@ const ONBOARDING_EXEMPT_PATHS = [
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Stop GPS and drop any in-progress Roam so the next account on this device
+// doesn't inherit it. Lazy require keeps the native location modules out of
+// this provider's import graph (and its tests).
+async function clearRoamOnSignOut(): Promise<void> {
+  try {
+    const { stopLocationUpdates } = require('@/src/features/roam/tracking') as typeof import('@/src/features/roam/tracking');
+    const { clearRecording } = require('@/src/features/roam/recordingStore') as typeof import('@/src/features/roam/recordingStore');
+    await stopLocationUpdates();
+    await clearRecording();
+  } catch {
+    // best-effort
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -256,6 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await clearOfflineQueue().catch(() => undefined);
       await clearAllWaterData().catch(() => undefined);
       await clearAllReminders().catch(() => undefined);
+      await clearRoamOnSignOut();
     };
 
     const initialize = async () => {
@@ -450,6 +465,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearOfflineQueue();
     await clearAllWaterData().catch(() => undefined);
     await clearAllReminders().catch(() => undefined);
+    await clearRoamOnSignOut();
     await supabase.auth.signOut();
     setUser(null);
     router.replace('/');

@@ -20,6 +20,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 const NEON_LIME = '#5fc793';
 
 import type { UserProfile } from '@/src/lib/api/users';
+import { StartRoamCard } from '@/src/features/roam/components/StartRoamCard';
 
 interface MobileHomeProps {
     user: any;
@@ -123,6 +124,10 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
                     activeSession={metrics.activeSession}
                     currentDay={metrics.currentDay}
                 />
+
+                <View style={styles.section}>
+                    <StartRoamCard />
+                </View>
 
                 {/* AI Coach Insight */}
                 <View style={styles.section}>

@@ -29,6 +29,7 @@ import { fetchExerciseByUUID, fetchExercises } from '@/src/lib/api/exercises';
 import { useAuth } from '@/src/providers/AuthProvider';
 import type { Exercise, RelatedExercise } from '@/src/types/exercise';
 import { useRouter } from 'expo-router';
+import { StartRoamCard } from '@/src/features/roam/components/StartRoamCard';
 
 const MUSCLES = ['Abs', 'Biceps', 'Triceps', 'Chest', 'Back', 'Legs', 'Shoulders', 'Glutes', 'Calves', 'Cardio'];
 
@@ -229,6 +230,10 @@ export default function ExercisesScreen() {
           loop
           style={styles.challengeAnimation}
         />
+      </View>
+
+      <View style={{ marginBottom: 24 }}>
+        <StartRoamCard />
       </View>
 
       <View style={{ marginBottom: 24 }}>

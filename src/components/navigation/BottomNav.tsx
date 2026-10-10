@@ -28,6 +28,7 @@ const hiddenRoutePrefixes = [
   '/signup',
   '/workouts/customize',
   '/workouts/session',
+  '/roam/record',
   '/update-password',
   '/privacy-policy',
   '/terms-of-service',
@@ -88,7 +89,7 @@ export function BottomNav() {
       key: 'workouts',
       icon: Dumbbell,
       label: 'Workouts',
-      match: (p) => p.startsWith('/exercises'),
+      match: (p) => p.startsWith('/exercises') || p === '/roam' || p.startsWith('/roam/'),
       onPress: () => navigate('/exercises', pathname.startsWith('/exercises')),
     },
     {
