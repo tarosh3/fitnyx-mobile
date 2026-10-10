@@ -177,6 +177,10 @@ _Claude updates this section automatically when corrections are made._
 - **`prebuild --clean` wipes `android/local.properties`** → build fails `SDK location not found`. Recreate it: `sdk.dir=/Users/taroshmathuria/Library/Android/sdk`. `ANDROID_HOME` is NOT set in the shell/profile; SDK lives at `~/Library/Android/sdk` (has platforms 35/36/36.1).
 - **Notifee maven repo:** `expo run:android` passes `--configure-on-demand` + `org.gradle.parallel=true`, so notifee's own `rootProject.allprojects` repo injection runs too late → `Could not find app.notifee:core`. `plugins/withNotifeeRepo.js` must inject `maven { url "$rootDir/../node_modules/@notifee/react-native/android/libs" }` into the app's `allprojects.repositories`. That plugin's gate must be `config.modResults.language === 'groovy'` (NOT `'gradle'`) — `withProjectBuildGradle` sets `language` to `'groovy'`/`'kt'`, never `'gradle'`, so the wrong value silently no-ops the plugin.
 
+### iOS build (local `xcodebuild` / `expo run:ios`)
+
+- **Local iOS builds fail at the "Bundle React Native code and images" phase with `sentry-cli - error: An organization ID or slug is required`** — the Sentry source-map upload needs org/token that only EAS has. For local builds set `SENTRY_DISABLE_AUTO_UPLOAD=true` (e.g. `SENTRY_DISABLE_AUTO_UPLOAD=true xcodebuild … build`). Don't commit that setting — EAS builds should keep uploading. `ios/` is gitignored (prebuild-managed), like `android/`.
+
 ### React / providers
 
 - **Never memoize a callback that calls a `useWorkout()` action (`finishActiveSession`, `abandonActiveSession`, `pauseActiveSession`, `resumeActiveSession`) without listing that action in the deps.** Those actions close over `activeSession` and are re-created when it changes; a screen that mounts before the provider has the session (e.g. right after `offlineStartSession` → `router.push`) captures the `activeSession = null` version and the action silently no-ops. Verified 2026-10-08 with a Jest probe against `app/workouts/session/[id].tsx` (`completeWorkout`/`abandonWorkout` memoized on `[sessionId]` only).
