@@ -437,10 +437,11 @@ export default function StatsScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    const hydrate = async () => {
+    // Resolves true when cached data was put on screen.
+    const hydrate = async (): Promise<boolean> => {
       if (!userId) {
         setLoading(false);
-        return;
+        return false;
       }
       try {
         const [cachedLatest, cachedHist, cachedFitness] = await Promise.all([
@@ -448,7 +449,7 @@ export default function StatsScreen() {
           cacheGet<Metric[]>(cacheKeys.bodyMetricsHistory(userId)),
           cacheGet<{ target_weight_kg?: number }>(cacheKeys.fitnessProfile(userId)),
         ]);
-        if (cancelled) return;
+        if (cancelled) return false;
         if (cachedLatest) setLatest(cachedLatest);
         if (cachedHist?.length) setHistory(normalizeHistory(cachedHist));
         if (cachedFitness?.target_weight_kg && cachedFitness.target_weight_kg > 0) {
@@ -457,12 +458,17 @@ export default function StatsScreen() {
         // Always flip loading off after hydrate so we never get stuck on a spinner;
         // loadData refreshes in the background.
         setLoading(false);
+        return Boolean(cachedLatest || cachedHist?.length);
       } catch {
         setLoading(false);
+        return false;
       }
     };
-    hydrate().finally(() => {
-      if (userId) loadData();
+    hydrate().then((hadCache) => {
+      // Alert only when the screen has nothing to show. (This effect's loadData
+      // closure always saw the initial loading=true, so it alerted even over
+      // cached data.)
+      if (userId) loadData({ alertOnFail: !hadCache });
     });
     return () => {
       cancelled = true;
@@ -486,7 +492,7 @@ export default function StatsScreen() {
     }
   }, [logOpen, latest, weightUnit, heightUnit]);
 
-  const loadData = async () => {
+  const loadData = async ({ alertOnFail = false }: { alertOnFail?: boolean } = {}) => {
     try {
       const [latestMetric, hist, fitness] = await Promise.all([
         fetchLatestMetric(),
@@ -507,7 +513,7 @@ export default function StatsScreen() {
     } catch (err) {
       console.error('Failed to load metrics', err);
       // Don't alert if we already have cached data on screen
-      if (loading) {
+      if (alertOnFail) {
         Alert.alert('Error', 'Unable to load body stats.');
       }
     } finally {
