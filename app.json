@@ -19,25 +19,23 @@
       "backgroundColor": "#050505",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "CADisableMinimumFrameDurationOnPhone": true
+        "CADisableMinimumFrameDurationOnPhone": true,
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#050505",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.fitnyx.app",
       "backgroundColor": "#050505",
       "permissions": [
-        "FOREGROUND_SERVICE",
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
         "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM",
         "VIBRATE"
       ],
       "intentFilters": [

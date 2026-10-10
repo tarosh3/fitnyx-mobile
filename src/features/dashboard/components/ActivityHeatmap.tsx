@@ -173,7 +173,8 @@ export function ActivityHeatmap({ streakDays, maxStreak, totalActiveDays, activi
                                                         styles.cell,
                                                         {
                                                             backgroundColor: getIntensityColor(count, theme),
-                                                            borderColor: isSelected ? '#fff' : isToday ? NEON_LIME : getIntensityBorder(count, theme),
+                                                            // Selected ring must contrast the page bg in both themes — theme text color does exactly that.
+                                                            borderColor: isSelected ? palette.text : isToday ? NEON_LIME : getIntensityBorder(count, theme),
                                                             borderWidth: isSelected ? 1.5 : isToday ? 1.5 : 0.5,
                                                         },
                                                     ]}

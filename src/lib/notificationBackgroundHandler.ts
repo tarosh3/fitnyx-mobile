@@ -48,12 +48,3 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
     console.error('Background notification action failed:', error);
   }
 });
-
-// Register the foreground service task (Android only)
-notifee.registerForegroundService(() => {
-  // Return a promise that resolves when the service should stop.
-  // For workout timer, this stays alive until dismiss() is called.
-  return new Promise(() => {
-    // Service runs indefinitely until stopForegroundService() is called
-  });
-});

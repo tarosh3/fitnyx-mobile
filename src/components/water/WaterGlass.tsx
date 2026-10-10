@@ -106,7 +106,7 @@ export function WaterGlass({ progress = 0, primary = '#5fc793' }: Props) {
   }));
 
   // Bubble travels from the floor up to just under the surface, fading near the top.
-  const bubbleProps = (t: { value: number }, x: number, r: number) =>
+  const useBubbleProps = (t: { value: number }, x: number, r: number) =>
     useAnimatedProps(() => {
       const top = waterTop.value + 10;
       const cy = BASE_Y - 12 - t.value * (BASE_Y - 12 - top);
@@ -114,9 +114,9 @@ export function WaterGlass({ progress = 0, primary = '#5fc793' }: Props) {
       return { cy, r, cx: x, opacity: (1 - t.value) * 0.5 * visible };
     });
 
-  const b1Props = bubbleProps(b1, CX - 26, 3);
-  const b2Props = bubbleProps(b2, CX + 14, 2.4);
-  const b3Props = bubbleProps(b3, CX + 30, 1.8);
+  const b1Props = useBubbleProps(b1, CX - 26, 3);
+  const b2Props = useBubbleProps(b2, CX + 14, 2.4);
+  const b3Props = useBubbleProps(b3, CX + 30, 1.8);
 
   return (
     <View style={styles.wrap} pointerEvents="none">

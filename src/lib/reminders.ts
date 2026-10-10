@@ -165,9 +165,10 @@ function buildTimestampTrigger(timestamp: number, repeat?: RepeatFrequency): Tim
     type: TriggerType.TIMESTAMP,
     timestamp,
     ...(repeat !== undefined ? { repeatFrequency: repeat } : {}),
-    // Use exact-and-allow-while-idle when the device grants exact alarms;
-    // USE_EXACT_ALARM is auto-granted on Android 13+, SCHEDULE_EXACT_ALARM
-    // is declared for Android 12 as a fallback (user must grant in settings).
+    // Use exact-and-allow-while-idle when the device grants exact alarms.
+    // Only SCHEDULE_EXACT_ALARM is declared (user grants in system settings;
+    // notifee falls back to inexact otherwise). USE_EXACT_ALARM is deliberately
+    // NOT declared — Google Play only allows it for alarm-clock/calendar apps.
     alarmManager:
       Platform.OS === 'android'
         ? { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE }
@@ -271,6 +272,14 @@ function computeIntervalSlots(
     }
   }
   return slots;
+}
+
+// Full wipe for sign-out / account deletion: cancel every scheduled trigger
+// and drop the stored list, so reminders never fire for the next account on
+// this device.
+export async function clearAllReminders(): Promise<void> {
+  await notifee.cancelTriggerNotifications().catch(() => undefined);
+  await AsyncStorage.removeItem(STORAGE_KEY).catch(() => undefined);
 }
 
 export async function cancelReminderTriggers(parentId: string): Promise<void> {

@@ -113,6 +113,14 @@ export async function clearDay(date: string): Promise<DayLog> {
   return { date, entries: [] };
 }
 
+// Full wipe for sign-out / account deletion — water history is device-local,
+// so without this the next account on the device inherits it.
+export async function clearAllWaterData(): Promise<void> {
+  const keys = await AsyncStorage.getAllKeys();
+  const mine = keys.filter((k) => k.startsWith(ENTRIES_PREFIX) || k === GOAL_KEY);
+  if (mine.length > 0) await AsyncStorage.multiRemove(mine);
+}
+
 export function sumMl(day: DayLog): number {
   return day.entries.reduce((acc, e) => acc + e.amountMl, 0);
 }

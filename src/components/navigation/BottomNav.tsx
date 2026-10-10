@@ -34,6 +34,8 @@ const hiddenRoutePrefixes = [
   '/delete-account',
   '/email-verified',
   '/verification-failed',
+  '/invite',
+  '/access-expired',
 ];
 
 type TabItem = {

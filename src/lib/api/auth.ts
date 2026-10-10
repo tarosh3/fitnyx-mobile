@@ -1,4 +1,4 @@
-import { API_BASE_URL, _invalidateBackendSessionIdCache, _resetAuthInvalidated } from '@/src/lib/api';
+import { API_BASE_URL, InviteGateError, _invalidateBackendSessionIdCache, _resetAuthInvalidated } from '@/src/lib/api';
 import { secureStorage } from '@/src/lib/secureStorage';
 import { supabase } from '@/src/lib/supabase';
 
@@ -39,11 +39,30 @@ export async function registerSession(accessToken?: string): Promise<string> {
     },
   });
   const text = await response.text();
-  const result = text ? JSON.parse(text) : null;
+  // Safely parse JSON — a proxy/gateway may return an HTML error page (e.g. 502)
+  let result: { session_id?: string; error?: string; code?: string } | null = null;
+  if (text) {
+    try {
+      result = JSON.parse(text);
+    } catch {
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+    }
+  }
   if (!response.ok) {
+    // Invite gate: the account has no live access window. Typed so AuthProvider
+    // and fetchWithAuth can route to the invite/expired screens.
+    if (
+      response.status === 403 &&
+      (result?.code === 'INVITE_REQUIRED' || result?.code === 'INVITE_EXPIRED')
+    ) {
+      throw new InviteGateError(result?.error || 'Invite required', result.code);
+    }
     throw new Error(result?.error || `API call failed: ${response.statusText}`);
   }
-  const sessionId = result.session_id;
+  const sessionId = result?.session_id;
+  if (!sessionId) {
+    throw new Error('Session registration returned no session_id');
+  }
   await secureStorage.setItem(SESSION_ID_KEY, sessionId);
   _invalidateBackendSessionIdCache(sessionId);
   // A live session is back — clear the global auth-invalidation latch so

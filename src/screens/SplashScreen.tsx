@@ -57,7 +57,7 @@ interface Props {
   onAnimationComplete?: () => void;
 }
 
-export default function SplashScreen({ onAnimationComplete }: Props) {
+export function AnimatedSplash({ onAnimationComplete }: Props) {
   // Stroke drawing (0 = fully hidden, 1 = fully drawn)
   const strokeProgress1 = useSharedValue(0);
   const strokeProgress2 = useSharedValue(0);

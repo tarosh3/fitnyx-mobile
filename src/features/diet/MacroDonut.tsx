@@ -94,31 +94,40 @@ export function MacroDonut({ calories, proteinG, carbsG, fatsG, mutedColor, trac
 
       <View style={styles.legend}>
         {segments.map((seg, i) => (
-          <Animated.View
-            key={seg.key}
-            style={[styles.legendItem, useEntranceDelay(enter, 200 + i * 90)]}
-          >
-            <View style={[styles.dot, { backgroundColor: seg.color }]} />
-            <Text style={[styles.legendLabel, { color: mutedColor }]}>{seg.key.toUpperCase()}</Text>
-            <Text style={[styles.legendValue, { color: textColor }]}>{seg.grams}g</Text>
-            <Text style={[styles.legendPct, { color: mutedColor }]}>{Math.round(seg.share * 100)}%</Text>
-          </Animated.View>
+          <LegendRow key={seg.key} seg={seg} delay={200 + i * 90} mutedColor={mutedColor} textColor={textColor} />
         ))}
       </View>
     </View>
   );
 }
 
-// Small staggered fade/slide-up for each legend row.
-function useEntranceDelay(enter: { value: number }, delay: number) {
+// One legend row, owning its own staggered fade/slide-up entrance. Kept as a
+// component (not a hook called in a .map) so the animation hooks live at a
+// component top level — no Rules-of-Hooks violation if the macro set changes.
+interface LegendRowProps {
+  seg: { key: string; share: number; grams: number; color: string };
+  delay: number;
+  mutedColor: string;
+  textColor: string;
+}
+
+function LegendRow({ seg, delay, mutedColor, textColor }: LegendRowProps) {
   const v = useSharedValue(0);
   useEffect(() => {
     v.value = withDelay(delay, withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) }));
   }, [v, delay]);
-  return useAnimatedStyle(() => ({
+  const style = useAnimatedStyle(() => ({
     opacity: v.value,
     transform: [{ translateY: (1 - v.value) * 8 }],
   }));
+  return (
+    <Animated.View style={[styles.legendItem, style]}>
+      <View style={[styles.dot, { backgroundColor: seg.color }]} />
+      <Text style={[styles.legendLabel, { color: mutedColor }]}>{seg.key.toUpperCase()}</Text>
+      <Text style={[styles.legendValue, { color: textColor }]}>{seg.grams}g</Text>
+      <Text style={[styles.legendPct, { color: mutedColor }]}>{Math.round(seg.share * 100)}%</Text>
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({

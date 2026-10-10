@@ -45,7 +45,7 @@ export function ConfirmModal({
                     <View style={styles.header}>
                         <View style={[
                             styles.iconCircle,
-                            { backgroundColor: variant === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(128, 242, 13, 0.1)' }
+                            { backgroundColor: variant === 'danger' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(95, 199, 147, 0.12)' }
                         ]}>
                             <AlertCircle
                                 size={24}
@@ -53,7 +53,7 @@ export function ConfirmModal({
                             />
                         </View>
                         <Pressable onPress={onCancel} style={styles.closeBtn}>
-                            <X size={20} color="rgba(255,255,255,0.3)" />
+                            <X size={20} color={palette.mutedText} />
                         </Pressable>
                     </View>
 
@@ -144,7 +144,8 @@ const getStyles = (palette: any) => StyleSheet.create({
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        // Theme-aware faint fill — a white-alpha here disappears on light cards.
+        backgroundColor: `${palette.text}08`,
     },
     content: {
         gap: 8,
@@ -168,14 +169,14 @@ const getStyles = (palette: any) => StyleSheet.create({
         flex: 1,
         height: 52,
         borderRadius: 16,
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        backgroundColor: `${palette.text}08`,
         borderWidth: 1,
         borderColor: palette.border,
         alignItems: 'center',
         justifyContent: 'center',
     },
     cancelBtnText: {
-        color: 'rgba(255,255,255,0.6)',
+        color: palette.mutedText,
         fontSize: 12,
         fontWeight: '800',
         letterSpacing: 1,

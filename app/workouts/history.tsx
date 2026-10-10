@@ -83,7 +83,7 @@ export default function WorkoutHistoryScreen() {
     setConfirmConfig({
       visible: true,
       title: 'DELETE WORKOUT',
-      message: `Delete ${session.plan_name || 'this workout'}? This will permanentely remove all logs for this session.`,
+      message: `Delete ${session.plan_name || 'this workout'}? This will permanently remove all logs for this session.`,
       onConfirm: async () => {
         hideConfirm();
         try {
@@ -111,7 +111,7 @@ export default function WorkoutHistoryScreen() {
           <View style={styles.cardInfo}>
             <Text style={styles.planTitle}>{session.plan_name?.toUpperCase() || 'CUSTOM SESSION'}</Text>
             <View style={styles.dateRow}>
-              <Calendar size={12} color="rgba(255,255,255,0.4)" />
+              <Calendar size={12} color={palette.mutedText} />
               <Text style={styles.dateText}>{dateStr}</Text>
             </View>
           </View>
@@ -180,9 +180,9 @@ export default function WorkoutHistoryScreen() {
           style={styles.expandToggle}
         >
           {isExpanded ? (
-            <ChevronUp size={20} color="rgba(255,255,255,0.3)" />
+            <ChevronUp size={20} color={palette.mutedText} />
           ) : (
-            <ChevronDown size={20} color="rgba(255,255,255,0.3)" />
+            <ChevronDown size={20} color={palette.mutedText} />
           )}
         </Pressable>
       </View>
@@ -216,7 +216,7 @@ export default function WorkoutHistoryScreen() {
         ) : sessions.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
-              <History size={48} color="rgba(255,255,255,0.1)" />
+              <History size={48} color={palette.border} />
             </View>
             <Text style={styles.emptyTitle}>NO WORKOUTS YET</Text>
             <Text style={styles.emptySub}>Your fitness journey starts with the first rep.</Text>
@@ -301,10 +301,10 @@ const getStyles = (palette: any) => StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: `${palette.text}05`,
   },
   emptyTitle: {
     color: palette.text,
@@ -313,7 +313,7 @@ const getStyles = (palette: any) => StyleSheet.create({
     letterSpacing: 1,
   },
   emptySub: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.mutedText,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -354,7 +354,7 @@ const getStyles = (palette: any) => StyleSheet.create({
     gap: 6,
   },
   dateText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.mutedText,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -386,7 +386,7 @@ const getStyles = (palette: any) => StyleSheet.create({
     fontWeight: '900',
   },
   statLabel: {
-    color: 'rgba(255,255,255,0.3)',
+    color: palette.mutedText,
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 1,
@@ -394,11 +394,11 @@ const getStyles = (palette: any) => StyleSheet.create({
   divisor: {
     width: 1,
     height: 30,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.border,
   },
   progressTrack: {
     height: 2,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.border,
     width: '100%',
   },
   progressBar: {
@@ -410,26 +410,26 @@ const getStyles = (palette: any) => StyleSheet.create({
     shadowRadius: 4,
   },
   expandedContent: {
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    backgroundColor: `${palette.text}03`,
     padding: 20,
     paddingBottom: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.03)',
+    borderTopColor: palette.border,
   },
   exerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.03)',
+    borderBottomColor: palette.border,
   },
   exName: {
-    color: 'rgba(255,255,255,0.9)',
+    color: palette.text,
     fontSize: 14,
     fontWeight: '700',
   },
   exMeta: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.mutedText,
     fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
@@ -438,12 +438,12 @@ const getStyles = (palette: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 2,
-    backgroundColor: 'rgba(128, 242, 13, 0.05)',
+    backgroundColor: 'rgba(95, 199, 147, 0.08)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(128, 242, 13, 0.1)',
+    borderColor: 'rgba(95, 199, 147, 0.18)',
   },
   weightText: {
     color: NEON_LIME,
@@ -459,10 +459,10 @@ const getStyles = (palette: any) => StyleSheet.create({
   expandToggle: {
     paddingVertical: 10,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: `${palette.text}05`,
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.3)',
+    color: palette.mutedText,
     fontSize: 12,
     textAlign: 'center',
     paddingVertical: 20,
@@ -478,7 +478,7 @@ const getStyles = (palette: any) => StyleSheet.create({
     height: 48,
     paddingHorizontal: 24,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: `${palette.text}05`,
     borderWidth: 1,
     borderColor: palette.border,
     alignItems: 'center',
@@ -501,7 +501,7 @@ const getStyles = (palette: any) => StyleSheet.create({
     fontWeight: '900',
   },
   totalPage: {
-    color: 'rgba(255,255,255,0.3)',
+    color: palette.mutedText,
     fontSize: 14,
     fontWeight: '700',
   },
