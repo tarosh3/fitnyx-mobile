@@ -16,7 +16,8 @@ import { clearAllOfflineData } from '@/src/lib/offline/offlineStore';
 import { clearAllReminders } from '@/src/lib/reminders';
 import { clearAllWaterData } from '@/src/lib/water';
 import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
-import { getStoredUser, supabase } from '@/src/lib/supabase';
+import { isDefinitelyOffline } from '@/src/lib/network';
+import { getStoredSession, getStoredUser, supabase } from '@/src/lib/supabase';
 
 // Durable key that persists indefinitely (not subject to TTL expiry)
 const ONBOARDING_DONE_KEY = 'fitnyx:onboarding-complete';
@@ -292,6 +293,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initialize = async () => {
       try {
+        // Offline launch: open straight from the stored session. getSession()
+        // would retry an expired token's refresh for ~30 s first (a minute-long
+        // spinner); Supabase refreshes it once the network is back.
+        if (await isDefinitelyOffline()) {
+          const stored = await getStoredSession();
+          if (stored?.user) {
+            await startOffline(stored.user);
+            return;
+          }
+        }
+
         const {
           data: { session: storedSession },
           error: getError,

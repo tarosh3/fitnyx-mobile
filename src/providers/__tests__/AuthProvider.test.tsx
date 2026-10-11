@@ -138,6 +138,31 @@ describe('AuthProvider offline launch', () => {
   });
 });
 
+describe('AuthProvider offline launch (no connection)', () => {
+  it('opens from the stored session without waiting on Supabase', async () => {
+    const NetInfo = jest.requireMock('@react-native-community/netinfo') as { fetch: jest.Mock };
+    const { getStoredSession } = jest.requireMock('@/src/lib/supabase') as { getStoredSession: jest.Mock };
+    NetInfo.fetch.mockResolvedValueOnce({ isConnected: false, isInternetReachable: false });
+    getStoredSession.mockResolvedValueOnce({ access_token: 'old', expires_at: 0, user });
+    (supabase.auth.getSession as jest.Mock).mockClear();
+
+    let seen: { id: string } | null = null;
+    function UserProbe() {
+      seen = useAuth().user as { id: string } | null;
+      return null;
+    }
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await act(async () => {});
+
+    expect(seen).toEqual(user);
+    expect(supabase.auth.getSession).not.toHaveBeenCalled();
+  });
+});
+
 describe('AuthProvider sign-out', () => {
   it('keeps local data (offline queue included) when Supabase sign-out fails offline', async () => {
     const { clearOfflineQueue } = jest.requireMock('@/src/lib/cache/indexeddb') as { clearOfflineQueue: jest.Mock };

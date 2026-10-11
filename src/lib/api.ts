@@ -1,6 +1,7 @@
 import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 
-import { supabase } from '@/src/lib/supabase';
+import { isDefinitelyOffline } from '@/src/lib/network';
+import { getStoredSession, supabase } from '@/src/lib/supabase';
 import { idbGet, idbGetStale, idbSet } from '@/src/lib/cache/indexeddb';
 import { getApiBaseUrl } from '@/src/lib/config/backend';
 import { secureStorage } from '@/src/lib/secureStorage';
@@ -150,6 +151,15 @@ async function getAccessToken(): Promise<string | null> {
   if (inflightSessionFetch) return inflightSessionFetch;
   inflightSessionFetch = (async () => {
     try {
+      // Offline, don't ask Supabase: with an expired token getSession() spends
+      // ~30 s retrying the refresh — every API call (and screen) waited on it.
+      if (await isDefinitelyOffline()) {
+        const stored = await getStoredSession();
+        if (stored?.access_token && (stored.expires_at ?? 0) * 1000 - Date.now() > 30_000) {
+          return stored.access_token;
+        }
+        throw new NetworkUnavailableError();
+      }
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (session?.access_token) {
         cachedAccessToken = session.access_token;
