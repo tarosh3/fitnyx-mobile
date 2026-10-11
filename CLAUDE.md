@@ -99,7 +99,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## UI primitives (`src/components/ui/`)
 
-Button, Card, Input, Screen, PageHeader, ConfirmModal, Logo
+Button, Card, Input, Screen, PageHeader, ConfirmModal, Logo, LoopingLottie (decorative looping Lottie that pauses when its screen is unfocused — use it instead of `LottieView autoPlay loop`)
 
 Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, BackendKeepAlive, SyncManager
 

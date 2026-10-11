@@ -17,7 +17,14 @@ export interface RouteMapProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export function RouteMap({ route, vehicleRanges = [], live = false, style }: RouteMapProps) {
+// Memoized: the live screen re-renders every second for its clock, but the
+// map only needs to update when a new fix changes the route.
+export const RouteMap = React.memo(function RouteMap({
+  route,
+  vehicleRanges = NO_RANGES,
+  live = false,
+  style,
+}: RouteMapProps) {
   const palette = useThemeColors();
   const { theme } = useTheme();
 
@@ -73,7 +80,9 @@ export function RouteMap({ route, vehicleRanges = [], live = false, style }: Rou
       </Map>
     </View>
   );
-}
+});
+
+const NO_RANGES: [number, number][] = [];
 
 const styles = StyleSheet.create({
   wrap: { overflow: 'hidden', borderRadius: 16 },

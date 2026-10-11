@@ -1,11 +1,11 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import LottieView from 'lottie-react-native';
 import { ChevronLeft, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/src/components/ui/Screen';
+import { LoopingLottie } from '@/src/components/ui/LoopingLottie';
 import { DietPlanView } from '@/src/features/diet/DietPlanView';
 import { DietWizard } from '@/src/features/diet/DietWizard';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -108,10 +108,8 @@ export default function DietScreen() {
         <View style={styles.generatingWrapper}>
           <BlurView intensity={20} tint="dark" style={styles.generatingCard}>
             <View style={styles.iconCircle}>
-              <LottieView
+              <LoopingLottie
                 source={require('@/assets/animations/chatbot.json')}
-                autoPlay
-                loop
                 style={{ width: 80, height: 80 }}
               />
             </View>

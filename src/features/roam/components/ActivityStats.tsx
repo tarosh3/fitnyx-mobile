@@ -21,7 +21,15 @@ export function ActivityStats({ activity }: { activity: ActivitySummary }) {
           label={cycle ? 'Avg speed' : 'Avg pace'}
           value={cycle ? formatSpeed(activity.avg_speed_mps) : formatPace(activity.avg_pace_sec_per_km)}
         />
-        <StatTile label="Max speed" value={formatSpeed(activity.max_speed_mps)} />
+        {/* On foot everything else is a pace, so show the best stretch as one too. */}
+        <StatTile
+          label={cycle ? 'Max speed' : 'Best pace'}
+          value={
+            cycle
+              ? formatSpeed(activity.max_speed_mps)
+              : formatPace(activity.max_speed_mps > 0 ? 1000 / activity.max_speed_mps : null)
+          }
+        />
       </View>
       <View style={styles.row}>
         <StatTile label="Total time" value={formatDuration(activity.elapsed_time_sec)} />

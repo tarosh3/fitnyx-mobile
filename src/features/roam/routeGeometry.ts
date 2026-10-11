@@ -13,7 +13,25 @@ export function vehicleLines(route: LngLatPair[], ranges: [number, number][]): F
   return { type: 'FeatureCollection', features };
 }
 
+/** Most points the drawn line needs; more is invisible at map zoom. */
+export const MAX_DRAWN_POINTS = 1000;
+
+/**
+ * Every k-th point (first and last always kept) so the line handed to the
+ * native map stays small: a long Roam has thousands of fixes, and the live
+ * screen re-sends the whole line on every new fix. Metrics never use this.
+ */
+export function thinForDisplay(route: LngLatPair[], max = MAX_DRAWN_POINTS): LngLatPair[] {
+  if (route.length <= max) return route;
+  const step = Math.ceil(route.length / (max - 1));
+  const out: LngLatPair[] = [];
+  for (let i = 0; i < route.length - 1; i += step) out.push(route[i]);
+  out.push(route[route.length - 1]);
+  return out;
+}
+
 export function routeLine(route: LngLatPair[]): FeatureCollection<LineString> {
+  route = thinForDisplay(route);
   return {
     type: 'FeatureCollection',
     features:

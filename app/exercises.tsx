@@ -1,4 +1,3 @@
-import LottieView from 'lottie-react-native';
 import {
   Clock,
   Dumbbell,
@@ -22,6 +21,7 @@ import {
 import { WeeklyCalendar } from '@/src/components/dashboard/WeeklyCalendar';
 import { Card } from '@/src/components/ui/Card';
 import { Screen } from '@/src/components/ui/Screen';
+import { LoopingLottie } from '@/src/components/ui/LoopingLottie';
 import { ExerciseDetailModal } from '@/src/features/dashboard/ExerciseDetailModal';
 import { ExerciseMedia } from '@/src/features/workouts/ExerciseMedia';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -44,6 +44,59 @@ function getThumbnail(exercise: Exercise): string | undefined {
     undefined
   );
 }
+
+// Memoized so typing in search or loading the next page doesn't re-render
+// every visible tile (and its image) — only changed rows update.
+const ExerciseTile = React.memo(function ExerciseTile({
+  item,
+  index,
+  onOpen,
+  styles,
+}: {
+  item: Exercise;
+  index: number;
+  onOpen: (exercise: Exercise) => void;
+  styles: ReturnType<typeof getStyles>;
+}) {
+  const thumbnail = getThumbnail(item);
+  const defaultBgs = ['#1E1E1E', '#2D2D2D', '#333333'];
+  const fallbackBg = defaultBgs[index % 3];
+
+  return (
+    <Pressable
+      onPress={() => onOpen(item)}
+      style={({ pressed }) => [styles.tileWrap, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+    >
+      <Card style={styles.tile}>
+        <View style={styles.tileContentRow}>
+          <View style={[styles.tileImgWrap, { backgroundColor: fallbackBg }]}>
+            {thumbnail ? (
+              <ExerciseMedia url={thumbnail} title={item.title} style={styles.image} />
+            ) : null}
+          </View>
+          <View style={styles.tileTextCol}>
+            <Text numberOfLines={1} style={styles.tileTitle}>
+              {item.title.toUpperCase()}
+            </Text>
+            <View style={styles.tileMetaRow}>
+              <View style={styles.tileMetaItem}>
+                <Clock color={NEON_LIME} size={12} />
+                <Text style={styles.tileMetaText}>12 MIN</Text>
+              </View>
+              <View style={styles.tileMetaItem}>
+                <Dumbbell color={NEON_LIME} size={12} />
+                <Text style={styles.tileMetaText}>3 X 12</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.tilePlayWrap}>
+            <Play color={NEON_LIME} size={16} fill={NEON_LIME} style={{ marginLeft: 2 }} />
+          </View>
+        </View>
+      </Card>
+    </Pressable>
+  );
+});
 
 export default function ExercisesScreen() {
   const palette = useThemeColors();
@@ -108,10 +161,10 @@ export default function ExercisesScreen() {
     loadPage(1, true);
   }, [loadPage]);
 
-  const openExercise = async (exercise: Exercise) => {
+  const openExercise = useCallback((exercise: Exercise) => {
     setSelectedExercise(exercise);
     setInfoOpen(true);
-  };
+  }, []);
 
   const onSelectRelated = async (exercise: RelatedExercise) => {
     try {
@@ -122,46 +175,12 @@ export default function ExercisesScreen() {
     }
   };
 
-  const renderItem = ({ item, index }: { item: Exercise; index: number }) => {
-    const thumbnail = getThumbnail(item);
-    const defaultBgs = ['#1E1E1E', '#2D2D2D', '#333333'];
-    const fallbackBg = defaultBgs[index % 3];
-
-    return (
-      <Pressable
-        onPress={() => openExercise(item)}
-        style={({ pressed }) => [styles.tileWrap, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-      >
-        <Card style={styles.tile}>
-          <View style={styles.tileContentRow}>
-            <View style={[styles.tileImgWrap, { backgroundColor: fallbackBg }]}>
-              {thumbnail ? (
-                <ExerciseMedia url={thumbnail} title={item.title} style={styles.image} />
-              ) : null}
-            </View>
-            <View style={styles.tileTextCol}>
-              <Text numberOfLines={1} style={styles.tileTitle}>
-                {item.title.toUpperCase()}
-              </Text>
-              <View style={styles.tileMetaRow}>
-                <View style={styles.tileMetaItem}>
-                  <Clock color={NEON_LIME} size={12} />
-                  <Text style={styles.tileMetaText}>12 MIN</Text>
-                </View>
-                <View style={styles.tileMetaItem}>
-                  <Dumbbell color={NEON_LIME} size={12} />
-                  <Text style={styles.tileMetaText}>3 X 12</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.tilePlayWrap}>
-              <Play color={NEON_LIME} size={16} fill={NEON_LIME} style={{ marginLeft: 2 }} />
-            </View>
-          </View>
-        </Card>
-      </Pressable>
-    );
-  };
+  const renderItem = useCallback(
+    ({ item, index }: { item: Exercise; index: number }) => (
+      <ExerciseTile item={item} index={index} onOpen={openExercise} styles={styles} />
+    ),
+    [openExercise, styles]
+  );
 
   const EmptyState = useMemo(
     () => (
@@ -224,10 +243,8 @@ export default function ExercisesScreen() {
             <Text style={styles.challengeBtnText}>JOIN NOW</Text>
           </Pressable>
         </View>
-        <LottieView
+        <LoopingLottie
           source={require('@/assets/animations/yoga.json')}
-          autoPlay
-          loop
           style={styles.challengeAnimation}
         />
       </View>

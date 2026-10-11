@@ -35,25 +35,23 @@ export function ExerciseMedia({ url, title, style, autoPlay = true }: ExerciseMe
       (url?.toLowerCase().endsWith('.mp4') && resolvedUrl.startsWith('file://'))
     : false;
 
-  // useVideoPlayer must be called unconditionally (Rules of Hooks)
-  const player = useVideoPlayer(isVideo ? resolvedUrl! : null, (p) => {
+  if (!resolvedUrl) return null;
+
+  // Only video media gets a player: a native player per image tile (e.g. every
+  // row of the exercise list) costs memory and makes scrolling janky.
+  if (isVideo) {
+    return <ExerciseVideo url={resolvedUrl} style={style} autoPlay={autoPlay} />;
+  }
+
+  return <Image source={{ uri: resolvedUrl }} accessibilityLabel={title} style={style} />;
+}
+
+function ExerciseVideo({ url, style, autoPlay }: { url: string; style?: StyleProp<ImageStyle>; autoPlay: boolean }) {
+  const player = useVideoPlayer(url, (p) => {
     p.loop = true;
     p.muted = true;
     if (autoPlay) p.play();
   });
 
-  if (!resolvedUrl) return null;
-
-  if (isVideo) {
-    return (
-      <VideoView
-        player={player}
-        style={style as any}
-        contentFit="cover"
-        nativeControls={!autoPlay}
-      />
-    );
-  }
-
-  return <Image source={{ uri: resolvedUrl }} accessibilityLabel={title} style={style} />;
+  return <VideoView player={player} style={style as any} contentFit="cover" nativeControls={!autoPlay} />;
 }

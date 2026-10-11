@@ -13,7 +13,8 @@ export const MIN_STEP_M = 3;
 export const STATIONARY_MPS = 0.3;
 export const VEHICLE_SUSTAIN_SEC = 20;
 export const GAP_SEC = 20;
-export const MAX_SPEED_MIN_DT_SEC = 3;
+/** Max speed = best average over any stretch of this much moving time. */
+export const MAX_SPEED_WINDOW_SEC = 10;
 export const MIN_ELIGIBLE_DISTANCE_M = 200;
 export const MIN_ELIGIBLE_MOVING_SEC = 60;
 
@@ -133,6 +134,7 @@ export function computeStats(points: RoamPoint[], type: ActivityType): RoamStats
   };
 
   let moving = 0;
+  const counted: Interval[] = []; // intervals that count, in order — for max speed
   let lastCrossT = 0;
   let nextKm = 1;
   intervals.forEach((iv, i) => {
@@ -151,7 +153,7 @@ export function computeStats(points: RoamPoint[], type: ActivityType): RoamStats
     }
     stats.distanceM += iv.d;
     moving += iv.dt;
-    if (iv.dt >= MAX_SPEED_MIN_DT_SEC && v > stats.maxSpeedMps) stats.maxSpeedMps = v;
+    counted.push(iv);
   });
 
   // Vehicle index ranges (consecutive vehicle intervals collapsed).
@@ -164,6 +166,9 @@ export function computeStats(points: RoamPoint[], type: ActivityType): RoamStats
 
   stats.movingTimeSec = Math.round(moving);
   if (moving > 0) stats.avgSpeedMps = stats.distanceM / moving;
+  // The best stretch can't be slower than the whole (also covers Roams
+  // shorter than one window).
+  stats.maxSpeedMps = Math.max(maxWindowSpeed(counted), stats.avgSpeedMps);
   if (stats.distanceM >= 100 && moving > 0) {
     stats.avgPaceSecPerKm = Math.round(moving / (stats.distanceM / 1000));
   }
@@ -177,6 +182,25 @@ export function computeStats(points: RoamPoint[], type: ActivityType): RoamStats
     stats.movingTimeSec >= MIN_ELIGIBLE_MOVING_SEC &&
     stats.vehicleDistanceM <= stats.distanceM;
   return stats;
+}
+
+/** Highest average speed over consecutive counted intervals spanning ≥ the window. */
+function maxWindowSpeed(ivs: Interval[]): number {
+  let best = 0;
+  let d = 0;
+  let dt = 0;
+  let left = 0;
+  for (const iv of ivs) {
+    d += iv.d;
+    dt += iv.dt;
+    while (left < ivs.length && dt - ivs[left].dt >= MAX_SPEED_WINDOW_SEC) {
+      d -= ivs[left].d;
+      dt -= ivs[left].dt;
+      left++;
+    }
+    if (dt >= MAX_SPEED_WINDOW_SEC && d / dt > best) best = d / dt;
+  }
+  return best;
 }
 
 function trailingFastSec(intervals: Interval[]): number {

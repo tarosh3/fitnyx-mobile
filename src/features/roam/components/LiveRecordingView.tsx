@@ -24,7 +24,7 @@ export function LiveRecordingView({ recording, onFinish }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <RouteMap live route={stats?.route ?? []} vehicleRanges={stats?.vehicleRanges ?? []} style={styles.map} />
+      <RouteMap live route={stats?.route ?? NO_ROUTE} vehicleRanges={stats?.vehicleRanges} style={styles.map} />
 
       {stats?.inVehicleNow ? (
         <VehicleBanner message="Looks like you're in a vehicle — this stretch won't count toward your Roam." />
@@ -62,6 +62,8 @@ export function LiveRecordingView({ recording, onFinish }: Props) {
     </View>
   );
 }
+
+const NO_ROUTE: [number, number][] = []; // stable, so the memoized map doesn't re-render
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, gap: 12 },

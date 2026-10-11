@@ -39,6 +39,19 @@ class Track {
 
 const stats = (tr: Track, type: ActivityType) => computeStats(tr.pts, type);
 
+describe('max speed (mirrors metrics_test.go)', () => {
+  it('works with ~2 s phone fixes and is never below the average', () => {
+    const s = stats(new Track().move(3, 2, 150).move(4.5, 2, 30).move(3, 2, 150), 'run');
+    expect(s.maxSpeedMps).toBeCloseTo(4.5, 1);
+    expect(s.maxSpeedMps).toBeGreaterThanOrEqual(s.avgSpeedMps);
+  });
+
+  it('is not set by one noisy fix', () => {
+    const s = stats(new Track().move(3, 2, 100).move(6.5, 2, 1).move(3, 2, 100), 'run');
+    expect(s.maxSpeedMps).toBeLessThan(3.8);
+  });
+});
+
 describe('computeStats (mirrors backend rules)', () => {
   it('steady 5 km run: distance, moving time, splits, pace', () => {
     const s = stats(new Track().move(3, 3, 556), 'run');

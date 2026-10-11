@@ -1,4 +1,4 @@
-import { endpoints, routeBounds, routeLine, vehicleLines } from '@/src/features/roam/routeGeometry';
+import { endpoints, MAX_DRAWN_POINTS, routeBounds, routeLine, thinForDisplay, vehicleLines } from '@/src/features/roam/routeGeometry';
 
 const route: [number, number][] = [
   [72.87, 19.07],
@@ -8,6 +8,16 @@ const route: [number, number][] = [
 ];
 
 describe('routeGeometry', () => {
+  it('thins long routes for display, keeping the first and last point', () => {
+    const route = Array.from({ length: 5000 }, (_, i): [number, number] => [72 + i * 1e-5, 19]);
+    const thin = thinForDisplay(route);
+    expect(thin.length).toBeLessThanOrEqual(MAX_DRAWN_POINTS);
+    expect(thin[0]).toEqual(route[0]);
+    expect(thin[thin.length - 1]).toEqual(route[4999]);
+    expect(thinForDisplay(route.slice(0, 10))).toHaveLength(10);
+  });
+
+
   it('builds the route line only when there are 2+ points', () => {
     expect(routeLine(route).features).toHaveLength(1);
     expect(routeLine(route.slice(0, 1)).features).toHaveLength(0);
