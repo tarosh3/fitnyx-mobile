@@ -248,6 +248,16 @@ export function formatDuration(sec: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
 
+/** Readable duration for totals and summaries: "1h 34m", "28m 6s", "45s". */
+export function formatDurationHuman(sec: number): string {
+  const s = Math.max(0, Math.round(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (m > 0) return s % 60 > 0 ? `${m}m ${s % 60}s` : `${m}m`;
+  return `${s}s`;
+}
+
 export function formatPace(secPerKm: number | null): string {
   if (secPerKm == null || !Number.isFinite(secPerKm) || secPerKm <= 0) return '--:--';
   const s = Math.round(secPerKm);

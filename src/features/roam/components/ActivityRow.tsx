@@ -3,14 +3,14 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ACTIVITY_LABEL, ActivityTypeIcon } from '@/src/features/roam/components/ActivityTypeIcon';
-import { formatDistance, formatDuration, formatPace, formatSpeed } from '@/src/features/roam/geo';
+import { formatDistance, formatDurationHuman, formatPace, formatSpeed } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { ActivitySummary } from '@/src/lib/api/activities';
 
 /** One past Roam in the history list. */
 export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; onPress: () => void }) {
   const palette = useThemeColors();
-  const date = new Date(activity.started_at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const date = dayLabel(new Date(activity.started_at));
   const rate =
     activity.activity_type === 'cycle' ? formatSpeed(activity.avg_speed_mps) : formatPace(activity.avg_pace_sec_per_km);
   return (
@@ -26,7 +26,7 @@ export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; 
           {ACTIVITY_LABEL[activity.activity_type]} · {formatDistance(activity.distance_m)}
         </Text>
         <Text style={[styles.sub, { color: palette.mutedText }]}>
-          {date} · {formatDuration(activity.moving_time_sec)} · {rate}
+          {date} · {formatDurationHuman(activity.moving_time_sec)} · {rate}
         </Text>
         {!activity.xp_eligible ? (
           <Text style={[styles.flag, { color: palette.warning }]}>
@@ -39,6 +39,15 @@ export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; 
       <ChevronRight size={18} color={palette.mutedText} />
     </Pressable>
   );
+}
+
+/** "Today", "Yesterday", else "Sat, 10 Oct". */
+function dayLabel(d: Date): string {
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOf(new Date()) - startOf(d)) / 86_400_000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 const styles = StyleSheet.create({

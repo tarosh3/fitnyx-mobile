@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { StatTile } from '@/src/features/roam/components/StatTile';
-import { formatDistance, formatDuration } from '@/src/features/roam/geo';
+import { formatDistance, formatDurationHuman } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { ActivityWeek } from '@/src/lib/api/activities';
 
@@ -15,7 +15,7 @@ export function WeekSummary({ week }: { week: ActivityWeek }) {
       <View style={styles.row}>
         <StatTile label="Roams" value={String(week.count)} />
         <StatTile label="Distance" value={formatDistance(week.distance_m)} />
-        <StatTile label="Moving" value={formatDuration(week.moving_time_sec)} />
+        <StatTile label="Time" value={formatDurationHuman(week.moving_time_sec)} />
       </View>
     </View>
   );

@@ -3,6 +3,7 @@ import {
   decodePolyline,
   formatDistance,
   formatDuration,
+  formatDurationHuman,
   formatPace,
   type ActivityType,
   type RoamPoint,
@@ -160,5 +161,15 @@ describe('polyline + formatting', () => {
     expect(formatDuration(3725)).toBe('1:02:05');
     expect(formatPace(333)).toBe('5:33 /km');
     expect(formatPace(null)).toBe('--:--');
+  });
+});
+
+describe('formatDurationHuman', () => {
+  it('reads like words, not a clock', () => {
+    expect(formatDurationHuman(5638)).toBe('1h 33m');
+    expect(formatDurationHuman(3600)).toBe('1h');
+    expect(formatDurationHuman(1686)).toBe('28m 6s');
+    expect(formatDurationHuman(120)).toBe('2m');
+    expect(formatDurationHuman(45)).toBe('45s');
   });
 });
