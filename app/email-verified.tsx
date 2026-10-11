@@ -15,7 +15,7 @@ export default function EmailVerifiedScreen() {
       <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}> 
         <Text style={styles.emoji}>🎉</Text>
         <Text style={[styles.title, { color: palette.text }]}>Your email has been verified successfully!</Text>
-        <Text style={[styles.subtitle, { color: palette.mutedText }]}>Open the app and log in to continue.</Text>
+        <Text style={[styles.subtitle, { color: palette.mutedText }]}>Log in to continue.</Text>
         <Button title="Back to Login" onPress={() => router.replace('/login')} />
       </View>
     </Screen>
