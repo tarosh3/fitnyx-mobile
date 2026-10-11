@@ -51,7 +51,17 @@ export default function AuthCallbackScreen() {
         // PKCE flow: exchange authorization code for session
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError) throw exchangeError;
+          if (exchangeError) {
+            // A signup link reaches here only after Supabase confirmed the
+            // email. If this isn't the phone the user signed up on (no PKCE
+            // verifier here) the exchange can't sign them in — but the email
+            // IS verified, so say so instead of "verification failed".
+            if (type === 'signup') {
+              router.replace('/email-verified');
+              return;
+            }
+            throw exchangeError;
+          }
         } else if (rawUrl) {
           // Implicit flow fallback: extract tokens from hash fragment
           const hashIndex = rawUrl.indexOf('#');
@@ -85,6 +95,10 @@ export default function AuthCallbackScreen() {
             router.replace('/update-password');
             break;
           case 'signup':
+            // Signed in by the exchange above: go straight into the app
+            // (onboarding redirect applies for new users).
+            router.replace('/');
+            break;
           case 'email':
             router.replace('/email-verified');
             break;

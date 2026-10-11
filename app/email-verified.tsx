@@ -1,52 +1,19 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { MailCheck } from 'lucide-react-native';
+import React from 'react';
 
-import { Screen } from '@/src/components/ui/Screen';
-import { Button } from '@/src/components/ui/Button';
-import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { AuthResultCard } from '@/src/features/auth/components/AuthResultCard';
 
 export default function EmailVerifiedScreen() {
   const router = useRouter();
-  const palette = useThemeColors();
-
   return (
-    <Screen scroll={false} contentContainerStyle={styles.center}>
-      <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}> 
-        <Text style={styles.emoji}>🎉</Text>
-        <Text style={[styles.title, { color: palette.text }]}>Your email has been verified successfully!</Text>
-        <Text style={[styles.subtitle, { color: palette.mutedText }]}>Open the app and log in to continue.</Text>
-        <Button title="Back to Login" onPress={() => router.replace('/login')} />
-      </View>
-    </Screen>
+    <AuthResultCard
+      icon={MailCheck}
+      tone="success"
+      title="Email verified"
+      body="Your account is ready. Log in to start training."
+      actionLabel="Log in"
+      onAction={() => router.replace('/login')}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  card: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 18,
-    width: '100%',
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 13,
-    marginBottom: 16,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-});

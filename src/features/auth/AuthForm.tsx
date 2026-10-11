@@ -13,6 +13,11 @@ import { sanitizeName, sanitizeEmail, MAX_NAME, MAX_EMAIL, MAX_PASSWORD } from '
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Signup confirmation links land on the website, which confirms the email on
+// any device and hands off to the app on phones (fitnyx.in/email-confirmed).
+// Opening the app's own scheme directly did nothing on a computer.
+const EMAIL_CONFIRMED_URL = 'https://fitnyx.in/email-confirmed';
+
 interface AuthFormProps {
   initialMode?: 'login' | 'signup';
   onSuccess?: () => void;
@@ -96,7 +101,7 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode, notic
               first_name: firstName,
               last_name: lastName,
             },
-            emailRedirectTo: redirectTo,
+            emailRedirectTo: EMAIL_CONFIRMED_URL,
           },
         });
 
