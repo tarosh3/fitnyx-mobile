@@ -31,7 +31,9 @@ export function LevelProgress({ level, xp, nextLevelXp, progressPercent }: Level
                             <Text style={styles.xpValueText}>{xp} XP Earned</Text>
                         </View>
                         <Text style={styles.xpDescription}>
-                            You're crushing it! Keep consistent to reach Elite status.
+                            {xp === 0
+                                ? 'Finish a workout or a Roam to earn your first XP.'
+                                : "You're crushing it! Keep consistent to reach Elite status."}
                         </Text>
                     </View>
                 </View>

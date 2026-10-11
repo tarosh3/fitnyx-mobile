@@ -81,7 +81,11 @@ export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDay
                     {avatarUrl ? (
                         <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
                     ) : (
-                        <View style={[styles.avatarFallback, { backgroundColor: palette.surface }]} />
+                        <View style={[styles.avatarFallback, { backgroundColor: palette.surface }]}>
+                            <Text style={[styles.avatarInitial, { color: palette.primary }]}>
+                                {userName.trim().charAt(0).toUpperCase() || '?'}
+                            </Text>
+                        </View>
                     )}
                 </Pressable>
             </View>
@@ -179,5 +183,8 @@ const getStyles = (palette: any) => StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
+    avatarInitial: { fontSize: 22, fontWeight: '800' },
 });

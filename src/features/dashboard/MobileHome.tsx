@@ -87,19 +87,18 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         return (
             <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
                 <Text style={[styles.stateText, { color: palette.mutedText }]}>SOMETHING WENT WRONG</Text>
-                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Pull down to retry</Text>
+                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Check your connection and try again.</Text>
+                <Pressable onPress={metrics.refresh} hitSlop={12} style={styles.retryBtn} accessibilityRole="button">
+                    <Text style={[styles.retryText, { color: palette.primary }]}>Try again</Text>
+                </Pressable>
             </View>
         );
     }
 
-    if (!metrics.sessions.length && !metrics.activePlan) {
-        return (
-            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
-                <Text style={[styles.stateText, { color: palette.mutedText }]}>NO ACTIVITY YET</Text>
-                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Start a workout to see your dashboard</Text>
-            </View>
-        );
-    }
+    // A brand-new user (no plan, no workouts yet) gets the full Home: its
+    // mission card reads "Start your journey · Select a plan to begin", and
+    // Roam and the coach are right there. An empty "No activity yet" page
+    // used to leave them with nothing to tap.
 
     return (
         <ScrollView style={[styles.container, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
@@ -234,6 +233,8 @@ const getStyles = (palette: any) => StyleSheet.create({
         flex: 1,
     },
     aiSpacer: { flex: 1 },
+    retryBtn: { marginTop: 16, paddingVertical: 8, paddingHorizontal: 16 },
+    retryText: { fontSize: 14, fontWeight: '700' },
     aiChevronOpen: { transform: [{ rotate: '180deg' }] },
     aiAsk: { marginTop: 12, alignSelf: 'flex-start' },
     aiAskText: { fontSize: 13, fontWeight: '700', color: palette.primary },
