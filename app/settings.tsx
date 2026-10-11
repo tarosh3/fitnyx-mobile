@@ -462,7 +462,8 @@ function PickerSheet({
 
 const styles = StyleSheet.create({
   screen: {
-    paddingBottom: spacing['3xl'],
+    // Clear the bottom tab bar (76) plus breathing room.
+    paddingBottom: 120,
     paddingHorizontal: 0,
     gap: spacing.xs,
   },

@@ -18,7 +18,8 @@ import { motion, spacing, type as t } from '@/src/styles/tokens';
 
 const hiddenRoutePrefixes = [
   '/onboarding',
-  '/settings',
+  // Settings is a tab, so its root keeps the bar; only its sub-pages hide it.
+  '/settings/coach-memory',
   '/reminders',
   '/water',
   '/profile',

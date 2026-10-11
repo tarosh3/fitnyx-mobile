@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import notifee, {
   AlarmType,
   AndroidImportance,
+  AndroidNotificationSetting,
   AndroidVisibility,
   AuthorizationStatus,
   RepeatFrequency,
@@ -160,18 +161,36 @@ function notifBody(r: Reminder): { title: string; body: string } {
   return { title: copy.title, body: copy.body };
 }
 
-function buildTimestampTrigger(timestamp: number, repeat?: RepeatFrequency): TimestampTrigger {
+/**
+ * Whether Android lets this app schedule EXACT alarms. Since Android 12,
+ * SCHEDULE_EXACT_ALARM is a special access the user grants in system settings
+ * (USE_EXACT_ALARM is deliberately NOT declared — Google Play only allows it
+ * for alarm-clock/calendar apps). Older Android and iOS: always true.
+ */
+export async function canScheduleExactAlarms(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+  const settings = await notifee.getNotificationSettings();
+  return settings.android.alarm !== AndroidNotificationSetting.DISABLED;
+}
+
+/** Opens the system "Alarms & reminders" access screen for this app. */
+export function openExactAlarmSettings(): Promise<void> {
+  return notifee.openAlarmPermissionSettings();
+}
+
+function buildTimestampTrigger(timestamp: number, exact: boolean, repeat?: RepeatFrequency): TimestampTrigger {
   return {
     type: TriggerType.TIMESTAMP,
     timestamp,
     ...(repeat !== undefined ? { repeatFrequency: repeat } : {}),
-    // Use exact-and-allow-while-idle when the device grants exact alarms.
-    // Only SCHEDULE_EXACT_ALARM is declared (user grants in system settings;
-    // notifee falls back to inexact otherwise). USE_EXACT_ALARM is deliberately
-    // NOT declared — Google Play only allows it for alarm-clock/calendar apps.
+    // Exact when allowed; otherwise allow-while-idle, which Android may delay
+    // by a few minutes but always delivers. Requesting an exact alarm without
+    // the access doesn't degrade gracefully: notifee drops the trigger
+    // ("Missing SCHEDULE_EXACT_ALARM permission. Trigger not scheduled"), which
+    // silently killed every reminder on Android 12+.
     alarmManager:
       Platform.OS === 'android'
-        ? { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE }
+        ? { type: exact ? AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE : AlarmType.SET_AND_ALLOW_WHILE_IDLE }
         : undefined,
   };
 }
@@ -218,10 +237,11 @@ export async function scheduleReminder(r: Reminder, opts: { prompt?: boolean } =
   await ensureChannel();
   const granted = opts.prompt ? await ensurePermission() : await hasPermission();
   if (!granted) return;
+  const exact = await canScheduleExactAlarms();
 
   if (r.schedule.kind === 'daily') {
     const fire = nextOccurrence(r.schedule.hour, r.schedule.minute);
-    await scheduleSingle(r.id, 'd0', buildTimestampTrigger(fire.getTime(), RepeatFrequency.DAILY), notifBody(r));
+    await scheduleSingle(r.id, 'd0', buildTimestampTrigger(fire.getTime(), exact, RepeatFrequency.DAILY), notifBody(r));
     return;
   }
 
@@ -235,7 +255,7 @@ export async function scheduleReminder(r: Reminder, opts: { prompt?: boolean } =
       await scheduleSingle(
         r.id,
         `t${i}`,
-        buildTimestampTrigger(fire.getTime(), RepeatFrequency.DAILY),
+        buildTimestampTrigger(fire.getTime(), exact, RepeatFrequency.DAILY),
         notifBody(r),
       );
     }
@@ -247,7 +267,7 @@ export async function scheduleReminder(r: Reminder, opts: { prompt?: boolean } =
   if (minutes <= 0) return;
   const slots = computeIntervalSlots(minutes, startHour, endHour, MAX_INTERVAL_SLOTS);
   for (let i = 0; i < slots.length; i++) {
-    await scheduleSingle(r.id, `i${i}`, buildTimestampTrigger(slots[i]), notifBody(r));
+    await scheduleSingle(r.id, `i${i}`, buildTimestampTrigger(slots[i], exact), notifBody(r));
   }
 }
 
@@ -298,7 +318,7 @@ export async function sendTestNotification(r: Reminder): Promise<boolean> {
   await scheduleSingle(
     r.id,
     `test_${Date.now()}`,
-    buildTimestampTrigger(fire),
+    buildTimestampTrigger(fire, await canScheduleExactAlarms()),
     payload
   );
   return true;
