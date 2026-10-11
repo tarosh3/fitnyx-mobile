@@ -11,7 +11,7 @@ export default function SignupScreen() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/dashboard');
+      router.replace('/');
     }
   }, [loading, user, router]);
 
@@ -23,7 +23,7 @@ export default function SignupScreen() {
       style={{ paddingBottom: 0, backgroundColor: '#000000' }}
       contentContainerStyle={{ flex: 1, backgroundColor: '#000000' }}
     >
-      <AuthForm initialMode="signup" onSuccess={() => router.replace('/dashboard')} />
+      <AuthForm initialMode="signup" onSuccess={() => router.replace('/')} />
     </Screen>
   );
 }

@@ -505,7 +505,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     fetchUserProfile(currentUser.id);
     const complete = await checkOnboarding(currentUser);
-    router.replace(complete ? '/dashboard' : '/onboarding');
+    router.replace(complete ? '/' : '/onboarding'); // Home is the app's start screen
   };
 
   const value = useMemo<AuthContextType>(

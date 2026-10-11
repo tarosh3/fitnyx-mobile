@@ -703,7 +703,7 @@ export default function WorkoutSessionScreen() {
     <View style={styles.root}>
       <Screen style={{ backgroundColor: DEPTH_BG }}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backBtn}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={styles.backBtn}>
           <ChevronLeft size={24} color="#fff" />
         </Pressable>
         <View style={{ flex: 1 }}>

@@ -153,7 +153,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.headerRow}>
         <PressableScale
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/dashboard'))}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           style={[styles.backBtn, { backgroundColor: c.surface, borderColor: c.border }]}
         >
           <ChevronLeft size={22} color={c.text} />

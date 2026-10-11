@@ -131,7 +131,7 @@ export function OnboardingFlow() {
       try {
         await completeOnboarding();
         markOnboardingComplete();
-        router.replace('/dashboard');
+        router.replace('/');
       } catch (error) {
         console.error('Failed to complete onboarding', error);
       } finally {

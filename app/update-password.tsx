@@ -41,7 +41,7 @@ export default function UpdatePasswordScreen() {
       if (updateError) throw updateError;
 
       setMessage('Password updated successfully! Redirecting...');
-      setTimeout(() => router.replace('/dashboard'), 1500);
+      setTimeout(() => router.replace('/'), 1500);
     } catch (err: any) {
       setError(err?.message || 'Failed to update password');
     } finally {

@@ -19,7 +19,7 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/dashboard');
+      router.replace('/');
     }
   }, [loading, user, router]);
 
@@ -31,7 +31,7 @@ export default function LoginScreen() {
       style={{ paddingBottom: 0, backgroundColor: '#000000' }}
       contentContainerStyle={{ flex: 1, backgroundColor: '#000000' }}
     >
-      <AuthForm initialMode="login" notice={notice} onSuccess={() => router.replace('/dashboard')} />
+      <AuthForm initialMode="login" notice={notice} onSuccess={() => router.replace('/')} />
     </Screen>
   );
 }
