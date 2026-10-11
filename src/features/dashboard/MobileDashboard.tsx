@@ -5,6 +5,7 @@ import { DashboardStats } from './components/DashboardStats';
 import { ProfileHeader } from './components/ProfileHeader';
 import { QuickActionsGrid } from './components/QuickActionsGrid';
 
+import { RoamStatsCard } from '@/src/features/roam/components/RoamStatsCard';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchLatestMetric } from '@/src/lib/api';
 import type { UserProfile } from '@/src/lib/api/users';
@@ -28,7 +29,7 @@ export function MobileDashboard({ user, avatarUrl, userProfile }: MobileDashboar
     placeholderData: (prev: any) => prev,
   });
 
-  const userName = (userProfile?.username || userProfile?.first_name || user?.user_metadata?.first_name || 'Athlete');
+  const userName = (userProfile?.first_name || userProfile?.username || user?.user_metadata?.first_name || 'Athlete');
 
   if (isLoading) {
     return (
@@ -54,6 +55,8 @@ export function MobileDashboard({ user, avatarUrl, userProfile }: MobileDashboar
             : null}
           height={latestMetric?.height_cm ?? null}
         />
+
+        <RoamStatsCard userId={user?.id} />
 
         <QuickActionsGrid />
 

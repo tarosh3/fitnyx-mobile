@@ -89,10 +89,10 @@ export default function AuthCallbackScreen() {
             router.replace('/email-verified');
             break;
           case 'magiclink':
-            router.replace('/dashboard');
+            router.replace('/');
             break;
           default:
-            router.replace('/dashboard');
+            router.replace('/');
             break;
         }
       } catch (err: any) {

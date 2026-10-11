@@ -12,11 +12,10 @@ import {
     User
 } from 'lucide-react-native';
 import React from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const NEON_LIME = '#5fc793';
 const PALE_ORANGE = '#FF9500';
 
@@ -88,11 +87,16 @@ const getStyles = (palette: any) => StyleSheet.create({
         gap: 12,
     },
     cardContainer: {
-        width: (SCREEN_WIDTH - 48 - 12) / 2, // 24*2 padding, 12 gap
+        // Two per row filling the row exactly, whatever the screen padding is
+        // (a fixed width assumed 24px padding and left a gap on the right).
+        flexBasis: '45%',
+        flexGrow: 1,
     },
     card: {
         height: 110,
         borderRadius: 20,
+        // BlurView draws a square layer on Android; clip it to the corners.
+        overflow: 'hidden',
         padding: 16,
         backgroundColor: palette.card,
         borderWidth: 1,

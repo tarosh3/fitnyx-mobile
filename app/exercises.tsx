@@ -1,10 +1,9 @@
-import LottieView from 'lottie-react-native';
 import {
-  Clock,
-  Dumbbell,
+  Target,
   Play,
   Search,
-  SlidersHorizontal
+  SlidersHorizontal,
+  WifiOff,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -22,13 +21,18 @@ import {
 import { WeeklyCalendar } from '@/src/components/dashboard/WeeklyCalendar';
 import { Card } from '@/src/components/ui/Card';
 import { Screen } from '@/src/components/ui/Screen';
+import { LoopingLottie } from '@/src/components/ui/LoopingLottie';
 import { ExerciseDetailModal } from '@/src/features/dashboard/ExerciseDetailModal';
 import { ExerciseMedia } from '@/src/features/workouts/ExerciseMedia';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchExerciseByUUID, fetchExercises } from '@/src/lib/api/exercises';
+import { useActivityData } from '@/src/hooks/useActivityData';
+import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
+import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
 import type { Exercise, RelatedExercise } from '@/src/types/exercise';
 import { useRouter } from 'expo-router';
+import { StartRoamCard } from '@/src/features/roam/components/StartRoamCard';
 
 const MUSCLES = ['Abs', 'Biceps', 'Triceps', 'Chest', 'Back', 'Legs', 'Shoulders', 'Glutes', 'Calves', 'Cardio'];
 
@@ -44,14 +48,74 @@ function getThumbnail(exercise: Exercise): string | undefined {
   );
 }
 
+// Memoized so typing in search or loading the next page doesn't re-render
+// every visible tile (and its image) — only changed rows update.
+const ExerciseTile = React.memo(function ExerciseTile({
+  item,
+  index,
+  onOpen,
+  styles,
+}: {
+  item: Exercise;
+  index: number;
+  onOpen: (exercise: Exercise) => void;
+  styles: ReturnType<typeof getStyles>;
+}) {
+  const thumbnail = getThumbnail(item);
+  // Real facts about the exercise: "Lower chest · Bodyweight only".
+  const meta = [item.primary_muscles?.[0]?.name, item.equipment?.[0]?.name]
+    .filter(Boolean)
+    .map((t) => t!.charAt(0).toUpperCase() + t!.slice(1).toLowerCase())
+    .join(' · ');
+  const defaultBgs = ['#1E1E1E', '#2D2D2D', '#333333'];
+  const fallbackBg = defaultBgs[index % 3];
+
+  return (
+    <Pressable
+      onPress={() => onOpen(item)}
+      style={({ pressed }) => [styles.tileWrap, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+    >
+      <Card style={styles.tile}>
+        <View style={styles.tileContentRow}>
+          <View style={[styles.tileImgWrap, { backgroundColor: fallbackBg }]}>
+            {thumbnail ? (
+              <ExerciseMedia url={thumbnail} title={item.title} style={styles.image} />
+            ) : null}
+          </View>
+          <View style={styles.tileTextCol}>
+            <Text numberOfLines={1} style={styles.tileTitle}>
+              {item.title.toUpperCase()}
+            </Text>
+            <View style={styles.tileMetaRow}>
+              {meta ? (
+                <View style={styles.tileMetaItem}>
+                  <Target color={NEON_LIME} size={12} />
+                  <Text style={styles.tileMetaText} numberOfLines={1}>{meta}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+          <View style={styles.tilePlayWrap}>
+            <Play color={NEON_LIME} size={16} fill={NEON_LIME} style={{ marginLeft: 2 }} />
+          </View>
+        </View>
+      </Card>
+    </Pressable>
+  );
+});
+
 export default function ExercisesScreen() {
   const palette = useThemeColors();
   const { user, avatarUrl, userProfile } = useAuth();
   const router = useRouter();
   const styles = useMemo(() => getStyles(palette), [palette]);
+  // Shared react-query cache with Home — no extra request when Home has loaded.
+  const metrics = useRetentionMetrics(user?.id);
+  const activity = useActivityData(metrics.sessions);
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -77,6 +141,7 @@ export default function ExercisesScreen() {
       } else {
         setLoadingMore(true);
       }
+      const firstPageKey = cacheKeys.exerciseListPage(`${debouncedSearch}|${muscle}|${isWarmup}`);
 
       try {
         const response = await fetchExercises({
@@ -91,8 +156,19 @@ export default function ExercisesScreen() {
         setExercises((prev) => (reset ? next : [...prev, ...next]));
         setHasMore(response.meta.current_page < response.meta.total_pages);
         setPage(targetPage + 1);
+        setLoadFailed(false);
+        if (targetPage === 1) cacheSet(firstPageKey, next, cacheTTL.DAY).catch(() => undefined);
       } catch (error) {
-        console.error('Failed to load exercises', error);
+        console.warn('Failed to load exercises', error);
+        // Offline / server down: show the last copy of this list rather than
+        // an empty "no exercises found".
+        if (reset) {
+          const cached = await cacheGet<Exercise[]>(firstPageKey).catch(() => null);
+          // Never leave the previous filter's list under a new chip.
+          setExercises(cached ?? []);
+          setHasMore(false);
+          setLoadFailed(!cached?.length);
+        }
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -107,10 +183,10 @@ export default function ExercisesScreen() {
     loadPage(1, true);
   }, [loadPage]);
 
-  const openExercise = async (exercise: Exercise) => {
+  const openExercise = useCallback((exercise: Exercise) => {
     setSelectedExercise(exercise);
     setInfoOpen(true);
-  };
+  }, []);
 
   const onSelectRelated = async (exercise: RelatedExercise) => {
     try {
@@ -121,49 +197,24 @@ export default function ExercisesScreen() {
     }
   };
 
-  const renderItem = ({ item, index }: { item: Exercise; index: number }) => {
-    const thumbnail = getThumbnail(item);
-    const defaultBgs = ['#1E1E1E', '#2D2D2D', '#333333'];
-    const fallbackBg = defaultBgs[index % 3];
-
-    return (
-      <Pressable
-        onPress={() => openExercise(item)}
-        style={({ pressed }) => [styles.tileWrap, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-      >
-        <Card style={styles.tile}>
-          <View style={styles.tileContentRow}>
-            <View style={[styles.tileImgWrap, { backgroundColor: fallbackBg }]}>
-              {thumbnail ? (
-                <ExerciseMedia url={thumbnail} title={item.title} style={styles.image} />
-              ) : null}
-            </View>
-            <View style={styles.tileTextCol}>
-              <Text numberOfLines={1} style={styles.tileTitle}>
-                {item.title.toUpperCase()}
-              </Text>
-              <View style={styles.tileMetaRow}>
-                <View style={styles.tileMetaItem}>
-                  <Clock color={NEON_LIME} size={12} />
-                  <Text style={styles.tileMetaText}>12 MIN</Text>
-                </View>
-                <View style={styles.tileMetaItem}>
-                  <Dumbbell color={NEON_LIME} size={12} />
-                  <Text style={styles.tileMetaText}>3 X 12</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.tilePlayWrap}>
-              <Play color={NEON_LIME} size={16} fill={NEON_LIME} style={{ marginLeft: 2 }} />
-            </View>
-          </View>
-        </Card>
-      </Pressable>
-    );
-  };
+  const renderItem = useCallback(
+    ({ item, index }: { item: Exercise; index: number }) => (
+      <ExerciseTile item={item} index={index} onOpen={openExercise} styles={styles} />
+    ),
+    [openExercise, styles]
+  );
 
   const EmptyState = useMemo(
-    () => (
+    () => loadFailed ? (
+      <View style={styles.emptyWrap}>
+        <WifiOff color="#64748B" size={34} />
+        <Text style={styles.emptyTitle}>Couldn’t load exercises</Text>
+        <Text style={styles.emptySub}>Check your connection and try again.</Text>
+        <Pressable onPress={() => loadPage(1, true)} style={styles.clearFilterBtn}>
+          <Text style={{ color: palette.text, fontSize: 13, fontWeight: '800' }}>Try again</Text>
+        </Pressable>
+      </View>
+    ) : (
       <View style={styles.emptyWrap}>
         <SlidersHorizontal color="#64748B" size={34} />
         <Text style={styles.emptyTitle}>No exercises found</Text>
@@ -180,12 +231,12 @@ export default function ExercisesScreen() {
         </Pressable>
       </View>
     ),
-    []
+    [loadFailed, loadPage]
   );
 
   const userName =
-    userProfile?.username ||
     userProfile?.first_name ||
+    userProfile?.username ||
     user?.user_metadata?.first_name ||
     user?.email?.split('@')[0] ||
     'Guest';
@@ -223,16 +274,18 @@ export default function ExercisesScreen() {
             <Text style={styles.challengeBtnText}>JOIN NOW</Text>
           </Pressable>
         </View>
-        <LottieView
+        <LoopingLottie
           source={require('@/assets/animations/yoga.json')}
-          autoPlay
-          loop
           style={styles.challengeAnimation}
         />
       </View>
 
       <View style={{ marginBottom: 24 }}>
-        <WeeklyCalendar />
+        <StartRoamCard />
+      </View>
+
+      <View style={{ marginBottom: 24 }}>
+        <WeeklyCalendar activityDays={activity.days} />
       </View>
 
       <View style={styles.sectionHeadRow}>
@@ -586,12 +639,13 @@ const getStyles = (palette: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 1,
   },
   tileMetaText: {
     color: palette.mutedText,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 12.5,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   tilePlayWrap: {
     width: 44,

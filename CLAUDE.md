@@ -63,7 +63,7 @@ No eslint/prettier configured yet.
 
 **API (`src/lib/api.ts` + `src/lib/api/`):**
 All authenticated calls via `fetchWithAuth()` — attaches Supabase JWT automatically.
-Domain modules: `auth`, `dashboard`, `exercises`, `onboarding`, `users`, `username`, `workoutPlans`, `workoutSessions`, `agent`.
+Domain modules: `auth`, `dashboard`, `exercises`, `onboarding`, `users`, `username`, `workoutPlans`, `workoutSessions`, `agent`, `activities` (Roam).
 
 **Cache (`src/lib/cache/`):**
 Two layers: in-memory Map (fast) + AsyncStorage via indexeddb.ts (persisted).
@@ -73,6 +73,12 @@ Two layers: in-memory Map (fast) + AsyncStorage via indexeddb.ts (persisted).
 
 **Offline (`src/lib/db.ts`):**
 AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:offline-queue`. Replayed by AuthProvider on reconnect.
+
+**Roam (`src/features/roam/`, screens `app/roam/`)** — GPS-tracked run / walk / ride:
+- Background GPS task is defined in `tracking.ts`, imported at the top of `app/_layout.tsx` (must stay there — the OS delivers locations to a task defined at startup). Tracking only starts from the foreground, so only "While using the app" permission is requested; never add `ACCESS_BACKGROUND_LOCATION` (it triggers Google Play's background-location declaration).
+- The in-progress recording is persisted in `recordingStore.ts` (chunked AsyncStorage, serialized writes), not React state.
+- `geo.ts` mirrors the backend's `internal/activity/metrics.go` (thresholds, vehicle detection, splits). **Change both together**; the backend is authoritative for saved numbers and XP.
+- Maps: MapLibre (`RouteMap.tsx`; `RouteMap.web.tsx` placeholder for the web export) with OpenFreeMap tiles — style URLs live only in `mapStyle.ts`.
 
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
@@ -89,11 +95,11 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `home` · `onboarding` · `workouts`
+`auth` · `dashboard` · `diet` · `home` · `onboarding` · `roam` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
-Button, Card, Input, Screen, PageHeader, ConfirmModal, Logo
+Button, Card, Input, Screen, PageHeader, ConfirmModal, Logo, LoopingLottie (decorative looping Lottie that pauses when its screen is unfocused — use it instead of `LottieView autoPlay loop`)
 
 Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, BackendKeepAlive, SyncManager
 
@@ -170,6 +176,29 @@ _Claude updates this section automatically when corrections are made._
 - **`android/` is gitignored (prebuild-managed).** After cloning or if a build fails on stale native config, regenerate with `npx expo prebuild -p android --clean` so config plugins (`plugins/withNotifeeRepo.js`, `withNotifIcon.js`, `withFirebasePodfileFix.js`) re-apply. Never hand-edit `android/` — fix the config plugin instead.
 - **`prebuild --clean` wipes `android/local.properties`** → build fails `SDK location not found`. Recreate it: `sdk.dir=/Users/taroshmathuria/Library/Android/sdk`. `ANDROID_HOME` is NOT set in the shell/profile; SDK lives at `~/Library/Android/sdk` (has platforms 35/36/36.1).
 - **Notifee maven repo:** `expo run:android` passes `--configure-on-demand` + `org.gradle.parallel=true`, so notifee's own `rootProject.allprojects` repo injection runs too late → `Could not find app.notifee:core`. `plugins/withNotifeeRepo.js` must inject `maven { url "$rootDir/../node_modules/@notifee/react-native/android/libs" }` into the app's `allprojects.repositories`. That plugin's gate must be `config.modResults.language === 'groovy'` (NOT `'gradle'`) — `withProjectBuildGradle` sets `language` to `'groovy'`/`'kt'`, never `'gradle'`, so the wrong value silently no-ops the plugin.
+
+### iOS build (local `xcodebuild` / `expo run:ios`)
+
+- **Local iOS builds fail at the "Bundle React Native code and images" phase with `sentry-cli - error: An organization ID or slug is required`** — the Sentry source-map upload needs org/token that only EAS has. For local builds set `SENTRY_DISABLE_AUTO_UPLOAD=true` (e.g. `SENTRY_DISABLE_AUTO_UPLOAD=true xcodebuild … build`). Don't commit that setting — EAS builds should keep uploading. `ios/` is gitignored (prebuild-managed), like `android/`.
+
+### Native patches / Roam device testing
+
+- **`patches/expo-task-manager+55.0.20.patch` (applied by `postinstall: patch-package`) backports the expo-task-manager 57 fix**: on 55.0.20, if a location event arrives before the React context exists (app killed mid-Roam, then reopened), the task manager is registered as "headless" and dropped after the first batch — every later GPS fix is queued forever and the Roam stops gaining distance. Remove the patch (and the `expo.autolinking.android.buildFromSource` entry) once the app is on SDK ≥ 57. When bumping expo-task-manager, regenerate or delete the patch — `patch-package` fails the install on a version mismatch.
+- **Expo SDK 55 links most expo-* Android modules as prebuilt AARs** (shown as `[📦]` in `expo run:android` output), so editing their Java/Kotlin in `node_modules` does nothing. A patched module must be listed in `package.json` → `expo.autolinking.android.buildFromSource` (expo-task-manager also needs `unimodules-app-loader` there, or Gradle fails `Project with path ':unimodules-app-loader' could not be found`).
+- **Never build the iOS simulator app with `CODE_SIGNING_ALLOWED=NO`** — it strips the application-identifier entitlement, so every Keychain write fails (`SecureStore setItem failed: A required entitlement isn't present`) and the Supabase session is lost on each relaunch. Build with signing left on (simulator builds sign ad hoc), e.g. `SENTRY_DISABLE_AUTO_UPLOAD=true xcodebuild -workspace ios/FitNyx.xcworkspace -scheme FitNyx -configuration Debug -sdk iphonesimulator build`, or `npx expo run:ios`. Not an app bug — EAS/device builds are signed.
+- **Maestro `pressKey: Home` on iOS stops a running `xcrun simctl location … start` route**, which looks exactly like background GPS failing. To test Roam in the background, background the app with `xcrun simctl launch booted com.apple.Preferences` instead, and check `pointCount` in the app's `RCTAsyncLocalStorage_V1/manifest.json` (key `fitnyx-roam:recording`).
+- **`app/login.tsx` / `app/signup.tsx` render the bare `AuthForm` (no `AuthLanding` header), so they must keep `Screen`'s safe-area top + side padding** — zeroing them (as before 2026-10-11) drew the form under the status bar whenever the route was opened directly (deep link, session-expired redirect). For Maestro, driving login through Welcome (`openLink: fitnyxmobile:///` → tap `" Log in"`) is still the most reliable path.
+
+### Navigation (expo-router stack)
+
+- **Never `router.replace('/x')` to "go back" to a screen that is already underneath** (e.g. `/roam` after discard/delete, `/workouts/select` after finishing a session). replace() only swaps the top screen, so the stack gets a second copy and back walks through duplicates like browser history. Use `router.dismissTo('/x')` (pops to it, or replaces if it isn't in the stack). Found 2026-10-11.
+- **Bottom-nav tabs must reset the stack**: `if (router.canDismiss()) router.dismissAll(); router.replace(tab)` in `BottomNav.navigate`. With replace() alone, Home → Roam → Run → Workouts tab → back returned to the stale Roam.
+- **System back (root `BackHandler` in `app/_layout.tsx`)**: pop if `canGoBack()`, else go to Home (`/`) from any other tab, and only Home asks "press back again to exit".
+- **Verify navigation by walking real paths with back presses** (adb `input keyevent 4` + `uiautomator dump` to read the screen), including tab switches from deep inside a flow — opening screens by deep link alone never exercises the stack. Device px ≠ screenshot px: tab bar centres on a 1080-wide Pixel 7 are x≈116/327/540/751/963 (Home/Workouts/Coach/Stats/Settings), y≈2238.
+
+### Notifications (notifee)
+
+- **Never request an exact alarm without checking access.** On Android 12+, `AlarmType.SET_EXACT*` without the user-granted SCHEDULE_EXACT_ALARM makes notifee DROP the trigger ("Missing SCHEDULE_EXACT_ALARM permission. Trigger not scheduled") — it does not fall back. Use `canScheduleExactAlarms()` in `src/lib/reminders.ts` and fall back to `SET_AND_ALLOW_WHILE_IDLE` (found 2026-10-11: every reminder silently failed). Verify scheduling with `adb shell dumpsys alarm | grep fitnyx` and `adb logcat | grep -i notifee`, not just "no error thrown".
 
 ### React / providers
 

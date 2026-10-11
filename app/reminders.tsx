@@ -1,6 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import {
+  AlarmClock,
   Bell,
   ChevronLeft,
   Cookie,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AppState,
   Modal,
   Platform,
   Pressable,
@@ -34,9 +36,12 @@ import {
   type Reminder,
   type ReminderSchedule,
   type ReminderType,
+  canScheduleExactAlarms,
   deleteReminder,
   describeSchedule,
   ensurePermission,
+  openExactAlarmSettings,
+  rescheduleAll,
   sendTestNotification,
   setReminderEnabled,
   upsertReminder,
@@ -81,6 +86,22 @@ export default function RemindersScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const { items, refresh } = useReminders();
+  // Without Android's "Alarms & reminders" access reminders still fire, but
+  // the OS may batch them a few minutes late. Offer to switch it on; recheck
+  // when the user comes back from system settings.
+  const [exactAlarms, setExactAlarms] = useState(true);
+  useEffect(() => {
+    let wasExact: boolean | null = null;
+    const check = () =>
+      canScheduleExactAlarms().then((ok) => {
+        setExactAlarms(ok);
+        if (wasExact === false && ok) rescheduleAll().catch(() => undefined); // upgrade to exact
+        wasExact = ok;
+      });
+    check();
+    const sub = AppState.addEventListener('change', (st) => st === 'active' && check());
+    return () => sub.remove();
+  }, []);
   const activeCount = items.filter((r) => r.enabled).length;
   const pausedCount = items.length - activeCount;
   const [editor, setEditor] = useState<Reminder | null>(null);
@@ -143,6 +164,24 @@ export default function RemindersScreen() {
           <Plus size={20} color={c.primaryText} />
         </PressableScale>
       </View>
+
+      {!exactAlarms && items.some((r) => r.enabled) ? (
+        <Pressable
+          onPress={() => openExactAlarmSettings().catch(() => undefined)}
+          accessibilityRole="button"
+          style={[styles.summaryCard, { backgroundColor: c.card, borderColor: c.border }]}
+        >
+          <View style={[styles.summaryIcon, { backgroundColor: `${c.warning}1A` }]}>
+            <AlarmClock size={18} color={c.warning} strokeWidth={1.8} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.summaryTitle, { color: c.text }]}>Get reminders right on time</Text>
+            <Text style={[styles.summarySub, { color: c.mutedText }]}>
+              {'Android may delay them by a few minutes. Tap to allow “Alarms & reminders”.'}
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       {items.length === 0 ? (
         <View style={[styles.emptyCard, { backgroundColor: c.card, borderColor: c.border }]}>

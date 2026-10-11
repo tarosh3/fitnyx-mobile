@@ -134,6 +134,7 @@ const CHART_PAD_RIGHT = 12;
 
 function WeightChart({
   data,
+  hasOlderEntries,
   weightUnit,
   targetWeightKg,
   primary,
@@ -144,6 +145,8 @@ function WeightChart({
   warning,
 }: {
   data: Metric[];
+  /** There are entries, just not 2+ inside the selected range. */
+  hasOlderEntries: boolean;
   weightUnit: 'kg' | 'lbs';
   targetWeightKg?: number;
   primary: string;
@@ -238,7 +241,9 @@ function WeightChart({
       <View style={[styles.chartEmpty, { backgroundColor: cardBg, borderColor: border }]}>
         <Activity size={36} color={border} />
         <Text style={[styles.chartEmptyText, { color: mutedText }]}>
-          Log at least 2 entries to see your trend
+          {hasOlderEntries
+            ? 'Not enough entries in this range — try a longer one'
+            : 'Log at least 2 entries to see your trend'}
         </Text>
       </View>
     );
@@ -722,6 +727,7 @@ export default function StatsScreen() {
             <View style={{ paddingHorizontal: spacing.base }}>
               <WeightChart
                 data={filtered}
+                hasOlderEntries={history.length >= 2}
                 weightUnit={weightUnit}
                 targetWeightKg={targetWeightKg}
                 primary={c.primary}

@@ -1,5 +1,7 @@
 // Register notification background handler at module level
 import '@/src/lib/notificationBackgroundHandler';
+// Defines the Roam background-location task at startup (required by the OS).
+import '@/src/features/roam/tracking';
 
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';

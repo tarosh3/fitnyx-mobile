@@ -1,9 +1,10 @@
 import { BlurView } from 'expo-blur';
 import { Calendar, Flame, Target, Trophy, Zap } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { useTheme } from '@/src/providers/ThemeProvider';
 
 const NEON_LIME = '#5fc793';
@@ -31,7 +32,9 @@ function getWeeksGrid(monthsBack: number): { date: Date; dateStr: string }[][] {
             if (current <= today) {
                 week.push({
                     date: new Date(current),
-                    dateStr: current.toISOString().slice(0, 10),
+                    // Local calendar day: toISOString() would shift every cell a day
+                    // early anywhere east of UTC (local midnight is the previous UTC day).
+                    dateStr: localDateKey(current),
                 });
             }
             current.setDate(current.getDate() + 1);
@@ -57,12 +60,14 @@ function getIntensityBorder(count: number, theme: string): string {
 
 interface ActivityHeatmapProps {
     streakDays: number;
+    /** All completed workouts (same period as totalActiveDays). */
+    totalWorkouts: number;
     maxStreak: number;
     totalActiveDays: number;
     activityDays: { get: (dateStr: string) => number | undefined };
 }
 
-export function ActivityHeatmap({ streakDays, maxStreak, totalActiveDays, activityDays }: ActivityHeatmapProps) {
+export function ActivityHeatmap({ streakDays, totalWorkouts, maxStreak, totalActiveDays, activityDays }: ActivityHeatmapProps) {
     const palette = useThemeColors();
     const { theme } = useTheme();
     const styles = getStyles(palette, theme);
@@ -70,16 +75,9 @@ export function ActivityHeatmap({ streakDays, maxStreak, totalActiveDays, activi
     const weeks = useMemo(() => getWeeksGrid(MONTHS_BACK), []);
     const totalWidth = weeks.length * (CELL_SIZE + CELL_GAP);
 
-    // Count total workouts from activityDays
-    const totalWorkouts = useMemo(() => {
-        let count = 0;
-        weeks.forEach((week) =>
-            week.forEach((day) => {
-                count += activityDays.get(day.dateStr) || 0;
-            })
-        );
-        return count;
-    }, [weeks, activityDays]);
+    const todayKey = localDateKey(new Date());
+    // Open on the latest weeks — the grid starts months back and is wider than the screen.
+    const gridScroll = useRef<ScrollView>(null);
 
     // Calculate this week's workouts
     const thisWeekWorkouts = useMemo(() => {
@@ -156,14 +154,20 @@ export function ActivityHeatmap({ streakDays, maxStreak, totalActiveDays, activi
                     </View>
 
                     {/* Grid */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+                    <ScrollView
+                        ref={gridScroll}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={{ flex: 1 }}
+                        onContentSizeChange={() => gridScroll.current?.scrollToEnd({ animated: false })}
+                    >
                         <View>
                             <View style={styles.heatmapGrid}>
                                 {weeks.map((week, weekIndex) => (
                                     <View key={weekIndex} style={styles.heatmapCol}>
                                         {week.map((day) => {
                                             const count = activityDays.get(day.dateStr) || 0;
-                                            const isToday = day.dateStr === new Date().toISOString().slice(0, 10);
+                                            const isToday = day.dateStr === todayKey;
                                             const isSelected = selectedDay?.dateStr === day.dateStr;
                                             return (
                                                 <Pressable

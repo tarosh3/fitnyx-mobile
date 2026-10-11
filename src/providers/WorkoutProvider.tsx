@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppState } from 'react-native';
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
@@ -23,6 +24,7 @@ import {
   setActiveOfflineSessionId,
 } from '@/src/lib/offline/offlineStore';
 import * as WorkoutNotification from '@/src/lib/workoutNotification';
+import { retentionMetricsKey } from '@/src/hooks/queryKeys';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 // --- Timer context (changes every second — only subscribe if you need the live timer) ---
@@ -57,6 +59,7 @@ const formatTime = (seconds: number) => {
 
 export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { isOnline } = useNetworkStatus();
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -196,6 +199,22 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     });
     return () => subscription.remove();
   }, [activeSession?.id, refreshActiveSession]);
+
+  // A workout just ended — finished or abandoned, in the app, from the
+  // notification or on another device: Home's streak, weekly stats, heatmap
+  // and XP all come from the dashboard query, so refresh it now instead of
+  // showing the pre-workout numbers until its staleTime runs out.
+  const endedSessionId = useRef<string | null>(null);
+  useEffect(() => {
+    if (activeSession) {
+      endedSessionId.current = activeSession.id;
+      return;
+    }
+    if (endedSessionId.current && user?.id) {
+      endedSessionId.current = null;
+      queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user.id) });
+    }
+  }, [activeSession, user?.id, queryClient]);
 
   // Poll for active session only when one is in progress (skip when offline or no session)
   useEffect(() => {

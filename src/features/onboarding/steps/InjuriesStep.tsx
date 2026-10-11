@@ -8,10 +8,10 @@ import { OnboardingStepProps } from '@/src/features/onboarding/types';
 import { sanitizeGeneralText, MAX_MEDIUM_TEXT } from '@/src/lib/validators';
 
 const INJURIES = [
-  { id: 'none', label: 'No injuries', emoji: '🚫' },
+  { id: 'none', label: 'No injuries', emoji: '✅' },
   { id: 'knee_pain', label: 'Knee pain', emoji: '🦵' },
-  { id: 'back_pain', label: 'Back pain', emoji: '🔙' },
-  { id: 'shoulder_pain', label: 'Shoulder pain', emoji: '💪' },
+  { id: 'back_pain', label: 'Back pain', emoji: '🦴' },
+  { id: 'shoulder_pain', label: 'Shoulder pain', emoji: '🤕' },
   { id: 'other', label: 'Other', emoji: '❓' },
 ];
 

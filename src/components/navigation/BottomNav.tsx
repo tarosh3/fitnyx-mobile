@@ -18,7 +18,8 @@ import { motion, spacing, type as t } from '@/src/styles/tokens';
 
 const hiddenRoutePrefixes = [
   '/onboarding',
-  '/settings',
+  // Settings is a tab, so its root keeps the bar; only its sub-pages hide it.
+  '/settings/coach-memory',
   '/reminders',
   '/water',
   '/profile',
@@ -28,6 +29,7 @@ const hiddenRoutePrefixes = [
   '/signup',
   '/workouts/customize',
   '/workouts/session',
+  '/roam/record',
   '/update-password',
   '/privacy-policy',
   '/terms-of-service',
@@ -92,7 +94,7 @@ export function BottomNav() {
       key: 'workouts',
       icon: Dumbbell,
       label: 'Workouts',
-      match: (p) => p.startsWith('/exercises'),
+      match: (p) => p.startsWith('/exercises') || p.startsWith('/workouts') || p === '/roam' || p.startsWith('/roam/'),
       onPress: () => navigate('/exercises', pathname.startsWith('/exercises')),
     },
     {

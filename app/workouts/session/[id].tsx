@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -170,7 +170,7 @@ export default function WorkoutSessionScreen() {
   const palette = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessionId = Array.isArray(id) ? id[0] : id;
-  const { setActiveSession, pauseActiveSession, resumeActiveSession, finishActiveSession, abandonActiveSession } = useWorkout();
+  const { activeSession, setActiveSession, pauseActiveSession, resumeActiveSession, finishActiveSession, abandonActiveSession } = useWorkout();
   const { isOffline, pendingCount } = useOfflineAware();
 
   const [loading, setLoading] = useState(true);
@@ -252,6 +252,38 @@ export default function WorkoutSessionScreen() {
     if (!sessionId) return;
     loadSession();
   }, [sessionId]);
+
+  // Pause / resume / finish can also come from the notification, which goes
+  // through WorkoutProvider — keep this screen's copy of the session in step,
+  // or its timer and Pause button keep showing "running".
+  const sawActive = useRef(false);
+  useEffect(() => {
+    if (!sessionId) return;
+    if (activeSession && activeSession.id === sessionId) {
+      sawActive.current = true;
+      const live = activeSession;
+      setSession((prev) =>
+        prev &&
+        (prev.status !== live.status ||
+          prev.total_duration_sec !== live.total_duration_sec ||
+          prev.last_resumed_at !== live.last_resumed_at)
+          ? {
+              ...prev,
+              status: live.status,
+              total_duration_sec: live.total_duration_sec,
+              last_resumed_at: live.last_resumed_at,
+              paused_at: live.paused_at,
+            }
+          : prev,
+      );
+    } else if (!activeSession && sawActive.current) {
+      // Finished (or abandoned) elsewhere: show the server's final state.
+      sawActive.current = false;
+      offlineGetSession(sessionId)
+        .then((r) => setSession(r.session))
+        .catch(() => undefined);
+    }
+  }, [activeSession, sessionId]);
 
   const loadSession = async () => {
     if (!sessionId) return;
@@ -587,6 +619,26 @@ export default function WorkoutSessionScreen() {
     }
   }, [sessionId, finishActiveSession, router]);
 
+  // Finishing is final, so it confirms like Abandon does — one stray tap on
+  // the big FINISH button used to end the session on the spot.
+  const confirmFinish = useCallback(() => {
+    const sets = exercises.reduce((n, e) => n + e.logs.length, 0);
+    setConfirmConfig({
+      visible: true,
+      title: 'FINISH WORKOUT?',
+      message:
+        sets > 0
+          ? `${sets} set${sets === 1 ? '' : 's'} logged. Your workout will be saved and counted toward your streak.`
+          : "You haven't logged any sets yet. Finish anyway?",
+      variant: 'primary',
+      confirmLabel: 'FINISH',
+      onConfirm: () => {
+        hideConfirm();
+        completeWorkout();
+      },
+    });
+  }, [exercises, completeWorkout]);
+
   const abandonWorkout = useCallback(() => {
     if (!sessionId) return;
 
@@ -651,7 +703,7 @@ export default function WorkoutSessionScreen() {
     <View style={styles.root}>
       <Screen style={{ backgroundColor: DEPTH_BG }}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/dashboard')} style={styles.backBtn}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={styles.backBtn}>
           <ChevronLeft size={24} color="#fff" />
         </Pressable>
         <View style={{ flex: 1 }}>
@@ -682,7 +734,7 @@ export default function WorkoutSessionScreen() {
       <SessionTimer
         session={session}
         onPauseResume={pauseOrResume}
-        onFinish={completeWorkout}
+        onFinish={confirmFinish}
         onAbandon={abandonWorkout}
         finishing={finishing}
       />

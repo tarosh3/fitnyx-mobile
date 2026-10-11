@@ -1,4 +1,5 @@
 import { saveMetric } from '@/src/lib/api';
+import { createActivity } from '@/src/lib/api/activities';
 import {
   logExerciseSet,
   updateExerciseLog,
@@ -110,6 +111,12 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       if (realId.startsWith('offline-')) throw new Error('Session not yet synced');
       await sessionAction('abandon', { sessionId: realId, timestamp: payload.timestamp });
       await clearPersistedSession(payload.sessionId);
+      break;
+    }
+
+    case 'SAVE_ACTIVITY': {
+      // A Roam saved while offline. Idempotent server-side (client_activity_id).
+      await createActivity(payload);
       break;
     }
 

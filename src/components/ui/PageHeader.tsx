@@ -33,7 +33,7 @@ export function PageHeader({ title, subtitle, backTo, onBackPress }: PageHeaderP
       return;
     }
 
-    router.replace('/dashboard');
+    router.replace('/');
   };
 
   return (

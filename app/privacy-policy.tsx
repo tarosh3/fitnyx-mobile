@@ -9,11 +9,11 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 const SECTIONS = [
   {
     title: '1. Information We Collect',
-    body: 'We collect account details (name, email), onboarding information (age, height, weight, goals), workout logs, nutrition preferences, and AI coach conversations when you use FitNyx.',
+    body: 'We collect account details (name, email), onboarding information (age, height, weight, goals), workout logs, nutrition preferences, and AI coach conversations when you use FitNyx. When you record a Roam (run, walk or ride), we collect your device\'s precise location only while that recording is in progress — including while your screen is locked or the app is in the background — to map your route and measure distance, pace and speed. We never collect location when no Roam is being recorded.',
   },
   {
     title: '2. How We Use Data',
-    body: 'We use your data to personalize workouts, calculate progress analytics, generate nutrition plans, and provide AI coaching responses. We do not sell personal data.',
+    body: 'We use your data to personalize workouts, calculate progress analytics, generate nutrition plans, and provide AI coaching responses. We do not sell personal data. Roam routes are stored with your account, visible only to you, used only to show your activity history and stats (and activity totals to your AI coach), and never used for advertising or shared with third parties.',
   },
   {
     title: '3. AI Processing',
@@ -38,7 +38,7 @@ export default function PrivacyPolicyScreen() {
 
   return (
     <Screen>
-      <PageHeader title="Privacy Policy" subtitle="Last updated: February 16, 2026" backTo="/settings" />
+      <PageHeader title="Privacy Policy" subtitle="Last updated: October 10, 2026" backTo="/settings" />
 
       <Card style={{ gap: 10 }}>
         {SECTIONS.map((section) => (

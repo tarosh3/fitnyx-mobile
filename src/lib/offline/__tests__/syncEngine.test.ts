@@ -15,6 +15,8 @@ jest.mock('@/src/lib/offline/offlineStore', () => ({
   cleanupStaleSessions: jest.fn(async () => {}),
 }));
 jest.mock('@/src/lib/api', () => ({ saveMetric: jest.fn() }));
+const mockCreateActivity = jest.fn(async (..._a: unknown[]) => ({ id: 'act-1' }));
+jest.mock('@/src/lib/api/activities', () => ({ createActivity: (...a: unknown[]) => mockCreateActivity(...a) }));
 const mockLogSet = jest.fn();
 const mockUpdateLog = jest.fn(async (..._a: unknown[]) => ({}));
 jest.mock('@/src/lib/api/workoutSessions', () => ({
@@ -149,5 +151,22 @@ describe('processOfflineQueue — UPDATE_SET', () => {
     await processOfflineQueue();
 
     expect(mockUpdateLog).toHaveBeenCalledWith('log-1', { actual_reps: 6, actual_weight_kg: 0, rpe: 9 });
+  });
+});
+
+describe('processOfflineQueue — SAVE_ACTIVITY', () => {
+  beforeEach(() => {
+    mockQueue.length = 0;
+    mockCreateActivity.mockClear();
+  });
+
+  it('uploads a Roam saved while offline and removes it from the queue', async () => {
+    const payload = { client_activity_id: 'c1', activity_type: 'run', points: [[1, 2, 0, 5, 0]] };
+    mockQueue.push({ id: 'r', type: 'SAVE_ACTIVITY', payload, timestamp: Date.now() });
+
+    await processOfflineQueue();
+
+    expect(mockCreateActivity).toHaveBeenCalledWith(payload);
+    expect(mockQueue).toHaveLength(0);
   });
 });

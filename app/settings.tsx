@@ -118,7 +118,7 @@ export default function SettingsScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: 'Train smarter with FitNyx — your AI fitness coach. https://fitnyx.app',
+        message: 'Train smarter with FitNyx — your AI fitness coach. https://fitnyx.in',
       });
     } catch {
       /* user cancelled */
@@ -134,7 +134,7 @@ export default function SettingsScreen() {
   };
 
   const handleContact = () => {
-    Linking.openURL('mailto:support@fitnyx.app?subject=FitNyx Support');
+    Linking.openURL('mailto:support@fitnyx.in?subject=FitNyx%20Support');
   };
 
   const firstName = userProfile?.first_name || user?.user_metadata?.first_name || 'User';
@@ -153,7 +153,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.headerRow}>
         <PressableScale
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/dashboard'))}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           style={[styles.backBtn, { backgroundColor: c.surface, borderColor: c.border }]}
         >
           <ChevronLeft size={22} color={c.text} />
@@ -282,7 +282,7 @@ export default function SettingsScreen() {
         <SettingRow
           icon={<HelpCircle size={20} color={c.primary} strokeWidth={1.8} />}
           label="Help & FAQ"
-          onPress={() => Linking.openURL('https://fitnyx.app/help')}
+          onPress={() => Linking.openURL('https://fitnyx.in/help')}
           showChevron
         />
         <SettingRow
@@ -345,7 +345,7 @@ export default function SettingsScreen() {
       {/* Footer */}
       <View style={styles.footer}>
         <Image
-          source={require('@/assets/images/fitnyx_logo_4k_transparent.png')}
+          source={require('@/assets/images/fitnyx-logo.png')}
           style={styles.footerLogo}
           resizeMode="contain"
         />
@@ -462,7 +462,8 @@ function PickerSheet({
 
 const styles = StyleSheet.create({
   screen: {
-    paddingBottom: spacing['3xl'],
+    // Clear the bottom tab bar (76) plus breathing room.
+    paddingBottom: 120,
     paddingHorizontal: 0,
     gap: spacing.xs,
   },

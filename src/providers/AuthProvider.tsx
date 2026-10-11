@@ -58,6 +58,19 @@ const ONBOARDING_EXEMPT_PATHS = [
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Deliberate sign-out: stop GPS and drop any in-progress Roam. Lazy require keeps the native location modules out of
+// this provider's import graph (and its tests).
+async function clearRoamOnSignOut(): Promise<void> {
+  try {
+    const { stopLocationUpdates } = require('@/src/features/roam/tracking') as typeof import('@/src/features/roam/tracking');
+    const { clearRecording } = require('@/src/features/roam/recordingStore') as typeof import('@/src/features/roam/recordingStore');
+    await stopLocationUpdates();
+    await clearRecording();
+  } catch {
+    // best-effort
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -256,6 +269,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await clearOfflineQueue().catch(() => undefined);
       await clearAllWaterData().catch(() => undefined);
       await clearAllReminders().catch(() => undefined);
+      // Not clearRoamOnSignOut(): a forced sign-out mid-run must not delete
+      // the user's unsaved Roam. It's scoped to their account
+      // (getRecordingFor), so it reappears only if they sign back in.
     };
 
     const initialize = async () => {
@@ -450,6 +466,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearOfflineQueue();
     await clearAllWaterData().catch(() => undefined);
     await clearAllReminders().catch(() => undefined);
+    await clearRoamOnSignOut();
     await supabase.auth.signOut();
     setUser(null);
     router.replace('/');
@@ -488,7 +505,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     fetchUserProfile(currentUser.id);
     const complete = await checkOnboarding(currentUser);
-    router.replace(complete ? '/dashboard' : '/onboarding');
+    router.replace(complete ? '/' : '/onboarding'); // Home is the app's start screen
   };
 
   const value = useMemo<AuthContextType>(

@@ -116,7 +116,7 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode, notic
         });
 
         if (signInError) throw signInError;
-        router.replace('/dashboard');
+        router.replace('/');
         onSuccess?.();
       }
     } catch (err: any) {
@@ -179,7 +179,7 @@ export function AuthForm({ initialMode = 'login', onSuccess, onSwitchMode, notic
         }
       }
 
-      router.replace('/dashboard');
+      router.replace('/');
       onSuccess?.();
     } catch (err: any) {
       safeSetError(err?.message || 'Social login failed. Please try again.');

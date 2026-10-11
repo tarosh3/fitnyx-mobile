@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 
+import { localDateKey } from '@/src/lib/api/workoutSessions';
+
 /** Minimal session shape needed for activity data computation. */
 interface SessionLike {
   status: string;
@@ -9,12 +11,13 @@ interface SessionLike {
 
 interface ActivityData {
   days: Map<string, number>;
+  totalWorkouts: number;
   totalActiveDays: number;
   maxStreak: number;
   loading: boolean;
 }
 
-const DEFAULTS: ActivityData = { days: new Map(), totalActiveDays: 0, maxStreak: 0, loading: true };
+const DEFAULTS: ActivityData = { days: new Map(), totalWorkouts: 0, totalActiveDays: 0, maxStreak: 0, loading: true };
 
 function computeActivityData(sessions: SessionLike[]) {
   const completed = sessions.filter((s) => s.status === 'completed');
@@ -22,7 +25,10 @@ function computeActivityData(sessions: SessionLike[]) {
   const dayMap = new Map<string, number>();
 
   completed.forEach((session) => {
-    const dateStr = (session.finished_at || session.started_at).slice(0, 10);
+    // Local calendar day, like the heatmap cells and the streak — slicing the
+    // UTC timestamp put early-morning workouts (before 05:30 in India) on the
+    // previous day.
+    const dateStr = localDateKey(new Date(session.finished_at || session.started_at));
     dayMap.set(dateStr, (dayMap.get(dateStr) || 0) + 1);
   });
 
@@ -44,6 +50,7 @@ function computeActivityData(sessions: SessionLike[]) {
 
   return {
     days: dayMap,
+    totalWorkouts: completed.length,
     totalActiveDays: dayMap.size,
     maxStreak,
   };

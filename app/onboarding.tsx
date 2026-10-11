@@ -23,7 +23,7 @@ export default function OnboardingScreen() {
       try {
         const status = await getOnboardingStatus();
         if (status.onboarding_complete) {
-          router.replace('/dashboard');
+          router.replace('/');
           return;
         }
       } catch {

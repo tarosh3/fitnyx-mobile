@@ -4,6 +4,8 @@ export const cacheKeys = {
   onboardingStatus: (userId: string) => `onboarding:${userId}`,
   workoutPlans: (userId: string) => `plans:${userId}`,
   exercises: 'exercises:all',
+  // First page of the exercise list per filter combination (offline fallback).
+  exerciseListPage: (filters: string) => `exercises:list:${filters}`,
   exerciseCategories: 'exercises:categories',
   exerciseHistory: (uuid: string) => `exercise-history:${uuid}`,
   dashboard: (userId: string) => `dashboard:${userId}`,
@@ -12,6 +14,8 @@ export const cacheKeys = {
   bodyMetricsLatest: (userId: string) => `bodyMetrics:latest:${userId}`,
   bodyMetricsHistory: (userId: string) => `bodyMetrics:history:${userId}`,
   fitnessProfile: (userId: string) => `fitnessProfile:${userId}`,
+  roamActivities: (userId: string) => `roam:activities:${userId}`,
+  roamActivity: (userId: string, id: string) => `roam:activity:${userId}:${id}`,
 } as const;
 
 export const cacheTTL = {

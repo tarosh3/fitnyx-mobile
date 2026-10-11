@@ -5,7 +5,7 @@ import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { BlurView } from 'expo-blur';
-import { Sparkles } from 'lucide-react-native';
+import { ChevronDown, Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 const NEON_LIME = '#5fc793';
 
 import type { UserProfile } from '@/src/lib/api/users';
+import { StartRoamCard } from '@/src/features/roam/components/StartRoamCard';
 
 interface MobileHomeProps {
     user: any;
@@ -46,6 +47,8 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
     // always takes precedence when present.
     const FALLBACK_INSIGHT = 'Consistency beats intensity — show up today.';
     const [insight, setInsight] = React.useState('');
+    // The insight is clamped to two lines; tapping expands it in place.
+    const [insightOpen, setInsightOpen] = React.useState(false);
     const userId: string | undefined = user?.id;
     React.useEffect(() => {
         if (metrics.dailyInsight) { setInsight(metrics.dailyInsight); return; }
@@ -84,19 +87,18 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         return (
             <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
                 <Text style={[styles.stateText, { color: palette.mutedText }]}>SOMETHING WENT WRONG</Text>
-                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Pull down to retry</Text>
+                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Check your connection and try again.</Text>
+                <Pressable onPress={metrics.refresh} hitSlop={12} style={styles.retryBtn} accessibilityRole="button">
+                    <Text style={[styles.retryText, { color: palette.primary }]}>Try again</Text>
+                </Pressable>
             </View>
         );
     }
 
-    if (!metrics.sessions.length && !metrics.activePlan) {
-        return (
-            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
-                <Text style={[styles.stateText, { color: palette.mutedText }]}>NO ACTIVITY YET</Text>
-                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Start a workout to see your dashboard</Text>
-            </View>
-        );
-    }
+    // A brand-new user (no plan, no workouts yet) gets the full Home: its
+    // mission card reads "Start your journey · Select a plan to begin", and
+    // Roam and the coach are right there. An empty "No activity yet" page
+    // used to leave them with nothing to tap.
 
     return (
         <ScrollView style={[styles.container, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
@@ -124,9 +126,13 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
                     currentDay={metrics.currentDay}
                 />
 
+                <View style={styles.section}>
+                    <StartRoamCard />
+                </View>
+
                 {/* AI Coach Insight */}
                 <View style={styles.section}>
-                    <Pressable onPress={openCenteredChat}>
+                    <Pressable onPress={() => setInsightOpen((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: insightOpen }}>
                         <BlurView intensity={10} tint="light" style={styles.aiCard}>
                             <View style={styles.aiIconRow}>
                                 <View style={styles.aiIconContainer}>
@@ -136,10 +142,19 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
                                     <View style={styles.aiTitleRow}>
                                         <Text style={styles.aiTitle}>AI COACH INSIGHT</Text>
                                         <View style={styles.aiPulseDot} />
+                                        <View style={styles.aiSpacer} />
+                                        <View style={insightOpen ? styles.aiChevronOpen : undefined}>
+                                            <ChevronDown color={palette.mutedText} size={18} />
+                                        </View>
                                     </View>
-                                    <Text style={styles.aiText} numberOfLines={2}>
+                                    <Text style={styles.aiText} numberOfLines={insightOpen ? undefined : 2}>
                                         "{insight || "Analysing your recent performance..."}"
                                     </Text>
+                                    {insightOpen ? (
+                                        <Pressable onPress={openCenteredChat} hitSlop={8} style={styles.aiAsk}>
+                                            <Text style={styles.aiAskText}>Ask Filo about this →</Text>
+                                        </Pressable>
+                                    ) : null}
                                 </View>
                                 <Sparkles color="rgba(255,255,255,0.05)" size={48} style={styles.aiBgIcon} />
                             </View>
@@ -150,11 +165,12 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
                 <PerformanceStats
                     weeklyWorkouts={metrics.weeklyWorkouts}
                     weeklyVolume={metrics.weeklyVolume}
-                    weeklyBurned={0}
+                    weeklyBurned={metrics.weeklyCalories}
                 />
 
                 <ActivityHeatmap
                     streakDays={metrics.streakDays}
+                    totalWorkouts={activity.totalWorkouts}
                     maxStreak={activity.maxStreak}
                     totalActiveDays={activity.totalActiveDays}
                     activityDays={activity.days}
@@ -216,6 +232,12 @@ const getStyles = (palette: any) => StyleSheet.create({
     aiHeaderContent: {
         flex: 1,
     },
+    aiSpacer: { flex: 1 },
+    retryBtn: { marginTop: 16, paddingVertical: 8, paddingHorizontal: 16 },
+    retryText: { fontSize: 14, fontWeight: '700' },
+    aiChevronOpen: { transform: [{ rotate: '180deg' }] },
+    aiAsk: { marginTop: 12, alignSelf: 'flex-start' },
+    aiAskText: { fontSize: 13, fontWeight: '700', color: palette.primary },
     aiTitleRow: {
         flexDirection: 'row',
         alignItems: 'center',

@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import LottieView from 'lottie-react-native';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { LoopingLottie } from '@/src/components/ui/LoopingLottie';
 
 const NEON_LIME = '#5fc793';
 const PALE_ORANGE = '#FF9500';
@@ -51,10 +51,8 @@ export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDay
             <View style={styles.headerRow}>
                 <View>
                     <View style={styles.streakBadge}>
-                        <LottieView
+                        <LoopingLottie
                             source={require('@/assets/animations/fire.json')}
-                            autoPlay
-                            loop
                             style={{ width: 20, height: 20, transform: [{ scale: 1 + Math.min(streakDays, 30) * 0.03 }] }}
                         />
                         <Text style={styles.streakText}>{streakDays} DAY STREAK</Text>
@@ -83,7 +81,11 @@ export function ProfileHeader({ userName, avatarUrl, variant = 'home', streakDay
                     {avatarUrl ? (
                         <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
                     ) : (
-                        <View style={[styles.avatarFallback, { backgroundColor: palette.surface }]} />
+                        <View style={[styles.avatarFallback, { backgroundColor: palette.surface }]}>
+                            <Text style={[styles.avatarInitial, { color: palette.primary }]}>
+                                {userName.trim().charAt(0).toUpperCase() || '?'}
+                            </Text>
+                        </View>
                     )}
                 </Pressable>
             </View>
@@ -181,5 +183,8 @@ const getStyles = (palette: any) => StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
+    avatarInitial: { fontSize: 22, fontWeight: '800' },
 });

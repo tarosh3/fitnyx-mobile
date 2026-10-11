@@ -1,0 +1,115 @@
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Linking, StyleSheet, Text, View } from 'react-native';
+
+import { Button } from '@/src/components/ui/Button';
+import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
+import { PageHeader } from '@/src/components/ui/PageHeader';
+import { Screen } from '@/src/components/ui/Screen';
+import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { ActivityRow } from '@/src/features/roam/components/ActivityRow';
+import { WeekSummary } from '@/src/features/roam/components/WeekSummary';
+import type { ActivityType } from '@/src/features/roam/geo';
+import { getRecordingFor } from '@/src/features/roam/recordingStore';
+import { useRoamActivities } from '@/src/features/roam/useRoamActivities';
+import { useRoamRecording } from '@/src/features/roam/useRoamRecording';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { useAuth } from '@/src/providers/AuthProvider';
+
+const TYPES: { label: string; value: ActivityType }[] = [
+  { label: 'Run', value: 'run' },
+  { label: 'Walk', value: 'walk' },
+  { label: 'Ride', value: 'cycle' },
+];
+
+export default function RoamScreen() {
+  const palette = useThemeColors();
+  const router = useRouter();
+  const { user } = useAuth();
+  const { data, loading, error } = useRoamActivities(user?.id);
+  const recording = useRoamRecording();
+  const [type, setType] = useState<ActivityType>('run');
+  const [starting, setStarting] = useState(false);
+  const [notice, setNotice] = useState<'denied' | 'blocked' | 'failed' | null>(null);
+  const [inProgress, setInProgress] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      getRecordingFor(user?.id).then((m) => setInProgress(m != null));
+    }, [user?.id]),
+  );
+
+  const onStart = async () => {
+    setStarting(true);
+    try {
+      const result = await recording.start(type);
+      if (result === 'granted') router.push('/roam/record');
+      else if (result === 'denied' || result === 'blocked') setNotice(result);
+      else setNotice('failed');
+    } catch {
+      setNotice('failed');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  return (
+    <Screen>
+      <PageHeader title="ROAM" subtitle="RUN · WALK · RIDE" backTo="/exercises" />
+
+      <View style={styles.section}>
+        {inProgress ? (
+          <Button title="CONTINUE YOUR ROAM" onPress={() => router.push('/roam/record')} />
+        ) : (
+          <>
+            <SegmentedControl options={TYPES} value={type} onChange={setType} />
+            <Button title={`START ${TYPES.find((t) => t.value === type)?.label.toUpperCase()}`} onPress={onStart} loading={starting} />
+            <Text style={[styles.hint, { color: palette.mutedText }]}>
+              Vehicle travel (car, bus, train, metro) is detected and never counts.
+            </Text>
+          </>
+        )}
+      </View>
+
+      {data ? <WeekSummary week={data.week} /> : null}
+
+      <Text style={[styles.heading, { color: palette.mutedText }]}>YOUR ROAMS</Text>
+      {loading && !data ? <ActivityIndicator color={palette.primary} /> : null}
+      {error ? <Text style={[styles.hint, { color: palette.destructive }]}>{error}</Text> : null}
+      {data && data.data.length === 0 ? (
+        <Text style={[styles.hint, { color: palette.mutedText }]}>No Roams yet — your first one will show up here.</Text>
+      ) : null}
+      <View style={styles.list}>
+        {data?.data.map((a) => (
+          <ActivityRow key={a.id} activity={a} onPress={() => router.push(`/roam/${a.id}`)} />
+        ))}
+      </View>
+
+      <ConfirmModal
+        visible={notice !== null}
+        title={notice === 'failed' ? "COULDN'T START" : 'LOCATION NEEDED'}
+        message={
+          notice === 'blocked'
+            ? 'Location access is turned off for FitNyx. Allow it in Settings ("While using the app") to record a Roam.'
+            : notice === 'denied'
+              ? 'Roam needs your location to map your route and measure distance.'
+              : 'GPS tracking could not start. Check that location services are on and try again.'
+        }
+        confirmLabel={notice === 'blocked' ? 'OPEN SETTINGS' : 'OK'}
+        showCancel={notice === 'blocked'}
+        onConfirm={() => {
+          if (notice === 'blocked') Linking.openSettings();
+          setNotice(null);
+        }}
+        onCancel={() => setNotice(null)}
+      />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  section: { gap: 12, marginBottom: 16 },
+  hint: { fontSize: 12, textAlign: 'center' },
+  heading: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2, marginTop: 20, marginBottom: 10 },
+  list: { gap: 10, paddingBottom: 40 },
+});

@@ -76,6 +76,27 @@
             "useFrameworks": "static"
           }
         }
+      ],
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "FitNyx uses your location to map your route and measure distance and pace during a Roam.",
+          "locationAlwaysAndWhenInUsePermission": "FitNyx keeps tracking your Roam route while your screen is locked or the app is in the background, so your run, walk or ride is recorded in full.",
+          "locationAlwaysPermission": "FitNyx keeps tracking your Roam route while your screen is locked or the app is in the background, so your run, walk or ride is recorded in full.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/fitnyx-logo.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#050505"
+        }
       ]
     ],
     "experiments": {

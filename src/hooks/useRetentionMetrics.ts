@@ -167,7 +167,7 @@ export function useRetentionMetrics(userId?: string) {
 }
 
 // Query key export for external invalidation (e.g. after completing a workout)
-export const retentionMetricsKey = (userId?: string) => ['retentionMetrics', userId];
+export { retentionMetricsKey } from '@/src/hooks/queryKeys';
 
 function calculateStats(sessions: DashboardSession[]) {
   let streak = 0;
