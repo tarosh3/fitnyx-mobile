@@ -181,7 +181,7 @@ export default function PlanDetailsScreen() {
       <Screen style={{ backgroundColor: DEPTH_BG }}>
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyTitle}>PLAN NOT FOUND</Text>
-          <Pressable onPress={() => router.replace('/workouts/select')} style={styles.backBtnAction}>
+          <Pressable onPress={() => router.dismissTo('/workouts/select')} style={styles.backBtnAction}>
             <Text style={styles.backBtnActionText}>BACK TO PLANS</Text>
           </Pressable>
         </View>

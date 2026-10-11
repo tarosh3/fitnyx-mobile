@@ -155,17 +155,18 @@ function RootLayout() {
     let currentCount = 0;
 
     const backAction = () => {
-      // If we aren't on the root dashboard page, go back or navigate to dashboard
-      if (pathname !== '/' && pathname !== '/dashboard') {
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace('/dashboard');
-        }
+      // Back pops the stack; at the root of any other tab it goes to Home
+      // (Android convention), and only Home asks for a second press to exit.
+      if (router.canGoBack()) {
+        router.back();
+        return true;
+      }
+      if (pathname !== '/') {
+        router.replace('/');
         return true;
       }
 
-      // If we are on the dashboard, require double tap to exit
+      // On Home with nothing to go back to: require double tap to exit
       setTimeout(() => {
         currentCount = 0;
       }, 2000); // 2 seconds threshold
