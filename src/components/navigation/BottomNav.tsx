@@ -71,6 +71,10 @@ export function BottomNav() {
       const now = Date.now();
       if (now - lastNavTime.current < 300) return;
       lastNavTime.current = now;
+      // A tab starts a fresh stack. replace() alone only swaps the top screen,
+      // so everything pushed before (e.g. Roam → Run) stayed underneath and
+      // back walked through it like browser history.
+      if (router.canDismiss()) router.dismissAll();
       router.replace(href as never);
     },
     [router]
