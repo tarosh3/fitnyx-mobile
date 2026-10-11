@@ -118,7 +118,7 @@ export default function SettingsScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: 'Train smarter with FitNyx — your AI fitness coach. https://fitnyx.app',
+        message: 'Train smarter with FitNyx — your AI fitness coach. https://fitnyx.in',
       });
     } catch {
       /* user cancelled */
@@ -134,7 +134,7 @@ export default function SettingsScreen() {
   };
 
   const handleContact = () => {
-    Linking.openURL('mailto:support@fitnyx.app?subject=FitNyx Support');
+    Linking.openURL('mailto:support@fitnyx.in?subject=FitNyx%20Support');
   };
 
   const firstName = userProfile?.first_name || user?.user_metadata?.first_name || 'User';
@@ -282,7 +282,7 @@ export default function SettingsScreen() {
         <SettingRow
           icon={<HelpCircle size={20} color={c.primary} strokeWidth={1.8} />}
           label="Help & FAQ"
-          onPress={() => Linking.openURL('https://fitnyx.app/help')}
+          onPress={() => Linking.openURL('https://fitnyx.in/help')}
           showChevron
         />
         <SettingRow
