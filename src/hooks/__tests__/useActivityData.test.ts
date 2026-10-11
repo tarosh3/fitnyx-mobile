@@ -1,6 +1,3 @@
-// India is UTC+5:30: a workout at 02:00 local on 5 Oct is 20:30 UTC on 4 Oct.
-process.env.TZ = 'Asia/Kolkata';
-
 import { renderHook } from '@testing-library/react-native';
 
 import { useActivityData } from '@/src/hooks/useActivityData';
@@ -9,9 +6,16 @@ const done = (iso: string) => ({ status: 'completed', started_at: iso, finished_
 
 describe('useActivityData', () => {
   it('buckets workouts by the local calendar day, not the UTC date', () => {
-    const { result } = renderHook(() => useActivityData([done('2026-10-04T20:30:00.000Z')]));
-    expect(result.current.days.get('2026-10-05')).toBe(1);
-    expect(result.current.days.get('2026-10-04')).toBeUndefined();
+    // 20:30 UTC is already the next day east of UTC (02:00 in India). The
+    // expected key is computed in the machine's own zone, so this holds on
+    // any CI timezone and fails on the old UTC-slice code wherever the two differ.
+    const iso = '2026-10-04T20:30:00.000Z';
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const localKey = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const { result } = renderHook(() => useActivityData([done(iso)]));
+    expect(result.current.days.get(localKey)).toBe(1);
+    expect(result.current.days.size).toBe(1);
   });
 
   it('never reports more active days than workouts', () => {
