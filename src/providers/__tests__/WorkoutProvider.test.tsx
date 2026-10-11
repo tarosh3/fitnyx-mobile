@@ -40,6 +40,8 @@ jest.mock('@/src/hooks/useNetworkStatus', () => ({ useNetworkStatus: () => ({ is
 const mockAuth = { user: { id: 'u1' } };
 jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => mockAuth }));
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
 import { WorkoutProvider, useWorkout } from '@/src/providers/WorkoutProvider';
 
 let ctx: ReturnType<typeof useWorkout> | null = null;
@@ -58,9 +60,11 @@ const inProgress = (id: string) => ({
 
 async function mount() {
   const r = render(
-    <WorkoutProvider>
-      <Probe />
-    </WorkoutProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <WorkoutProvider>
+        <Probe />
+      </WorkoutProvider>
+    </QueryClientProvider>,
   );
   await act(async () => {});
   return r;
@@ -105,6 +109,28 @@ describe('WorkoutProvider active-session fallback', () => {
       await ctx!.finishActiveSession();
     });
     expect(mockFinish).toHaveBeenCalledWith('s1');
+    r.unmount();
+  });
+
+  it('refreshes Home metrics (streak, weekly stats, XP) when a workout ends', async () => {
+    const client = new QueryClient();
+    const invalidate = jest.spyOn(client, 'invalidateQueries');
+    const r = render(
+      <QueryClientProvider client={client}>
+        <WorkoutProvider>
+          <Probe />
+        </WorkoutProvider>
+      </QueryClientProvider>,
+    );
+    await act(async () => {});
+    await act(async () => {
+      ctx!.setActiveSession(inProgress('s1') as any);
+    });
+    invalidate.mockClear();
+    await act(async () => {
+      await ctx!.finishActiveSession();
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['retentionMetrics', 'u1'] });
     r.unmount();
   });
 });
