@@ -93,7 +93,7 @@ export function BottomNav() {
       key: 'workouts',
       icon: Dumbbell,
       label: 'Workouts',
-      match: (p) => p.startsWith('/exercises') || p === '/roam' || p.startsWith('/roam/'),
+      match: (p) => p.startsWith('/exercises') || p.startsWith('/workouts') || p === '/roam' || p.startsWith('/roam/'),
       onPress: () => navigate('/exercises', pathname.startsWith('/exercises')),
     },
     {

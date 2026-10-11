@@ -1,6 +1,5 @@
 import {
-  Clock,
-  Dumbbell,
+  Target,
   Play,
   Search,
   SlidersHorizontal
@@ -26,6 +25,8 @@ import { ExerciseDetailModal } from '@/src/features/dashboard/ExerciseDetailModa
 import { ExerciseMedia } from '@/src/features/workouts/ExerciseMedia';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchExerciseByUUID, fetchExercises } from '@/src/lib/api/exercises';
+import { useActivityData } from '@/src/hooks/useActivityData';
+import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
 import { useAuth } from '@/src/providers/AuthProvider';
 import type { Exercise, RelatedExercise } from '@/src/types/exercise';
 import { useRouter } from 'expo-router';
@@ -59,6 +60,11 @@ const ExerciseTile = React.memo(function ExerciseTile({
   styles: ReturnType<typeof getStyles>;
 }) {
   const thumbnail = getThumbnail(item);
+  // Real facts about the exercise: "Lower chest · Bodyweight only".
+  const meta = [item.primary_muscles?.[0]?.name, item.equipment?.[0]?.name]
+    .filter(Boolean)
+    .map((t) => t!.charAt(0).toUpperCase() + t!.slice(1).toLowerCase())
+    .join(' · ');
   const defaultBgs = ['#1E1E1E', '#2D2D2D', '#333333'];
   const fallbackBg = defaultBgs[index % 3];
 
@@ -79,14 +85,12 @@ const ExerciseTile = React.memo(function ExerciseTile({
               {item.title.toUpperCase()}
             </Text>
             <View style={styles.tileMetaRow}>
-              <View style={styles.tileMetaItem}>
-                <Clock color={NEON_LIME} size={12} />
-                <Text style={styles.tileMetaText}>12 MIN</Text>
-              </View>
-              <View style={styles.tileMetaItem}>
-                <Dumbbell color={NEON_LIME} size={12} />
-                <Text style={styles.tileMetaText}>3 X 12</Text>
-              </View>
+              {meta ? (
+                <View style={styles.tileMetaItem}>
+                  <Target color={NEON_LIME} size={12} />
+                  <Text style={styles.tileMetaText} numberOfLines={1}>{meta}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
           <View style={styles.tilePlayWrap}>
@@ -103,6 +107,9 @@ export default function ExercisesScreen() {
   const { user, avatarUrl, userProfile } = useAuth();
   const router = useRouter();
   const styles = useMemo(() => getStyles(palette), [palette]);
+  // Shared react-query cache with Home — no extra request when Home has loaded.
+  const metrics = useRetentionMetrics(user?.id);
+  const activity = useActivityData(metrics.sessions);
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,8 +211,8 @@ export default function ExercisesScreen() {
   );
 
   const userName =
-    userProfile?.username ||
     userProfile?.first_name ||
+    userProfile?.username ||
     user?.user_metadata?.first_name ||
     user?.email?.split('@')[0] ||
     'Guest';
@@ -254,7 +261,7 @@ export default function ExercisesScreen() {
       </View>
 
       <View style={{ marginBottom: 24 }}>
-        <WeeklyCalendar />
+        <WeeklyCalendar activityDays={activity.days} />
       </View>
 
       <View style={styles.sectionHeadRow}>
@@ -608,12 +615,13 @@ const getStyles = (palette: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 1,
   },
   tileMetaText: {
     color: palette.mutedText,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 12.5,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   tilePlayWrap: {
     width: 44,

@@ -283,7 +283,7 @@ export function AnimatedSplash({ onAnimationComplete }: Props) {
           {/* Filled logo PNG (same square size, fades in over outlines) */}
           <Animated.View style={[StyleSheet.absoluteFill, fillStyle]}>
             <Image
-              source={require('@/assets/images/fitnyx_logo_4k_transparent.png')}
+              source={require('@/assets/images/fitnyx-logo.png')}
               style={{ width: LOGO_SIZE, height: LOGO_SIZE }}
               resizeMode="contain"
             />

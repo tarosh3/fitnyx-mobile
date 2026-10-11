@@ -27,7 +27,7 @@ import { WaterGlass } from '@/src/components/water/WaterGlass';
 import { Screen } from '@/src/components/ui/Screen';
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { getMonthTotals, useWaterToday, WATER_LIMITS } from '@/src/lib/water';
+import { getMonthTotals, useWaterToday, WATER_LIMITS, ymd } from '@/src/lib/water';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
 
 const PRESETS = [200, 300, 500];
@@ -103,9 +103,10 @@ export default function WaterScreen() {
   };
 
   const chartData = useMemo(() => {
+    const todayKey = ymd();
     return monthData.map((d, i) => {
       const dayNum = i + 1;
-      const isToday = d.date === new Date().toISOString().slice(0, 10);
+      const isToday = d.date === todayKey; // local day, like the stored keys
       const reached = d.total >= goalMl && goalMl > 0;
       return {
         value: d.total,

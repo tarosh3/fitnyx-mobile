@@ -29,7 +29,7 @@ export function MobileDashboard({ user, avatarUrl, userProfile }: MobileDashboar
     placeholderData: (prev: any) => prev,
   });
 
-  const userName = (userProfile?.username || userProfile?.first_name || user?.user_metadata?.first_name || 'Athlete');
+  const userName = (userProfile?.first_name || userProfile?.username || user?.user_metadata?.first_name || 'Athlete');
 
   if (isLoading) {
     return (

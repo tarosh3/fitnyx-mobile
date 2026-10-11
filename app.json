@@ -88,6 +88,15 @@
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": true
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/fitnyx-logo.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#050505"
+        }
       ]
     ],
     "experiments": {

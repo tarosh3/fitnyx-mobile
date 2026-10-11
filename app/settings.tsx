@@ -345,7 +345,7 @@ export default function SettingsScreen() {
       {/* Footer */}
       <View style={styles.footer}>
         <Image
-          source={require('@/assets/images/fitnyx_logo_4k_transparent.png')}
+          source={require('@/assets/images/fitnyx-logo.png')}
           style={styles.footerLogo}
           resizeMode="contain"
         />
