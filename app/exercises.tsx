@@ -2,7 +2,8 @@ import {
   Target,
   Play,
   Search,
-  SlidersHorizontal
+  SlidersHorizontal,
+  WifiOff,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -27,6 +28,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchExerciseByUUID, fetchExercises } from '@/src/lib/api/exercises';
 import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
+import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
 import type { Exercise, RelatedExercise } from '@/src/types/exercise';
 import { useRouter } from 'expo-router';
@@ -113,6 +115,7 @@ export default function ExercisesScreen() {
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -138,6 +141,7 @@ export default function ExercisesScreen() {
       } else {
         setLoadingMore(true);
       }
+      const firstPageKey = cacheKeys.exerciseListPage(`${debouncedSearch}|${muscle}|${isWarmup}`);
 
       try {
         const response = await fetchExercises({
@@ -152,8 +156,19 @@ export default function ExercisesScreen() {
         setExercises((prev) => (reset ? next : [...prev, ...next]));
         setHasMore(response.meta.current_page < response.meta.total_pages);
         setPage(targetPage + 1);
+        setLoadFailed(false);
+        if (targetPage === 1) cacheSet(firstPageKey, next, cacheTTL.DAY).catch(() => undefined);
       } catch (error) {
-        console.error('Failed to load exercises', error);
+        console.warn('Failed to load exercises', error);
+        // Offline / server down: show the last copy of this list rather than
+        // an empty "no exercises found".
+        if (reset) {
+          const cached = await cacheGet<Exercise[]>(firstPageKey).catch(() => null);
+          // Never leave the previous filter's list under a new chip.
+          setExercises(cached ?? []);
+          setHasMore(false);
+          setLoadFailed(!cached?.length);
+        }
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -190,7 +205,16 @@ export default function ExercisesScreen() {
   );
 
   const EmptyState = useMemo(
-    () => (
+    () => loadFailed ? (
+      <View style={styles.emptyWrap}>
+        <WifiOff color="#64748B" size={34} />
+        <Text style={styles.emptyTitle}>Couldn’t load exercises</Text>
+        <Text style={styles.emptySub}>Check your connection and try again.</Text>
+        <Pressable onPress={() => loadPage(1, true)} style={styles.clearFilterBtn}>
+          <Text style={{ color: palette.text, fontSize: 13, fontWeight: '800' }}>Try again</Text>
+        </Pressable>
+      </View>
+    ) : (
       <View style={styles.emptyWrap}>
         <SlidersHorizontal color="#64748B" size={34} />
         <Text style={styles.emptyTitle}>No exercises found</Text>
@@ -207,7 +231,7 @@ export default function ExercisesScreen() {
         </Pressable>
       </View>
     ),
-    []
+    [loadFailed, loadPage]
   );
 
   const userName =
