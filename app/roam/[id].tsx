@@ -66,7 +66,7 @@ export default function RoamDetailScreen() {
       await cacheInvalidate(cacheKeys.roamActivity(user.id, activityId));
       await cacheInvalidate(cacheKeys.roamActivities(user.id));
       queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user.id) }); // its XP is gone
-      router.replace('/roam');
+      router.dismissTo('/roam'); // the list underneath, not a second copy
     } catch {
       setError('Could not delete this Roam. Try again.');
       setDeleting(false);

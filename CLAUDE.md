@@ -189,6 +189,13 @@ _Claude updates this section automatically when corrections are made._
 - **Maestro `pressKey: Home` on iOS stops a running `xcrun simctl location … start` route**, which looks exactly like background GPS failing. To test Roam in the background, background the app with `xcrun simctl launch booted com.apple.Preferences` instead, and check `pointCount` in the app's `RCTAsyncLocalStorage_V1/manifest.json` (key `fitnyx-roam:recording`).
 - **`app/login.tsx` / `app/signup.tsx` render the bare `AuthForm` (no `AuthLanding` header), so they must keep `Screen`'s safe-area top + side padding** — zeroing them (as before 2026-10-11) drew the form under the status bar whenever the route was opened directly (deep link, session-expired redirect). For Maestro, driving login through Welcome (`openLink: fitnyxmobile:///` → tap `" Log in"`) is still the most reliable path.
 
+### Navigation (expo-router stack)
+
+- **Never `router.replace('/x')` to "go back" to a screen that is already underneath** (e.g. `/roam` after discard/delete, `/workouts/select` after finishing a session). replace() only swaps the top screen, so the stack gets a second copy and back walks through duplicates like browser history. Use `router.dismissTo('/x')` (pops to it, or replaces if it isn't in the stack). Found 2026-10-11.
+- **Bottom-nav tabs must reset the stack**: `if (router.canDismiss()) router.dismissAll(); router.replace(tab)` in `BottomNav.navigate`. With replace() alone, Home → Roam → Run → Workouts tab → back returned to the stale Roam.
+- **System back (root `BackHandler` in `app/_layout.tsx`)**: pop if `canGoBack()`, else go to Home (`/`) from any other tab, and only Home asks "press back again to exit".
+- **Verify navigation by walking real paths with back presses** (adb `input keyevent 4` + `uiautomator dump` to read the screen), including tab switches from deep inside a flow — opening screens by deep link alone never exercises the stack. Device px ≠ screenshot px: tab bar centres on a 1080-wide Pixel 7 are x≈116/327/540/751/963 (Home/Workouts/Coach/Stats/Settings), y≈2238.
+
 ### React / providers
 
 - **Never memoize a callback that calls a `useWorkout()` action (`finishActiveSession`, `abandonActiveSession`, `pauseActiveSession`, `resumeActiveSession`) without listing that action in the deps.** Those actions close over `activeSession` and are re-created when it changes; a screen that mounts before the provider has the session (e.g. right after `offlineStartSession` → `router.push`) captures the `activeSession = null` version and the action silently no-ops. Verified 2026-10-08 with a Jest probe against `app/workouts/session/[id].tsx` (`completeWorkout`/`abandonWorkout` memoized on `[sessionId]` only).

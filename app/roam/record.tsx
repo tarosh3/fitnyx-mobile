@@ -32,7 +32,7 @@ export default function RoamRecordScreen() {
 
   // Nothing recording (opened directly / already saved) → back to Roam home.
   useEffect(() => {
-    if (!recording.loading && !recording.meta) router.replace('/roam');
+    if (!recording.loading && !recording.meta) router.dismissTo('/roam');
   }, [recording.loading, recording.meta, router]);
 
   const finish = async () => {
@@ -43,7 +43,8 @@ export default function RoamRecordScreen() {
 
   const leave = async () => {
     if (user?.id) await cacheInvalidate(cacheKeys.roamActivities(user.id));
-    router.replace('/roam');
+    // Back to the Roam screen already underneath — replace() would stack a second one.
+    router.dismissTo('/roam');
   };
 
   const save = async () => {
