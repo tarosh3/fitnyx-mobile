@@ -26,7 +26,7 @@ export default function RoamScreen() {
   const palette = useThemeColors();
   const router = useRouter();
   const { user } = useAuth();
-  const { data, loading, error } = useRoamActivities(user?.id);
+  const { data, pending, loading, error, offline } = useRoamActivities(user?.id);
   const recording = useRoamRecording();
   const [type, setType] = useState<ActivityType>('run');
   const [starting, setStarting] = useState(false);
@@ -75,11 +75,16 @@ export default function RoamScreen() {
 
       <Text style={[styles.heading, { color: palette.mutedText }]}>YOUR ROAMS</Text>
       {loading && !data ? <ActivityIndicator color={palette.primary} /> : null}
-      {error ? <Text style={[styles.hint, { color: palette.destructive }]}>{error}</Text> : null}
-      {data && data.data.length === 0 ? (
+      {error ? (
+        <Text style={[styles.hint, { color: offline ? palette.mutedText : palette.destructive }]}>{error}</Text>
+      ) : null}
+      {data && data.data.length === 0 && pending.length === 0 ? (
         <Text style={[styles.hint, { color: palette.mutedText }]}>No Roams yet — your first one will show up here.</Text>
       ) : null}
       <View style={styles.list}>
+        {pending.map((a) => (
+          <ActivityRow key={a.id} activity={a} pending />
+        ))}
         {data?.data.map((a) => (
           <ActivityRow key={a.id} activity={a} onPress={() => router.push(`/roam/${a.id}`)} />
         ))}

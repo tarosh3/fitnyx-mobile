@@ -41,6 +41,7 @@ import { SectionHeader } from '@/src/components/ui/SectionHeader';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { SettingGroup } from '@/src/components/ui/SettingGroup';
 import { SettingRow } from '@/src/components/ui/SettingRow';
+import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { formatHeight, formatWeight, useHeightUnit, useLanguage, useWeightUnit } from '@/src/lib/prefs';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -64,6 +65,8 @@ export default function SettingsScreen() {
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [signOutFailed, setSignOutFailed] = useState(false);
+  const { isOffline, pendingCount, refreshPendingCount } = useOfflineAware();
 
   const [weightUnit, setWeightUnit] = useWeightUnit();
   const [heightUnit, setHeightUnit] = useHeightUnit();
@@ -329,7 +332,11 @@ export default function SettingsScreen() {
           icon={<LogOut size={20} color={c.destructive} strokeWidth={1.8} />}
           label="Sign Out"
           destructive
-          onPress={() => setSignOutOpen(true)}
+          onPress={() => {
+            refreshPendingCount();
+            if (isOffline) setSignOutFailed(true);
+            else setSignOutOpen(true);
+          }}
           showChevron
         />
         <SettingRow
@@ -418,14 +425,28 @@ export default function SettingsScreen() {
         visible={signOutOpen}
         variant="danger"
         title="Sign out?"
-        message="You'll need to log back in to reach your workouts, water log and AI coach."
+        message={
+          pendingCount > 0
+            ? `${pendingCount} change${pendingCount === 1 ? '' : 's'} made offline haven't synced yet. We'll send them first, then sign you out.`
+            : "You'll need to log back in to reach your workouts, water log and AI coach."
+        }
         confirmLabel="Sign out"
         cancelLabel="Stay"
         onCancel={() => setSignOutOpen(false)}
         onConfirm={() => {
           setSignOutOpen(false);
-          signOut();
+          signOut().catch(() => setSignOutFailed(true));
         }}
+      />
+
+      <ConfirmModal
+        visible={signOutFailed}
+        title="Can't sign out offline"
+        message="Connect to the internet to sign out. Everything on this device stays as it is until then."
+        confirmLabel="OK"
+        showCancel={false}
+        onConfirm={() => setSignOutFailed(false)}
+        onCancel={() => setSignOutFailed(false)}
       />
     </Screen>
   );

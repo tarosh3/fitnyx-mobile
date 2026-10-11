@@ -36,6 +36,11 @@ export async function getCachedPlan(planId: string): Promise<WorkoutPlan | null>
   return plans[planId] ?? null;
 }
 
+/** Every plan whose details were opened on this device. */
+export async function getAllCachedPlans(): Promise<WorkoutPlan[]> {
+  return Object.values(await readJson<PlansStore>(KEYS.plans, {}));
+}
+
 export async function cachePlanDays(planId: string, days: WorkoutPlanDay[]): Promise<void> {
   const allDays = await readJson<DaysStore>(KEYS.days, {});
   allDays[planId] = days;

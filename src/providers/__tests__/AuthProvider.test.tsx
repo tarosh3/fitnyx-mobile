@@ -23,6 +23,7 @@ jest.mock('@/src/lib/api/users', () => ({ getProfile: jest.fn(async () => ({})) 
 jest.mock('@/src/lib/cache', () => ({
   cacheClear: jest.fn(async () => {}),
   cacheGet: jest.fn(async () => ({ complete: true })),
+  cacheGetStale: jest.fn(async () => null),
   cacheSet: jest.fn(async () => {}),
   cacheKeys: { onboardingStatus: (id: string) => `o:${id}`, userProfile: (id: string) => `p:${id}` },
   cacheTTL: { MEDIUM: 1, DAY: 1 },
@@ -104,5 +105,66 @@ describe('AuthProvider token refresh', () => {
 
     expect(mockRegisterSession).toHaveBeenCalledTimes(1);
     r.unmount();
+  });
+});
+
+describe('AuthProvider offline launch', () => {
+  it('opens the app for the stored user when the expired token cannot refresh offline', async () => {
+    const { AuthRetryableFetchError } = jest.requireActual('@supabase/supabase-js');
+    const { getStoredUser } = jest.requireMock('@/src/lib/supabase') as { getStoredUser: jest.Mock };
+    const { clearAllOfflineData } = jest.requireMock('@/src/lib/offline/offlineStore') as {
+      clearAllOfflineData: jest.Mock;
+    };
+    getStoredUser.mockResolvedValueOnce(user);
+    (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
+      data: { session: null },
+      error: new AuthRetryableFetchError('Network request failed', 0),
+    });
+
+    let seen: { id: string } | null = null;
+    function UserProbe() {
+      seen = useAuth().user as { id: string } | null;
+      return null;
+    }
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    await act(async () => {});
+
+    expect(seen).toEqual(user);
+    expect(clearAllOfflineData).not.toHaveBeenCalled();
+  });
+});
+
+describe('AuthProvider sign-out', () => {
+  it('keeps local data (offline queue included) when Supabase sign-out fails offline', async () => {
+    const { clearOfflineQueue } = jest.requireMock('@/src/lib/cache/indexeddb') as { clearOfflineQueue: jest.Mock };
+    const { clearAllOfflineData } = jest.requireMock('@/src/lib/offline/offlineStore') as {
+      clearAllOfflineData: jest.Mock;
+    };
+    clearOfflineQueue.mockClear();
+    clearAllOfflineData.mockClear();
+    (supabase.auth as unknown as { signOut: jest.Mock }).signOut = jest.fn(async () => ({
+      error: new Error('Network request failed'),
+    }));
+
+    let doSignOut: (() => Promise<void>) | null = null;
+    function SignOutProbe() {
+      doSignOut = useAuth().signOut;
+      return null;
+    }
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({ data: { session }, error: null });
+    render(
+      <AuthProvider>
+        <SignOutProbe />
+      </AuthProvider>,
+    );
+    await act(async () => {});
+
+    await expect(doSignOut!()).rejects.toThrow('Network request failed');
+    expect(clearOfflineQueue).not.toHaveBeenCalled();
+    expect(clearAllOfflineData).not.toHaveBeenCalled();
   });
 });

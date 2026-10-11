@@ -6,8 +6,23 @@ import {
   deleteExerciseLog,
   sessionAction,
 } from '@/src/lib/api/workoutSessions';
-import { getOfflineQueue, removeFromOfflineQueue, OfflineMutation } from '@/src/lib/cache/indexeddb';
-import { setIdMapping, getIdMapping, clearIdMappings, clearPersistedSession, cleanupStaleSessions } from './offlineStore';
+import {
+  addToOfflineQueue,
+  getOfflineQueue,
+  removeFromOfflineQueue,
+  updateOfflineQueue,
+  OfflineMutation,
+} from '@/src/lib/cache/indexeddb';
+import {
+  clearPersistedSession,
+  cleanupStaleSessions,
+  deleteOfflineLog,
+  isOfflineId,
+  promoteOfflineLog,
+  promoteOfflineSession,
+  pruneIdMappings,
+  resolveId,
+} from './offlineStore';
 
 export interface SyncResult {
   processed: number;
@@ -15,10 +30,20 @@ export interface SyncResult {
   errors: Array<{ mutation: OfflineMutation; error: string }>;
 }
 
-async function resolveSessionId(sessionId: string): Promise<string> {
-  if (!sessionId.startsWith('offline-')) return sessionId;
-  const realId = await getIdMapping(sessionId);
-  return realId || sessionId;
+const resolveSessionId = resolveId;
+
+/**
+ * Takes a synced mutation off the queue and returns the entry as it is now —
+ * null if the user removed it meanwhile. Atomic, so an edit or delete made
+ * while the request was in flight is never lost between the check and removal.
+ */
+async function takeFromQueue(id: string): Promise<OfflineMutation | null> {
+  let current: OfflineMutation | null = null;
+  await updateOfflineQueue((queue) => {
+    current = queue.find((m) => m.id === id) ?? null;
+    return queue.filter((m) => m.id !== id);
+  });
+  return current;
 }
 
 async function processMutation(mutation: OfflineMutation): Promise<void> {
@@ -38,11 +63,11 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
           dayId: payload.dayId,
           startedAt: payload.startedAt,
         });
-        await setIdMapping(payload.tempId, session.id);
+        await promoteOfflineSession(payload.tempId, session.id);
       } catch (error: any) {
         // 409 = server already has an active session — map to existing session
         if (error?.status === 409 && error?.data?.session?.id) {
-          await setIdMapping(payload.tempId, error.data.session.id);
+          await promoteOfflineSession(payload.tempId, error.data.session.id);
         } else {
           throw error;
         }
@@ -55,21 +80,49 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       if (realSessionId.startsWith('offline-')) {
         throw new Error('Session not yet synced — will retry');
       }
-      await logExerciseSet(realSessionId, {
+      const log = await logExerciseSet(realSessionId, {
         exercise_uuid: payload.exerciseUuid,
         set_number: payload.setNumber,
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
         rpe: payload.rpe,
       });
+      if (payload.logId && log?.id) await promoteOfflineLog(realSessionId, payload.logId, log.id);
+
+      // The set may have been edited or deleted while this request was in
+      // flight (offlineApi rewrites / removes the queued LOG_SET). Apply that
+      // to the set the server just created.
+      const now = await takeFromQueue(mutation.id);
+      if (!log?.id) break;
+      if (!now) {
+        await deleteOfflineLog(realSessionId, log.id);
+        await deleteExerciseLog(log.id).catch(() =>
+          addToOfflineQueue({ type: 'DELETE_SET', payload: { sessionId: realSessionId, logId: log.id } }),
+        );
+      } else if (
+        now.payload.reps !== payload.reps ||
+        now.payload.weightKg !== payload.weightKg ||
+        now.payload.rpe !== payload.rpe
+      ) {
+        // weight 0 = bodyweight (clears a weight that was set)
+        const edit = { reps: now.payload.reps, weightKg: now.payload.weightKg ?? 0, rpe: now.payload.rpe };
+        await updateExerciseLog(log.id, {
+          actual_reps: edit.reps,
+          actual_weight_kg: edit.weightKg,
+          rpe: edit.rpe,
+        }).catch(() =>
+          addToOfflineQueue({ type: 'UPDATE_SET', payload: { sessionId: realSessionId, logId: log.id, ...edit } }),
+        );
+      }
       break;
     }
 
     case 'UPDATE_SET': {
-      // If the log was created offline, we can't update it by its offline ID
-      // It was already created during LOG_SET sync with correct data
-      if (payload.logId?.startsWith('offline-')) break;
-      await updateExerciseLog(payload.logId, {
+      // A set created offline whose LOG_SET hasn't synced was edited in the
+      // queue instead (offlineApi); one that has synced resolves to its server id.
+      const logId = await resolveId(payload.logId);
+      if (isOfflineId(logId)) break;
+      await updateExerciseLog(logId, {
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
         rpe: payload.rpe,
@@ -78,8 +131,9 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
     }
 
     case 'DELETE_SET': {
-      if (payload.logId?.startsWith('offline-')) break;
-      await deleteExerciseLog(payload.logId);
+      const logId = await resolveId(payload.logId);
+      if (isOfflineId(logId)) break;
+      await deleteExerciseLog(logId);
       break;
     }
 
@@ -102,7 +156,7 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       if (realId.startsWith('offline-')) throw new Error('Session not yet synced');
       await sessionAction('finish', { sessionId: realId, timestamp: payload.timestamp });
       // Clean up offline data for this session
-      await clearPersistedSession(payload.sessionId);
+      await clearPersistedSession(realId);
       break;
     }
 
@@ -110,7 +164,7 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       const realId = await resolveSessionId(payload.sessionId);
       if (realId.startsWith('offline-')) throw new Error('Session not yet synced');
       await sessionAction('abandon', { sessionId: realId, timestamp: payload.timestamp });
-      await clearPersistedSession(payload.sessionId);
+      await clearPersistedSession(realId);
       break;
     }
 
@@ -130,17 +184,39 @@ export function isTransientStatus(status: number): boolean {
 }
 
 let syncInProgress = false;
+let rerunRequested = false;
+const syncListeners = new Set<(result: SyncResult) => void>();
+
+/** Called after a sync run that sent something, so screens can refetch. */
+export function onOfflineSync(listener: (result: SyncResult) => void): () => void {
+  syncListeners.add(listener);
+  return () => syncListeners.delete(listener);
+}
 
 export async function processOfflineQueue(): Promise<SyncResult> {
-  // Prevent concurrent sync runs (AuthProvider + SyncManager can both trigger)
-  if (syncInProgress) return { processed: 0, failed: 0, errors: [] };
+  // Prevent concurrent sync runs (AuthProvider + SyncManager can both trigger).
+  // A trigger that lands mid-run (a set logged while syncing) gets one more
+  // pass afterwards instead of waiting for the next reconnect.
+  if (syncInProgress) {
+    rerunRequested = true;
+    return { processed: 0, failed: 0, errors: [] };
+  }
   syncInProgress = true;
 
+  const total: SyncResult = { processed: 0, failed: 0, errors: [] };
   try {
-    return await processOfflineQueueInternal();
+    do {
+      rerunRequested = false;
+      const result = await processOfflineQueueInternal();
+      total.processed += result.processed;
+      total.failed = result.failed;
+      total.errors = result.errors;
+    } while (rerunRequested);
   } finally {
     syncInProgress = false;
   }
+  if (total.processed > 0) syncListeners.forEach((listener) => listener(total));
+  return total;
 }
 
 async function processOfflineQueueInternal(): Promise<SyncResult> {
@@ -194,11 +270,17 @@ async function processOfflineQueueInternal(): Promise<SyncResult> {
     }
   }
 
-  // If all processed successfully, clean up ID mappings
+  // Forget offline→server id mappings nothing can reach any more. Kept while a
+  // queued mutation or a stored session/set still uses them: a session screen
+  // opened offline keeps its offline id after the session syncs.
   const remaining = await getOfflineQueue();
-  if (remaining.length === 0) {
-    await clearIdMappings();
+  const referenced = new Set<string>();
+  for (const m of remaining) {
+    for (const v of [m.payload?.sessionId, m.payload?.logId, m.payload?.tempId]) {
+      if (typeof v === 'string') referenced.add(v);
+    }
   }
+  await pruneIdMappings(referenced).catch(() => {});
 
   // Clean up stale completed/abandoned sessions older than 7 days
   await cleanupStaleSessions().catch(() => {});

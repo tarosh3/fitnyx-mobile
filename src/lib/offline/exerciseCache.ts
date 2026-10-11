@@ -1,4 +1,4 @@
-import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
+import { idbGet, idbGetStale, idbSet } from '@/src/lib/cache/indexeddb';
 import { cacheTTL } from '@/src/lib/cache/keys';
 import { fetchExerciseByUUID } from '@/src/lib/api/exercises';
 import { Exercise } from '@/src/types/exercise';
@@ -24,7 +24,8 @@ export async function fetchExerciseWithCache(uuid: string): Promise<Exercise | n
     await cacheExercise(uuid, exercise);
     return exercise;
   } catch {
-    return null;
+    // Offline: an older copy beats a nameless exercise in the session screen.
+    return idbGetStale<Exercise>(exerciseCacheKey(uuid));
   }
 }
 

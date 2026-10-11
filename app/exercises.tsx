@@ -28,7 +28,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchExerciseByUUID, fetchExercises } from '@/src/lib/api/exercises';
 import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
-import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
 import type { Exercise, RelatedExercise } from '@/src/types/exercise';
 import { useRouter } from 'expo-router';
@@ -163,7 +163,7 @@ export default function ExercisesScreen() {
         // Offline / server down: show the last copy of this list rather than
         // an empty "no exercises found".
         if (reset) {
-          const cached = await cacheGet<Exercise[]>(firstPageKey).catch(() => null);
+          const cached = await cacheGetStale<Exercise[]>(firstPageKey).catch(() => null);
           // Never leave the previous filter's list under a new chip.
           setExercises(cached ?? []);
           setHasMore(false);

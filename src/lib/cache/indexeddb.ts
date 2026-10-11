@@ -12,19 +12,28 @@ function wrapKey(key: string): string {
   return `${KEY_PREFIX}${key}`;
 }
 
-export async function idbGet<T>(key: string): Promise<T | null> {
+// TTL is freshness, not lifetime: an expired entry reads as a miss (so callers
+// refetch) but stays on disk as the offline fallback — idbGetStale serves it.
+// Deleting on expiry left offline screens empty 30 min after the last fetch.
+async function readEntry<T>(key: string): Promise<CacheEntry<T> | null> {
   try {
     const raw = await AsyncStorage.getItem(wrapKey(key));
-    if (!raw) return null;
-    const entry = JSON.parse(raw) as CacheEntry<T>;
-    if (entry.ttl > 0 && Date.now() - entry.timestamp > entry.ttl) {
-      await idbDelete(key);
-      return null;
-    }
-    return entry.data;
+    return raw ? (JSON.parse(raw) as CacheEntry<T>) : null;
   } catch {
     return null;
   }
+}
+
+export async function idbGet<T>(key: string): Promise<T | null> {
+  const entry = await readEntry<T>(key);
+  if (!entry) return null;
+  if (entry.ttl > 0 && Date.now() - entry.timestamp > entry.ttl) return null;
+  return entry.data;
+}
+
+/** The stored value even if expired — last-known data for offline. */
+export async function idbGetStale<T>(key: string): Promise<T | null> {
+  return (await readEntry<T>(key))?.data ?? null;
 }
 
 export async function idbSet<T>(key: string, data: T, ttl: number = 5 * 60 * 1000): Promise<void> {
@@ -83,7 +92,9 @@ export interface OfflineMutation {
 }
 
 const QUEUE_KEY = 'offline-mutation-queue';
-const QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// Long enough that a workout logged offline survives weeks without signal —
+// at 7 days, a trip away from coverage silently dropped it.
+const QUEUE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 // Every queue write is read-modify-write of one AsyncStorage value. Without
 // serialization, a set logged while the sync engine removes an entry can
@@ -111,6 +122,14 @@ export function updateOfflineQueue(
   });
 }
 
+const queueListeners = new Set<() => void>();
+
+/** Called after each mutation is queued (SyncManager syncs it if online). */
+export function onOfflineQueueAdd(listener: () => void): () => void {
+  queueListeners.add(listener);
+  return () => queueListeners.delete(listener);
+}
+
 export async function addToOfflineQueue(mutation: Omit<OfflineMutation, 'id' | 'timestamp'>): Promise<void> {
   const next: OfflineMutation = {
     ...mutation,
@@ -118,6 +137,7 @@ export async function addToOfflineQueue(mutation: Omit<OfflineMutation, 'id' | '
     timestamp: Date.now(),
   };
   await updateOfflineQueue((queue) => [...queue, next]);
+  queueListeners.forEach((listener) => listener());
 }
 
 export async function getOfflineQueue(): Promise<OfflineMutation[]> {

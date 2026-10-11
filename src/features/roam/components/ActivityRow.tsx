@@ -7,8 +7,19 @@ import { formatDistance, formatDurationHuman, formatPace, formatSpeed } from '@/
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { ActivitySummary } from '@/src/lib/api/activities';
 
-/** One past Roam in the history list. */
-export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; onPress: () => void }) {
+/**
+ * One past Roam in the history list. `pending`: saved offline, not uploaded
+ * yet — no detail screen or XP until it is.
+ */
+export function ActivityRow({
+  activity,
+  onPress,
+  pending = false,
+}: {
+  activity: ActivitySummary;
+  onPress?: () => void;
+  pending?: boolean;
+}) {
   const palette = useThemeColors();
   const date = dayLabel(new Date(activity.started_at));
   const rate =
@@ -16,6 +27,7 @@ export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; 
   return (
     <Pressable
       onPress={onPress}
+      disabled={!onPress}
       style={({ pressed }) => [styles.row, { backgroundColor: palette.card, borderColor: palette.border }, pressed && { opacity: 0.8 }]}
     >
       <View style={[styles.icon, { backgroundColor: palette.surface }]}>
@@ -28,7 +40,9 @@ export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; 
         <Text style={[styles.sub, { color: palette.mutedText }]}>
           {date} · {formatDurationHuman(activity.moving_time_sec)} · {rate}
         </Text>
-        {!activity.xp_eligible ? (
+        {pending ? (
+          <Text style={[styles.flag, { color: palette.mutedText }]}>Waiting to upload · syncs when you're online</Text>
+        ) : !activity.xp_eligible ? (
           <Text style={[styles.flag, { color: palette.warning }]}>
             {activity.vehicle_detected ? 'Vehicle travel detected — not counted' : 'Too short to count'}
           </Text>
@@ -36,7 +50,7 @@ export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; 
           <Text style={[styles.flag, { color: palette.primary }]}>+{activity.xp} XP</Text>
         )}
       </View>
-      <ChevronRight size={18} color={palette.mutedText} />
+      {onPress ? <ChevronRight size={18} color={palette.mutedText} /> : null}
     </Pressable>
   );
 }

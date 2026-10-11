@@ -2,7 +2,7 @@ import 'react-native-url-polyfill/auto';
 import '@/src/lib/cryptoPolyfill'; // before createClient: PKCE needs crypto.subtle
 
 import { AppState } from 'react-native';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type User } from '@supabase/supabase-js';
 
 import { secureStorage } from '@/src/lib/secureStorage';
 
@@ -55,4 +55,20 @@ if (!isServer) {
       supabase.auth.stopAutoRefresh();
     }
   });
+}
+
+/**
+ * The signed-in user straight from storage, with no network call. Used to start
+ * the app offline when the access token has expired and can't be refreshed —
+ * getSession() returns no session then, though Supabase keeps it for later.
+ */
+export async function getStoredUser(): Promise<User | null> {
+  const key = (supabase.auth as unknown as { storageKey: string }).storageKey;
+  const raw = await secureStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    return (JSON.parse(raw) as { user?: User }).user ?? null;
+  } catch {
+    return null;
+  }
 }

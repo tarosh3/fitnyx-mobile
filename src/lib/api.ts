@@ -1,5 +1,7 @@
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
+
 import { supabase } from '@/src/lib/supabase';
-import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
+import { idbGet, idbGetStale, idbSet } from '@/src/lib/cache/indexeddb';
 import { getApiBaseUrl } from '@/src/lib/config/backend';
 import { secureStorage } from '@/src/lib/secureStorage';
 
@@ -128,6 +130,17 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 });
 
+/**
+ * Thrown when the token can't be refreshed for lack of network. No `status`,
+ * like a failed fetch, so offline fallbacks treat it as "offline".
+ */
+export class NetworkUnavailableError extends TypeError {
+  constructor() {
+    super('Network request failed');
+    this.name = 'NetworkUnavailableError';
+  }
+}
+
 async function getAccessToken(): Promise<string | null> {
   // Use the in-memory token if it's still valid for at least 30 more seconds.
   // Avoids the SecureStore decrypt cost on every API call.
@@ -137,12 +150,18 @@ async function getAccessToken(): Promise<string | null> {
   if (inflightSessionFetch) return inflightSessionFetch;
   inflightSessionFetch = (async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (session?.access_token) {
         cachedAccessToken = session.access_token;
         cachedAccessTokenExpiresAt = (session.expires_at ?? 0) * 1000;
         return session.access_token;
       }
+      // Offline with an expired access token: the refresh couldn't reach
+      // Supabase, which keeps the session and refreshes it once the network is
+      // back. Fail like fetch does so callers take their offline path — signing
+      // out here logged users out (and wiped the offline queue) the moment they
+      // used the app offline more than an hour after their last refresh.
+      if (isAuthRetryableFetchError(sessionError)) throw new NetworkUnavailableError();
       // Stored session is gone — try one forced refresh before giving up.
       const { data: { session: refreshed }, error } = await supabase.auth.refreshSession();
       if (!error && refreshed?.access_token) {
@@ -150,10 +169,12 @@ async function getAccessToken(): Promise<string | null> {
         cachedAccessTokenExpiresAt = (refreshed.expires_at ?? 0) * 1000;
         return refreshed.access_token;
       }
+      if (isAuthRetryableFetchError(error)) throw new NetworkUnavailableError();
       // Refresh failed — our own session is dead. Latch + push to /login.
       invalidateAuth('expired');
       return null;
-    } catch {
+    } catch (error) {
+      if ((error as Error)?.name === 'NetworkUnavailableError') throw error;
       invalidateAuth('expired');
       return null;
     } finally {
@@ -431,7 +452,17 @@ export async function getDietPlan(userId: string): Promise<DietPlan> {
   const cached = await idbGet<DietPlan>(key);
   if (cached) return cached;
 
-  const plan = await fetchWithAuth('/diet');
+  let plan: DietPlan;
+  try {
+    plan = await fetchWithAuth('/diet');
+  } catch (error) {
+    // Offline: the last plan we had, however old, instead of an error.
+    if (!(error as { status?: number })?.status) {
+      const stale = await idbGetStale<DietPlan>(key);
+      if (stale) return stale;
+    }
+    throw error;
+  }
   if (plan?.id) {
     await idbSet(key, plan, 24 * 60 * 60 * 1000);
   }

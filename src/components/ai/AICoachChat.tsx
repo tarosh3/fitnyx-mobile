@@ -34,6 +34,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { MAX_LONG_TEXT, sanitizeGeneralText } from '@/src/lib/validators';
 import { useAICoach } from '@/src/providers/AICoachProvider';
@@ -71,6 +72,9 @@ export function AICoachChat() {
     loadThreads,
   } = useAICoach();
   const [inputValue, setInputValue] = useState('');
+  // Filo runs on the server: offline, say so instead of failing silently.
+  const { isOnline } = useNetworkStatus();
+  const canSend = isOnline && !isLoading;
   const [kbHeight, setKbHeight] = useState(0);
 
   useEffect(() => {
@@ -97,7 +101,7 @@ export function AICoachChat() {
   }, [isOpen]);
 
   const handleSend = () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || !canSend) return;
     sendMessage(inputValue);
     setInputValue('');
   };
@@ -146,16 +150,25 @@ export function AICoachChat() {
                     <ChevronDown color={c.mutedText} size={14} />
                   </View>
                   <View style={styles.subRow}>
-                    <View style={[styles.statusDot, { backgroundColor: c.success }]} />
+                    <View style={[styles.statusDot, { backgroundColor: isOnline ? c.success : c.mutedText }]} />
                     <Text style={[styles.headerSub, { color: c.mutedText }]} numberOfLines={1}>
-                      {threads.length > 0 ? `${threads.length} chat${threads.length === 1 ? '' : 's'}` : 'AI Fitness Coach'}
+                      {!isOnline
+                        ? 'Offline'
+                        : threads.length > 0
+                          ? `${threads.length} chat${threads.length === 1 ? '' : 's'}`
+                          : 'AI Fitness Coach'}
                     </Text>
                   </View>
                 </View>
               </Pressable>
 
               <View style={styles.headerActions}>
-                <Pressable onPress={startNewChat} hitSlop={8} style={[styles.iconBtn, { backgroundColor: `${c.primary}1A` }]}>
+                <Pressable
+                  onPress={startNewChat}
+                  disabled={!isOnline}
+                  hitSlop={8}
+                  style={[styles.iconBtn, { backgroundColor: `${c.primary}1A` }, !isOnline && { opacity: 0.45 }]}
+                >
                   <MessageSquarePlus color={c.primary} size={18} strokeWidth={2} />
                 </Pressable>
                 {currentThreadId ? (
@@ -179,7 +192,8 @@ export function AICoachChat() {
                   </View>
                   <Pressable
                     onPress={startNewChat}
-                    style={[styles.newChatBtn, { backgroundColor: c.primary }]}
+                    disabled={!isOnline}
+                    style={[styles.newChatBtn, { backgroundColor: c.primary }, !isOnline && { opacity: 0.45 }]}
                   >
                     <MessageSquarePlus color={c.primaryText} size={12} strokeWidth={2.4} />
                     <Text style={[styles.newChatBtnText, { color: c.primaryText }]}>NEW</Text>
@@ -254,7 +268,12 @@ export function AICoachChat() {
                       <Pressable
                         key={prompt.text}
                         onPress={() => sendMessage(prompt.text)}
-                        style={[styles.promptCard, { backgroundColor: c.surface, borderColor: c.border }]}
+                        disabled={!isOnline}
+                        style={[
+                          styles.promptCard,
+                          { backgroundColor: c.surface, borderColor: c.border },
+                          !isOnline && { opacity: 0.45 },
+                        ]}
                       >
                         <Text style={styles.promptIcon}>{prompt.icon}</Text>
                         <Text style={[styles.promptText, { color: c.text }]} numberOfLines={2}>
@@ -325,6 +344,11 @@ export function AICoachChat() {
 
             {/* Input */}
             <View style={[styles.inputBar, { borderColor: c.border }]}>
+              {!isOnline ? (
+                <Text style={[styles.offlineNote, { color: c.mutedText }]}>
+                  You're offline. Filo needs an internet connection to reply.
+                </Text>
+              ) : null}
               <View style={[styles.inputWrap, { backgroundColor: c.surface, borderColor: c.border }]}>
                 <TextInput
                   multiline
@@ -337,16 +361,16 @@ export function AICoachChat() {
                 />
                 <Pressable
                   onPress={handleSend}
-                  disabled={isLoading || !inputValue.trim()}
+                  disabled={!canSend || !inputValue.trim()}
                   style={[
                     styles.sendBtn,
                     {
-                      backgroundColor: inputValue.trim() && !isLoading ? c.primary : `${c.primary}33`,
+                      backgroundColor: inputValue.trim() && canSend ? c.primary : `${c.primary}33`,
                     },
                   ]}
                 >
                   <Send
-                    color={inputValue.trim() && !isLoading ? c.primaryText : c.mutedText}
+                    color={inputValue.trim() && canSend ? c.primaryText : c.mutedText}
                     size={18}
                     strokeWidth={2.2}
                   />
@@ -665,6 +689,12 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
+  },
+  offlineNote: {
+    fontFamily: t.weight.medium,
+    fontSize: t.size.xs,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
   inputBar: {
     paddingHorizontal: spacing.base,

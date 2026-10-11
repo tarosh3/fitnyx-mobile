@@ -1,3 +1,5 @@
+import { AuthRetryableFetchError } from '@supabase/supabase-js';
+
 import { supabase } from '@/src/lib/supabase';
 
 // Must mock before importing the module under test
@@ -87,6 +89,22 @@ describe('fetchWithAuth', () => {
     });
 
     await expect(fetchWithAuth('/test')).rejects.toThrow('No active session');
+  });
+
+  it('fails like a network error — without signing out — when the token can\'t refresh offline', async () => {
+    (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
+      data: { session: null },
+      error: new AuthRetryableFetchError('Network request failed', 0),
+    });
+
+    const error = await fetchWithAuth('/test').catch((e: unknown) => e);
+    expect((error as Error).name).toBe('NetworkUnavailableError');
+    expect((error as { status?: number }).status).toBeUndefined();
+    expect(isAuthError(error)).toBe(false);
+
+    // Back online: the same session still works (no sign-out latch).
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('{"ok":true}') });
+    await expect(fetchWithAuth('/test')).resolves.toEqual({ ok: true });
   });
 
   it('passes through custom headers', async () => {

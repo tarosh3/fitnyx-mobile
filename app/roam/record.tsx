@@ -14,7 +14,7 @@ import { saveRoam } from '@/src/features/roam/upload';
 import { useRoamRecording } from '@/src/features/roam/useRoamRecording';
 import { retentionMetricsKey } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { cacheInvalidate, cacheKeys } from '@/src/lib/cache';
+import { cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 type Modal = 'finish' | 'discard' | 'queued' | 'too-short' | null;
@@ -41,8 +41,10 @@ export default function RoamRecordScreen() {
     setPhase('summary');
   };
 
+  // The Roam list refetches on focus. Its cache is the offline copy of the
+  // history, so it's never deleted here — that emptied the list for anyone
+  // who saved a Roam without signal.
   const leave = async () => {
-    if (user?.id) await cacheInvalidate(cacheKeys.roamActivities(user.id));
     // Back to the Roam screen already underneath — replace() would stack a second one.
     router.dismissTo('/roam');
   };
@@ -58,10 +60,13 @@ export default function RoamRecordScreen() {
         return;
       }
       await clearRecording();
-      if (user?.id) {
-        await cacheInvalidate(cacheKeys.roamActivities(user.id));
+      if (user?.id && outcome.status === 'saved') {
         // Home's XP total includes Roam XP — don't wait out its staleTime.
-        if (outcome.status === 'saved') queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user.id) });
+        queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user.id) });
+        // The detail screen opens next: give it (and offline viewing) the saved copy.
+        await cacheSet(cacheKeys.roamActivity(user.id, outcome.activity.id), outcome.activity, cacheTTL.DAY).catch(
+          () => undefined,
+        );
       }
       if (outcome.status === 'saved') router.replace(`/roam/${outcome.activity.id}`);
       else setModal('queued');

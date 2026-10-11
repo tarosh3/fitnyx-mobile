@@ -132,11 +132,85 @@ export async function clearIdMappings(): Promise<void> {
   await AsyncStorage.removeItem(KEYS.idMap);
 }
 
+/** The server id for an offline id once it has synced; any other id unchanged. */
+export async function resolveId(id: string): Promise<string> {
+  if (!isOfflineId(id)) return id;
+  return (await getIdMapping(id)) ?? id;
+}
+
+/**
+ * Re-keys an offline-started session under its server id once START has
+ * synced, so everything after (sets, pause, finish — online or queued) targets
+ * the real session. The mapping stays so screens still holding the offline id
+ * resolve to it.
+ */
+export async function promoteOfflineSession(offlineId: string, realId: string): Promise<void> {
+  await setIdMapping(offlineId, realId);
+  const sessions = await readJson<Record<string, OfflineSession>>(KEYS.sessions, {});
+  const local = sessions[offlineId];
+  if (local) {
+    delete sessions[offlineId];
+    sessions[realId] = { ...sessions[realId], ...local, id: realId, _offline: false };
+    await writeJson(KEYS.sessions, sessions);
+  }
+  const allLogs = await readJson<Record<string, OfflineExerciseLog[]>>(KEYS.logs, {});
+  if (allLogs[offlineId]) {
+    const moved = allLogs[offlineId].map((l) => ({ ...l, session_id: realId }));
+    allLogs[realId] = [...(allLogs[realId] ?? []), ...moved];
+    delete allLogs[offlineId];
+    await writeJson(KEYS.logs, allLogs);
+  }
+  if ((await getActiveOfflineSessionId()) === offlineId) {
+    await setActiveOfflineSessionId(realId);
+  }
+}
+
+/** Swaps an offline-created set's id for its server id once LOG_SET has synced. */
+export async function promoteOfflineLog(sessionId: string, offlineId: string, realId: string): Promise<void> {
+  await setIdMapping(offlineId, realId);
+  const logs = await getOfflineLogs(sessionId);
+  const idx = logs.findIndex((l) => l.id === offlineId);
+  if (idx === -1) return;
+  logs[idx] = { ...logs[idx], id: realId, _offline: false };
+  await saveOfflineLogs(sessionId, logs);
+}
+
+/** Drops id mappings whose session is gone from the local store (finished and synced). */
+export async function pruneIdMappings(stillReferenced: Set<string>): Promise<void> {
+  const map = await readJson<Record<string, string>>(KEYS.idMap, {});
+  const sessions = await readJson<Record<string, OfflineSession>>(KEYS.sessions, {});
+  const allLogs = await readJson<Record<string, OfflineExerciseLog[]>>(KEYS.logs, {});
+  const liveLogIds = new Set(Object.values(allLogs).flat().map((l) => l.id));
+  let changed = false;
+  for (const [offlineId, realId] of Object.entries(map)) {
+    const live =
+      stillReferenced.has(offlineId) ||
+      Boolean(sessions[realId] || sessions[offlineId]) ||
+      liveLogIds.has(realId) ||
+      liveLogIds.has(offlineId);
+    if (!live) {
+      delete map[offlineId];
+      changed = true;
+    }
+  }
+  if (changed) await writeJson(KEYS.idMap, map);
+}
+
 // --- Persistence for crash recovery ---
 
+/**
+ * The server's sets plus any logged offline that haven't synced yet — those
+ * still have offline ids. Without this a refetch hid them until they synced.
+ */
+export async function withPendingLogs(sessionId: string, serverLogs: ExerciseLog[]): Promise<ExerciseLog[]> {
+  const pending = (await getOfflineLogs(sessionId)).filter((l) => isOfflineId(l.id));
+  return pending.length ? [...serverLogs, ...pending] : serverLogs;
+}
+
 export async function persistSessionState(session: WorkoutSession, logs: ExerciseLog[]): Promise<void> {
+  const merged = await withPendingLogs(session.id, logs);
   await saveOfflineSession({ ...session, _offline: isOfflineId(session.id) });
-  await saveOfflineLogs(session.id, logs.map((l) => ({ ...l, _offline: isOfflineId(l.id) })));
+  await saveOfflineLogs(session.id, merged.map((l) => ({ ...l, _offline: isOfflineId(l.id) })));
   await setActiveOfflineSessionId(session.id);
 }
 

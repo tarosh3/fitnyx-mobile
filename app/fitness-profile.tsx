@@ -32,7 +32,10 @@ import { Button } from '@/src/components/ui/Button';
 import { Field } from '@/src/components/ui/Field';
 import { PressableScale } from '@/src/components/ui/PressableScale';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { useAuth } from '@/src/providers/AuthProvider';
 import {
   FitnessProfile,
   getFitnessProfile,
@@ -95,6 +98,11 @@ type Tab = 'goals' | 'preferences' | 'health';
 
 export default function FitnessProfileScreen() {
   const c = useThemeColors();
+  const { user } = useAuth();
+  const { isOnline } = useNetworkStatus();
+  // Nothing loaded (offline, no cached copy): the form shows defaults, and
+  // saving them would overwrite the real profile — so saving is blocked.
+  const [loadFailed, setLoadFailed] = useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [weightUnit] = useWeightUnit();
@@ -123,7 +131,17 @@ export default function FitnessProfileScreen() {
   const load = async () => {
     setLoading(true);
     try {
-      const profile = await getFitnessProfile();
+      const cacheKey = user ? cacheKeys.fitnessProfile(user.id) : null;
+      let profile: FitnessProfile;
+      try {
+        profile = await getFitnessProfile();
+        if (cacheKey) cacheSet(cacheKey, profile, cacheTTL.LONG).catch(() => undefined);
+      } catch (err) {
+        const cached = cacheKey ? await cacheGetStale<FitnessProfile>(cacheKey) : null;
+        if (!cached) throw err;
+        profile = cached;
+      }
+      setLoadFailed(false);
       setPrimaryGoal(profile.primary_goal || '');
       const lvl = (profile.experience_level || 'beginner') as 'beginner' | 'intermediate' | 'advanced';
       setExperienceLevel(EXPERIENCE_LEVELS.some((l) => l.value === lvl) ? lvl : 'beginner');
@@ -144,7 +162,8 @@ export default function FitnessProfileScreen() {
       setDietary(profile.dietary_preferences ?? []);
       setInjuries((profile.injuries ?? []).join(', '));
     } catch (err) {
-      console.error('Failed to load fitness profile', err);
+      if ((err as { status?: number })?.status) console.error('Failed to load fitness profile', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -156,6 +175,15 @@ export default function FitnessProfileScreen() {
   };
 
   const save = async () => {
+    if (!isOnline) {
+      Alert.alert("You're offline", 'Connect to the internet to save your fitness profile.');
+      return;
+    }
+    if (loadFailed) {
+      // Back online but the form never loaded: load it instead of saving defaults.
+      load();
+      return;
+    }
     setSaving(true);
     try {
       const targetWeightKg = targetWeight

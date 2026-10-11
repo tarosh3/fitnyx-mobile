@@ -23,6 +23,7 @@ import {
   persistSessionState,
   setActiveOfflineSessionId,
 } from '@/src/lib/offline/offlineStore';
+import { onOfflineSync } from '@/src/lib/offline/syncEngine';
 import * as WorkoutNotification from '@/src/lib/workoutNotification';
 import { retentionMetricsKey } from '@/src/hooks/queryKeys';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -199,6 +200,10 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     });
     return () => subscription.remove();
   }, [activeSession?.id, refreshActiveSession]);
+
+  // A session started offline just synced: pick up its server copy (and id)
+  // so the timer, notification and session screen follow the real session.
+  useEffect(() => onOfflineSync(() => refreshActiveSession()), [refreshActiveSession]);
 
   // A workout just ended — finished or abandoned, in the app, from the
   // notification or on another device: Home's streak, weekly stats, heatmap

@@ -63,6 +63,8 @@ export default function PlanDetailsScreen() {
   const [days, setDays] = useState<DayWithExercises[]>([]);
   const [expandedDayId, setExpandedDayId] = useState<string | null>(null);
   const [loadingDayId, setLoadingDayId] = useState<string | null>(null);
+  // Days whose exercises couldn't load (offline, never cached) — not "empty".
+  const [unloadedDayIds, setUnloadedDayIds] = useState<string[]>([]);
   const [startingDayId, setStartingDayId] = useState<string | null>(null);
   const { isOffline } = useOfflineAware();
   const { activeSession } = useWorkout();
@@ -97,13 +99,28 @@ export default function PlanDetailsScreen() {
       setDays(hydratedDays);
 
       await Promise.all([cachePlan(planResult), cachePlanDays(planId, daysResult.data || [])]);
+      prefetchDayExercises(daysResult.data || []);
     } catch (loadError: any) {
-      console.error('Failed to load plan details', loadError);
+      if (loadError?.status) console.error('Failed to load plan details', loadError);
       if (!loadedCached) {
         setError('Failed to load plan details.');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Cache every training day's exercises while online, so any day can be
+  // started offline later — not only the ones that happened to be opened.
+  const prefetchDayExercises = async (planDays: { id: string; is_rest_day?: boolean }[]) => {
+    for (const day of planDays) {
+      if (day.is_rest_day) continue;
+      try {
+        const response = await getDayExercises(day.id);
+        await cacheDayExercises(day.id, response.data || []);
+      } catch {
+        return; // went offline or server trouble — whatever is cached stays
+      }
     }
   };
 
@@ -134,9 +151,13 @@ export default function PlanDetailsScreen() {
       const response = await getDayExercises(day.id);
       const exercises = response.data || [];
       setDays((prev) => prev.map((entry) => (entry.id === day.id ? { ...entry, exercises } : entry)));
+      setUnloadedDayIds((prev) => prev.filter((id) => id !== day.id));
       await cacheDayExercises(day.id, exercises);
-    } catch (toggleError) {
-      console.error('Failed to load day exercises', toggleError);
+    } catch (toggleError: any) {
+      if (toggleError?.status) console.error('Failed to load day exercises', toggleError);
+      if (!(await getCachedDayExercises(day.id))) {
+        setUnloadedDayIds((prev) => (prev.includes(day.id) ? prev : [...prev, day.id]));
+      }
     } finally {
       setLoadingDayId(null);
     }
@@ -323,11 +344,16 @@ export default function PlanDetailsScreen() {
                             </View>
                           ))}
                         </View>
+                      ) : unloadedDayIds.includes(day.id) ? (
+                        <Text style={styles.noExercisesText}>
+                          You're offline. Connect once to load this day's exercises.
+                        </Text>
                       ) : (
                         <Text style={styles.noExercisesText}>No exercises added for this day.</Text>
                       )}
 
-                      {activeSession && activeSession.day_id === day.id ? (
+                      {unloadedDayIds.includes(day.id) &&
+                      !(activeSession && activeSession.day_id === day.id) ? null : activeSession && activeSession.day_id === day.id ? (
                         <Pressable
                           onPress={() => router.push(`/workouts/session/${activeSession.id}`)}
                           style={({ pressed }) => [

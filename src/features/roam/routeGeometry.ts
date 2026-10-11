@@ -71,3 +71,26 @@ export function routeBounds(route: LngLatPair[]): [number, number, number, numbe
   const pad = 0.0015; // ~150 m
   return [w - pad, s - pad, e + pad, n + pad];
 }
+
+/**
+ * Projects the route into a width×height box (equirectangular, longitude
+ * scaled by cos(latitude) so shapes aren't stretched), centred with `pad`
+ * pixels of margin. For drawing the route without map tiles (offline).
+ */
+export function projectToBox(route: LngLatPair[], width: number, height: number, pad: number): [number, number][] {
+  if (route.length === 0 || width <= 2 * pad || height <= 2 * pad) return [];
+  const midLat = (Math.min(...route.map((p) => p[1])) + Math.max(...route.map((p) => p[1]))) / 2;
+  const kx = Math.cos((midLat * Math.PI) / 180);
+  const xs = route.map((p) => p[0] * kx);
+  const ys = route.map((p) => p[1]);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const spanX = Math.max(...xs) - minX;
+  const spanY = Math.max(...ys) - minY;
+  const span = Math.max(spanX, spanY) || 1e-9; // one point / a straight line still draws
+  const scale = Math.min((width - 2 * pad) / (spanX || span), (height - 2 * pad) / (spanY || span));
+  const offX = (width - spanX * scale) / 2;
+  const offY = (height - spanY * scale) / 2;
+  // North up: larger latitude → smaller y.
+  return route.map((_, i) => [offX + (xs[i] - minX) * scale, height - (offY + (ys[i] - minY) * scale)]);
+}

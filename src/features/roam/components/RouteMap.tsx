@@ -1,9 +1,11 @@
 import { Camera, GeoJSONSource, Layer, Map, NativeUserLocation } from '@maplibre/maplibre-react-native';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
+import { RouteSketch } from '@/src/features/roam/components/RouteSketch';
 import { MAP_STYLE_URL } from '@/src/features/roam/mapStyle';
 import { endpoints, routeBounds, routeLine, vehicleLines, type LngLatPair } from '@/src/features/roam/routeGeometry';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useTheme } from '@/src/providers/ThemeProvider';
 
@@ -34,9 +36,34 @@ export const RouteMap = React.memo(function RouteMap({
   const bounds = useMemo(() => routeBounds(route), [route]);
   const last = route[route.length - 1];
 
+  // The style and tiles come from the internet. Until the style loads (or if
+  // it fails) the map is blank — the route layers need a style too — so draw
+  // the route ourselves, and remount the map to retry once back online.
+  const { isOnline } = useNetworkStatus();
+  const [styleLoaded, setStyleLoaded] = useState(false);
+  const [styleFailed, setStyleFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const wasOnline = useRef(isOnline);
+  useEffect(() => {
+    if (isOnline && !wasOnline.current && !styleLoaded) {
+      setStyleFailed(false);
+      setAttempt((n) => n + 1);
+    }
+    wasOnline.current = isOnline;
+  }, [isOnline, styleLoaded]);
+  const showSketch = !styleLoaded && (styleFailed || !isOnline);
+
   return (
     <View style={[styles.wrap, style]}>
-      <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE_URL[theme]} logo={false} compass={false}>
+      <Map
+        key={attempt}
+        style={StyleSheet.absoluteFill}
+        mapStyle={MAP_STYLE_URL[theme]}
+        logo={false}
+        compass={false}
+        onDidFinishLoadingStyle={() => setStyleLoaded(true)}
+        onDidFailLoadingMap={() => setStyleFailed(true)}
+      >
         {live && last ? (
           <Camera center={last} zoom={16} duration={600} />
         ) : live ? (
@@ -78,6 +105,7 @@ export const RouteMap = React.memo(function RouteMap({
           />
         </GeoJSONSource>
       </Map>
+      {showSketch ? <RouteSketch route={route} vehicleRanges={vehicleRanges} live={live} /> : null}
     </View>
   );
 });

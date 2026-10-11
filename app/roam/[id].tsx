@@ -17,7 +17,7 @@ import { retentionMetricsKey } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { isAuthError } from '@/src/lib/api';
 import { deleteActivity, getActivity, type ActivityDetail } from '@/src/lib/api/activities';
-import { cacheGet, cacheInvalidate, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { cacheGetStale, cacheInvalidate, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 export default function RoamDetailScreen() {
@@ -37,7 +37,7 @@ export default function RoamDetailScreen() {
     const key = cacheKeys.roamActivity(user.id, activityId);
     let cancelled = false;
     (async () => {
-      const cached = await cacheGet<ActivityDetail>(key);
+      const cached = await cacheGetStale<ActivityDetail>(key);
       if (cached) {
         if (!cancelled) setActivity(cached);
         return; // a saved Roam never changes
@@ -48,7 +48,13 @@ export default function RoamDetailScreen() {
         setActivity(fresh);
         await cacheSet(key, fresh, cacheTTL.DAY);
       } catch (e) {
-        if (!cancelled && !isAuthError(e)) setError('Could not load this Roam.');
+        if (!cancelled && !isAuthError(e)) {
+          setError(
+            (e as { status?: number })?.status
+              ? 'Could not load this Roam.'
+              : "You're offline. Open this Roam once while online to keep it available offline.",
+          );
+        }
       }
     })();
     return () => {
