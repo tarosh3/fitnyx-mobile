@@ -578,7 +578,7 @@ export default function WorkoutSessionScreen() {
 
     try {
       await finishActiveSession();
-      router.replace('/workouts/select');
+      router.dismissTo('/workouts/select');
     } catch (finishError) {
       console.error('Failed to finish workout', finishError);
       setError('Failed to finish workout.');
@@ -600,7 +600,7 @@ export default function WorkoutSessionScreen() {
         hideConfirm();
         try {
           await abandonActiveSession();
-          router.replace('/workouts/select');
+          router.dismissTo('/workouts/select');
         } catch (abandonError) {
           console.error('Failed to abandon', abandonError);
           setError('Failed to abandon workout.');
@@ -639,7 +639,7 @@ export default function WorkoutSessionScreen() {
       <Screen style={{ backgroundColor: DEPTH_BG }}>
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyTitle}>SESSION NOT FOUND</Text>
-          <Pressable onPress={() => router.replace('/workouts/select')} style={styles.backBtnAction}>
+          <Pressable onPress={() => router.dismissTo('/workouts/select')} style={styles.backBtnAction}>
             <Text style={styles.backBtnActionText}>BACK TO PLANS</Text>
           </Pressable>
         </View>
