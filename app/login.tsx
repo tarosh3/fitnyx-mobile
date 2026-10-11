@@ -26,7 +26,9 @@ export default function LoginScreen() {
   return (
     <Screen
       scroll={false}
-      style={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0, backgroundColor: '#000000' }}
+      // Keep Screen's safe-area top + side padding: opened directly (deep link,
+      // session-expired redirect) the bare form otherwise sits under the status bar.
+      style={{ paddingBottom: 0, backgroundColor: '#000000' }}
       contentContainerStyle={{ flex: 1, backgroundColor: '#000000' }}
     >
       <AuthForm initialMode="login" notice={notice} onSuccess={() => router.replace('/dashboard')} />
