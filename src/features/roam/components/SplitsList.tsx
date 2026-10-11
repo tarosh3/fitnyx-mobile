@@ -1,6 +1,8 @@
+import { Zap } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { UnitText } from '@/src/features/roam/components/StatTile';
 import { formatPace, formatSpeed, type ActivityType } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
@@ -27,7 +29,7 @@ export function SplitsList({ type, splits, distanceM, movingSec }: Props) {
     <View style={styles.list}>
       <Text style={[styles.title, { color: palette.mutedText }]}>{type === 'cycle' ? 'SPLITS · SPEED PER KM' : 'SPLITS · PACE PER KM'}</Text>
       {splits.map((s, i) => {
-        // Only the fastest km is in full colour, so the eye finds it at once.
+        // Only the fastest km is in full colour (with a bolt), so the eye finds it at once.
         const best = splits.length > 1 && i === fastestIndex;
         return (
           <View key={s.km} style={styles.row}>
@@ -41,9 +43,10 @@ export function SplitsList({ type, splits, distanceM, movingSec }: Props) {
                 ]}
               />
             </View>
-            <Text style={[styles.pace, { color: best ? palette.primary : palette.text }]}>
-              {rate(s.sec)}
-            </Text>
+            <View style={styles.pace}>
+              {best ? <Zap size={12} color={palette.primary} fill={palette.primary} /> : null}
+              <UnitText value={rate(s.sec)} color={best ? palette.primary : palette.text} />
+            </View>
           </View>
         );
       })}
@@ -59,23 +62,21 @@ export function SplitsList({ type, splits, distanceM, movingSec }: Props) {
               ]}
             />
           </View>
-          <Text style={[styles.pace, { color: palette.text }]}>{rate(rest.pace)}</Text>
+          <View style={styles.pace}>
+            <UnitText value={rate(rest.pace)} color={palette.text} />
+          </View>
         </View>
-      ) : null}
-      {splits.length > 1 ? (
-        <Text style={[styles.legend, { color: palette.mutedText }]}>Highlighted: your fastest km</Text>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { gap: 8 },
+  list: { gap: 10 },
   title: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2, marginBottom: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   km: { width: 58, fontSize: 12, fontWeight: '700' },
-  track: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
-  bar: { height: 8, borderRadius: 4 },
-  pace: { width: 76, textAlign: 'right', fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  legend: { fontSize: 11, marginTop: 2 },
+  track: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+  bar: { height: 6, borderRadius: 3 },
+  pace: { width: 92, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
 });
