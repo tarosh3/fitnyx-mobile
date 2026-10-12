@@ -94,3 +94,46 @@ export function projectToBox(route: LngLatPair[], width: number, height: number,
   // North up: larger latitude → smaller y.
   return route.map((_, i) => [offX + (xs[i] - minX) * scale, height - (offY + (ys[i] - minY) * scale)]);
 }
+
+const EARTH_M_PER_DEG = 111320;
+
+/** Rough metres between two [lng, lat] points (fine at route scale). */
+function stepM(a: LngLatPair, b: LngLatPair): number {
+  const kx = Math.cos((((a[1] + b[1]) / 2) * Math.PI) / 180);
+  return Math.hypot((b[0] - a[0]) * kx, b[1] - a[1]) * EARTH_M_PER_DEG;
+}
+
+/**
+ * Evenly spaced direction marks along the route — one per ~70 m, 4 to 14 of
+ * them (or exactly `count`) —
+ * each with the heading of travel there (degrees from north, measured over
+ * the next few metres so GPS jitter doesn't spin it). Drawn as chevrons on
+ * the right of travel, they tell overlapping passes (out-and-back) apart.
+ */
+export function directionMarks(route: LngLatPair[], count?: number): FeatureCollection<Point> {
+  const features: Feature<Point>[] = [];
+  if (route.length < 2) return { type: 'FeatureCollection', features };
+  const cum = [0];
+  for (let i = 1; i < route.length; i++) cum.push(cum[i - 1] + stepM(route[i - 1], route[i]));
+  const total = cum[cum.length - 1];
+  if (total < 20) return { type: 'FeatureCollection', features };
+  const n = count ?? Math.min(14, Math.max(4, Math.round(total / 70)));
+  const every = total / (n + 1);
+  const lookahead = Math.min(15, every / 2);
+  let i = 0;
+  for (let k = 1; k <= n; k++) {
+    const at = every * k;
+    while (i + 1 < route.length && cum[i + 1] < at) i++;
+    const f = cum[i + 1] > cum[i] ? (at - cum[i]) / (cum[i + 1] - cum[i]) : 0;
+    const a = route[i];
+    const b = route[Math.min(i + 1, route.length - 1)];
+    const p: LngLatPair = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+    let j = i + 1;
+    while (j < route.length - 1 && cum[j] - at < lookahead) j++;
+    const q = route[j];
+    const kx = Math.cos((p[1] * Math.PI) / 180);
+    const bearing = ((Math.atan2((q[0] - p[0]) * kx, q[1] - p[1]) * 180) / Math.PI + 360) % 360;
+    features.push({ type: 'Feature', properties: { bearing }, geometry: { type: 'Point', coordinates: p } });
+  }
+  return { type: 'FeatureCollection', features };
+}

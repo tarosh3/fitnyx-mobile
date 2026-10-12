@@ -134,6 +134,34 @@ export interface ReplayPosition {
   clockSec: number;
   speedMps: number;
   inVehicle: boolean;
+  /** Heading in degrees clockwise from north (for the playhead arrow). */
+  bearing: number;
+}
+
+/** Look this far along the route for the heading, so GPS jitter doesn't spin the arrow. */
+const BEARING_LOOKAHEAD_M = 8;
+
+function bearingDeg(from: LngLatPair, to: LngLatPair): number {
+  const toRad = Math.PI / 180;
+  const [lng1, lat1] = [from[0] * toRad, from[1] * toRad];
+  const [lng2, lat2] = [to[0] * toRad, to[1] * toRad];
+  const y = Math.sin(lng2 - lng1) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lng2 - lng1);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+/** Heading at a point: towards a point a few metres ahead (or from one behind, at the end). */
+function headingAt(tl: ReplayTimeline, index: number, coord: LngLatPair): number {
+  const n = tl.coords.length;
+  for (let j = index + 1; j < n; j++) {
+    const [lng, lat] = tl.coords[j];
+    if (haversine(coord[1], coord[0], lat, lng) >= BEARING_LOOKAHEAD_M) return bearingDeg(coord, tl.coords[j]);
+  }
+  for (let j = index; j >= 0; j--) {
+    const [lng, lat] = tl.coords[j];
+    if (haversine(coord[1], coord[0], lat, lng) >= BEARING_LOOKAHEAD_M) return bearingDeg(tl.coords[j], coord);
+  }
+  return 0;
 }
 
 /** Where the replay is at `sec` replay-seconds (clamped to the ends). */
@@ -151,14 +179,16 @@ export function positionAt(tl: ReplayTimeline, sec: number): ReplayPosition {
   const f = span > 0 ? Math.min(1, Math.max(0, (s - tl.t[lo]) / span)) : s >= tl.t[hi] ? 1 : 0;
   const lerp = (a: number[]) => a[lo] + (a[hi] - a[lo]) * f;
   const [a, b] = [tl.coords[lo], tl.coords[hi]];
+  const coord: LngLatPair = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
   return {
     index: f >= 1 ? hi : lo,
-    coord: [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f],
+    coord,
     progress: lerp(tl.progress),
     distanceM: lerp(tl.dist),
     clockSec: lerp(tl.clock),
     speedMps: tl.speed[f >= 0.5 ? hi : lo],
     inVehicle: tl.vehicle[hi],
+    bearing: headingAt(tl, lo, coord),
   };
 }
 

@@ -61,6 +61,13 @@ describe('positionAt', () => {
     expect(p.speedMps).toBeCloseTo(1, 1);
   });
 
+  it('points the playhead the way the route goes', () => {
+    expect(positionAt(tl, 5).bearing).toBeCloseTo(90, 0); // eastward line
+    const back = buildTimeline({ route: [...line(3, 10)].reverse(), routeTimes: [0, 10, 20], distanceM: 20, movingTimeSec: 20 })!;
+    expect(positionAt(back, 5).bearing).toBeCloseTo(270, 0); // heading back west
+    expect(positionAt(tl, 99).bearing).toBeCloseTo(90, 0); // at the end: from behind
+  });
+
   it('clamps to the ends', () => {
     expect(positionAt(tl, -3).distanceM).toBe(0);
     expect(positionAt(tl, 99).distanceM).toBeCloseTo(20, 5);
