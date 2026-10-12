@@ -23,11 +23,21 @@ export interface ActivitySummary {
   xp: number;
 }
 
+/** Reserved for a future photos feature — the backend returns [] for now. */
+export interface ActivityPhoto {
+  url: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+}
+
 export interface ActivityDetail extends ActivitySummary {
   /** Google-encoded polyline of accepted fixes (decode with decodePolyline). */
   route_polyline: string;
   /** Seconds since start for each route point, for replay. Empty for Roams saved before replay existed. */
   route_times?: number[];
+  /** Reserved (not used yet); always [] today. */
+  photos?: ActivityPhoto[];
   /** Inclusive [start, end] indices into the decoded route travelled by vehicle. */
   vehicle_ranges: [number, number][];
   splits: { km: number; sec: number }[];
