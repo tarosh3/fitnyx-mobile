@@ -28,6 +28,7 @@ import { LocationStep } from '@/src/features/onboarding/steps/LocationStep';
 import { InjuriesStep } from '@/src/features/onboarding/steps/InjuriesStep';
 import { IntensityStep } from '@/src/features/onboarding/steps/IntensityStep';
 import { MotivationStep } from '@/src/features/onboarding/steps/MotivationStep';
+import { resumeStepIndex } from '@/src/features/onboarding/resumeStep';
 
 const PRIMARY = '#5FC793';
 
@@ -81,9 +82,7 @@ export function OnboardingFlow() {
       try {
         const data = await getOnboarding();
         setOnboardingData(data);
-        if (data.current_step > 1) {
-          setCurrentStep(data.current_step - 1);
-        }
+        setCurrentStep(resumeStepIndex(data.current_step, STEPS.length));
       } catch (error) {
         console.error('Failed to load onboarding', error);
       } finally {

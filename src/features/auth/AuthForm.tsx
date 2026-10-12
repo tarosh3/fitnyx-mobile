@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { exchangeCodeOnce } from '@/src/lib/authCode';
 import { supabase } from '@/src/lib/supabase';
 import { sanitizeName, sanitizeEmail, MAX_NAME, MAX_EMAIL, MAX_PASSWORD } from '@/src/lib/validators';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -257,7 +258,7 @@ export const AuthForm = forwardRef<AuthFormHandle, AuthFormProps>(function AuthF
       if (callbackError) throw new Error(callbackError.replace(/\+/g, ' '));
       const code = callbackUrl.searchParams.get('code');
       if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: exchangeError } = await exchangeCodeOnce(code);
         if (exchangeError) throw exchangeError;
       } else {
         const accessToken = hashParams.get('access_token');
