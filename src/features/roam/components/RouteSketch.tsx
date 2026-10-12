@@ -12,6 +12,8 @@ interface Props {
   vehicleRanges: [number, number][];
   /** Recording in progress (no end marker; the badge says it's still recording). */
   live: boolean;
+  /** Replay: draw only this fraction of the route (by points). */
+  progress?: number;
 }
 
 const PAD = 28;
@@ -19,14 +21,16 @@ const PAD = 28;
 const BADGE_SPACE = 32;
 
 /** The route drawn without map tiles — shown while the map can't load (offline). */
-export function RouteSketch({ route, vehicleRanges, live }: Props) {
+export function RouteSketch({ route, vehicleRanges, live, progress }: Props) {
   const c = useThemeColors();
   const [size, setSize] = useState({ w: 0, h: 0 });
   const onLayout = (e: LayoutChangeEvent) =>
     setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
 
   const drawn = useMemo(() => thinForDisplay(route), [route]);
-  const pts = useMemo(() => projectToBox(drawn, size.w, size.h - BADGE_SPACE, PAD), [drawn, size]);
+  const all = useMemo(() => projectToBox(drawn, size.w, size.h - BADGE_SPACE, PAD), [drawn, size]);
+  // Replay draws a growing prefix; the projection stays fixed to the whole route.
+  const pts = progress == null ? all : all.slice(0, Math.max(1, Math.ceil(all.length * Math.min(1, progress))));
   // Vehicle ranges index the full route; map them onto the thinned one.
   const vehicle = useMemo(() => {
     if (!vehicleRanges.length || drawn.length === route.length) {

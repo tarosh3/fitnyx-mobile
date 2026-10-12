@@ -24,6 +24,7 @@ export function pendingSummary(input: CreateActivityInput): ActivitySummary {
   return {
     id: `pending-${input.client_activity_id}`,
     activity_type: input.activity_type,
+    name: input.name ?? null,
     started_at: input.started_at,
     ended_at: input.ended_at,
     local_date: input.local_date,

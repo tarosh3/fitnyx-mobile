@@ -6,6 +6,8 @@ import type { ActivityType, RoamPoint } from '@/src/features/roam/geo';
 export interface ActivitySummary {
   id: string;
   activity_type: ActivityType;
+  /** User-given title; null = show defaultActivityName(). Absent from older backends. */
+  name?: string | null;
   started_at: string;
   ended_at: string;
   local_date: string;
@@ -24,6 +26,8 @@ export interface ActivitySummary {
 export interface ActivityDetail extends ActivitySummary {
   /** Google-encoded polyline of accepted fixes (decode with decodePolyline). */
   route_polyline: string;
+  /** Seconds since start for each route point, for replay. Empty for Roams saved before replay existed. */
+  route_times?: number[];
   /** Inclusive [start, end] indices into the decoded route travelled by vehicle. */
   vehicle_ranges: [number, number][];
   splits: { km: number; sec: number }[];
@@ -49,6 +53,8 @@ export interface CreateActivityInput {
   ended_at: string;
   /** Device-local calendar date of the start (YYYY-MM-DD). */
   local_date: string;
+  /** Optional title; blank = the app's default ("Morning Run"). */
+  name?: string;
   points: RoamPoint[];
 }
 
@@ -69,4 +75,12 @@ export async function getActivity(id: string): Promise<ActivityDetail> {
 
 export async function deleteActivity(id: string): Promise<void> {
   return fetchWithAuth(`/activities/${id}`, { method: 'DELETE' });
+}
+
+/** Renames a Roam. A blank name clears it (the app shows its default title). */
+export async function renameActivity(id: string, name: string): Promise<ActivityDetail> {
+  return fetchWithAuth(`/activities/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  });
 }

@@ -1,4 +1,5 @@
 import { Camera, GeoJSONSource, Layer, Map, NativeUserLocation } from '@maplibre/maplibre-react-native';
+import type { FeatureCollection, Point } from 'geojson';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
@@ -16,6 +17,19 @@ export interface RouteMapProps {
   vehicleRanges?: [number, number][];
   /** Live recording: follow the latest position instead of framing the route. */
   live?: boolean;
+  /**
+   * Replay: a MapLibre `line-gradient` expression (speed colours, revealed up
+   * to the playhead). The not-yet-drawn route shows as a faint ghost line.
+   */
+  lineGradient?: unknown[];
+  /** Replay playhead position. */
+  head?: LngLatPair | null;
+  /** Replay: keep the camera on this point instead of framing the whole route. */
+  follow?: LngLatPair | null;
+  /** Replay: kilometre markers reached so far (`km` property is the label). */
+  kmMarks?: FeatureCollection<Point>;
+  /** Offline fallback: draw the route only up to this fraction (replay). */
+  sketchProgress?: number;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -25,6 +39,11 @@ export const RouteMap = React.memo(function RouteMap({
   route,
   vehicleRanges = NO_RANGES,
   live = false,
+  lineGradient,
+  head,
+  follow,
+  kmMarks,
+  sketchProgress,
   style,
 }: RouteMapProps) {
   const palette = useThemeColors();
@@ -35,6 +54,13 @@ export const RouteMap = React.memo(function RouteMap({
   const markers = useMemo(() => endpoints(route, !live), [route, live]);
   const bounds = useMemo(() => routeBounds(route), [route]);
   const last = route[route.length - 1];
+  const headPoint = useMemo<FeatureCollection<Point>>(
+    () => ({
+      type: 'FeatureCollection',
+      features: head ? [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: head } }] : [],
+    }),
+    [head],
+  );
 
   // The style and tiles come from the internet. Until the style loads (or if
   // it fails) the map is blank — the route layers need a style too — so draw
@@ -64,7 +90,9 @@ export const RouteMap = React.memo(function RouteMap({
         onDidFinishLoadingStyle={() => setStyleLoaded(true)}
         onDidFailLoadingMap={() => setStyleFailed(true)}
       >
-        {live && last ? (
+        {follow ? (
+          <Camera center={follow} zoom={15.5} duration={450} easing="linear" />
+        ) : live && last ? (
           <Camera center={last} zoom={16} duration={600} />
         ) : live ? (
           <Camera trackUserLocation="default" zoom={15} />
@@ -74,12 +102,24 @@ export const RouteMap = React.memo(function RouteMap({
 
         {live ? <NativeUserLocation /> : null}
 
-        <GeoJSONSource id="roam-route" data={line}>
+        <GeoJSONSource id="roam-route" data={line} lineMetrics={Boolean(lineGradient)}>
+          {lineGradient ? (
+            <Layer
+              type="line"
+              id="roam-route-ghost"
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              paint={{ 'line-color': palette.text, 'line-opacity': 0.18, 'line-width': 5 }}
+            />
+          ) : null}
           <Layer
             type="line"
             id="roam-route-line"
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-            paint={{ 'line-color': palette.primary, 'line-width': 5 }}
+            paint={
+              lineGradient
+                ? { 'line-gradient': lineGradient as never, 'line-width': 5.5 }
+                : { 'line-color': palette.primary, 'line-width': 5 }
+            }
           />
         </GeoJSONSource>
 
@@ -104,8 +144,56 @@ export const RouteMap = React.memo(function RouteMap({
             }}
           />
         </GeoJSONSource>
+
+        {kmMarks ? (
+          <GeoJSONSource id="roam-km" data={kmMarks}>
+            <Layer
+              type="circle"
+              id="roam-km-circle"
+              paint={{
+                'circle-radius': 10,
+                'circle-color': palette.background,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': palette.text,
+              }}
+            />
+            <Layer
+              type="symbol"
+              id="roam-km-label"
+              layout={{
+                'text-field': ['to-string', ['get', 'km']],
+                'text-size': 11,
+                'text-font': ['Noto Sans Bold'],
+                'text-allow-overlap': true,
+              }}
+              paint={{ 'text-color': palette.text }}
+            />
+          </GeoJSONSource>
+        ) : null}
+
+        {head ? (
+          <GeoJSONSource id="roam-head" data={headPoint}>
+            <Layer
+              type="circle"
+              id="roam-head-halo"
+              paint={{ 'circle-radius': 14, 'circle-color': palette.primary, 'circle-opacity': 0.25 }}
+            />
+            <Layer
+              type="circle"
+              id="roam-head-dot"
+              paint={{
+                'circle-radius': 7,
+                'circle-color': palette.primary,
+                'circle-stroke-width': 3,
+                'circle-stroke-color': palette.background,
+              }}
+            />
+          </GeoJSONSource>
+        ) : null}
       </Map>
-      {showSketch ? <RouteSketch route={route} vehicleRanges={vehicleRanges} live={live} /> : null}
+      {showSketch ? (
+        <RouteSketch route={route} vehicleRanges={vehicleRanges} live={live} progress={sketchProgress} />
+      ) : null}
     </View>
   );
 });

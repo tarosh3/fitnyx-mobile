@@ -36,6 +36,11 @@ beforeEach(() => {
 });
 
 describe('buildActivityInput', () => {
+  it('includes a custom name only when one is given', () => {
+    expect(buildActivityInput(meta, pts, T0 + 90_000, 'Sunday long run')!.name).toBe('Sunday long run');
+    expect(buildActivityInput(meta, pts, T0 + 90_000)).not.toHaveProperty('name');
+  });
+
   it('builds the payload with ISO times and a local date', () => {
     const input = buildActivityInput(meta, pts, T0 + 90_000)!;
     expect(input).toMatchObject({

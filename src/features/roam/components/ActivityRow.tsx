@@ -2,7 +2,8 @@ import { ChevronRight } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ACTIVITY_LABEL, ActivityTypeIcon } from '@/src/features/roam/components/ActivityTypeIcon';
+import { activityTitle } from '@/src/features/roam/activityName';
+import { ActivityTypeIcon } from '@/src/features/roam/components/ActivityTypeIcon';
 import { formatDistance, formatDurationHuman, formatPace, formatSpeed } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { ActivitySummary } from '@/src/lib/api/activities';
@@ -34,11 +35,11 @@ export function ActivityRow({
         <ActivityTypeIcon type={activity.activity_type} color={palette.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.title, { color: palette.text }]}>
-          {ACTIVITY_LABEL[activity.activity_type]} · {formatDistance(activity.distance_m)}
+        <Text style={[styles.title, { color: palette.text }]} numberOfLines={1}>
+          {activityTitle(activity)}
         </Text>
-        <Text style={[styles.sub, { color: palette.mutedText }]}>
-          {date} · {formatDurationHuman(activity.moving_time_sec)} · {rate}
+        <Text style={[styles.sub, { color: palette.mutedText }]} numberOfLines={1}>
+          {date} · {formatDistance(activity.distance_m)} · {formatDurationHuman(activity.moving_time_sec)} · {rate}
         </Text>
         {pending ? (
           <Text style={[styles.flag, { color: palette.mutedText }]}>Waiting to upload · syncs when you're online</Text>

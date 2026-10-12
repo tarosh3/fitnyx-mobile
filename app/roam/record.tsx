@@ -6,6 +6,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
+import { cleanActivityName, defaultActivityName } from '@/src/features/roam/activityName';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
 import { LiveRecordingView } from '@/src/features/roam/components/LiveRecordingView';
 import { RecordingSummaryView } from '@/src/features/roam/components/RecordingSummaryView';
@@ -29,6 +30,7 @@ export default function RoamRecordScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Modal>(null);
+  const [name, setName] = useState('');
 
   // Nothing recording (opened directly / already saved) → back to Roam home.
   useEffect(() => {
@@ -37,7 +39,8 @@ export default function RoamRecordScreen() {
 
   const finish = async () => {
     setModal(null);
-    await recording.finish();
+    const done = await recording.finish();
+    if (done) setName(defaultActivityName(done.meta.type, new Date(done.meta.startedAtMs)));
     setPhase('summary');
   };
 
@@ -54,7 +57,11 @@ export default function RoamRecordScreen() {
     setSaving(true);
     setError(null);
     try {
-      const outcome = await saveRoam(recording.meta, recording.points);
+      // The untouched default isn't stored — the app derives it — so a later
+      // rename back to "Morning Run" and the default stay the same thing.
+      const cleaned = cleanActivityName(name);
+      const custom = cleaned && cleaned !== defaultActivityName(recording.meta.type, new Date(recording.meta.startedAtMs));
+      const outcome = await saveRoam(recording.meta, recording.points, custom ? cleaned : undefined);
       if (outcome.status === 'too-short') {
         setModal('too-short');
         return;
@@ -108,6 +115,9 @@ export default function RoamRecordScreen() {
           elapsedSec={recording.elapsedMs / 1000}
           saving={saving}
           error={error}
+          name={name}
+          defaultName={defaultActivityName(meta.type, new Date(meta.startedAtMs))}
+          onNameChange={setName}
           onSave={save}
           onDiscard={() => setModal('discard')}
         />
