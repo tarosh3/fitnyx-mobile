@@ -1,3 +1,5 @@
+import { AuthRetryableFetchError } from '@supabase/supabase-js';
+
 import { supabase } from '@/src/lib/supabase';
 
 // Must mock before importing the module under test
@@ -87,6 +89,49 @@ describe('fetchWithAuth', () => {
     });
 
     await expect(fetchWithAuth('/test')).rejects.toThrow('No active session');
+  });
+
+  it('fails like a network error — without signing out — when the token can\'t refresh offline', async () => {
+    (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
+      data: { session: null },
+      error: new AuthRetryableFetchError('Network request failed', 0),
+    });
+
+    const error = await fetchWithAuth('/test').catch((e: unknown) => e);
+    expect((error as Error).name).toBe('NetworkUnavailableError');
+    expect((error as { status?: number }).status).toBeUndefined();
+    expect(isAuthError(error)).toBe(false);
+
+    // Back online: the same session still works (no sign-out latch).
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('{"ok":true}') });
+    await expect(fetchWithAuth('/test')).resolves.toEqual({ ok: true });
+  });
+
+  describe('offline (device reports no connection)', () => {
+    const NetInfo = jest.requireMock('@react-native-community/netinfo') as { fetch: jest.Mock };
+    const { getStoredSession } = jest.requireMock('@/src/lib/supabase') as { getStoredSession: jest.Mock };
+    beforeEach(() => {
+      NetInfo.fetch.mockResolvedValueOnce({ isConnected: false, isInternetReachable: false });
+    });
+    afterEach(() => getStoredSession.mockReset());
+
+    it('fails fast with an expired token, without asking Supabase (which retries ~30 s)', async () => {
+      getStoredSession.mockResolvedValueOnce({ access_token: 'old', expires_at: Math.floor(Date.now() / 1000) - 60 });
+      (supabase.auth.getSession as jest.Mock).mockClear();
+
+      const error = await fetchWithAuth('/test').catch((e: unknown) => e);
+      expect((error as Error).name).toBe('NetworkUnavailableError');
+      expect(supabase.auth.getSession).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('uses a still-valid stored token directly', async () => {
+      getStoredSession.mockResolvedValueOnce({ access_token: 'stored', expires_at: Math.floor(Date.now() / 1000) + 3600 });
+      mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('{}') });
+
+      await fetchWithAuth('/test');
+      expect(mockFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer stored');
+    });
   });
 
   it('passes through custom headers', async () => {

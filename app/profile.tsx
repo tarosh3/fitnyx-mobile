@@ -35,6 +35,7 @@ import { PressableScale } from '@/src/components/ui/PressableScale';
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { getProfile, updateProfile } from '@/src/lib/api/users';
 import { checkAndLockUsername, claimUsername } from '@/src/lib/api/username';
@@ -58,7 +59,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { user, loading: authLoading, avatarUrl: authAvatarUrl } = useAuth();
+  const { user, loading: authLoading, avatarUrl: authAvatarUrl, userProfile: cachedProfile } = useAuth();
+  const { isOnline } = useNetworkStatus();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -96,6 +98,16 @@ export default function ProfileScreen() {
     if (authLoading || !user) return;
     loadProfile();
   }, [authLoading, user]);
+
+  // Filled from the offline copy: reload from the server once back online,
+  // before anything can be saved over it.
+  const loadedFromServer = useRef(false);
+  const wasOnline = useRef(isOnline);
+  useEffect(() => {
+    const reconnected = isOnline && !wasOnline.current;
+    wasOnline.current = isOnline;
+    if (reconnected && !loadedFromServer.current && !authLoading && user) loadProfile();
+  }, [isOnline]);
 
   // live username check
   useEffect(() => {
@@ -138,8 +150,11 @@ export default function ProfileScreen() {
       let profile: any = null;
       try {
         profile = await getProfile();
+        loadedFromServer.current = true;
       } catch {
-        profile = null;
+        // Offline: the cached profile, so the form shows the real bio, gender,
+        // birthday and phone — not blanks that a later save would write back.
+        profile = cachedProfile;
       }
 
       const metadata = user.user_metadata || {};
@@ -231,6 +246,10 @@ export default function ProfileScreen() {
     if (usernameStatus.state === 'checking') return;
     if (usernameStatus.state === 'taken' || usernameStatus.state === 'invalid') {
       setMessage({ type: 'error', text: 'Fix username before saving.' });
+      return;
+    }
+    if (!isOnline) {
+      setMessage({ type: 'error', text: "You're offline. Connect to the internet to save your profile." });
       return;
     }
 

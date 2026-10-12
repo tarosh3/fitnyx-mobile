@@ -2,33 +2,47 @@ import { ChevronRight } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ACTIVITY_LABEL, ActivityTypeIcon } from '@/src/features/roam/components/ActivityTypeIcon';
-import { formatDistance, formatDurationHuman, formatPace, formatSpeed } from '@/src/features/roam/geo';
+import { activityTitle } from '@/src/features/roam/activityName';
+import { ActivityTypeIcon } from '@/src/features/roam/components/ActivityTypeIcon';
+import { formatDistance, formatDurationHuman, formatSpeed } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { ActivitySummary } from '@/src/lib/api/activities';
 
-/** One past Roam in the history list. */
-export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; onPress: () => void }) {
+/**
+ * One past Roam in the history list. `pending`: saved offline, not uploaded
+ * yet — no detail screen or XP until it is.
+ */
+export function ActivityRow({
+  activity,
+  onPress,
+  pending = false,
+}: {
+  activity: ActivitySummary;
+  onPress?: () => void;
+  pending?: boolean;
+}) {
   const palette = useThemeColors();
   const date = dayLabel(new Date(activity.started_at));
-  const rate =
-    activity.activity_type === 'cycle' ? formatSpeed(activity.avg_speed_mps) : formatPace(activity.avg_pace_sec_per_km);
+  const rate = formatSpeed(activity.avg_speed_mps);
   return (
     <Pressable
       onPress={onPress}
+      disabled={!onPress}
       style={({ pressed }) => [styles.row, { backgroundColor: palette.card, borderColor: palette.border }, pressed && { opacity: 0.8 }]}
     >
       <View style={[styles.icon, { backgroundColor: palette.surface }]}>
         <ActivityTypeIcon type={activity.activity_type} color={palette.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.title, { color: palette.text }]}>
-          {ACTIVITY_LABEL[activity.activity_type]} · {formatDistance(activity.distance_m)}
+        <Text style={[styles.title, { color: palette.text }]} numberOfLines={1}>
+          {activityTitle(activity)}
         </Text>
-        <Text style={[styles.sub, { color: palette.mutedText }]}>
-          {date} · {formatDurationHuman(activity.moving_time_sec)} · {rate}
+        <Text style={[styles.sub, { color: palette.mutedText }]} numberOfLines={1}>
+          {date} · {formatDistance(activity.distance_m)} · {formatDurationHuman(activity.moving_time_sec)} · {rate}
         </Text>
-        {!activity.xp_eligible ? (
+        {pending ? (
+          <Text style={[styles.flag, { color: palette.mutedText }]}>Waiting to upload · syncs when you're online</Text>
+        ) : !activity.xp_eligible ? (
           <Text style={[styles.flag, { color: palette.warning }]}>
             {activity.vehicle_detected ? 'Vehicle travel detected — not counted' : 'Too short to count'}
           </Text>
@@ -36,7 +50,7 @@ export function ActivityRow({ activity, onPress }: { activity: ActivitySummary; 
           <Text style={[styles.flag, { color: palette.primary }]}>+{activity.xp} XP</Text>
         )}
       </View>
-      <ChevronRight size={18} color={palette.mutedText} />
+      {onPress ? <ChevronRight size={18} color={palette.mutedText} /> : null}
     </Pressable>
   );
 }

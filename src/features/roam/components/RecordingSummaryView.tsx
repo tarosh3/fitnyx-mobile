@@ -1,7 +1,9 @@
+import { Pencil } from 'lucide-react-native';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
+import { MAX_ACTIVITY_NAME } from '@/src/features/roam/activityName';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
 import { RouteMap } from '@/src/features/roam/components/RouteMap';
 import { SplitsList } from '@/src/features/roam/components/SplitsList';
@@ -16,17 +18,53 @@ interface Props {
   elapsedSec: number;
   saving: boolean;
   error: string | null;
+  /** Editable title, prefilled with the default ("Morning Run"). */
+  name: string;
+  /** Shown when the field is cleared — what saving it blank will show. */
+  defaultName: string;
+  onNameChange: (name: string) => void;
   onSave: () => void;
   onDiscard: () => void;
 }
 
 /** After Finish: review the Roam, then save or discard. Numbers are final once the server recomputes them. */
-export function RecordingSummaryView({ type, stats, elapsedSec, saving, error, onSave, onDiscard }: Props) {
+export function RecordingSummaryView({
+  type,
+  stats,
+  elapsedSec,
+  saving,
+  error,
+  name,
+  defaultName,
+  onNameChange,
+  onSave,
+  onDiscard,
+}: Props) {
   const palette = useThemeColors();
   return (
     <View style={styles.wrap}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: palette.text }]}>{ACTIVITY_LABEL[type].toUpperCase()} COMPLETE</Text>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View>
+          <Text style={[styles.eyebrow, { color: palette.primary }]}>{ACTIVITY_LABEL[type].toUpperCase()} COMPLETE</Text>
+          {/* The title reads as a heading but is editable in place. */}
+          <View style={[styles.nameRow, { borderBottomColor: palette.border }]}>
+            <TextInput
+              testID="roam-name"
+              accessibilityLabel="Roam name"
+              value={name}
+              onChangeText={onNameChange}
+              placeholder={defaultName}
+              placeholderTextColor={palette.mutedText}
+              maxLength={MAX_ACTIVITY_NAME}
+              editable={!saving}
+              returnKeyType="done"
+              selectTextOnFocus
+              selectionColor={palette.primary}
+              style={[styles.name, { color: palette.text }]}
+            />
+            <Pencil size={18} color={palette.mutedText} />
+          </View>
+        </View>
         <RouteMap route={stats.route} vehicleRanges={stats.vehicleRanges} style={styles.map} />
 
         {stats.vehicleDetected ? (
@@ -40,17 +78,15 @@ export function RecordingSummaryView({ type, stats, elapsedSec, saving, error, o
         ) : null}
 
         <RoamStatsPanel
-          type={type}
           distanceM={stats.distanceM}
           movingSec={stats.movingTimeSec}
           elapsedSec={elapsedSec}
-          avgPaceSecPerKm={stats.avgPaceSecPerKm}
           avgSpeedMps={stats.avgSpeedMps}
           maxSpeedMps={stats.maxSpeedMps}
           vehicleDetected={stats.vehicleDetected}
         />
 
-        <SplitsList type={type} splits={stats.splits} distanceM={stats.distanceM} movingSec={stats.movingTimeSec} />
+        <SplitsList splits={stats.splits} distanceM={stats.distanceM} movingSec={stats.movingTimeSec} />
 
         {!stats.xpEligible && !stats.vehicleDetected ? (
           <Text style={[styles.note, { color: palette.mutedText }]}>
@@ -75,7 +111,9 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', gap: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   discard: { flex: 1 },
   save: { flex: 2 },
-  title: { fontSize: 22, fontWeight: '900', letterSpacing: 1.5 },
+  eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  name: { flex: 1, fontSize: 26, fontWeight: '800', letterSpacing: -0.4, paddingVertical: 8 },
   map: { height: 260 },
   note: { fontSize: 12, textAlign: 'center' },
 });

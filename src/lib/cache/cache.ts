@@ -1,4 +1,4 @@
-import { idbGet, idbSet, idbDelete, idbClear } from './indexeddb';
+import { idbGet, idbGetStale, idbSet, idbDelete, idbClear } from './indexeddb';
 
 interface CacheEntry<T = unknown> {
   data: T;
@@ -27,6 +27,16 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   }
 
   return null;
+}
+
+/**
+ * Last-known value regardless of TTL. For showing something while a refetch
+ * runs, or instead of an empty screen when it can't (offline).
+ */
+export async function cacheGetStale<T>(key: string): Promise<T | null> {
+  const memory = memoryCache.get(key) as CacheEntry<T> | undefined;
+  if (memory) return memory.data;
+  return idbGetStale<T>(key);
 }
 
 export async function cacheSet<T>(key: string, data: T, ttl: number = DEFAULT_TTL): Promise<void> {

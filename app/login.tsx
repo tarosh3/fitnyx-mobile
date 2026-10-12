@@ -1,8 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 
-import { Screen } from '@/src/components/ui/Screen';
-import { AuthForm } from '@/src/features/auth/AuthForm';
+import { AuthScreen } from '@/src/features/auth/AuthScreen';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 // Reasons set by the global auth-failure handler when it redirects here.
@@ -23,15 +22,5 @@ export default function LoginScreen() {
     }
   }, [loading, user, router]);
 
-  return (
-    <Screen
-      scroll={false}
-      // Keep Screen's safe-area top + side padding: opened directly (deep link,
-      // session-expired redirect) the bare form otherwise sits under the status bar.
-      style={{ paddingBottom: 0, backgroundColor: '#000000' }}
-      contentContainerStyle={{ flex: 1, backgroundColor: '#000000' }}
-    >
-      <AuthForm initialMode="login" notice={notice} onSuccess={() => router.replace('/')} />
-    </Screen>
-  );
+  return <AuthScreen mode="login" notice={notice} />;
 }

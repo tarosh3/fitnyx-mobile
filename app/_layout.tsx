@@ -49,6 +49,10 @@ LogBox.ignoreLogs([
   'AuthApiError: Invalid Refresh Token',
   'Invalid Refresh Token: Refresh Token Not Found',
   'Refresh Token Not Found',
+  // supabase-js console.errors every failed token-refresh attempt while
+  // offline (it retries with backoff); expected offline, not an app error.
+  'TypeError: Network request failed',
+  'AuthRetryableFetchError',
 ]);
 
 import { rescheduleAll as rescheduleAllReminders } from '@/src/lib/reminders';

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
@@ -15,6 +15,7 @@ import {
   WorkoutPlan,
 } from '@/src/lib/api/workoutPlans';
 import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
+import { getAllCachedPlans } from '@/src/lib/db';
 import { cacheKeys, cacheTTL } from '@/src/lib/cache/keys';
 import { useAuth } from '@/src/providers/AuthProvider';
 import {
@@ -29,6 +30,9 @@ import {
 const NEON_LIME = '#5fc793';
 
 type PlansTab = 'my-plans' | 'system-plans';
+
+// The offline copy outlives a normal cache entry: it's what you train from without signal.
+const PLANS_OFFLINE_TTL = 30 * cacheTTL.DAY;
 
 function formatDate(dateString?: string) {
   if (!dateString) return 'Not set';
@@ -67,43 +71,59 @@ export default function SelectWorkoutScreen() {
 
   const hideConfirm = () => setConfirmConfig((prev) => ({ ...prev, visible: false }));
 
+  // Plans for offline use: the last list fetched here, else any of the user's
+  // plans opened on this device (so a user who never opened this screen online
+  // still sees the plan they train on).
+  const loadCachedPlans = async (): Promise<WorkoutPlan[] | null> => {
+    if (!user) return null;
+    const listed = await idbGet<{ data: WorkoutPlan[] }>(cacheKeys.workoutPlans(user.id));
+    if (listed?.data) return listed.data;
+    const opened = (await getAllCachedPlans()).filter(
+      (p) => p.user_id === user.id && p.source !== 'default' && p.source !== 'system',
+    );
+    return opened.length ? opened : null;
+  };
+
+  // Connectivity flips re-run this; only the latest run may write state.
+  const loadSeq = useRef(0);
   const loadPlans = async () => {
+    const seq = ++loadSeq.current;
+    const current = () => seq === loadSeq.current;
     setLoading(true);
     setError(null);
     try {
       if (isOffline) {
-        // Load from cache when offline
-        const cachedPlans = user ? await idbGet<{ data: WorkoutPlan[] }>(cacheKeys.workoutPlans(user.id)) : null;
-        if (cachedPlans?.data) {
-          setMyPlans(cachedPlans.data);
-        }
+        const cached = await loadCachedPlans();
+        if (!current()) return;
+        setMyPlans(cached ?? []);
         setDefaultPlans([]);
-        setLoading(false);
         return;
       }
 
       const [my, defaults] = await Promise.all([getWorkoutPlans(), getDefaultWorkoutPlans()]);
+      if (!current()) return;
       setMyPlans(my.data || []);
       setDefaultPlans(defaults.data || []);
 
       // Cache plans for offline use
       if (user && my.data) {
-        idbSet(cacheKeys.workoutPlans(user.id), { data: my.data }, cacheTTL.DAY).catch(() => {});
+        idbSet(cacheKeys.workoutPlans(user.id), { data: my.data }, PLANS_OFFLINE_TTL).catch(() => {});
       }
-    } catch (loadError) {
-      console.error('Failed to load plans', loadError);
-      // Try cache fallback on network error
-      if (user) {
-        const cachedPlans = await idbGet<{ data: WorkoutPlan[] }>(cacheKeys.workoutPlans(user.id));
-        if (cachedPlans?.data) {
-          setMyPlans(cachedPlans.data);
-          setLoading(false);
-          return;
-        }
+    } catch (loadError: any) {
+      const cached = await loadCachedPlans();
+      if (!current()) return;
+      if (cached) {
+        setMyPlans(cached);
+        return;
       }
-      setError('Failed to load workout plans.');
+      // No status = the request never reached the server (offline): the
+      // offline banner and empty state say it; this isn't a failure to report.
+      if (loadError?.status) {
+        console.error('Failed to load plans', loadError);
+        setError('Failed to load workout plans.');
+      }
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   };
 
@@ -227,12 +247,20 @@ export default function SelectWorkoutScreen() {
             <Info size={32} color={palette.mutedText} />
           </View>
           <Text style={styles.emptyTitle}>
-            {activeTab === 'my-plans' ? 'No Custom Plans' : 'No Default Plans'}
+            {isOffline
+              ? "You're offline"
+              : activeTab === 'my-plans'
+                ? 'No Custom Plans'
+                : 'No Default Plans'}
           </Text>
           <Text style={styles.emptySubtitle}>
-            {activeTab === 'my-plans'
-              ? 'Craft your perfect routine to reach your peak performance.'
-              : 'Our system plans are being optimized for your profile.'}
+            {isOffline
+              ? activeTab === 'my-plans'
+                ? 'Plans you open while online stay available offline. Connect to load yours.'
+                : 'Default plans need an internet connection to browse.'
+              : activeTab === 'my-plans'
+                ? 'Craft your perfect routine to reach your peak performance.'
+                : 'Our system plans are being optimized for your profile.'}
           </Text>
 
           {activeTab === 'my-plans' && !isOffline ? (

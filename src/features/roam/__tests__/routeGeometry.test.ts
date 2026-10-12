@@ -1,4 +1,13 @@
-import { endpoints, MAX_DRAWN_POINTS, routeBounds, routeLine, thinForDisplay, vehicleLines } from '@/src/features/roam/routeGeometry';
+import {
+  directionMarks,
+  endpoints,
+  MAX_DRAWN_POINTS,
+  projectToBox,
+  routeBounds,
+  routeLine,
+  thinForDisplay,
+  vehicleLines,
+} from '@/src/features/roam/routeGeometry';
 
 const route: [number, number][] = [
   [72.87, 19.07],
@@ -43,5 +52,52 @@ describe('routeGeometry', () => {
     expect(e).toBeGreaterThan(72.91);
     expect(n).toBeGreaterThan(19.12);
     expect(routeBounds([])).toBeNull();
+  });
+});
+
+describe('projectToBox', () => {
+  it('fits the route inside the padded box, north up', () => {
+    const route: [number, number][] = [
+      [77.2, 28.6],
+      [77.21, 28.61],
+      [77.22, 28.6],
+    ];
+    const pts = projectToBox(route, 300, 200, 20);
+    for (const [x, y] of pts) {
+      expect(x).toBeGreaterThanOrEqual(20 - 1e-6);
+      expect(x).toBeLessThanOrEqual(280 + 1e-6);
+      expect(y).toBeGreaterThanOrEqual(20 - 1e-6);
+      expect(y).toBeLessThanOrEqual(180 + 1e-6);
+    }
+    // The northern point is drawn above the others.
+    expect(pts[1][1]).toBeLessThan(pts[0][1]);
+  });
+
+  it('handles a single point and an empty box', () => {
+    expect(projectToBox([[77.2, 28.6]], 300, 200, 20)).toHaveLength(1);
+    expect(projectToBox([[77.2, 28.6]], 0, 0, 20)).toEqual([]);
+  });
+});
+
+describe('directionMarks', () => {
+  const east: [number, number][] = Array.from({ length: 21 }, (_, i) => [77.2 + i * 0.0005, 28.6]);
+
+  it('spaces marks evenly with the heading of travel', () => {
+    const marks = directionMarks(east, 4);
+    expect(marks.features).toHaveLength(4);
+    marks.features.forEach((f) => expect(f.properties!.bearing).toBeCloseTo(90, 0));
+    const xs = marks.features.map((f) => f.geometry.coordinates[0]);
+    expect(xs[1] - xs[0]).toBeCloseTo(xs[2] - xs[1], 6);
+  });
+
+  it('points the other way on the way back (out-and-back)', () => {
+    const back = [...east, ...[...east].reverse().slice(1)];
+    const bearings = directionMarks(back, 6).features.map((f) => Math.round(f.properties!.bearing));
+    expect(bearings.slice(0, 3)).toEqual([90, 90, 90]);
+    expect(bearings.slice(3)).toEqual([270, 270, 270]);
+  });
+
+  it('skips tiny routes', () => {
+    expect(directionMarks([[77.2, 28.6], [77.20001, 28.6]]).features).toHaveLength(0);
   });
 });

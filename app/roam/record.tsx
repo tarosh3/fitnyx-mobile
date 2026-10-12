@@ -6,6 +6,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
+import { cleanActivityName, defaultActivityName } from '@/src/features/roam/activityName';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
 import { LiveRecordingView } from '@/src/features/roam/components/LiveRecordingView';
 import { RecordingSummaryView } from '@/src/features/roam/components/RecordingSummaryView';
@@ -14,7 +15,7 @@ import { saveRoam } from '@/src/features/roam/upload';
 import { useRoamRecording } from '@/src/features/roam/useRoamRecording';
 import { retentionMetricsKey } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { cacheInvalidate, cacheKeys } from '@/src/lib/cache';
+import { cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 type Modal = 'finish' | 'discard' | 'queued' | 'too-short' | null;
@@ -29,6 +30,7 @@ export default function RoamRecordScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Modal>(null);
+  const [name, setName] = useState('');
 
   // Nothing recording (opened directly / already saved) → back to Roam home.
   useEffect(() => {
@@ -37,12 +39,15 @@ export default function RoamRecordScreen() {
 
   const finish = async () => {
     setModal(null);
-    await recording.finish();
+    const done = await recording.finish();
+    if (done) setName(defaultActivityName(done.meta.type, new Date(done.meta.startedAtMs)));
     setPhase('summary');
   };
 
+  // The Roam list refetches on focus. Its cache is the offline copy of the
+  // history, so it's never deleted here — that emptied the list for anyone
+  // who saved a Roam without signal.
   const leave = async () => {
-    if (user?.id) await cacheInvalidate(cacheKeys.roamActivities(user.id));
     // Back to the Roam screen already underneath — replace() would stack a second one.
     router.dismissTo('/roam');
   };
@@ -52,16 +57,23 @@ export default function RoamRecordScreen() {
     setSaving(true);
     setError(null);
     try {
-      const outcome = await saveRoam(recording.meta, recording.points);
+      // The untouched default isn't stored — the app derives it — so a later
+      // rename back to "Morning Run" and the default stay the same thing.
+      const cleaned = cleanActivityName(name);
+      const custom = cleaned && cleaned !== defaultActivityName(recording.meta.type, new Date(recording.meta.startedAtMs));
+      const outcome = await saveRoam(recording.meta, recording.points, custom ? cleaned : undefined);
       if (outcome.status === 'too-short') {
         setModal('too-short');
         return;
       }
       await clearRecording();
-      if (user?.id) {
-        await cacheInvalidate(cacheKeys.roamActivities(user.id));
+      if (user?.id && outcome.status === 'saved') {
         // Home's XP total includes Roam XP — don't wait out its staleTime.
-        if (outcome.status === 'saved') queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user.id) });
+        queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user.id) });
+        // The detail screen opens next: give it (and offline viewing) the saved copy.
+        await cacheSet(cacheKeys.roamActivity(user.id, outcome.activity.id), outcome.activity, cacheTTL.DAY).catch(
+          () => undefined,
+        );
       }
       if (outcome.status === 'saved') router.replace(`/roam/${outcome.activity.id}`);
       else setModal('queued');
@@ -103,6 +115,9 @@ export default function RoamRecordScreen() {
           elapsedSec={recording.elapsedMs / 1000}
           saving={saving}
           error={error}
+          name={name}
+          defaultName={defaultActivityName(meta.type, new Date(meta.startedAtMs))}
+          onNameChange={setName}
           onSave={save}
           onDiscard={() => setModal('discard')}
         />

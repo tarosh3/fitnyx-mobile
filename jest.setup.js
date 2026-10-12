@@ -54,6 +54,8 @@ jest.mock('@/src/lib/supabase', () => ({
       stopAutoRefresh: jest.fn(),
     },
   },
+  getStoredUser: jest.fn(() => Promise.resolve(null)),
+  getStoredSession: jest.fn(() => Promise.resolve(null)),
 }));
 
 // Mock react-native-reanimated

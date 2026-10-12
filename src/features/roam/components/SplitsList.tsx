@@ -3,11 +3,10 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { UnitText } from '@/src/features/roam/components/StatTile';
-import { formatPace, formatSpeed, type ActivityType } from '@/src/features/roam/geo';
+import { formatSpeed } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 interface Props {
-  type: ActivityType;
   splits: { km: number; sec: number }[];
   /** Totals, to show the last partial km (e.g. the 0.99 km after 4 full ones). */
   distanceM: number;
@@ -15,19 +14,19 @@ interface Props {
 }
 
 /** Per-km times with a bar relative to the fastest split. */
-export function SplitsList({ type, splits, distanceM, movingSec }: Props) {
+export function SplitsList({ splits, distanceM, movingSec }: Props) {
   const palette = useThemeColors();
   if (splits.length === 0) return null;
   const fastest = Math.min(...splits.map((s) => s.sec));
   const fastestIndex = splits.findIndex((s) => s.sec === fastest); // first one on a tie
   // A ride reads in km/h everywhere else, so its splits do too.
-  const rate = (secPerKm: number) => (type === 'cycle' ? formatSpeed(1000 / secPerKm) : formatPace(secPerKm));
+  const rate = (secPerKm: number) => formatSpeed(1000 / secPerKm);
   const restM = distanceM - splits.length * 1000;
   const restSec = movingSec - splits.reduce((t, s) => t + s.sec, 0);
   const rest = restM >= 50 && restSec > 0 ? { km: restM / 1000, pace: restSec / (restM / 1000) } : null;
   return (
     <View style={styles.list}>
-      <Text style={[styles.title, { color: palette.mutedText }]}>{type === 'cycle' ? 'SPLITS · SPEED PER KM' : 'SPLITS · PACE PER KM'}</Text>
+      <Text style={[styles.title, { color: palette.mutedText }]}>SPLITS · SPEED PER KM</Text>
       {splits.map((s, i) => {
         // Only the fastest km is in full colour (with a bolt), so the eye finds it at once.
         const best = splits.length > 1 && i === fastestIndex;

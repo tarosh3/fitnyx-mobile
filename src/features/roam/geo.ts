@@ -184,6 +184,42 @@ export function computeStats(points: RoamPoint[], type: ActivityType): RoamStats
   return stats;
 }
 
+/** Live "current speed" averages this much recent movement — smooth, still responsive. */
+export const CURRENT_SPEED_WINDOW_SEC = 8;
+/** No fix for this long: GPS is lost, so there's no current speed to show. */
+export const CURRENT_SPEED_STALE_SEC = 12;
+
+/**
+ * Speed right now, for the live screen (not saved; the backend never sees it).
+ * Averages the movement in the last CURRENT_SPEED_WINDOW_SEC of the current
+ * segment, ignoring jitter steps like the metrics do. Returns null without a
+ * recent fix (GPS searching, or paused) and 0 when standing still.
+ * `nowSec` is seconds since the recording started (same clock as the points).
+ */
+export function currentSpeedMps(points: RoamPoint[], nowSec: number): number | null {
+  // Only the tail matters; at 1 fix / 2 s this covers the window many times over.
+  const route = acceptedFixes(points.slice(-40));
+  const last = route[route.length - 1];
+  if (!last || nowSec - last[2] > CURRENT_SPEED_STALE_SEC) return null;
+  let d = 0;
+  let anchor = last;
+  let first = last;
+  for (let i = route.length - 2; i >= 0; i--) {
+    const p = route[i];
+    if (p[4] !== last[4] || last[2] - p[2] > CURRENT_SPEED_WINDOW_SEC) break;
+    first = p;
+    const step = haversine(p[0], p[1], anchor[0], anchor[1]);
+    if (step >= MIN_STEP_M) {
+      d += step;
+      anchor = p;
+    }
+  }
+  const dt = last[2] - first[2];
+  if (dt < 3) return null; // not enough recent fixes yet
+  const v = d / dt;
+  return v < STATIONARY_MPS ? 0 : v;
+}
+
 /** Highest average speed over consecutive counted intervals spanning ≥ the window. */
 function maxWindowSpeed(ivs: Interval[]): number {
   let best = 0;
@@ -256,12 +292,6 @@ export function formatDurationHuman(sec: number): string {
   if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
   if (m > 0) return s % 60 > 0 ? `${m}m ${s % 60}s` : `${m}m`;
   return `${s}s`;
-}
-
-export function formatPace(secPerKm: number | null): string {
-  if (secPerKm == null || !Number.isFinite(secPerKm) || secPerKm <= 0) return '--:--';
-  const s = Math.round(secPerKm);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} /km`;
 }
 
 export function formatSpeed(mps: number): string {

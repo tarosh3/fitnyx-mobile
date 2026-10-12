@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { RouteMap } from '@/src/features/roam/components/RouteMap';
 import { StatTile } from '@/src/features/roam/components/StatTile';
 import { VehicleBanner } from '@/src/features/roam/components/VehicleBanner';
-import { formatDistance, formatDuration, formatPace, formatSpeed } from '@/src/features/roam/geo';
+import { currentSpeedMps, formatDistance, formatDuration, formatSpeed } from '@/src/features/roam/geo';
 import type { RoamRecording } from '@/src/features/roam/useRoamRecording';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
@@ -14,13 +14,19 @@ interface Props {
   onFinish: () => void;
 }
 
-/** The live screen: map following you, big distance, time, pace/speed, controls. */
+/** The live screen: map following you, big distance, time, speed, controls. */
 export function LiveRecordingView({ recording, onFinish }: Props) {
   const palette = useThemeColors();
   const { meta, stats, elapsedMs } = recording;
   if (!meta) return null;
   const paused = meta.status === 'paused';
-  const rate = meta.type === 'cycle' ? formatSpeed(stats?.avgSpeedMps ?? 0) : formatPace(stats?.avgPaceSecPerKm ?? null);
+  // Speed in km/h for every Roam type (runs and walks too — not min/km pace).
+  const rate = formatSpeed(stats?.avgSpeedMps ?? 0);
+  // Live speed from the last few seconds of fixes (re-evaluated each second
+  // with the clock). null = no recent fix; 0 = standing still.
+  const now = paused ? null : currentSpeedMps(recording.points, (Date.now() - meta.startedAtMs) / 1000);
+  const rateNow = now == null ? '--' : formatSpeed(now);
+  const nowLabel = paused ? 'Paused' : now == null ? 'Finding GPS' : now === 0 ? 'Stopped' : 'Speed now';
 
   return (
     <View style={styles.wrap}>
@@ -37,7 +43,8 @@ export function LiveRecordingView({ recording, onFinish }: Props) {
         <StatTile big label="Distance" value={formatDistance(stats?.distanceM ?? 0)} />
         <View style={styles.row}>
           <StatTile label="Time" value={formatDuration(elapsedMs / 1000)} />
-          <StatTile label={meta.type === 'cycle' ? 'Avg speed' : 'Avg pace'} value={rate} />
+          <StatTile label={nowLabel} value={rateNow} accent={!paused && now != null && now > 0} />
+          <StatTile label="Avg speed" value={rate} />
         </View>
       </View>
 

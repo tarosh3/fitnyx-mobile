@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { WorkoutSession } from '@/src/lib/api/workoutSessions';
 import { WorkoutPlanDay } from '@/src/lib/api/workoutPlans';
 import { getDashboard, DashboardSession, DashboardPlan, DashboardPlanDay } from '@/src/lib/api/dashboard';
-import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 
 type MetricsPayload = Omit<RetentionMetrics, 'loading' | 'activeSession'>;
@@ -109,7 +109,9 @@ async function persistMetrics(userId: string | undefined, payload: MetricsPayloa
 async function hydrateMetrics(userId: string | undefined): Promise<MetricsPayload | null> {
   if (!userId) return null;
   try {
-    return (await cacheGet<MetricsPayload>(cacheKeys.dashboard(userId))) ?? null;
+    // Last-known numbers even past their TTL: the query refetches when online,
+    // and offline they beat an empty Home.
+    return (await cacheGetStale<MetricsPayload>(cacheKeys.dashboard(userId))) ?? null;
   } catch {
     return null;
   }

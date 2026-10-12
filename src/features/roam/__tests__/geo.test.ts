@@ -4,7 +4,7 @@ import {
   formatDistance,
   formatDuration,
   formatDurationHuman,
-  formatPace,
+  formatSpeed,
   type ActivityType,
   type RoamPoint,
 } from '@/src/features/roam/geo';
@@ -154,13 +154,12 @@ describe('polyline + formatting', () => {
     ]);
   });
 
-  it('formats distance, duration and pace', () => {
+  it('formats distance, duration and speed', () => {
     expect(formatDistance(850)).toBe('850 m');
     expect(formatDistance(5004)).toBe('5.00 km');
     expect(formatDuration(65)).toBe('1:05');
     expect(formatDuration(3725)).toBe('1:02:05');
-    expect(formatPace(333)).toBe('5:33 /km');
-    expect(formatPace(null)).toBe('--:--');
+    expect(formatSpeed(1000 / 333)).toBe('10.8 km/h');
   });
 });
 

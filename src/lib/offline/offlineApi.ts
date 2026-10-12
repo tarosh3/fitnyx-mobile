@@ -24,6 +24,8 @@ import {
   deleteOfflineLog,
   setActiveOfflineSessionId,
   persistSessionState,
+  resolveId,
+  withPendingLogs,
   OfflineSession,
   OfflineExerciseLog,
 } from './offlineStore';
@@ -100,7 +102,9 @@ export async function offlineStartSession(input: StartSessionInput): Promise<Wor
 
 // --- Get Session (with offline fallback) ---
 
-export async function offlineGetSession(sessionId: string): Promise<SessionWithLogs> {
+export async function offlineGetSession(requestedId: string): Promise<SessionWithLogs> {
+  // A session started offline that has since synced is fetched by its server id.
+  const sessionId = await resolveId(requestedId);
   if (isOfflineId(sessionId)) {
     const session = await getOfflineSession(sessionId);
     if (!session) throw new Error('Offline session not found');
@@ -112,9 +116,10 @@ export async function offlineGetSession(sessionId: string): Promise<SessionWithL
   if (online) {
     try {
       const result = await getWorkoutSession(sessionId);
+      const exercise_logs = await withPendingLogs(sessionId, result.exercise_logs || []);
       // Persist for crash recovery
       await persistSessionState(result.session, result.exercise_logs || []);
-      return result;
+      return { ...result, exercise_logs };
     } catch (error: any) {
       if (error?.status) throw error;
       // Network error, try offline store
@@ -130,7 +135,8 @@ export async function offlineGetSession(sessionId: string): Promise<SessionWithL
 
 // --- Log Set ---
 
-export async function offlineLogSet(sessionId: string, data: LogExerciseInput): Promise<ExerciseLog> {
+export async function offlineLogSet(requestedId: string, data: LogExerciseInput): Promise<ExerciseLog> {
+  const sessionId = await resolveId(requestedId);
   const online = await checkOnline();
 
   if (online && !isOfflineId(sessionId)) {
@@ -170,7 +176,15 @@ export async function offlineLogSet(sessionId: string, data: LogExerciseInput): 
 
   await addToOfflineQueue({
     type: 'LOG_SET',
-    payload: { sessionId, exerciseUuid: data.exercise_uuid, setNumber: data.set_number, reps: data.actual_reps, weightKg: data.actual_weight_kg, rpe: data.rpe },
+    payload: {
+      sessionId,
+      logId,
+      exerciseUuid: data.exercise_uuid,
+      setNumber: data.set_number,
+      reps: data.actual_reps,
+      weightKg: data.actual_weight_kg,
+      rpe: data.rpe,
+    },
   });
 
   return offlineLog;
@@ -179,10 +193,13 @@ export async function offlineLogSet(sessionId: string, data: LogExerciseInput): 
 // --- Update Log ---
 
 export async function offlineUpdateLog(
-  sessionId: string,
-  logId: string,
+  requestedSessionId: string,
+  requestedLogId: string,
   data: { actual_reps?: number; actual_weight_kg?: number; rpe?: number }
 ): Promise<ExerciseLog> {
+  // A set logged offline that has since synced is edited by its server id.
+  const sessionId = await resolveId(requestedSessionId);
+  const logId = await resolveId(requestedLogId);
   const online = await checkOnline();
 
   if (online && !isOfflineId(logId)) {
@@ -201,14 +218,16 @@ export async function offlineUpdateLog(
     updates.weight_kg = data.actual_weight_kg === 0 ? undefined : data.actual_weight_kg;
   }
   if (data.rpe !== undefined) updates.rpe = data.rpe;
-  const updated = await updateOfflineLog(sessionId, logId, updates);
+  const updated =
+    (await updateOfflineLog(sessionId, logId, updates)) ??
+    (await updateOfflineLog(requestedSessionId, requestedLogId, updates));
 
   if (!updated) throw new Error('Log not found in offline store');
 
   if (isOfflineId(logId)) {
     // For offline-created logs, update the original LOG_SET in the queue
     // so sync creates the set with final values instead of original ones
-    await updateQueuedLogSet(sessionId, updated);
+    await updateQueuedLogSet([sessionId, requestedSessionId], logId, updated);
   } else {
     await addToOfflineQueue({
       type: 'UPDATE_SET',
@@ -221,7 +240,9 @@ export async function offlineUpdateLog(
 
 // --- Delete Log ---
 
-export async function offlineDeleteLog(sessionId: string, logId: string): Promise<void> {
+export async function offlineDeleteLog(requestedSessionId: string, requestedLogId: string): Promise<void> {
+  const sessionId = await resolveId(requestedSessionId);
+  const logId = await resolveId(requestedLogId);
   const online = await checkOnline();
 
   if (online && !isOfflineId(logId)) {
@@ -236,14 +257,15 @@ export async function offlineDeleteLog(sessionId: string, logId: string): Promis
 
   if (isOfflineId(logId)) {
     // Capture the log data BEFORE deleting so we can find the matching queue entry
-    const logs = await getOfflineLogs(sessionId);
+    const logs = [...(await getOfflineLogs(sessionId)), ...(await getOfflineLogs(requestedSessionId))];
     const deletedLog = logs.find((l) => l.id === logId);
 
     await deleteOfflineLog(sessionId, logId);
+    await deleteOfflineLog(requestedSessionId, logId);
 
     // Remove the pending LOG_SET from the queue so it doesn't create a ghost set on sync
     if (deletedLog) {
-      await removeQueuedLogSetByData(sessionId, deletedLog.exercise_uuid, deletedLog.set_index);
+      await removeQueuedLogSet([sessionId, requestedSessionId], logId, deletedLog);
     }
   } else {
     await deleteOfflineLog(sessionId, logId);
@@ -256,24 +278,30 @@ export async function offlineDeleteLog(sessionId: string, logId: string): Promis
 
 // --- Queue helpers for offline-created logs ---
 
+// Matches the queued LOG_SET for an offline-created set: by its log id, or —
+// for entries queued before LOG_SET carried one — by session, exercise and set
+// number. sessionIds holds both the offline and (once synced) server id.
 const isQueuedLogSet = (
   item: { type: string; payload: any },
-  sessionId: string,
-  exerciseUuid: string,
-  setNumber: number,
+  sessionIds: string[],
+  logId: string,
+  log: Pick<OfflineExerciseLog, 'exercise_uuid' | 'set_index'>,
 ) =>
   item.type === 'LOG_SET' &&
-  item.payload.sessionId === sessionId &&
-  item.payload.exerciseUuid === exerciseUuid &&
-  item.payload.setNumber === setNumber;
+  (item.payload.logId
+    ? item.payload.logId === logId
+    : sessionIds.includes(item.payload.sessionId) &&
+      item.payload.exerciseUuid === log.exercise_uuid &&
+      item.payload.setNumber === log.set_index);
 
 async function updateQueuedLogSet(
-  sessionId: string,
+  sessionIds: string[],
+  logId: string,
   log: OfflineExerciseLog
 ): Promise<void> {
   // Rewrite the first matching LOG_SET with the edited values (under the queue lock).
   await updateOfflineQueue((queue) => {
-    const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionId, log.exercise_uuid, log.set_index));
+    const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionIds, logId, log));
     if (idx === -1) return queue;
     const next = [...queue];
     next[idx] = {
@@ -284,13 +312,13 @@ async function updateQueuedLogSet(
   });
 }
 
-async function removeQueuedLogSetByData(
-  sessionId: string,
-  exerciseUuid: string,
-  setNumber: number
+async function removeQueuedLogSet(
+  sessionIds: string[],
+  logId: string,
+  log: OfflineExerciseLog
 ): Promise<void> {
   await updateOfflineQueue((queue) => {
-    const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionId, exerciseUuid, setNumber));
+    const idx = queue.findIndex((q) => isQueuedLogSet(q, sessionIds, logId, log));
     return idx === -1 ? queue : queue.filter((_, i) => i !== idx);
   });
 }
@@ -299,10 +327,11 @@ async function removeQueuedLogSetByData(
 
 async function offlineSessionAction(
   actionType: 'pause' | 'resume' | 'finish' | 'abandon',
-  sessionId: string,
+  requestedId: string,
   /** When the action actually happened (ISO). Defaults to now. */
   at?: string
 ): Promise<WorkoutSession | null> {
+  const sessionId = await resolveId(requestedId);
   const online = await checkOnline();
 
   if (online && !isOfflineId(sessionId)) {

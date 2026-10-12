@@ -4,10 +4,12 @@ import { ChevronLeft, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Button } from '@/src/components/ui/Button';
 import { Screen } from '@/src/components/ui/Screen';
 import { LoopingLottie } from '@/src/components/ui/LoopingLottie';
 import { DietPlanView } from '@/src/features/diet/DietPlanView';
 import { DietWizard } from '@/src/features/diet/DietWizard';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { DietPlan, generateDietPlan, getDietPlan } from '@/src/lib/api';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -30,12 +32,19 @@ export default function DietScreen() {
   const [plan, setPlan] = useState<DietPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [view, setView] = useState<'wizard' | 'plan'>('wizard');
+  const [view, setView] = useState<'wizard' | 'plan' | 'offline'>('wizard');
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [tipIndex, setTipIndex] = useState(0);
+  const { isOnline } = useNetworkStatus();
 
   useEffect(() => {
     loadPlan();
   }, []);
+
+  // Couldn't tell offline whether a plan exists: check again on reconnect.
+  useEffect(() => {
+    if (isOnline && view === 'offline') loadPlan();
+  }, [isOnline]);
 
   useEffect(() => {
     if (!generating) return;
@@ -56,8 +65,10 @@ export default function DietScreen() {
       } else {
         setView('wizard');
       }
-    } catch {
-      setView('wizard');
+    } catch (error) {
+      // No status = never reached the server. Don't show "create a plan" to
+      // someone who may already have one.
+      setView((error as { status?: number })?.status ? 'wizard' : 'offline');
     } finally {
       // Small delay for smooth transition
       setTimeout(() => setLoading(false), 800);
@@ -65,6 +76,11 @@ export default function DietScreen() {
   };
 
   const onGenerate = async (preferences: any) => {
+    if (!isOnline) {
+      setGenerateError("You're offline. Connect to the internet to create your plan.");
+      return;
+    }
+    setGenerateError(null);
     setGenerating(true);
     try {
       const result = await generateDietPlan(user?.id ?? '', preferences);
@@ -72,6 +88,7 @@ export default function DietScreen() {
       setView('plan');
     } catch (error) {
       console.error('Failed to generate diet plan', error);
+      setGenerateError("Couldn't create your plan. Check your connection and try again.");
     } finally {
       setGenerating(false);
     }
@@ -121,8 +138,19 @@ export default function DietScreen() {
             <ActivityIndicator size="small" color={NEON_LIME} style={{ marginTop: 20 }} />
           </BlurView>
         </View>
+      ) : view === 'offline' ? (
+        <View style={styles.centered}>
+          <Text style={styles.offlineTitle}>You're offline</Text>
+          <Text style={styles.offlineText}>
+            Your diet plan loads once you're connected. After that, it stays available offline.
+          </Text>
+          <Button title="Try again" variant="secondary" onPress={loadPlan} />
+        </View>
       ) : view === 'wizard' ? (
-        <DietWizard onComplete={onGenerate} isLoading={generating} />
+        <>
+          {generateError ? <Text style={styles.generateError}>{generateError}</Text> : null}
+          <DietWizard onComplete={onGenerate} isLoading={generating} />
+        </>
       ) : plan ? (
         <DietPlanView
           plan={plan}
@@ -190,6 +218,27 @@ const getStyles = (palette: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 300,
+  },
+  offlineTitle: {
+    color: palette.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  offlineText: {
+    color: palette.mutedText,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    maxWidth: 300,
+    marginBottom: 20,
+  },
+  generateError: {
+    color: palette.destructive,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   generatingWrapper: {
     flex: 1,

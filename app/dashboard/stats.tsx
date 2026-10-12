@@ -50,7 +50,8 @@ import {
   saveMetric,
 } from '@/src/lib/api';
 import { getFitnessProfile } from '@/src/lib/api/onboarding';
-import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { addToOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { useAuth } from '@/src/providers/AuthProvider';
 import {
   cmToFt,
@@ -450,9 +451,9 @@ export default function StatsScreen() {
       }
       try {
         const [cachedLatest, cachedHist, cachedFitness] = await Promise.all([
-          cacheGet<Metric | null>(cacheKeys.bodyMetricsLatest(userId)),
-          cacheGet<Metric[]>(cacheKeys.bodyMetricsHistory(userId)),
-          cacheGet<{ target_weight_kg?: number }>(cacheKeys.fitnessProfile(userId)),
+          cacheGetStale<Metric | null>(cacheKeys.bodyMetricsLatest(userId)),
+          cacheGetStale<Metric[]>(cacheKeys.bodyMetricsHistory(userId)),
+          cacheGetStale<{ target_weight_kg?: number }>(cacheKeys.fitnessProfile(userId)),
         ]);
         if (cancelled) return false;
         if (cachedLatest) setLatest(cachedLatest);
@@ -516,10 +517,14 @@ export default function StatsScreen() {
         }
       }
     } catch (err) {
-      console.error('Failed to load metrics', err);
-      // Don't alert if we already have cached data on screen
-      if (alertOnFail) {
-        Alert.alert('Error', 'Unable to load body stats.');
+      // No status = never reached the server (offline): cached data (or the
+      // empty state) stays on screen; that's not an error to report.
+      if ((err as { status?: number })?.status) {
+        console.error('Failed to load metrics', err);
+        // Don't alert if we already have cached data on screen
+        if (alertOnFail) {
+          Alert.alert('Error', 'Unable to load body stats.');
+        }
       }
     } finally {
       setLoading(false);
@@ -552,18 +557,46 @@ export default function StatsScreen() {
         if (!isNaN(n) && n > 0) measurementsClean[k] = n;
       }
 
-      await saveMetric({
+      const input = {
         weight_kg: isNaN(weightKg) ? undefined : weightKg,
         height_cm: heightInCm,
         measurements: Object.keys(measurementsClean).length ? measurementsClean : undefined,
         notes: notes.trim() || undefined,
         source: 'user',
-      });
+      };
+      const closeForm = () => {
+        setMeasurements({});
+        setNotes('');
+        setMeasurementsExpanded(false);
+        setLogOpen(false);
+      };
 
-      setMeasurements({});
-      setNotes('');
-      setMeasurementsExpanded(false);
-      setLogOpen(false);
+      try {
+        await saveMetric(input);
+      } catch (err) {
+        if ((err as { status?: number })?.status) throw err;
+        // Offline: queue it (SyncManager sends it on reconnect) and show it now.
+        await addToOfflineQueue({ type: 'UPDATE_STATS', payload: input });
+        const pending: Metric = {
+          id: `offline-${Date.now()}`,
+          weight_kg: input.weight_kg ?? latest?.weight_kg ?? null,
+          height_cm: input.height_cm ?? latest?.height_cm ?? null,
+          measurements: input.measurements ?? null,
+          notes: input.notes,
+          source: 'user',
+          recorded_at: new Date().toISOString(),
+        };
+        setLatest(pending);
+        setHistory((prev) => [pending, ...prev]); // newest first, like the API
+        if (userId) {
+          cacheSet(cacheKeys.bodyMetricsLatest(userId), pending, cacheTTL.LONG).catch(() => undefined);
+        }
+        closeForm();
+        Alert.alert('Saved offline', "We'll sync this entry when you're back online.");
+        return;
+      }
+
+      closeForm();
       await loadData();
     } catch (err) {
       console.error('Failed to save metric', err);
@@ -574,6 +607,10 @@ export default function StatsScreen() {
   };
 
   const handleDelete = (id: string) => {
+    if (id.startsWith('offline-')) {
+      Alert.alert('Waiting to sync', 'This entry was saved offline. You can delete it once it has synced.');
+      return;
+    }
     Alert.alert('Delete entry', 'Remove this measurement permanently?', [
       { text: 'Cancel', style: 'cancel' },
       {

@@ -1,271 +1,300 @@
-import { getDailyInsight } from '@/src/lib/api/agent';
-import { localDateKey } from '@/src/lib/api/workoutSessions';
-import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import type { User } from '@supabase/supabase-js';
+import { useRouter } from 'expo-router';
+import { ArrowDown, ArrowRight, ChevronDown, Droplets, Flame, Route, Salad, Sparkles } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { getDailyInsight } from '@/src/lib/api/agent';
+import type { UserProfile } from '@/src/lib/api/users';
+import { localDateKey } from '@/src/lib/api/workoutSessions';
+import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAICoach } from '@/src/providers/AICoachProvider';
-import { BlurView } from 'expo-blur';
-import { ChevronDown, Sparkles } from 'lucide-react-native';
-import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { radii, spacing, type } from '@/src/styles/tokens';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
-import { LevelProgress } from './components/LevelProgress';
-import { PerformanceStats } from './components/PerformanceStats';
-import { ProfileHeader } from './components/ProfileHeader';
-
-import { useThemeColors } from '@/src/hooks/useThemeColors';
-
-const NEON_LIME = '#5fc793';
-
-import type { UserProfile } from '@/src/lib/api/users';
-import { StartRoamCard } from '@/src/features/roam/components/StartRoamCard';
+import { HomeLevelProgress, HomeWeekSummary } from './components/HomeProgress';
+import { getRecentTraining } from './homeActivity';
 
 interface MobileHomeProps {
-    user: any;
-    avatarUrl?: string | null;
-    userProfile?: UserProfile | null;
+  user: User;
+  avatarUrl?: string | null;
+  userProfile?: UserProfile | null;
 }
+
+const FALLBACK_INSIGHT = 'Make room for a little movement today. Small, consistent steps add up.';
 
 export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
-    const { openCenteredChat } = useAICoach();
-    const metrics = useRetentionMetrics(user?.id);
-    const activity = useActivityData(metrics.sessions);
-    const palette = useThemeColors();
-    const styles = getStyles(palette);
-    const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { openCenteredChat } = useAICoach();
+  const palette = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const { width, fontScale } = useWindowDimensions();
+  const metrics = useRetentionMetrics(user.id);
+  const activity = useActivityData(metrics.sessions);
+  const recentTraining = getRecentTraining(metrics.sessions);
+  const [refreshing, setRefreshing] = useState(false);
+  const [insight, setInsight] = useState('');
+  const [insightOpen, setInsightOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const styles = useMemo(() => getStyles(palette), [palette]);
+  const compact = width < 360 || fontScale > 1.2;
+  const userName = userProfile?.first_name || userProfile?.username || user.user_metadata?.first_name || 'Athlete';
+  const today = new Date();
+  const hour = today.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
-    const userName = (userProfile?.first_name || userProfile?.username || user?.user_metadata?.first_name || 'Athlete');
+  React.useEffect(() => setAvatarFailed(false), [avatarUrl]);
 
-    // The dashboard endpoint only returns a daily insight if one is already
-    // cached for today — it never generates one. So when it's empty, hit the
-    // generating endpoint, and always settle on real text (never a stuck
-    // "Analysing..." placeholder). The generated insight is cached per-user
-    // for a day so remounting the dashboard doesn't refire the AI call and
-    // burn the 10 req/min rate limit. The dashboard payload's own insight
-    // always takes precedence when present.
-    const FALLBACK_INSIGHT = 'Consistency beats intensity — show up today.';
-    const [insight, setInsight] = React.useState('');
-    // The insight is clamped to two lines; tapping expands it in place.
-    const [insightOpen, setInsightOpen] = React.useState(false);
-    const userId: string | undefined = user?.id;
-    React.useEffect(() => {
-        if (metrics.dailyInsight) { setInsight(metrics.dailyInsight); return; }
-        if (metrics.loading) return;
-        let cancelled = false;
-        (async () => {
-            try {
-                if (userId) {
-                    const cached = await cacheGet<string>(cacheKeys.dailyInsight(userId, localDateKey(new Date())));
-                    if (cached) {
-                        if (!cancelled) setInsight(cached);
-                        return;
-                    }
-                }
-                const r = await getDailyInsight();
-                if (r?.insight && userId) {
-                    cacheSet(cacheKeys.dailyInsight(userId, localDateKey(new Date())), r.insight, cacheTTL.DAY).catch(() => undefined);
-                }
-                if (!cancelled) setInsight(r?.insight || FALLBACK_INSIGHT);
-            } catch {
-                if (!cancelled) setInsight(FALLBACK_INSIGHT);
-            }
-        })();
-        return () => { cancelled = true; };
-    }, [metrics.dailyInsight, metrics.loading, userId]);
+  // Dashboard text wins. Generate only when missing, and reuse the existing per-user/day cache.
+  React.useEffect(() => {
+    if (metrics.dailyInsight) { setInsight(metrics.dailyInsight); return; }
+    if (metrics.loading) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const key = cacheKeys.dailyInsight(user.id, localDateKey(new Date()));
+        const cached = await cacheGet<string>(key);
+        if (cached) {
+          if (!cancelled) setInsight(cached);
+          return;
+        }
+        const result = await getDailyInsight();
+        if (result?.insight) cacheSet(key, result.insight, cacheTTL.DAY).catch(() => undefined);
+        if (!cancelled) setInsight(result?.insight || FALLBACK_INSIGHT);
+      } catch {
+        if (!cancelled) setInsight(FALLBACK_INSIGHT);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [metrics.dailyInsight, metrics.loading, user.id]);
 
-    if (metrics.loading) {
-        return (
-            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
-                <ActivityIndicator size="large" color={NEON_LIME} />
+  const refresh = async () => {
+    setRefreshing(true);
+    try { await metrics.refresh(); } finally { setRefreshing(false); }
+  };
+
+  const shortcuts = [
+    { title: 'Roam', subtitle: 'Run, walk, ride', icon: Route, route: '/roam', id: 'home-roam' },
+    { title: 'Nutrition', subtitle: 'Your daily fuel', icon: Salad, route: '/dashboard/diet', id: 'home-nutrition' },
+    { title: 'Water', subtitle: 'Stay hydrated', icon: Droplets, route: '/water', id: 'home-water' },
+  ] as const;
+
+  return (
+    <ScrollView
+      testID="home-scroll"
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingTop: insets.top + spacing.base, paddingBottom: 76 + insets.bottom + spacing['2xl'], paddingLeft: Math.max(insets.left, spacing.xl), paddingRight: Math.max(insets.right, spacing.xl) },
+      ]}
+      showsVerticalScrollIndicator={false}
+      contentInsetAdjustmentBehavior="never"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={palette.primary} colors={[palette.primary]} progressViewOffset={insets.top} />}
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <View style={styles.greetingBlock}>
+            <Text style={styles.date}>{dateLabel}</Text>
+            <Text style={styles.greeting}>{greeting},</Text>
+            <Text accessibilityRole="header" style={styles.name} numberOfLines={2}>{userName}.</Text>
+          </View>
+          <Pressable
+            testID="home-profile"
+            accessibilityRole="button"
+            accessibilityLabel="Open your profile"
+            onPress={() => router.push('/profile')}
+            style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+          >
+            {avatarUrl && !avatarFailed ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} onError={() => setAvatarFailed(true)} />
+            ) : <Text style={styles.avatarInitial}>{String(userName).trim().charAt(0).toUpperCase() || 'A'}</Text>}
+          </Pressable>
+        </View>
+
+        <View style={styles.todayRow}>
+          <Text style={styles.sectionTitle}>Your focus today</Text>
+          {!metrics.loading && !metrics.error && (
+            <View style={styles.streak} accessibilityLabel={`${metrics.streakDays} day workout streak`}>
+              <Flame size={15} color={styles.accent.color} />
+              <Text style={styles.streakText}>{metrics.streakDays > 0 ? `${metrics.streakDays}-day streak` : 'A fresh start'}</Text>
             </View>
-        );
-    }
+          )}
+        </View>
 
-    if (metrics.error) {
-        return (
-            <View style={[styles.loadingWrap, { backgroundColor: palette.background }]}>
-                <Text style={[styles.stateText, { color: palette.mutedText }]}>SOMETHING WENT WRONG</Text>
-                <Text style={[styles.stateSub, { color: palette.mutedText }]}>Check your connection and try again.</Text>
-                <Pressable onPress={metrics.refresh} hitSlop={12} style={styles.retryBtn} accessibilityRole="button">
-                    <Text style={[styles.retryText, { color: palette.primary }]}>Try again</Text>
-                </Pressable>
-            </View>
-        );
-    }
+        {metrics.loading ? (
+          <View style={styles.stateCard}>
+            <ActivityIndicator color={palette.primary} />
+            <Text style={styles.stateTitle}>Getting your day ready</Text>
+            <Text style={styles.secondaryText}>Your workout and recent progress will appear here.</Text>
+          </View>
+        ) : metrics.error ? (
+          <View style={styles.stateCard}>
+            <Text style={styles.stateTitle}>Your progress is taking a moment</Text>
+            <Text style={styles.secondaryText}>We couldn’t load your latest activity. Try again when you’re connected.</Text>
+            <Pressable testID="home-retry" accessibilityRole="button" onPress={refresh} style={styles.retryButton}>
+              <Text style={styles.actionText}>Try again</Text><ArrowRight size={18} color={styles.accent.color} />
+            </Pressable>
+          </View>
+        ) : (
+          <ActiveMissionCard
+            activePlan={metrics.activePlan}
+            activeSession={metrics.activeSession}
+            currentDay={metrics.currentDay}
+            nextExercisesCount={metrics.nextExercisesCount}
+            currentDayIndex={metrics.currentDayIndex}
+            totalDays={metrics.totalDays}
+          />
+        )}
 
-    // A brand-new user (no plan, no workouts yet) gets the full Home: its
-    // mission card reads "Start your journey · Select a plan to begin", and
-    // Roam and the coach are right there. An empty "No activity yet" page
-    // used to leave them with nothing to tap.
-
-    return (
-        <ScrollView style={[styles.container, { backgroundColor: palette.background }]} showsVerticalScrollIndicator={false}>
-            <View style={[styles.content, { paddingBottom: 100 + insets.bottom }]}>
-                <ProfileHeader
-                    userName={userName}
-                    avatarUrl={avatarUrl}
-                    variant="home"
-                    streakDays={metrics.streakDays}
-                    activePlanName={metrics.activePlan?.title ?? null}
-                    nextExercisesCount={metrics.nextExercisesCount}
-                    hasActiveSession={!!metrics.activeSession}
-                />
-
-                <LevelProgress
-                    level={metrics.level}
-                    xp={metrics.xp}
-                    nextLevelXp={metrics.nextLevelXp}
-                    progressPercent={metrics.levelProgress}
-                />
-
-                <ActiveMissionCard
-                    activePlan={metrics.activePlan}
-                    activeSession={metrics.activeSession}
-                    currentDay={metrics.currentDay}
-                />
-
-                <View style={styles.section}>
-                    <StartRoamCard />
+        <View style={styles.section}>
+          <View style={styles.sectionHeading}>
+            <Text style={styles.sectionTitle}>Keep the day moving</Text>
+          </View>
+          <View style={[styles.shortcuts, compact && styles.shortcutsCompact]}>
+            {shortcuts.map(({ title, subtitle, icon: Icon, route, id }) => (
+              <Pressable
+                key={id}
+                testID={id}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${title}: ${subtitle}`}
+                onPress={() => router.push(route)}
+                style={({ pressed }) => [styles.shortcut, compact && styles.shortcutCompact, pressed && styles.pressed]}
+              >
+                <Icon size={23} strokeWidth={1.7} color={styles.accent.color} />
+                <View style={styles.shortcutCopy}>
+                  <Text style={styles.shortcutTitle}>{title}</Text>
+                  <Text style={styles.shortcutSubtitle}>{subtitle}</Text>
                 </View>
+                {compact && <ArrowRight size={18} color={palette.mutedText} />}
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
-                {/* AI Coach Insight */}
-                <View style={styles.section}>
-                    <Pressable onPress={() => setInsightOpen((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: insightOpen }}>
-                        <BlurView intensity={10} tint="light" style={styles.aiCard}>
-                            <View style={styles.aiIconRow}>
-                                <View style={styles.aiIconContainer}>
-                                    <Sparkles color="#60A5FA" size={20} fill="#60A5FA" />
-                                </View>
-                                <View style={styles.aiHeaderContent}>
-                                    <View style={styles.aiTitleRow}>
-                                        <Text style={styles.aiTitle}>AI COACH INSIGHT</Text>
-                                        <View style={styles.aiPulseDot} />
-                                        <View style={styles.aiSpacer} />
-                                        <View style={insightOpen ? styles.aiChevronOpen : undefined}>
-                                            <ChevronDown color={palette.mutedText} size={18} />
-                                        </View>
-                                    </View>
-                                    <Text style={styles.aiText} numberOfLines={insightOpen ? undefined : 2}>
-                                        "{insight || "Analysing your recent performance..."}"
-                                    </Text>
-                                    {insightOpen ? (
-                                        <Pressable onPress={openCenteredChat} hitSlop={8} style={styles.aiAsk}>
-                                            <Text style={styles.aiAskText}>Ask Filo about this →</Text>
-                                        </Pressable>
-                                    ) : null}
-                                </View>
-                                <Sparkles color="rgba(255,255,255,0.05)" size={48} style={styles.aiBgIcon} />
-                            </View>
-                        </BlurView>
-                    </Pressable>
-                </View>
+        {!metrics.loading && !metrics.error && (
+          <View style={styles.section}>
+            <HomeWeekSummary
+              activityDays={activity.days}
+              weeklyWorkouts={recentTraining.workouts}
+              weeklyVolume={recentTraining.volume}
+              weeklyDuration={recentTraining.durationMinutes}
+              weeklyCalories={recentTraining.calories}
+              onViewActivity={() => router.push('/dashboard')}
+            />
+          </View>
+        )}
 
-                <PerformanceStats
-                    weeklyWorkouts={metrics.weeklyWorkouts}
-                    weeklyVolume={metrics.weeklyVolume}
-                    weeklyBurned={metrics.weeklyCalories}
-                />
-
-                <ActivityHeatmap
-                    streakDays={metrics.streakDays}
-                    totalWorkouts={activity.totalWorkouts}
-                    maxStreak={activity.maxStreak}
-                    totalActiveDays={activity.totalActiveDays}
-                    activityDays={activity.days}
-                />
-
-                <View style={{ height: 120 }} />
+        <View style={[styles.section, styles.coachCard]}>
+          <View style={styles.coachHeader}>
+            <View style={styles.coachTitleRow}>
+              <Sparkles size={19} strokeWidth={1.7} color={styles.accent.color} />
+              <Text style={styles.coachEyebrow}>FROM YOUR COACH</Text>
             </View>
-        </ScrollView>
-    );
+            <Text style={styles.coachName}>Filo</Text>
+          </View>
+          <Pressable
+            testID="home-insight"
+            accessibilityRole="button"
+            accessibilityLabel={`Coach insight. ${insight || FALLBACK_INSIGHT}`}
+            accessibilityHint={`${insightOpen ? 'Collapse' : 'Expand'} the displayed advice.`}
+            accessibilityState={{ expanded: insightOpen }}
+            onPress={() => setInsightOpen((previous) => !previous)}
+            style={styles.insightButton}
+          >
+            <Text style={styles.insight} numberOfLines={insightOpen ? undefined : 3}>{insight || FALLBACK_INSIGHT}</Text>
+            <ChevronDown size={16} color={palette.mutedText} style={insightOpen ? styles.chevronOpen : undefined} />
+          </Pressable>
+          <Pressable testID="home-coach" accessibilityRole="button" accessibilityLabel="Talk to Filo, your AI coach" onPress={openCenteredChat} style={({ pressed }) => [styles.coachAction, pressed && styles.pressed]}>
+            <Text style={styles.actionText}>Talk to Filo</Text><ArrowRight size={18} color={styles.accent.color} />
+          </Pressable>
+        </View>
+
+        {!metrics.loading && !metrics.error && (
+          <>
+            <View style={styles.section}>
+              <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Small steps. Real progress.</Text></View>
+              <HomeLevelProgress level={metrics.level} xp={metrics.xp} nextLevelXp={metrics.nextLevelXp} progressPercent={metrics.levelProgress} />
+            </View>
+            <Pressable
+              testID="home-history"
+              accessibilityRole="button"
+              accessibilityState={{ expanded: historyOpen }}
+              accessibilityLabel={`${historyOpen ? 'Hide' : 'Show'} workout activity history`}
+              onPress={() => setHistoryOpen((previous) => !previous)}
+              style={styles.historyButton}
+            >
+              <View style={styles.historyCopy}>
+                <Text style={styles.historyTitle}>Activity history</Text>
+                <Text style={styles.secondaryText}>See the days you showed up</Text>
+              </View>
+              <ArrowDown size={20} color={palette.mutedText} style={historyOpen ? styles.chevronOpen : undefined} />
+            </Pressable>
+            {historyOpen && (
+              <View style={styles.history}>
+                <ActivityHeatmap streakDays={metrics.streakDays} totalWorkouts={activity.totalWorkouts} maxStreak={activity.maxStreak} totalActiveDays={activity.totalActiveDays} activityDays={activity.days} />
+                <Text style={styles.historyNote}>Based on your most recent workout history.</Text>
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    </ScrollView>
+  );
 }
 
-const getStyles = (palette: any) => StyleSheet.create({
-    loadingWrap: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    stateText: {
-        fontSize: 11,
-        fontWeight: '800',
-        letterSpacing: 1.1,
-    },
-    stateSub: {
-        fontSize: 12,
-        marginTop: 6,
-    },
-    container: {
-        flex: 1,
-    },
-    content: {
-        paddingHorizontal: 0,
-        paddingTop: 12,
-    },
-    section: {
-        marginBottom: 32,
-    },
-    aiCard: {
-        borderRadius: 20,
-        overflow: 'hidden',
-        padding: 20,
-        backgroundColor: palette.card,
-        borderWidth: 1,
-        borderColor: palette.border,
-    },
-    aiIconRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
-        position: 'relative',
-    },
-    aiIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: 'rgba(96, 165, 250, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    aiHeaderContent: {
-        flex: 1,
-    },
-    aiSpacer: { flex: 1 },
-    retryBtn: { marginTop: 16, paddingVertical: 8, paddingHorizontal: 16 },
-    retryText: { fontSize: 14, fontWeight: '700' },
-    aiChevronOpen: { transform: [{ rotate: '180deg' }] },
-    aiAsk: { marginTop: 12, alignSelf: 'flex-start' },
-    aiAskText: { fontSize: 13, fontWeight: '700', color: palette.primary },
-    aiTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 4,
-    },
-    aiTitle: {
-        fontSize: 10,
-        fontWeight: '900',
-        color: palette.mutedText,
-        letterSpacing: 1.5,
-    },
-    aiPulseDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#60A5FA',
-    },
-    aiText: {
-        fontSize: 13,
-        color: palette.text,
-        fontWeight: '500',
-        opacity: 0.9,
-    },
-    aiBgIcon: {
-        position: 'absolute',
-        right: -10,
-        top: -10,
-        opacity: 0.1,
-    }
-});
+const getStyles = (palette: ReturnType<typeof useThemeColors>) => {
+  const accent = palette.accent;
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: palette.background },
+    scrollContent: { flexGrow: 1 },
+    content: { width: '100%', maxWidth: 600, alignSelf: 'center' },
+    accent: { color: accent },
+    header: { flexDirection: 'row', alignItems: 'center', gap: spacing.base, marginBottom: spacing['2xl'] },
+    greetingBlock: { flex: 1 },
+    date: { fontFamily: type.weight.medium, fontSize: 12, lineHeight: 18, color: palette.mutedText, marginBottom: spacing.md },
+    greeting: { fontFamily: type.weight.regular, fontSize: 17, lineHeight: 25, color: palette.mutedText },
+    name: { fontFamily: type.weight.bold, fontSize: 32, lineHeight: 40, letterSpacing: -1, color: palette.text },
+    avatar: { width: 54, height: 54, borderRadius: radii.pill, overflow: 'hidden', backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center', borderColor: palette.border, borderWidth: 1 },
+    avatarImage: { width: '100%', height: '100%' },
+    avatarInitial: { color: accent, fontFamily: type.weight.bold, fontSize: 23 },
+    todayRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md },
+    sectionTitle: { fontFamily: type.weight.semibold, fontSize: 17, lineHeight: 25, letterSpacing: -0.3, color: palette.text },
+    streak: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    streakText: { fontFamily: type.weight.medium, fontSize: 11, lineHeight: 18, color: accent },
+    section: { marginTop: spacing['2xl'] },
+    sectionHeading: { marginBottom: spacing.md },
+    shortcuts: { flexDirection: 'row', gap: spacing.sm },
+    shortcutsCompact: { flexDirection: 'column' },
+    shortcut: { flex: 1, backgroundColor: palette.surface, borderColor: palette.border, borderWidth: 1, borderRadius: radii.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.base, minHeight: 116, gap: spacing.md },
+    shortcutCompact: { flexDirection: 'row', alignItems: 'center', minHeight: 76, gap: spacing.base, paddingHorizontal: spacing.base },
+    shortcutCopy: { flex: 1, gap: spacing.xs },
+    shortcutTitle: { fontFamily: type.weight.semibold, fontSize: 13, lineHeight: 19, color: palette.text },
+    shortcutSubtitle: { fontFamily: type.weight.regular, fontSize: 10, lineHeight: 16, color: palette.mutedText },
+    pressed: { opacity: 0.75 },
+    coachCard: { backgroundColor: palette.accentSoft, borderRadius: radii.xl, padding: spacing.lg },
+    coachHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+    coachTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+    coachEyebrow: { color: accent, fontFamily: type.weight.semibold, fontSize: 10, lineHeight: 16, letterSpacing: 1.2 },
+    coachName: { fontFamily: type.weight.semibold, fontSize: 14, color: palette.text },
+    insightButton: { paddingTop: spacing.base, paddingBottom: spacing.sm, gap: spacing.sm, alignItems: 'flex-start', minHeight: 48 },
+    insight: { fontFamily: type.weight.medium, fontSize: 16, lineHeight: 25, color: palette.text },
+    coachAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48, alignSelf: 'flex-start' },
+    actionText: { fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 22, color: accent },
+    chevronOpen: { transform: [{ rotate: '180deg' }] },
+    historyButton: { marginTop: spacing.lg, paddingVertical: spacing.base, flexDirection: 'row', alignItems: 'center', gap: spacing.base, borderTopWidth: 1, borderTopColor: palette.border },
+    historyCopy: { flex: 1, gap: spacing.xs },
+    historyTitle: { fontFamily: type.weight.semibold, fontSize: 15, lineHeight: 23, color: palette.text },
+    history: { paddingTop: spacing.base },
+    historyNote: { fontFamily: type.weight.regular, fontSize: 11, color: palette.mutedText, lineHeight: 18 },
+    secondaryText: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 21, color: palette.mutedText },
+    stateCard: { minHeight: 230, borderRadius: radii['2xl'], backgroundColor: palette.surface, padding: spacing.xl, justifyContent: 'center', gap: spacing.md },
+    stateTitle: { fontFamily: type.weight.semibold, fontSize: 20, lineHeight: 28, color: palette.text },
+    retryButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
+  });
+};

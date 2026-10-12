@@ -6,14 +6,27 @@ jest.mock('@/src/lib/cache/indexeddb', () => ({
     const i = mockQueue.findIndex((m) => m.id === id);
     if (i !== -1) mockQueue.splice(i, 1);
   }),
+  updateOfflineQueue: jest.fn(async (mutator: (q: typeof mockQueue) => typeof mockQueue) => {
+    const next = mutator([...mockQueue]);
+    mockQueue.length = 0;
+    mockQueue.push(...next);
+  }),
+  addToOfflineQueue: jest.fn(),
 }));
-jest.mock('@/src/lib/offline/offlineStore', () => ({
-  setIdMapping: jest.fn(),
-  getIdMapping: jest.fn(async () => null),
-  clearIdMappings: jest.fn(),
-  clearPersistedSession: jest.fn(),
-  cleanupStaleSessions: jest.fn(async () => {}),
-}));
+jest.mock('@/src/lib/offline/offlineStore', () => {
+  const getIdMapping = jest.fn(async (_id: string): Promise<string | null> => null);
+  return {
+    getIdMapping,
+    resolveId: async (id: string) => (id.startsWith('offline-') ? (await getIdMapping(id)) ?? id : id),
+    isOfflineId: (id: string) => id.startsWith('offline-'),
+    promoteOfflineSession: jest.fn(),
+    promoteOfflineLog: jest.fn(),
+    deleteOfflineLog: jest.fn(),
+    pruneIdMappings: jest.fn(async () => {}),
+    clearPersistedSession: jest.fn(),
+    cleanupStaleSessions: jest.fn(async () => {}),
+  };
+});
 jest.mock('@/src/lib/api', () => ({ saveMetric: jest.fn() }));
 const mockCreateActivity = jest.fn(async (..._a: unknown[]) => ({ id: 'act-1' }));
 jest.mock('@/src/lib/api/activities', () => ({ createActivity: (...a: unknown[]) => mockCreateActivity(...a) }));

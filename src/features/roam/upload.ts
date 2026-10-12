@@ -19,6 +19,7 @@ export function buildActivityInput(
   meta: RecordingMeta,
   points: RoamPoint[],
   nowMs = Date.now(),
+  name?: string,
 ): CreateActivityInput | null {
   // Finish pauses the recording, so pausedAtMs is when the Roam ended — time
   // spent on the review screen (or waiting to sync offline) doesn't count.
@@ -32,6 +33,7 @@ export function buildActivityInput(
     started_at: new Date(meta.startedAtMs).toISOString(),
     ended_at: new Date(endedMs).toISOString(),
     local_date: localDateKey(new Date(meta.startedAtMs)),
+    ...(name ? { name } : {}),
     points: kept,
   };
 }
@@ -41,8 +43,8 @@ export function buildActivityInput(
  * queued for the offline sync (the upload is idempotent via client_activity_id);
  * a 4xx is thrown so the user can see it.
  */
-export async function saveRoam(meta: RecordingMeta, points: RoamPoint[]): Promise<SaveOutcome> {
-  const input = buildActivityInput(meta, points);
+export async function saveRoam(meta: RecordingMeta, points: RoamPoint[], name?: string): Promise<SaveOutcome> {
+  const input = buildActivityInput(meta, points, Date.now(), name);
   if (!input) return { status: 'too-short' };
   try {
     return { status: 'saved', activity: await createActivity(input) };

@@ -35,6 +35,7 @@ import {
   offlineDeleteLog,
 } from '@/src/lib/offline/offlineApi';
 import { fetchExerciseWithCache, cacheExercisesForDay } from '@/src/lib/offline/exerciseCache';
+import { getIdMapping, isOfflineId } from '@/src/lib/offline/offlineStore';
 import { cacheWorkoutVideos } from '@/src/lib/offline/videoCache';
 import { getCachedDayExercises } from '@/src/lib/db';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
@@ -284,6 +285,18 @@ export default function WorkoutSessionScreen() {
         .catch(() => undefined);
     }
   }, [activeSession, sessionId]);
+
+  // Started offline, now synced: follow the session under its server id, or
+  // this screen stops matching activeSession (timer, notification actions).
+  useEffect(() => {
+    const liveId = activeSession?.id;
+    if (!sessionId || !isOfflineId(sessionId) || !liveId || isOfflineId(liveId)) return;
+    getIdMapping(sessionId)
+      .then((realId) => {
+        if (realId === liveId) router.setParams({ id: realId });
+      })
+      .catch(() => undefined);
+  }, [activeSession?.id, sessionId]);
 
   const loadSession = async () => {
     if (!sessionId) return;

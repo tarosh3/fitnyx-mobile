@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sentry from '@sentry/react-native';
-import type { User } from '@supabase/supabase-js';
+import { isAuthRetryableFetchError, type User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -10,13 +10,14 @@ import { _registerAuthFailureHandler, isAuthError, isInviteGateError, saveMetric
 import { clearSessionId, getSessionId, registerSession } from '@/src/lib/api/auth';
 import { getOnboardingStatus } from '@/src/lib/api/onboarding';
 import { getProfile, type UserProfile } from '@/src/lib/api/users';
-import { cacheClear, cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { cacheClear, cacheGet, cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { clearOfflineQueue, getOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { clearAllOfflineData } from '@/src/lib/offline/offlineStore';
 import { clearAllReminders } from '@/src/lib/reminders';
 import { clearAllWaterData } from '@/src/lib/water';
 import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
-import { supabase } from '@/src/lib/supabase';
+import { isDefinitelyOffline } from '@/src/lib/network';
+import { getStoredSession, getStoredUser, supabase } from '@/src/lib/supabase';
 
 // Durable key that persists indefinitely (not subject to TTL expiry)
 const ONBOARDING_DONE_KEY = 'fitnyx:onboarding-complete';
@@ -150,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     const cacheKey = cacheKeys.userProfile(userId);
-    const cached = await cacheGet<UserProfile>(cacheKey);
+    const cached = await cacheGetStale<UserProfile>(cacheKey);
 
     if (cached) {
       applyProfile(cached);
@@ -274,12 +275,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // (getRecordingFor), so it reappears only if they sign back in.
     };
 
+    // Offline launch with an expired access token: the refresh can't reach
+    // Supabase, which keeps the session and refreshes it once the network is
+    // back (TOKEN_REFRESHED). Open the app for the stored user instead of
+    // treating them as signed out — screens fall back to cached data.
+    const startOffline = async (offlineUser: User | null) => {
+      if (!offlineUser) {
+        setUser(null);
+        return;
+      }
+      Sentry.setUser({ id: offlineUser.id });
+      setInviteGate(null);
+      setUser(offlineUser);
+      fetchUserProfile(offlineUser.id);
+      await checkOnboarding(offlineUser);
+    };
+
     const initialize = async () => {
       try {
+        // Offline launch: open straight from the stored session. getSession()
+        // would retry an expired token's refresh for ~30 s first (a minute-long
+        // spinner); Supabase refreshes it once the network is back.
+        if (await isDefinitelyOffline()) {
+          const stored = await getStoredSession();
+          if (stored?.user) {
+            await startOffline(stored.user);
+            return;
+          }
+        }
+
         const {
           data: { session: storedSession },
           error: getError,
         } = await supabase.auth.getSession();
+
+        if (isAuthRetryableFetchError(getError)) {
+          await startOffline(await getStoredUser());
+          return;
+        }
 
         if (getError) {
           if (isRefreshTokenError(getError)) {
@@ -305,6 +338,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (accessExpired) {
           const { data: { session: refreshed }, error: refreshErr } =
             await supabase.auth.refreshSession();
+          if (isAuthRetryableFetchError(refreshErr)) {
+            await startOffline(storedSession.user);
+            return;
+          }
           if (refreshErr || !refreshed) {
             await clearStaleSession();
             setUser(null);
@@ -456,6 +493,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isOnline, user]);
 
   const signOut = async () => {
+    // Signing out deletes the offline queue: send what's still waiting first.
+    await processOfflineQueue().catch(() => undefined);
+    // Supabase first. Offline its sign-out fails and keeps the session —
+    // wiping before it left a still-signed-in user (back on next launch) with
+    // their unsynced workouts deleted. Throws so callers can say so.
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
     // Clear durable onboarding flag for this user before wiping state
     if (user?.id) {
       await AsyncStorage.removeItem(`${ONBOARDING_DONE_KEY}:${user.id}`).catch(() => undefined);
@@ -467,7 +511,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearAllWaterData().catch(() => undefined);
     await clearAllReminders().catch(() => undefined);
     await clearRoamOnSignOut();
-    await supabase.auth.signOut();
     setUser(null);
     router.replace('/');
   };
