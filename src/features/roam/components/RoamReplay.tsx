@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ReplayControls } from '@/src/features/roam/components/ReplayControls';
 import { RouteMap } from '@/src/features/roam/components/RouteMap';
-import { decodePolyline, formatDistance, formatDuration, formatPace, formatSpeed } from '@/src/features/roam/geo';
+import { decodePolyline, formatDistance, formatDuration, formatSpeed } from '@/src/features/roam/geo';
 import { buildTimeline, gradientExpression, positionAt, rampColor } from '@/src/features/roam/replay';
 import type { LngLatPair } from '@/src/features/roam/routeGeometry';
 import { useReplayPlayer } from '@/src/features/roam/useReplayPlayer';
@@ -17,7 +17,7 @@ const FOLLOW_EVERY_MS = 400;
 
 /**
  * A saved Roam's map, coloured by speed, with a replay: the route draws itself
- * at the pace it was travelled while distance, time and pace tick along.
+ * at the pace it was travelled while distance, time and speed tick along.
  */
 export function RoamReplay({ activity }: { activity: ActivityDetail }) {
   const c = useThemeColors();
@@ -67,9 +67,8 @@ export function RoamReplay({ activity }: { activity: ActivityDetail }) {
 
   if (!tl || !at) return <RouteMap route={route} vehicleRanges={activity.vehicle_ranges} style={styles.map} />;
 
-  const cycle = activity.activity_type === 'cycle';
   const showHead = player.active && player.position < tl.duration;
-  const rateNow = at.speedMps > 0.3 ? (cycle ? formatSpeed(at.speedMps) : formatPace(1000 / at.speedMps)) : '—';
+  const rateNow = formatSpeed(at.speedMps > 0.3 ? at.speedMps : 0);
 
   return (
     <View style={styles.wrap}>
@@ -89,7 +88,7 @@ export function RoamReplay({ activity }: { activity: ActivityDetail }) {
             <Hud label="Distance" value={formatDistance(at.distanceM)} />
             <Hud label="Time" value={formatDuration(at.clockSec)} />
             <Hud
-              label={cycle ? 'Speed' : 'Pace'}
+              label="Speed"
               value={at.inVehicle ? 'Vehicle' : rateNow}
               dot={at.inVehicle ? c.mutedText : rampColor(tl, at.speedMps, c.routeRamp)}
             />

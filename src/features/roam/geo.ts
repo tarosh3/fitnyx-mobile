@@ -294,12 +294,6 @@ export function formatDurationHuman(sec: number): string {
   return `${s}s`;
 }
 
-export function formatPace(secPerKm: number | null): string {
-  if (secPerKm == null || !Number.isFinite(secPerKm) || secPerKm <= 0) return '--:--';
-  const s = Math.round(secPerKm);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} /km`;
-}
-
 export function formatSpeed(mps: number): string {
   return `${(mps * 3.6).toFixed(1)} km/h`;
 }

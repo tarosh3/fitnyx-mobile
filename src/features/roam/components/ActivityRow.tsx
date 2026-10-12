@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { activityTitle } from '@/src/features/roam/activityName';
 import { ActivityTypeIcon } from '@/src/features/roam/components/ActivityTypeIcon';
-import { formatDistance, formatDurationHuman, formatPace, formatSpeed } from '@/src/features/roam/geo';
+import { formatDistance, formatDurationHuman, formatSpeed } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { ActivitySummary } from '@/src/lib/api/activities';
 
@@ -23,8 +23,7 @@ export function ActivityRow({
 }) {
   const palette = useThemeColors();
   const date = dayLabel(new Date(activity.started_at));
-  const rate =
-    activity.activity_type === 'cycle' ? formatSpeed(activity.avg_speed_mps) : formatPace(activity.avg_pace_sec_per_km);
+  const rate = formatSpeed(activity.avg_speed_mps);
   return (
     <Pressable
       onPress={onPress}

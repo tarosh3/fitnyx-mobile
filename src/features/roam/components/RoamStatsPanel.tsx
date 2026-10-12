@@ -3,22 +3,14 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StatTile } from '@/src/features/roam/components/StatTile';
-import {
-  formatDistance,
-  formatDurationHuman,
-  formatPace,
-  formatSpeed,
-  type ActivityType,
-} from '@/src/features/roam/geo';
+import { formatDistance, formatDurationHuman, formatSpeed } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 export interface RoamStatsPanelProps {
-  type: ActivityType;
   distanceM: number;
   movingSec: number;
   /** Start to finish, including stops. */
   elapsedSec: number;
-  avgPaceSecPerKm: number | null;
   avgSpeedMps: number;
   maxSpeedMps: number;
   /** Vehicle time also falls outside moving time, so it isn't just "stopped". */
@@ -29,15 +21,13 @@ export interface RoamStatsPanelProps {
 
 /**
  * The metrics of one Roam, shared by the post-run review and the saved Roam.
- * Hero distance, a 2×2 grid in one unit family (pace on foot, speed on a
- * bike), and a quiet footer for the time breakdown. The "what does this
+ * Hero distance, a 2×2 grid (speed in km/h for every Roam type), and a quiet
+ * footer for the time breakdown. The "what does this
  * mean" copy sits behind the info button instead of always taking space.
  */
 export function RoamStatsPanel(p: RoamStatsPanelProps) {
   const palette = useThemeColors();
   const [explain, setExplain] = useState(false);
-  const cycle = p.type === 'cycle';
-  const fastestPace = p.maxSpeedMps > 0 ? 1000 / p.maxSpeedMps : null;
   const notMovingSec = Math.max(0, p.elapsedSec - p.movingSec);
 
   return (
@@ -46,16 +36,10 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
       <View style={[styles.rule, { backgroundColor: palette.border }]} />
       <View style={styles.row}>
         <StatTile label="Moving time" value={formatDurationHuman(p.movingSec)} />
-        <StatTile
-          label={cycle ? 'Avg speed' : 'Avg pace'}
-          value={cycle ? formatSpeed(p.avgSpeedMps) : formatPace(p.avgPaceSecPerKm)}
-        />
+        <StatTile label="Avg speed" value={formatSpeed(p.avgSpeedMps)} />
       </View>
       <View style={styles.row}>
-        <StatTile
-          label={cycle ? 'Top speed' : 'Fastest pace'}
-          value={cycle ? formatSpeed(p.maxSpeedMps) : formatPace(fastestPace)}
-        />
+        <StatTile label="Top speed" value={formatSpeed(p.maxSpeedMps)} />
         {p.xp ? (
           <StatTile label="XP earned" value={p.xp.eligible ? `+${p.xp.earned}` : '—'} accent={p.xp.eligible} />
         ) : (
@@ -87,11 +71,10 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
 
       {explain ? (
         <View style={[styles.explainer, { backgroundColor: palette.surface }]}>
-          {!cycle ? <Explain term="Pace" text="minutes per km. Lower is faster." /> : null}
-          <Explain term={cycle ? 'Top speed' : 'Fastest'} text="your quickest 10 seconds." />
+          <Explain term="Top speed" text="your quickest 10 seconds." />
           <Explain
             term="Moving time"
-            text={p.vehicleDetected ? 'excludes stops and vehicle travel.' : 'excludes stops, so they never slow your pace.'}
+            text={p.vehicleDetected ? 'excludes stops and vehicle travel.' : 'excludes stops, so they never lower your average speed.'}
           />
         </View>
       ) : null}

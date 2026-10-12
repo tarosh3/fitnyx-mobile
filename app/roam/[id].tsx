@@ -161,7 +161,7 @@ export default function RoamDetailScreen() {
           />
         ) : null}
         <ActivityStats activity={activity} />
-        <SplitsList type={activity.activity_type} splits={activity.splits} distanceM={activity.distance_m} movingSec={activity.moving_time_sec} />
+        <SplitsList splits={activity.splits} distanceM={activity.distance_m} movingSec={activity.moving_time_sec} />
         {error ? <Text style={[styles.note, { color: palette.destructive }]}>{error}</Text> : null}
         <Button title="DELETE ROAM" variant="ghost" onPress={() => setConfirmDelete(true)} loading={deleting} />
       </View>

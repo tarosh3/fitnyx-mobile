@@ -78,17 +78,15 @@ export function RecordingSummaryView({
         ) : null}
 
         <RoamStatsPanel
-          type={type}
           distanceM={stats.distanceM}
           movingSec={stats.movingTimeSec}
           elapsedSec={elapsedSec}
-          avgPaceSecPerKm={stats.avgPaceSecPerKm}
           avgSpeedMps={stats.avgSpeedMps}
           maxSpeedMps={stats.maxSpeedMps}
           vehicleDetected={stats.vehicleDetected}
         />
 
-        <SplitsList type={type} splits={stats.splits} distanceM={stats.distanceM} movingSec={stats.movingTimeSec} />
+        <SplitsList splits={stats.splits} distanceM={stats.distanceM} movingSec={stats.movingTimeSec} />
 
         {!stats.xpEligible && !stats.vehicleDetected ? (
           <Text style={[styles.note, { color: palette.mutedText }]}>
