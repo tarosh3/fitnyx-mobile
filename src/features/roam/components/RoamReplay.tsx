@@ -98,16 +98,18 @@ export function RoamReplay({ activity }: { activity: ActivityDetail }) {
 
       <ReplayControls player={player} duration={tl.duration} follow={follow} onToggleFollow={() => setFollow((f) => !f)} />
 
-      <View style={styles.legend}>
-        <Text style={[styles.legendText, { color: c.mutedText }]}>Slower</Text>
-        <LinearGradient colors={[...c.routeRamp]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.legendBar} />
-        <Text style={[styles.legendText, { color: c.mutedText }]}>Faster</Text>
-      </View>
-      {!tl.timed ? (
+      {/* Without timing every point has the same speed — a legend would mean nothing. */}
+      {tl.timed ? (
+        <View style={styles.legend}>
+          <Text style={[styles.legendText, { color: c.mutedText }]}>Slower</Text>
+          <LinearGradient colors={[...c.routeRamp]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.legendBar} />
+          <Text style={[styles.legendText, { color: c.mutedText }]}>Faster</Text>
+        </View>
+      ) : (
         <Text style={[styles.note, { color: c.mutedText }]}>
           Recorded before replays had timing, so this one plays at an even pace.
         </Text>
-      ) : null}
+      )}
     </View>
   );
 }
