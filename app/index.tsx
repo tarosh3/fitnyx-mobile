@@ -20,11 +20,7 @@ export default function HomeScreen() {
   }
 
   if (user) {
-    return (
-      <Screen scroll={true}>
-        <MobileHome user={user} avatarUrl={avatarUrl} userProfile={userProfile} />
-      </Screen>
-    );
+    return <MobileHome user={user} avatarUrl={avatarUrl} userProfile={userProfile} />;
   }
 
   return <AuthLanding />;

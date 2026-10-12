@@ -1,0 +1,61 @@
+# Run while signed out. Uses invalid input only; no account or email is created.
+# Select a device explicitly: maestro --device <device-id> test .maestro/auth-flow.yaml
+appId: com.fitnyx.app
+---
+- openLink: "fitnyxmobile:///"
+- assertVisible:
+    id: welcome-get-started
+- takeScreenshot: auth-welcome
+- tapOn:
+    id: welcome-get-started
+- assertVisible:
+    id: auth-first-name
+- takeScreenshot: auth-signup
+- tapOn:
+    id: auth-submit
+- assertVisible: "Enter your first name."
+- takeScreenshot: auth-signup-validation
+- tapOn:
+    id: auth-back
+- tapOn:
+    id: welcome-login
+- assertVisible: "Welcome back.*"
+- takeScreenshot: auth-login
+- tapOn:
+    id: auth-email
+- inputText: "invalid-email"
+- tapOn: "Show password"
+- tapOn:
+    id: auth-email
+- pressKey: Enter
+- inputText: "dummy-password"
+- assertVisible: "Hide password"
+- takeScreenshot: auth-login-keyboard
+- hideKeyboard
+- tapOn: "Hide password"
+- scrollUntilVisible:
+    element:
+      id: auth-submit
+    direction: DOWN
+- tapOn:
+    id: auth-submit
+- assertVisible: "Enter a valid email address."
+- hideKeyboard
+- tapOn:
+    id: auth-forgot-password
+- assertVisible: "Reset your password."
+- assertNotVisible:
+    id: auth-password
+- takeScreenshot: auth-recovery
+- tapOn:
+    id: auth-submit
+- assertVisible: "Enter a valid email address."
+- eraseText
+- hideKeyboard
+- tapOn:
+    id: auth-switch-mode
+- assertVisible: "Welcome back."
+- tapOn:
+    id: auth-back
+- assertVisible:
+    id: welcome-get-started
