@@ -9,9 +9,12 @@ import { useAuth } from '@/src/providers/AuthProvider';
 
 export default function HomeScreen() {
   const palette = useThemeColors();
-  const { user, loading, avatarUrl, userProfile } = useAuth();
+  const { user, loading, onboardingComplete, avatarUrl, userProfile } = useAuth();
 
-  if (loading) {
+  // A signed-in user who hasn't finished onboarding is about to be routed
+  // to /onboarding (or an invite gate) by AuthProvider — rendering Home first
+  // flashed it, nav bar included, right after Google sign-up.
+  if (loading || (user && !onboardingComplete)) {
     return (
       <Screen scroll={false} contentContainerStyle={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={palette.primary} />
