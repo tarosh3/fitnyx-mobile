@@ -2,15 +2,18 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Timer } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useWorkout, useWorkoutTimer } from '@/src/providers/WorkoutProvider';
+import { bottomNavClearance } from './bottomNavLayout';
 
 export function ActiveSessionIndicator() {
   const palette = useThemeColors();
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const { activeSession } = useWorkout();
   const { elapsedTime, formatTime } = useWorkoutTimer();
   const { isOffline } = useOfflineAware();
@@ -18,7 +21,7 @@ export function ActiveSessionIndicator() {
   if (!activeSession || pathname === `/workouts/session/${activeSession.id}`) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { bottom: bottomNavClearance(insets.bottom) + 12 }]}>
       <Pressable
         onPress={() => router.push(`/workouts/session/${activeSession.id}`)}
         style={[styles.button, { backgroundColor: palette.primary }]}
@@ -37,7 +40,6 @@ export function ActiveSessionIndicator() {
 
 const styles = StyleSheet.create({
   container: {
-    bottom: 92,
     position: 'absolute',
     right: 16,
     zIndex: 40,

@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js';
+import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout';
 import { useRouter } from 'expo-router';
 import { ArrowDown, ArrowRight, ChevronDown, Droplets, Flame, Route, Salad, Sparkles } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
@@ -91,7 +92,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
       style={styles.screen}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingTop: insets.top + spacing.base, paddingBottom: 76 + insets.bottom + spacing['2xl'], paddingLeft: Math.max(insets.left, spacing.xl), paddingRight: Math.max(insets.right, spacing.xl) },
+        { paddingTop: insets.top + spacing.base, paddingBottom: bottomNavClearance(insets.bottom) + spacing['2xl'], paddingLeft: Math.max(insets.left, spacing.xl), paddingRight: Math.max(insets.right, spacing.xl) },
       ]}
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="never"

@@ -1,8 +1,10 @@
 import React from 'react';
 import { ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePathname } from 'expo-router';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { bottomNavClearance, isBottomNavRoute } from '@/src/components/navigation/bottomNavLayout';
 
 interface ScreenProps {
   children?: React.ReactNode;
@@ -14,6 +16,11 @@ interface ScreenProps {
 export function Screen({ children, scroll = true, contentContainerStyle, style }: ScreenProps) {
   const palette = useThemeColors();
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+  const requestedBottom = StyleSheet.flatten(contentContainerStyle)?.paddingBottom;
+  const navigationPadding = isBottomNavRoute(pathname) ? {
+    paddingBottom: Math.max(typeof requestedBottom === 'number' ? requestedBottom : 100, bottomNavClearance(insets.bottom) + 16),
+  } : undefined;
 
   const containerStyle: ViewStyle = {
     flex: 1,
@@ -27,13 +34,13 @@ export function Screen({ children, scroll = true, contentContainerStyle, style }
       {scroll ? (
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.scrollContainer, contentContainerStyle]}
+          contentContainerStyle={[styles.scrollContainer, contentContainerStyle, navigationPadding]}
           showsVerticalScrollIndicator={false}
         >
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.scrollContainer, contentContainerStyle]}>{children}</View>
+        <View style={[styles.scrollContainer, contentContainerStyle, navigationPadding]}>{children}</View>
       )}
     </View>
   );
