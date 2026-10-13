@@ -65,8 +65,8 @@ describe('BottomNav navigation and visibility', () => {
 
   it.each([
     ['home', '/', '/workouts/plans/plan-1'],
-    ['workouts', '/exercises', '/dashboard'],
-    ['stats', '/dashboard', '/workouts/history'],
+    ['workouts', '/workouts', '/dashboard'],
+    ['stats', '/dashboard', '/workouts'],
     ['settings', '/settings', '/dashboard/diet'],
   ])('opens the %s root after clearing the pushed stack', (tab, destination, current) => {
     mockPathname = current;
@@ -87,12 +87,12 @@ describe('BottomNav navigation and visibility', () => {
     fireEvent.press(screen.getByTestId('nav-workouts'));
 
     expect(mockDismissAll).not.toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith('/exercises');
+    expect(mockReplace).toHaveBeenCalledWith('/workouts');
   });
 
   it.each([
     ['home', '/'],
-    ['workouts', '/exercises'],
+    ['workouts', '/workouts'],
     ['stats', '/dashboard'],
     ['settings', '/settings'],
   ])('does nothing when the selected %s root is tapped again', (tab, current) => {
@@ -109,8 +109,8 @@ describe('BottomNav navigation and visibility', () => {
   });
 
   it.each([
-    ['workouts', '/workouts/plans/plan-1', '/exercises'],
-    ['workouts', '/roam/activity-1', '/exercises'],
+    ['workouts', '/exercises', '/workouts'],
+    ['home', '/roam/activity-1', '/'],
     ['stats', '/dashboard/diet', '/dashboard'],
   ])('selects %s on %s while allowing return to its root', (tab, current, destination) => {
     mockPathname = current;
@@ -162,7 +162,12 @@ describe('BottomNav navigation and visibility', () => {
     '/reminders',
     '/settings/coach-memory',
     '/dashboard/stats',
-    '/workouts/customize',
+    '/workouts/routine/edit',
+    '/workouts/routine/r-1',
+    '/workouts/summary/session-1',
+    '/workouts/history/session-1',
+    '/workouts/exercise/ex-1',
+    '/workouts/programs/plan-1',
     '/workouts/session/session-1',
     '/roam/record',
     '/privacy-policy',

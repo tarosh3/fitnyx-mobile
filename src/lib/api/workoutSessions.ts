@@ -1,3 +1,4 @@
+import type { TrackingType } from '@/src/types/exercise';
 import { fetchWithAuth } from '@/src/lib/api';
 
 export interface WorkoutSession {
@@ -24,7 +25,10 @@ export interface ExerciseLog {
   set_index: number;
   reps: number;
   weight_kg?: number;
+  /** Length of a timed hold or cardio set. (Before 2026-10 this held rest time.) */
   duration_sec?: number;
+  rest_sec?: number;
+  distance_m?: number;
   is_warmup: boolean;
   rpe?: number;
   created_at: string;
@@ -37,8 +41,9 @@ export interface SessionWithLogs {
 }
 
 export interface StartSessionInput {
-  workout_plan_id: string;
-  workout_day_id: string;
+  /** Omitted for an empty workout (no routine or program). */
+  workout_plan_id?: string;
+  workout_day_id?: string;
   started_at?: string; // ISO8601 — used by offline sync to preserve original start time
 }
 
@@ -48,6 +53,10 @@ export interface LogExerciseInput {
   actual_reps: number;
   actual_weight_kg?: number;
   actual_rest_seconds?: number;
+  /** Timed hold / cardio set length. */
+  actual_duration_sec?: number;
+  /** Cardio distance in metres. */
+  actual_distance_m?: number;
   rpe?: number;
 }
 
@@ -98,11 +107,16 @@ export interface HistoryExerciseSummary {
   sets: number;
   total_reps: number;
   max_weight_kg: number | null;
+  tracking_type?: TrackingType;
+  total_duration_sec?: number;
+  total_distance_m?: number;
 }
 
 /** Enriched session object returned by GET /workout-sessions/history. */
 export interface HistorySession {
   id: string;
+  plan_id?: string | null;
+  day_id?: string | null;
   plan_name: string;
   workout_date: string;
   started_at: string;

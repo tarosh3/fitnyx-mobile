@@ -27,6 +27,9 @@ export interface ExerciseHistorySet {
   reps: number;
   weight_kg: number | null;
   rpe?: number | null;
+  /** Timed holds and cardio (servers from 2026-10-14 on). */
+  duration_sec?: number | null;
+  distance_m?: number | null;
 }
 
 export interface ExerciseHistoryDay {

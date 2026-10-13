@@ -12,8 +12,9 @@ import { elevation, motion, spacing, type } from '@/src/styles/tokens';
 import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_LIFT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
 
 const destinations = [
-  { key: 'home', label: 'Home', icon: Home, href: '/', match: (p: string) => p === '/' },
-  { key: 'workouts', label: 'Workouts', icon: Dumbbell, href: '/exercises', match: (p: string) => p.startsWith('/exercises') || p.startsWith('/workouts') || p === '/roam' || p.startsWith('/roam/') },
+  // Roam lives on Home (2026-10 workouts revamp), so its screens light up Home.
+  { key: 'home', label: 'Home', icon: Home, href: '/', match: (p: string) => p === '/' || p === '/roam' || p.startsWith('/roam/') },
+  { key: 'workouts', label: 'Workouts', icon: Dumbbell, href: '/workouts', match: (p: string) => p.startsWith('/workouts') || p.startsWith('/exercises') },
   { key: 'stats', label: 'Stats', icon: ChartNoAxesColumnIncreasing, href: '/dashboard', match: (p: string) => p === '/dashboard' || p.startsWith('/dashboard/') },
   { key: 'settings', label: 'Settings', icon: Settings, href: '/settings', match: (p: string) => p.startsWith('/settings') },
 ] as const;

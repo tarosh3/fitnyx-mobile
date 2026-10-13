@@ -25,7 +25,7 @@ describe('ActiveMissionCard', () => {
     expect(screen.getByText('Explore plans')).toBeTruthy();
     expect(screen.queryByText(/exercises/)).toBeNull();
     fireEvent.press(screen.getByTestId('home-workout-card'));
-    expect(mockPush).toHaveBeenCalledWith('/workouts/select');
+    expect(mockPush).toHaveBeenCalledWith('/workouts');
   });
 
   it('labels plan navigation accurately and shows the supplied workout details', () => {
@@ -36,7 +36,7 @@ describe('ActiveMissionCard', () => {
     expect(screen.getByText('5 exercises  ·  Day 2 of 4')).toBeTruthy();
     expect(screen.getByText('View workout')).toBeTruthy();
     fireEvent.press(screen.getByTestId('home-workout-card'));
-    expect(mockPush).toHaveBeenCalledWith('/workouts/plans/plan-1');
+    expect(mockPush).toHaveBeenCalledWith('/workouts/programs/plan-1');
   });
 
   it('prioritizes an active session over the active plan', () => {
@@ -113,6 +113,6 @@ describe('ActiveMissionCard', () => {
     expect(screen.getByText('Open plan')).toBeTruthy();
     expect(screen.queryByText(/0 exercises/)).toBeNull();
     fireEvent.press(screen.getByTestId('home-workout-card'));
-    expect(mockPush).toHaveBeenCalledWith('/workouts/plans/plan-1');
+    expect(mockPush).toHaveBeenCalledWith('/workouts/programs/plan-1');
   });
 });

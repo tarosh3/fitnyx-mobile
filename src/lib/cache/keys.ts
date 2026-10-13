@@ -15,6 +15,11 @@ export const cacheKeys = {
   bodyMetricsHistory: (userId: string) => `bodyMetrics:history:${userId}`,
   fitnessProfile: (userId: string) => `fitnessProfile:${userId}`,
   roamActivities: (userId: string) => `roam:activities:${userId}`,
+  // Workouts tab
+  routines: (userId: string) => `workouts:routines:${userId}`,
+  workoutHistory: (userId: string) => `workouts:history:${userId}`,
+  workoutSession: (sessionId: string) => `workouts:session:${sessionId}`,
+  programs: 'workouts:programs',
   roamActivity: (userId: string, id: string) => `roam:activity:${userId}:${id}`,
 } as const;
 

@@ -85,6 +85,8 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
         set_number: payload.setNumber,
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
+        actual_duration_sec: payload.durationSec,
+        actual_distance_m: payload.distanceM,
         rpe: payload.rpe,
       });
       if (payload.logId && log?.id) await promoteOfflineLog(realSessionId, payload.logId, log.id);
@@ -102,13 +104,20 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       } else if (
         now.payload.reps !== payload.reps ||
         now.payload.weightKg !== payload.weightKg ||
+        now.payload.durationSec !== payload.durationSec ||
+        now.payload.distanceM !== payload.distanceM ||
         now.payload.rpe !== payload.rpe
       ) {
         // weight 0 = bodyweight (clears a weight that was set)
-        const edit = { reps: now.payload.reps, weightKg: now.payload.weightKg ?? 0, rpe: now.payload.rpe };
+        const edit = {
+          reps: now.payload.reps, weightKg: now.payload.weightKg ?? 0,
+          durationSec: now.payload.durationSec, distanceM: now.payload.distanceM, rpe: now.payload.rpe,
+        };
         await updateExerciseLog(log.id, {
           actual_reps: edit.reps,
           actual_weight_kg: edit.weightKg,
+          actual_duration_sec: edit.durationSec,
+          actual_distance_m: edit.distanceM,
           rpe: edit.rpe,
         }).catch(() =>
           addToOfflineQueue({ type: 'UPDATE_SET', payload: { sessionId: realSessionId, logId: log.id, ...edit } }),
@@ -125,6 +134,8 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       await updateExerciseLog(logId, {
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
+        actual_duration_sec: payload.durationSec,
+        actual_distance_m: payload.distanceM,
         rpe: payload.rpe,
       });
       break;

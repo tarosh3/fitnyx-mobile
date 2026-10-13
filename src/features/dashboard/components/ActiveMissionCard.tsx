@@ -63,8 +63,8 @@ export function ActiveMissionCard({
 
   const handlePress = () => {
     if (activeSession?.id) router.push(`/workouts/session/${activeSession.id}`);
-    else if (activePlan?.id) router.push(`/workouts/plans/${activePlan.id}`);
-    else router.push('/workouts/select');
+    else if (activePlan?.id) router.push(`/workouts/programs/${activePlan.id}`);
+    else router.push('/workouts');
   };
 
   return (

@@ -16,6 +16,9 @@ export interface RelatedExercise {
   url?: string;
 }
 
+/** How a set of this exercise is measured (backend `exercises.tracking_type`). */
+export type TrackingType = 'weight_reps' | 'reps' | 'duration' | 'cardio';
+
 export interface Exercise {
   id: number;
   uuid: string;
@@ -33,6 +36,9 @@ export interface Exercise {
   updated_at: string;
   category?: string;
   media_url?: string;
+  /** Missing on data cached before the 2026-10 revamp — treat as 'weight_reps'. */
+  tracking_type?: TrackingType;
+  is_warmup?: boolean;
 }
 
 export interface ExerciseResponse {

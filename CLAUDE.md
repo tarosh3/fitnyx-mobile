@@ -81,6 +81,12 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Maps: MapLibre (`RouteMap.tsx`; `RouteMap.web.tsx` placeholder for the web export) with OpenFreeMap tiles — style URLs live only in `mapStyle.ts`.
 - Replay (`replay.ts` pure timeline + `useReplayPlayer` + `RoamReplay`): uses the backend's `route_times` (seconds per route point; `[]` on Roams saved before 2026-10-12 → even pace). The line is a MapLibre `line-gradient` (source needs `lineMetrics`) coloured by speed (`routeRamp` theme colours) and revealed up to the playhead via transparent stops. Names: `name` is null unless the user changed it — the default ("Morning Run") is derived by `defaultActivityName()`, never stored.
 
+**Workouts (`src/features/workouts/`, screens `app/workouts/`)** — one tab, segments Train · History · Exercises (`?tab=`):
+- *Routine* = one saved workout (`/workout-routines`, a plan with `kind='routine'`); *Program* = predefined multi-day plan (activate = clone). Old routes (`/exercises`, `/workouts/select|customize|plans/[id]`) are redirects.
+- Live logger: `logger/useWorkoutLogger.ts` (data, offline layer) + `LoggerScreen.tsx` (UI). Rows follow `exercises.tracking_type` (`model.ts`: `prefill`, `draftToLog`, `describeSet`).
+- **The timer never auto-starts** (user rule): `startWorkout()` creates the session then pauses it ("ready" = paused with `total_duration_sec === 0`, `isReady()`); Start or the first ✓ resumes it.
+- Every sheet (`ui/Sheet.tsx`) has ✕, swipe-down and tap-outside close. Full-screen workout flows hide the bottom nav (`bottomNavLayout.ts`) because they have their own `BottomBar`.
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -230,3 +236,10 @@ _Claude updates this section automatically when corrections are made._
 - **A Google/Facebook redirect can carry `error`/`error_description` instead of a code** (user tapped Cancel → `access_denied`; Facebook account without email → "Error getting user email…"). On Android that URL also opens `/auth/callback`, which must step back to the sign-in form (it shows the error via `oauthErrorMessage`) — it used to show a full-screen "Invalid callback link" (found 2026-10-13). Simulate with `adb shell am start -a android.intent.action.VIEW -d "'fitnyxmobile://auth/callback?error=access_denied&error_description=User+denied+access'"` while the provider tab is open.
 - **Never render Home (or the bottom nav) for a signed-in user whose `onboardingComplete` is false.** Sign-in navigates to `/` and AuthProvider's redirect to `/onboarding` runs in an effect, i.e. after a frame — so `app/index.tsx` shows the spinner and `BottomNav` returns null until onboarding is complete (before 2026-10-13 a new Google sign-up saw Home + nav flash before the username step).
 - **Backend username availability excludes the caller's own account** (`isUsernameTakenInDB(name, exceptUserID)`), and there is no Redis "taken" cache any more — it kept names a user had moved away from blocked for 24 h.
+
+### Workouts revamp (2026-10-14)
+
+- **`uiautomator dump` fails ("could not get idle state") while a live clock or ring animates** (workout timer, rest bar). Tap by known coordinates or pause the timer first; the scratchpad helper's dump needs a timeout or it hangs the shell.
+- **In dev builds the Expo "Tools" floating button sits over the logger's Finish button** (top-right) — taps there open the dev menu. Turn "Tools button" off in the dev menu when testing; release builds don't have it.
+- **Unlogged rows of exercises added mid-workout live only in memory** — a reload/reopen rebuilds ad-hoc blocks from logged sets only. Planned (routine/program) rows always come back.
+

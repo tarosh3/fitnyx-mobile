@@ -78,6 +78,23 @@ describe('processOfflineQueue', () => {
     expect(mockQueue).toHaveLength(0);
   });
 
+  it('syncs a cardio set with its time and distance', async () => {
+    mockQueue.push({
+      id: 'c1',
+      type: 'LOG_SET',
+      payload: { sessionId: 'real-session', exerciseUuid: 'tread', setNumber: 1, reps: 0, durationSec: 1200, distanceM: 3000 },
+      timestamp: Date.now(),
+    });
+    mockLogSet.mockResolvedValue({ id: 'log-c1' });
+
+    await processOfflineQueue();
+
+    expect(mockLogSet).toHaveBeenCalledWith('real-session', expect.objectContaining({
+      exercise_uuid: 'tread', actual_reps: 0, actual_duration_sec: 1200, actual_distance_m: 3000,
+    }));
+    expect(mockQueue).toHaveLength(0);
+  });
+
   it('removes a mutation once it syncs', async () => {
     queueLogSet('m1');
     mockLogSet.mockResolvedValue({ id: 'log-1' });
