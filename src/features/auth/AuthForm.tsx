@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { oauthErrorFromParams, oauthErrorMessage } from '@/src/features/auth/oauthError';
 import { exchangeCodeOnce } from '@/src/lib/authCode';
 import { supabase } from '@/src/lib/supabase';
 import { sanitizeName, sanitizeEmail, MAX_NAME, MAX_EMAIL, MAX_PASSWORD } from '@/src/lib/validators';
@@ -253,9 +254,8 @@ export const AuthForm = forwardRef<AuthFormHandle, AuthFormProps>(function AuthF
       if (result.type !== 'success' || !result.url) return;
       const callbackUrl = new URL(result.url);
       const hashParams = new URLSearchParams(callbackUrl.hash.replace(/^#/, ''));
-      const callbackError = callbackUrl.searchParams.get('error_description') || hashParams.get('error_description') ||
-        callbackUrl.searchParams.get('error') || hashParams.get('error');
-      if (callbackError) throw new Error(callbackError.replace(/\+/g, ' '));
+      const callbackError = oauthErrorFromParams(callbackUrl.searchParams, hashParams);
+      if (callbackError) throw new Error(oauthErrorMessage(callbackError));
       const code = callbackUrl.searchParams.get('code');
       if (code) {
         const { error: exchangeError } = await exchangeCodeOnce(code);
