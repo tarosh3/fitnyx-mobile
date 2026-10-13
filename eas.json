@@ -24,8 +24,7 @@
         "EXPO_PUBLIC_API_URL": "https://fitnyx.onrender.com/api/v1",
         "EXPO_PUBLIC_SUPABASE_URL": "https://bgtsrwplmaijxxdobobe.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_iD8cRe6ypM7Lo5mEXf1Lag_7oAY6U0q",
-        "SENTRY_ALLOW_FAILURE": "true",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "production": {
@@ -35,8 +34,7 @@
         "EXPO_PUBLIC_API_URL": "https://fitnyx.onrender.com/api/v1",
         "EXPO_PUBLIC_SUPABASE_URL": "https://bgtsrwplmaijxxdobobe.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_iD8cRe6ypM7Lo5mEXf1Lag_7oAY6U0q",
-        "SENTRY_ALLOW_FAILURE": "true",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     }
   },

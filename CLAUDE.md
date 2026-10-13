@@ -180,7 +180,7 @@ _Claude updates this section automatically when corrections are made._
 
 ### iOS build (local `xcodebuild` / `expo run:ios`)
 
-- **Local iOS builds fail at the "Bundle React Native code and images" phase with `sentry-cli - error: An organization ID or slug is required`** — the Sentry source-map upload needs org/token that only EAS has. For local builds set `SENTRY_DISABLE_AUTO_UPLOAD=true` (e.g. `SENTRY_DISABLE_AUTO_UPLOAD=true xcodebuild … build`). Don't commit that setting — EAS builds should keep uploading. `ios/` is gitignored (prebuild-managed), like `android/`.
+- **Local builds need `SENTRY_DISABLE_AUTO_UPLOAD=true`** (e.g. `SENTRY_DISABLE_AUTO_UPLOAD=true xcodebuild … build`, `… ./gradlew assembleRelease`) — the source-map/dSYM upload needs `SENTRY_AUTH_TOKEN`, which only EAS has (EAS secret). Org/project/region come from the `@sentry/react-native/expo` plugin options in app.json (`fitnyx` / `fitnyx-mobile` / `https://de.sentry.io/` — the org is in the EU region). Never put `SENTRY_DISABLE_AUTO_UPLOAD` back in eas.json's `preview`/`production` profiles: without the upload, production crash reports show minified JS and `<unknown>` native frames. `ios/` is gitignored (prebuild-managed), like `android/`.
 
 ### Native patches / Roam device testing
 
@@ -199,7 +199,9 @@ _Claude updates this section automatically when corrections are made._
 
 ### Keyboard (Android, edge-to-edge)
 
-- **Android no longer resizes the window for the keyboard (edge-to-edge), so `KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}` does nothing on Android** — the keyboard covers the bottom of the form (found 2026-10-12: the auth screens' Log in / Create account button). Use `behavior="padding"` on both platforms, and don't pair a scrollable form with `keyboardDismissMode="on-drag"` on Android (scrolling to reach the button closed the keyboard). `app/profile.tsx` and `app/fitness-profile.tsx` still use the old pattern.
+- **Android no longer resizes the window for the keyboard (edge-to-edge), so `KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}` does nothing on Android** — the keyboard covers the bottom of the form (found 2026-10-12: the auth screens' Log in / Create account button). Use `behavior="padding"` on both platforms, and don't pair a scrollable form with `keyboardDismissMode="on-drag"` on Android (scrolling to reach the button closed the keyboard).
+
+- **Absolutely-positioned bottom bars (e.g. the Save bar on `app/profile.tsx` / `app/fitness-profile.tsx`) must pad by `insets.bottom`**, and the scroll content above them by the same amount. A fixed `Platform.OS === 'ios' ? 32 : 20` put Android's Save button under the 3-button navigation bar (found 2026-10-13).
 
 ### Notifications (notifee)
 
