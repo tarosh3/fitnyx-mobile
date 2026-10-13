@@ -263,7 +263,7 @@ export default function FitnessProfileScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, { paddingBottom: spacing['3xl'] + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
         >
           {tab === 'goals' ? (
@@ -556,7 +556,7 @@ export default function FitnessProfileScreen() {
           <View style={{ height: 100 }} />
         </ScrollView>
 
-        <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border }]}>
+        <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border, paddingBottom: insets.bottom + spacing.md }]}>
           <Button
             title={saving ? 'Saving…' : 'Save'}
             onPress={save}
@@ -751,7 +751,6 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.md,
-    paddingBottom: Platform.OS === 'ios' ? spacing['2xl'] : spacing.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

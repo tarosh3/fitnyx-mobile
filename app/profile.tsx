@@ -340,7 +340,7 @@ export default function ProfileScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.sm }]}
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.sm, paddingBottom: spacing['3xl'] + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
@@ -568,7 +568,7 @@ export default function ProfileScreen() {
         </ScrollView>
 
         {/* Sticky Save */}
-        <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border }]}>
+        <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border, paddingBottom: insets.bottom + spacing.md }]}>
           <Button
             title={saving ? 'Saving…' : 'Save Profile'}
             onPress={save}
@@ -807,7 +807,6 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.md,
-    paddingBottom: Platform.OS === 'ios' ? spacing['2xl'] : spacing.lg,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   sheetBackdrop: {
