@@ -188,7 +188,7 @@ describe('AuthForm', () => {
     browserSession.mockResolvedValue({ type: 'success', url: `${callbackUrl}?error=access_denied&error_description=Permission+was+denied` });
     render(<AuthForm />);
     fireEvent.press(screen.getByTestId('auth-google'));
-    await waitFor(() => expect(screen.getByText('Permission was denied')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Sign in was cancelled.')).toBeTruthy());
     expect(mockReplace).not.toHaveBeenCalled();
   });
 

@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { Screen } from '@/src/components/ui/Screen';
+import { oauthErrorFromParams, oauthErrorMessage } from '@/src/features/auth/oauthError';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { exchangeCodeOnce } from '@/src/lib/authCode';
 import { supabase } from '@/src/lib/supabase';
@@ -25,7 +26,7 @@ export default function AuthCallbackScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Expo Router passes query params when navigating via deep link (warm start)
-  const searchParams = useLocalSearchParams<{ code?: string; type?: string }>();
+  const searchParams = useLocalSearchParams<{ code?: string; type?: string; error?: string; error_description?: string }>();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -38,15 +39,27 @@ export default function AuthCallbackScreen() {
         let code = searchParams.code;
         let type = searchParams.type;
         let rawUrl: string | null = null;
+        let providerError = oauthErrorFromParams(searchParams);
 
-        if (!code) {
+        if (!code && !providerError) {
           rawUrl = await Linking.getInitialURL();
           if (rawUrl) {
             const parsed = Linking.parse(rawUrl);
             const qp = parsed.queryParams ?? {};
             code = qp.code as string | undefined;
             type = type || (qp.type as string | undefined);
+            const hashIndex = rawUrl.indexOf('#');
+            providerError = oauthErrorFromParams(qp, new URLSearchParams(hashIndex === -1 ? '' : rawUrl.substring(hashIndex + 1)));
           }
+        }
+
+        // Google / Facebook sent the user back with an error (e.g. they tapped
+        // Cancel). The sign-in form that opened the provider shows it, so step
+        // back to it; on a cold start there's no form, so say it here.
+        if (providerError) {
+          if (router.canGoBack()) router.back();
+          else setError(oauthErrorMessage(providerError));
+          return;
         }
 
         // PKCE flow: exchange authorization code for session
@@ -134,7 +147,7 @@ export default function AuthCallbackScreen() {
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <Text style={[styles.title, { color: palette.text }]}>Something went wrong</Text>
           <Text style={[styles.subtitle, { color: palette.mutedText }]}>{error}</Text>
-          <Button title="Back to Login" onPress={() => router.replace('/login')} />
+          <Button title="Back to Login" onPress={() => router.dismissTo('/login')} />
         </View>
       </Screen>
     );
