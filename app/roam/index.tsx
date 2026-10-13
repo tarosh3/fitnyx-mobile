@@ -55,7 +55,7 @@ export default function RoamScreen() {
 
   return (
     <Screen>
-      <PageHeader title="ROAM" subtitle="RUN · WALK · RIDE" backTo="/exercises" />
+      <PageHeader title="ROAM" subtitle="RUN · WALK · RIDE" backTo="/" />
 
       <View style={styles.section}>
         {inProgress ? (

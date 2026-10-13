@@ -166,6 +166,8 @@ export async function offlineLogSet(requestedId: string, data: LogExerciseInput)
     set_index: data.set_number,
     reps: data.actual_reps,
     weight_kg: data.actual_weight_kg,
+    duration_sec: data.actual_duration_sec,
+    distance_m: data.actual_distance_m,
     rpe: data.rpe,
     is_warmup: false,
     created_at: now,
@@ -183,6 +185,8 @@ export async function offlineLogSet(requestedId: string, data: LogExerciseInput)
       setNumber: data.set_number,
       reps: data.actual_reps,
       weightKg: data.actual_weight_kg,
+      durationSec: data.actual_duration_sec,
+      distanceM: data.actual_distance_m,
       rpe: data.rpe,
     },
   });
@@ -195,7 +199,7 @@ export async function offlineLogSet(requestedId: string, data: LogExerciseInput)
 export async function offlineUpdateLog(
   requestedSessionId: string,
   requestedLogId: string,
-  data: { actual_reps?: number; actual_weight_kg?: number; rpe?: number }
+  data: { actual_reps?: number; actual_weight_kg?: number; actual_duration_sec?: number; actual_distance_m?: number; rpe?: number }
 ): Promise<ExerciseLog> {
   // A set logged offline that has since synced is edited by its server id.
   const sessionId = await resolveId(requestedSessionId);
@@ -217,6 +221,8 @@ export async function offlineUpdateLog(
   if (data.actual_weight_kg !== undefined) {
     updates.weight_kg = data.actual_weight_kg === 0 ? undefined : data.actual_weight_kg;
   }
+  if (data.actual_duration_sec !== undefined) updates.duration_sec = data.actual_duration_sec;
+  if (data.actual_distance_m !== undefined) updates.distance_m = data.actual_distance_m;
   if (data.rpe !== undefined) updates.rpe = data.rpe;
   const updated =
     (await updateOfflineLog(sessionId, logId, updates)) ??
@@ -231,7 +237,10 @@ export async function offlineUpdateLog(
   } else {
     await addToOfflineQueue({
       type: 'UPDATE_SET',
-      payload: { sessionId, logId, reps: data.actual_reps, weightKg: data.actual_weight_kg, rpe: data.rpe },
+      payload: {
+        sessionId, logId, reps: data.actual_reps, weightKg: data.actual_weight_kg,
+        durationSec: data.actual_duration_sec, distanceM: data.actual_distance_m, rpe: data.rpe,
+      },
     });
   }
 
@@ -306,7 +315,10 @@ async function updateQueuedLogSet(
     const next = [...queue];
     next[idx] = {
       ...queue[idx],
-      payload: { ...queue[idx].payload, reps: log.reps, weightKg: log.weight_kg, rpe: log.rpe },
+      payload: {
+        ...queue[idx].payload, reps: log.reps, weightKg: log.weight_kg,
+        durationSec: log.duration_sec, distanceM: log.distance_m, rpe: log.rpe,
+      },
     };
     return next;
   });

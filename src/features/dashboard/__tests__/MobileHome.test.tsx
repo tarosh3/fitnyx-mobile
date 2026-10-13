@@ -112,7 +112,7 @@ describe('MobileHome actions and data states', () => {
 
     expect(screen.getByText('Explore plans')).toBeTruthy();
     fireEvent.press(screen.getByTestId('home-workout-card'));
-    expect(mockPush).toHaveBeenLastCalledWith('/workouts/select');
+    expect(mockPush).toHaveBeenLastCalledWith('/workouts');
     fireEvent.press(screen.getByTestId('home-view-stats'));
     expect(mockPush).toHaveBeenLastCalledWith('/dashboard');
   });

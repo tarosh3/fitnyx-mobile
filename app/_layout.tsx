@@ -76,6 +76,7 @@ import { QueryProvider } from '@/src/providers/QueryProvider';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { WorkoutProvider } from '@/src/providers/WorkoutProvider';
 import { AnimatedSplash } from '@/src/screens/SplashScreen';
+import { ToastProvider } from '@/src/features/workouts/ui/Toast';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -216,7 +217,9 @@ function RootLayout() {
             <WorkoutProvider>
               <AICoachProvider>
                 <View style={{ flex: 1 }}>
-                  <ThemedStack />
+                  <ToastProvider>
+                    <ThemedStack />
+                  </ToastProvider>
                   
                   {showAnimated && (
                     <View style={StyleSheet.absoluteFill}>
@@ -265,11 +268,19 @@ function ThemedStack() {
       <Stack.Screen name="exercises" options={{ animation: 'fade' }} />
       <Stack.Screen name="dashboard/stats" options={{ animation: 'fade' }} />
       <Stack.Screen name="dashboard/diet" />
+      <Stack.Screen name="workouts/index" options={{ animation: 'fade' }} />
+      <Stack.Screen name="workouts/routine/[id]" />
+      <Stack.Screen name="workouts/routine/edit" />
+      <Stack.Screen name="workouts/session/[id]" />
+      <Stack.Screen name="workouts/summary/[id]" options={{ gestureEnabled: false, animation: 'fade' }} />
+      <Stack.Screen name="workouts/history/index" />
+      <Stack.Screen name="workouts/history/[id]" />
+      <Stack.Screen name="workouts/exercise/[uuid]" />
+      <Stack.Screen name="workouts/programs/index" />
+      <Stack.Screen name="workouts/programs/[id]" />
       <Stack.Screen name="workouts/select" />
       <Stack.Screen name="workouts/customize" />
-      <Stack.Screen name="workouts/history" />
       <Stack.Screen name="workouts/plans/[id]" />
-      <Stack.Screen name="workouts/session/[id]" />
       <Stack.Screen name="achievements" />
       <Stack.Screen name="profile" />
       <Stack.Screen name="settings" options={{ animation: 'fade' }} />

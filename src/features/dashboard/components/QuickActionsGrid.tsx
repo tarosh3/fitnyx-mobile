@@ -2,11 +2,9 @@ import { useAICoach } from '@/src/providers/AICoachProvider';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import {
-    Activity,
     BrainCircuit,
     Dumbbell,
     History,
-    ListChecks,
     Salad,
     Settings,
     User
@@ -28,10 +26,8 @@ export function QuickActionsGrid() {
     const actions = [
         { label: 'Ask AI Coach', icon: BrainCircuit, color: PALE_ORANGE, onPress: openCenteredChat, highlight: true },
         { label: 'Diet & Nutrition', icon: Salad, color: NEON_LIME, onPress: () => router.push('/dashboard/diet') },
-        { label: 'Workout List', icon: Activity, color: NEON_LIME, onPress: () => router.push('/exercises') },
-        { label: 'Customize Workout', icon: Dumbbell, color: NEON_LIME, onPress: () => router.push('/workouts/customize') },
-        { label: 'Select Workout', icon: ListChecks, color: NEON_LIME, onPress: () => router.push('/workouts/select') },
-        { label: 'Workout History', icon: History, color: NEON_LIME, onPress: () => router.push('/workouts/history') },
+        { label: 'Workouts', icon: Dumbbell, color: NEON_LIME, onPress: () => router.push('/workouts') },
+        { label: 'Workout History', icon: History, color: NEON_LIME, onPress: () => router.push('/workouts?tab=history') },
         { label: 'Body Stats', icon: User, color: NEON_LIME, onPress: () => router.push('/dashboard/stats') },
         { label: 'Settings', icon: Settings, color: NEON_LIME, onPress: () => router.push('/settings') },
     ];

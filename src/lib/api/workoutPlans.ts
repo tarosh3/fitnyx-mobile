@@ -1,4 +1,8 @@
 import { fetchWithAuth } from '@/src/lib/api';
+import type { Exercise } from '@/src/types/exercise';
+
+// One Exercise type for the whole app (the backend embeds the full catalog row).
+export type { Exercise };
 
 export interface WorkoutPlan {
   id: string;
@@ -8,6 +12,8 @@ export interface WorkoutPlan {
   goal?: string;
   timezone: string;
   source: string;
+  /** 'routine' = one saved workout; 'program' = multi-day plan. */
+  kind?: 'routine' | 'program';
   is_active: boolean;
   start_date?: string;
   end_date?: string;
@@ -26,18 +32,6 @@ export interface WorkoutPlanDay {
   created_at: string;
 }
 
-export interface Exercise {
-  uuid: string;
-  title: string;
-  category?: string;
-  equipment?: string;
-  muscles?: string[];
-  difficulty_level?: string;
-  media_url?: string;
-  video_url?: string;
-  instructions?: string;
-}
-
 export interface WorkoutDayExercise {
   id: string;
   day_id: string;
@@ -47,10 +41,18 @@ export interface WorkoutDayExercise {
   target_reps?: number;
   target_weight_kg?: number;
   rest_seconds?: number;
+  /** Targets for timed holds and cardio. */
+  target_duration_sec?: number;
+  target_distance_m?: number;
   tempo?: string;
   rir?: number;
   created_at: string;
   exercise?: Exercise;
+}
+
+/** A plan with its days and each day's exercises (GET /workout-plans/:id, defaults). */
+export interface WorkoutPlanWithDays extends WorkoutPlan {
+  days?: (WorkoutPlanDay & { exercises?: WorkoutDayExercise[] })[];
 }
 
 export interface CreatePlanInput {
@@ -87,7 +89,7 @@ export async function getWorkoutPlans(): Promise<{ data: WorkoutPlan[] }> {
   return fetchWithAuth('/workout-plans');
 }
 
-export async function getDefaultWorkoutPlans(): Promise<{ data: WorkoutPlan[] }> {
+export async function getDefaultWorkoutPlans(): Promise<{ data: WorkoutPlanWithDays[] }> {
   return fetchWithAuth('/workout-plans/defaults');
 }
 

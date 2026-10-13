@@ -17,6 +17,19 @@ export const colors = {
     destructive: '#EF4444',
     success: '#22C55E',
     warning: '#F59E0B',
+    /** Body-part tones for the Workouts tab: fg = icon/text, bg = soft tile. */
+    parts: {
+      chest: { fg: '#4FD1C5', bg: '#0F2A2C' },
+      back: { fg: '#8AAEFF', bg: '#151D35' },
+      legs: { fg: '#B9A0FF', bg: '#1F1631' },
+      shoulders: { fg: '#F2C94C', bg: '#2A2410' },
+      arms: { fg: '#FF9466', bg: '#2B1A11' },
+      core: { fg: '#5fc793', bg: '#14231C' },
+      cardio: { fg: '#FF7A95', bg: '#2E121A' },
+    },
+    /** Deep-green hero card (same feel in both themes). */
+    hero: { from: '#1A6140', to: '#08180F', text: '#F2FBF6', muted: 'rgba(242,251,246,0.76)', accent: '#B8F0D3', line: 'rgba(255,255,255,0.12)' },
+    gold: { from: '#FFE7A3', to: '#F2B705', text: '#5A3B00' },
   },
   light: {
     background: '#F7F7F8',
@@ -33,6 +46,17 @@ export const colors = {
     destructive: '#DC2626',
     success: '#16A34A',
     warning: '#D97706',
+    parts: {
+      chest: { fg: '#0E7C86', bg: '#DCF1F2' },
+      back: { fg: '#2F5BEA', bg: '#E4EBFD' },
+      legs: { fg: '#7C3AED', bg: '#EEE7FD' },
+      shoulders: { fg: '#A35E00', bg: '#FBEFD8' },
+      arms: { fg: '#C2410C', bg: '#FDE8DC' },
+      core: { fg: '#23734A', bg: '#E2F2E8' },
+      cardio: { fg: '#BE123C', bg: '#FDE4EA' },
+    },
+    hero: { from: '#1E6E47', to: '#0B3522', text: '#F2FBF6', muted: 'rgba(242,251,246,0.76)', accent: '#B8F0D3', line: 'rgba(255,255,255,0.12)' },
+    gold: { from: '#FFE7A3', to: '#F2B705', text: '#5A3B00' },
   },
 } as const;
 
