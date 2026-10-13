@@ -199,7 +199,9 @@ export function OnboardingFlow() {
       <Animated.View
         key={stepKey}
         entering={FadeIn.duration(350)}
-        style={[styles.content, !showHeader && { paddingTop: insets.top + 16 }]}
+        // Android draws edge-to-edge: lift each step's bottom button above the
+        // system navigation bar.
+        style={[styles.content, { paddingBottom: insets.bottom + 10 }, !showHeader && { paddingTop: insets.top + 16 }]}
       >
         <StepComponent onNext={handleNext} onBack={handleBack} data={onboardingData} saving={saving} />
       </Animated.View>

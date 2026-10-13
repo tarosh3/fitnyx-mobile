@@ -201,7 +201,7 @@ _Claude updates this section automatically when corrections are made._
 
 - **Android no longer resizes the window for the keyboard (edge-to-edge), so `KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}` does nothing on Android** — the keyboard covers the bottom of the form (found 2026-10-12: the auth screens' Log in / Create account button). Use `behavior="padding"` on both platforms, and don't pair a scrollable form with `keyboardDismissMode="on-drag"` on Android (scrolling to reach the button closed the keyboard).
 
-- **Absolutely-positioned bottom bars (e.g. the Save bar on `app/profile.tsx` / `app/fitness-profile.tsx`) must pad by `insets.bottom`**, and the scroll content above them by the same amount. A fixed `Platform.OS === 'ios' ? 32 : 20` put Android's Save button under the 3-button navigation bar (found 2026-10-13).
+- **Every bottom-pinned button or bar must pad by `insets.bottom`** — absolutely-positioned bars (the Save bar on `app/profile.tsx` / `app/fitness-profile.tsx`) and flex-bottom buttons alike (onboarding's Continue: `OnboardingFlow` pads the step container by `insets.bottom + 10`), and the scroll content above them by the same amount. A fixed `Platform.OS === 'ios' ? 32 : 20` put Android's Save button under the 3-button navigation bar (found 2026-10-13).
 
 ### Notifications (notifee)
 
