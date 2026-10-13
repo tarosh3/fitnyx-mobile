@@ -6,6 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/src/components/ui/Button';
 import { Screen } from '@/src/components/ui/Screen';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { exchangeCodeOnce } from '@/src/lib/authCode';
 import { supabase } from '@/src/lib/supabase';
 
 /**
@@ -50,7 +51,7 @@ export default function AuthCallbackScreen() {
 
         // PKCE flow: exchange authorization code for session
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { error: exchangeError } = await exchangeCodeOnce(code);
           if (exchangeError) {
             // A signup link reaches here only after Supabase confirmed the
             // email. If this isn't the phone the user signed up on (no PKCE
