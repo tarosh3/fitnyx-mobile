@@ -1,357 +1,140 @@
 import { usePathname, useRouter } from 'expo-router';
-import { Dumbbell, Home, LayoutGrid, Settings, Sparkles } from 'lucide-react-native';
+import { ChartNoAxesColumnIncreasing, Dumbbell, Home, Settings, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedProps,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { Keyboard, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { motion, spacing, type as t } from '@/src/styles/tokens';
+import { elevation, motion, spacing, type } from '@/src/styles/tokens';
+import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_LIFT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
 
-const hiddenRoutePrefixes = [
-  '/onboarding',
-  // Settings is a tab, so its root keeps the bar; only its sub-pages hide it.
-  '/settings/coach-memory',
-  '/reminders',
-  '/water',
-  '/profile',
-  '/fitness-profile',
-  '/dashboard/stats',
-  '/login',
-  '/signup',
-  '/workouts/customize',
-  '/workouts/session',
-  '/roam/record',
-  '/update-password',
-  '/privacy-policy',
-  '/terms-of-service',
-  '/delete-account',
-  '/email-verified',
-  '/verification-failed',
-  '/invite',
-  '/access-expired',
-];
-
-type TabItem = {
-  key: string;
-  icon: typeof Home;
-  label: string;
-  isAi?: boolean;
-  match?: (p: string) => boolean;
-  onPress: () => void;
-};
-
-const DOT_SIZE = 8;
-const BAR_HEIGHT = 76;
-const TOP_RADIUS = 28;
-const NOTCH_WIDTH = 64;  // total width of the curved dip
-const NOTCH_DEPTH = 7;   // shallow dip
-const DOT_HOVER = 9;     // dot floats this far above the deepest point of the curve
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
+const destinations = [
+  { key: 'home', label: 'Home', icon: Home, href: '/', match: (p: string) => p === '/' },
+  { key: 'workouts', label: 'Workouts', icon: Dumbbell, href: '/exercises', match: (p: string) => p.startsWith('/exercises') || p.startsWith('/workouts') || p === '/roam' || p.startsWith('/roam/') },
+  { key: 'stats', label: 'Stats', icon: ChartNoAxesColumnIncreasing, href: '/dashboard', match: (p: string) => p === '/dashboard' || p.startsWith('/dashboard/') },
+  { key: 'settings', label: 'Settings', icon: Settings, href: '/settings', match: (p: string) => p.startsWith('/settings') },
+] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const c = useThemeColors();
+  const palette = useThemeColors();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { openCenteredChat } = useAICoach();
+  const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible());
   const lastNavTime = useRef(0);
 
-  const navigate = useCallback(
-    (href: string, isActive: boolean) => {
-      if (isActive) return;
-      const now = Date.now();
-      if (now - lastNavTime.current < 300) return;
-      lastNavTime.current = now;
-      // A tab starts a fresh stack. replace() alone only swaps the top screen,
-      // so everything pushed before (e.g. Roam → Run) stayed underneath and
-      // back walked through it like browser history.
-      if (router.canDismiss()) router.dismissAll();
-      router.replace(href as never);
-    },
-    [router]
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
+  const navigate = useCallback((href: string) => {
+    if (pathname === href) return;
+    const now = Date.now();
+    if (now - lastNavTime.current < 300) return;
+    lastNavTime.current = now;
+    // Selecting a destination starts a fresh stack, including from its sub-pages.
+    if (router.canDismiss()) router.dismissAll();
+    router.replace(href as never);
+  }, [pathname, router]);
+
+  if (!user || keyboardVisible || !isBottomNavRoute(pathname)) return null;
+
+  const renderTab = (item: typeof destinations[number]) => (
+    <DockItem key={item.key} id={item.key} label={item.label} icon={item.icon}
+      active={item.match(pathname)} onPress={() => navigate(item.href)} compact={width < 360} />
   );
 
-  const items: TabItem[] = [
-    {
-      key: 'home',
-      icon: Home,
-      label: 'Home',
-      match: (p) => p === '/',
-      onPress: () => navigate('/', pathname === '/'),
-    },
-    {
-      key: 'workouts',
-      icon: Dumbbell,
-      label: 'Workouts',
-      match: (p) => p.startsWith('/exercises') || p.startsWith('/workouts') || p === '/roam' || p.startsWith('/roam/'),
-      onPress: () => navigate('/exercises', pathname.startsWith('/exercises')),
-    },
-    {
-      key: 'ai',
-      icon: Sparkles,
-      label: 'Coach',
-      isAi: true,
-      onPress: openCenteredChat,
-    },
-    {
-      key: 'stats',
-      icon: LayoutGrid,
-      label: 'Stats',
-      match: (p) => p === '/dashboard' || p.startsWith('/dashboard/'),
-      onPress: () =>
-        navigate('/dashboard', pathname === '/dashboard' || pathname.startsWith('/dashboard/')),
-    },
-    {
-      key: 'settings',
-      icon: Settings,
-      label: 'Settings',
-      match: (p) => p.startsWith('/settings'),
-      onPress: () => navigate('/settings', pathname.startsWith('/settings')),
-    },
-  ];
-
-  const activeIndex = items.findIndex((it) => !it.isAi && it.match?.(pathname));
-
-  const [width, setWidth] = useState(0);
-  const [centers, setCenters] = useState<number[]>(Array(items.length).fill(0));
-  const notchX = useSharedValue(0);
-
-  useEffect(() => {
-    if (activeIndex >= 0 && centers[activeIndex] > 0) {
-      notchX.value = withSpring(centers[activeIndex], motion.spring.snappy);
-    }
-  }, [activeIndex, centers, notchX]);
-
-  // Path describing the bar's outline w/ animated notch at notchX
-  const animatedPath = useAnimatedProps(() => {
-    const W = width;
-    const H = BAR_HEIGHT;
-    if (W === 0) return { d: '' };
-    const x = notchX.value;
-    const half = NOTCH_WIDTH / 2;
-    const depth = NOTCH_DEPTH;
-
-    // Build outline: start at top-left after corner, traverse top edge w/ dip, then around
-    const d = [
-      `M ${TOP_RADIUS} 0`,
-      // top edge up to dip start
-      `L ${x - half} 0`,
-      // bezier down into dip
-      `C ${x - half + 18} 0 ${x - 18} ${depth} ${x} ${depth}`,
-      // bezier up out of dip
-      `C ${x + 18} ${depth} ${x + half - 18} 0 ${x + half} 0`,
-      // continue top edge
-      `L ${W - TOP_RADIUS} 0`,
-      // top-right corner
-      `Q ${W} 0 ${W} ${TOP_RADIUS}`,
-      // right edge
-      `L ${W} ${H}`,
-      // bottom edge
-      `L 0 ${H}`,
-      // left edge
-      `L 0 ${TOP_RADIUS}`,
-      // top-left corner
-      `Q 0 0 ${TOP_RADIUS} 0`,
-      'Z',
-    ].join(' ');
-    return { d };
-  });
-
-  const dotStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: notchX.value - DOT_SIZE / 2 }],
-    opacity: activeIndex >= 0 ? 1 : 0,
-  }));
-
-  const onTabLayout = (idx: number) => (e: LayoutChangeEvent) => {
-    const { x, width: w } = e.nativeEvent.layout;
-    const center = x + w / 2;
-    setCenters((prev) => {
-      if (Math.abs(prev[idx] - center) < 0.5) return prev;
-      const next = [...prev];
-      next[idx] = center;
-      return next;
-    });
-  };
-
-  if (!user) return null;
-  if (hiddenRoutePrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
-    return null;
-  }
-
   return (
-    <View style={[styles.wrap, { paddingBottom: insets.bottom }]}>
-      <View
-        style={styles.barFrame}
-        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-      >
-        {/* SVG-drawn bar shape with animated notch */}
-        {width > 0 ? (
-          <Svg width={width} height={BAR_HEIGHT} style={StyleSheet.absoluteFill}>
-            <AnimatedPath animatedProps={animatedPath} fill={c.card} stroke={c.border} strokeWidth={0.7} />
-          </Svg>
-        ) : null}
-
-        {/* Floating dot — sits inside the notch */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.dot,
-            { backgroundColor: c.primary, shadowColor: c.primary },
-            dotStyle,
-          ]}
-        />
-
-        <View style={styles.row}>
-          {items.map((item, idx) => {
-            const isActive = !item.isAi && !!item.match?.(pathname);
-            return (
-              <Tab
-                key={item.key}
-                item={item}
-                active={isActive}
-                onLayout={onTabLayout(idx)}
-                c={c}
-              />
-            );
-          })}
-        </View>
+    <View pointerEvents="box-none" style={[
+      styles.wrap,
+      { bottom: bottomNavGap(insets.bottom), paddingLeft: Math.max(insets.left, width < 360 ? 12 : 16), paddingRight: Math.max(insets.right, width < 360 ? 12 : 16) },
+    ]}>
+      <View testID="bottom-nav" style={styles.dock}>
+        <View pointerEvents="none" style={[styles.dockSurface, { backgroundColor: palette.card, borderColor: palette.border }]} />
+        {destinations.slice(0, 2).map(renderTab)}
+        <DockItem id="coach" label="Coach" icon={Sparkles} active={false} coach onPress={openCenteredChat} compact={width < 360} />
+        {destinations.slice(2).map(renderTab)}
       </View>
     </View>
   );
 }
 
-function Tab({
-  item,
-  active,
-  onLayout,
-  c,
-}: {
-  item: TabItem;
+function DockItem({ id, label, icon: Icon, active, coach = false, onPress, compact }: {
+  id: string;
+  label: string;
+  icon: typeof Home;
   active: boolean;
-  onLayout: (e: LayoutChangeEvent) => void;
-  c: ReturnType<typeof useThemeColors>;
+  coach?: boolean;
+  onPress: () => void;
+  compact: boolean;
 }) {
-  const Icon = item.icon;
-  const scale = useSharedValue(1);
-  const lift = useSharedValue(active ? 1 : 0);
+  const palette = useThemeColors();
+  const selection = useSharedValue(active ? 1 : 0);
+  const press = useSharedValue(1);
 
   useEffect(() => {
-    lift.value = withSpring(active ? 1 : 0, motion.spring.snappy);
-  }, [active, lift]);
+    selection.value = withTiming(active ? 1 : 0, { duration: motion.duration.fast, reduceMotion: ReduceMotion.System });
+  }, [active, selection]);
 
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scale.value * (1 + lift.value * 0.08) },
-      { translateY: -lift.value * 2 },
-    ],
-  }));
-
-  const color = item.isAi ? c.primary : active ? c.text : c.mutedText;
-  const stroke = active || item.isAi ? 2.4 : 1.8;
+  const selectedStyle = useAnimatedStyle(() => ({ opacity: selection.value }));
+  const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
+  const color = active ? palette.accent : palette.mutedText;
 
   return (
     <Pressable
-      onPress={item.onPress}
-      onPressIn={() => (scale.value = withSpring(0.88, motion.spring.snappy))}
-      onPressOut={() => (scale.value = withSpring(1, motion.spring.snappy))}
-      onLayout={onLayout}
-      style={styles.tab}
-      hitSlop={6}
+      testID={`nav-${id}`}
+      accessibilityRole={coach ? 'button' : 'tab'}
+      accessibilityLabel={coach ? 'Open Filo, your AI coach' : label}
+      accessibilityState={coach ? undefined : { selected: active }}
+      onPress={onPress}
+      onPressIn={() => { press.value = withSpring(0.94, { ...motion.spring.snappy, reduceMotion: ReduceMotion.System }); }}
+      onPressOut={() => { press.value = withSpring(1, { ...motion.spring.snappy, reduceMotion: ReduceMotion.System }); }}
+      style={[styles.tab, coach && styles.coachTab]}
     >
-      <Animated.View style={[styles.tabInner, iconStyle]}>
-        {item.isAi ? (
-          <View style={[styles.aiHalo, { backgroundColor: `${c.primary}1F` }]}>
-            <Icon color={color} size={22} strokeWidth={stroke} />
+      <Animated.View style={[styles.tabContent, pressStyle]}>
+        {!coach && <Animated.View pointerEvents="none" style={[styles.selection, { backgroundColor: palette.accentSoft }, selectedStyle]} />}
+        {coach ? (
+          <View style={[styles.coachMount, { backgroundColor: palette.card }]}>
+            <View style={[styles.coachButton, { backgroundColor: palette.primary }]}>
+              <Icon size={25} strokeWidth={1.9} color={palette.primaryText} accessible={false} />
+            </View>
           </View>
         ) : (
-          <Icon color={color} size={22} strokeWidth={stroke} />
+          <View style={styles.iconSlot}>
+            <Icon size={23} strokeWidth={active ? 2.25 : 1.75} color={color} accessible={false} />
+          </View>
         )}
+        <Text numberOfLines={1} maxFontSizeMultiplier={1.25} adjustsFontSizeToFit minimumFontScale={0.85}
+          style={[styles.label, compact && styles.compactLabel, {
+            color: coach ? palette.text : color,
+            fontFamily: active || coach ? type.weight.semibold : type.weight.medium,
+          }]}>
+          {label}
+        </Text>
       </Animated.View>
-      <Text
-        numberOfLines={1}
-        style={[
-          styles.label,
-          {
-            color,
-            fontFamily: active || item.isAi ? t.weight.bold : t.weight.medium,
-          },
-        ]}
-      >
-        {item.label}
-      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 50,
-  },
-  barFrame: {
-    width: '100%',
-    height: BAR_HEIGHT,
-  },
-  dot: {
-    position: 'absolute',
-    // Sit ABOVE the deepest point of the notch w/ a small gap so it visually hovers
-    top: NOTCH_DEPTH - DOT_SIZE - DOT_HOVER,
-    left: 0,
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  row: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xs,
-    gap: spacing.xs,
-  },
-  tabInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  aiHalo: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    fontSize: t.size.xs,
-    letterSpacing: 0.2,
-  },
+  wrap: { position: 'absolute', left: 0, right: 0, zIndex: 50, alignItems: 'center' },
+  dock: { width: '100%', maxWidth: 520, height: BOTTOM_NAV_HEIGHT + BOTTOM_NAV_LIFT, flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: spacing.sm, paddingBottom: 6 },
+  dockSurface: { position: 'absolute', top: BOTTOM_NAV_LIFT, bottom: 0, left: 0, right: 0, borderWidth: 1, borderRadius: 26, ...elevation.sm },
+  tab: { flex: 1, minHeight: 60, alignItems: 'center', justifyContent: 'center' },
+  coachTab: { height: 74, justifyContent: 'flex-end' },
+  tabContent: { width: '100%', height: 60, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 7, gap: 3 },
+  selection: { position: 'absolute', top: 0, bottom: 0, left: 2, right: 2, borderRadius: 18 },
+  iconSlot: { height: 29, alignItems: 'center', justifyContent: 'center' },
+  label: { fontSize: 11, lineHeight: 15, textAlign: 'center', width: '100%', paddingHorizontal: 1 },
+  compactLabel: { fontSize: 10 },
+  coachMount: { position: 'absolute', top: -14, width: 56, height: 56, padding: 4, borderRadius: 22 },
+  coachButton: { flex: 1, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 });
