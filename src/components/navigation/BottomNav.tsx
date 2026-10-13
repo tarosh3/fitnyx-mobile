@@ -24,7 +24,7 @@ export function BottomNav() {
   const palette = useThemeColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { user } = useAuth();
+  const { user, onboardingComplete } = useAuth();
   const { openCenteredChat } = useAICoach();
   const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible());
   const lastNavTime = useRef(0);
@@ -45,7 +45,7 @@ export function BottomNav() {
     router.replace(href as never);
   }, [pathname, router]);
 
-  if (!user || keyboardVisible || !isBottomNavRoute(pathname)) return null;
+  if (!user || !onboardingComplete || keyboardVisible || !isBottomNavRoute(pathname)) return null;
 
   const renderTab = (item: typeof destinations[number]) => (
     <DockItem key={item.key} id={item.key} label={item.label} icon={item.icon}

@@ -9,6 +9,7 @@ const mockOpenCoach = jest.fn();
 const mockSendMessage = jest.fn();
 let mockPathname = '/';
 let mockUser: { id: string } | null = { id: 'nav-user' };
+let mockOnboardingComplete = true;
 
 jest.mock('expo-router', () => ({
   usePathname: () => mockPathname,
@@ -18,7 +19,7 @@ jest.mock('expo-router', () => ({
     canDismiss: mockCanDismiss,
   }),
 }));
-jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: mockUser }) }));
+jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: mockUser, onboardingComplete: mockOnboardingComplete }) }));
 jest.mock('@/src/providers/AICoachProvider', () => ({
   useAICoach: () => ({ openCenteredChat: mockOpenCoach, sendMessage: mockSendMessage }),
 }));
@@ -47,6 +48,7 @@ describe('BottomNav navigation and visibility', () => {
     jest.clearAllMocks();
     mockPathname = '/';
     mockUser = { id: 'nav-user' };
+    mockOnboardingComplete = true;
     mockCanDismiss.mockReturnValue(true);
     keyboardListeners.clear();
     keyboardSubscriptions.length = 0;
@@ -132,6 +134,13 @@ describe('BottomNav navigation and visibility', () => {
     expect(mockSendMessage).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
     expect(mockDismissAll).not.toHaveBeenCalled();
+  });
+
+  it('hides the dock until onboarding is complete', () => {
+    mockOnboardingComplete = false;
+    const screen = render(<BottomNav />);
+
+    expect(screen.queryByTestId('bottom-nav')).toBeNull();
   });
 
   it('hides the dock when signed out', () => {
