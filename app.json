@@ -68,7 +68,14 @@
       "./plugins/withNotifeeRepo",
       "./plugins/withNotifIcon",
       "expo-live-activity",
-      "@sentry/react-native/expo",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://de.sentry.io/",
+          "organization": "fitnyx",
+          "project": "fitnyx-mobile"
+        }
+      ],
       [
         "expo-build-properties",
         {
