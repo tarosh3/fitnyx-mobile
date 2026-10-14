@@ -1,266 +1,114 @@
-import notifee, {
-  AndroidImportance,
-  AndroidCategory,
-  EventType,
-  Event,
-  AndroidAction,
-} from '@notifee/react-native';
+import notifee, { AndroidCategory, AndroidImportance, AndroidStyle, EventType, type Notification } from '@notifee/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import * as LiveActivity from 'expo-live-activity';
 
-const APP_ICON = require('../../assets/images/icon.png');
-const BRAND_GREEN = '#3BD4A2';
+import type { WorkoutSession } from '@/src/lib/api/workoutSessions';
+import { cacheKeys } from '@/src/lib/cache/keys';
+import { syncWorkoutLiveActivity } from '@/src/lib/workoutLiveActivity';
+import { elapsedForSession, formatWorkoutElapsed, getWorkoutState, workoutActionLabel, type WorkoutNotificationState } from '@/src/lib/workoutNotificationState';
+import { colors } from '@/src/theme/colors';
 
+export const NOTIFICATION_ID = 'active-workout';
 const CHANNEL_ID = 'workout-timer';
-const NOTIFICATION_ID = 'active-workout';
-
-type NotificationActionCallback = (action: 'pause' | 'resume' | 'finish') => void;
-
-let actionCallback: NotificationActionCallback | null = null;
-
-// Track the Live Activity ID for updates / stop
-let liveActivityId: string | undefined;
+const ARTWORK = require('../../assets/images/workouts/training-hero.jpg');
+const EQUIPMENT = require('../../assets/images/workouts/strength-equipment.png');
+type Action = 'pause' | 'resume' | 'open';
+type ActionCallback = (action: Action, sessionId: string, state?: WorkoutNotificationState) => void | Promise<void>;
+let queue: Promise<void> = Promise.resolve();
 
 export async function initialize(): Promise<void> {
   if (Platform.OS === 'android') {
-    await notifee.createChannel({
-      id: CHANNEL_ID,
-      name: 'Workout Timer',
-      importance: AndroidImportance.LOW,
-      vibration: false,
-      sound: '',
-    });
-  }
-}
-
-function formatElapsed(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function buildActions(isPaused: boolean): AndroidAction[] {
-  return [
-    {
-      title: isPaused ? '▶ Resume' : '⏸ Pause',
-      pressAction: { id: isPaused ? 'resume' : 'pause' },
-    },
-    {
-      title: '✓ Finish',
-      pressAction: { id: 'finish' },
-    },
-  ];
-}
-
-/**
- * Calculates the epoch-ms start date for the elapsed timer.
- * If paused, returns undefined (we stop the Live Activity timer).
- */
-function computeTimerStartDate(
-  elapsedSec: number,
-  isPaused: boolean,
-  sessionStartedAt?: string,
-  lastResumedAt?: string,
-): number | undefined {
-  if (isPaused) return undefined;
-
-  // Use last_resumed_at or started_at to calculate proper start
-  if (lastResumedAt || sessionStartedAt) {
-    const resumePoint = new Date(lastResumedAt || sessionStartedAt!).getTime();
-    // startDate = resume point minus already-accumulated base time
-    // This ensures the elapsed timer shows: base + (now - resumePoint)
-    return resumePoint - (elapsedSec * 1000 - (Date.now() - resumePoint));
-  }
-
-  // Fallback: derive from current elapsed
-  return Date.now() - elapsedSec * 1000;
-}
-
-export async function showActiveWorkout(
-  elapsedSec: number,
-  isPaused: boolean,
-  sessionStartedAt?: string,
-  lastResumedAt?: string,
-): Promise<void> {
-  if (Platform.OS === 'android') {
-    await notifee.displayNotification({
-      id: NOTIFICATION_ID,
-      title: 'Workout in Progress',
-      body: isPaused ? `Paused at ${formatElapsed(elapsedSec)}` : undefined,
-      android: {
-        channelId: CHANNEL_ID,
-        // Plain sticky notification — NOT a foreground service. Notifee's
-        // foreground service is declared shortService, which Android 14+
-        // kills after ~3 minutes and crashes the app mid-workout.
-        category: AndroidCategory.SERVICE,
-        ongoing: true,
-        autoCancel: false,
-        smallIcon: 'ic_stat_notification',
-        color: BRAND_GREEN,
-        colorized: true,
-        largeIcon: APP_ICON,
-        showChronometer: !isPaused,
-        chronometerDirection: 'up',
-        timestamp: isPaused ? undefined : Date.now() - elapsedSec * 1000,
-        showTimestamp: !isPaused,
-        actions: buildActions(isPaused),
-        pressAction: { id: 'default', launchActivity: 'default' },
-      },
-    });
+    await notifee.createChannel({ id: CHANNEL_ID, name: 'Workout controls', importance: AndroidImportance.LOW, vibration: false, sound: '' });
   } else if (Platform.OS === 'ios') {
-    // Silent notification for notification center
-    await notifee.displayNotification({
-      id: NOTIFICATION_ID,
-      title: 'Workout in Progress',
-      body: isPaused ? `Paused at ${formatElapsed(elapsedSec)}` : `Elapsed: ${formatElapsed(elapsedSec)}`,
-      ios: {
-        categoryId: 'workout',
-        interruptionLevel: 'passive',
-      },
-    });
-
-    // Start or update Live Activity for Dynamic Island
-    try {
-      const startDate = computeTimerStartDate(elapsedSec, isPaused, sessionStartedAt, lastResumedAt);
-
-      const state: LiveActivity.LiveActivityState = {
-        title: 'Workout in Progress',
-        subtitle: isPaused ? `Paused · ${formatElapsed(elapsedSec)}` : undefined,
-        progressBar: isPaused
-          ? { progress: 0 }
-          : {
-              elapsedTimer: { startDate: startDate! },
-            },
-        imageName: 'workout_icon',
-        dynamicIslandImageName: 'workout_icon',
-      };
-
-      const config: LiveActivity.LiveActivityConfig = {
-        backgroundColor: '#0A0A0A',
-        titleColor: '#FFFFFF',
-        subtitleColor: '#9CA3AF',
-        progressViewTint: BRAND_GREEN,
-        progressViewLabelColor: '#FFFFFF',
-        deepLinkUrl: '/active-workout',
-        timerType: 'circular',
-      };
-
-      if (liveActivityId) {
-        // Update existing Live Activity
-        LiveActivity.updateActivity(liveActivityId, state);
-      } else {
-        // Start new Live Activity
-        liveActivityId = LiveActivity.startActivity(state, config) as string | undefined;
-      }
-    } catch (error) {
-      console.warn('Live Activity error:', error);
-    }
+    const existing = await notifee.getNotificationCategories();
+    await notifee.setNotificationCategories([
+      ...existing.filter((category) => !category.id.startsWith('workout')),
+      ...(['ready', 'running', 'paused'] as const).map((state) => ({
+        id: `workout-${state}`,
+        actions: [
+          { id: state === 'running' ? 'pause' : 'resume', title: workoutActionLabel[state] },
+          { id: 'open', title: 'Open workout', foreground: true },
+        ],
+      })),
+    ]);
   }
 }
 
-export async function updateTimer(
-  elapsedSec: number,
-  isPaused: boolean,
-  sessionStartedAt?: string,
-  lastResumedAt?: string,
-): Promise<void> {
-  if (Platform.OS === 'android') {
-    await notifee.displayNotification({
-      id: NOTIFICATION_ID,
-      title: 'Workout in Progress',
-      body: isPaused ? `Paused at ${formatElapsed(elapsedSec)}` : undefined,
-      android: {
-        channelId: CHANNEL_ID,
-        // Plain sticky notification — see showActiveWorkout for why no foreground service.
-        category: AndroidCategory.SERVICE,
-        ongoing: true,
-        autoCancel: false,
-        smallIcon: 'ic_stat_notification',
-        color: BRAND_GREEN,
-        colorized: true,
-        largeIcon: APP_ICON,
-        showChronometer: !isPaused,
-        chronometerDirection: 'up',
-        timestamp: isPaused ? undefined : Date.now() - elapsedSec * 1000,
-        showTimestamp: !isPaused,
-        actions: buildActions(isPaused),
-        pressAction: { id: 'default', launchActivity: 'default' },
-      },
-    });
-  } else if (Platform.OS === 'ios') {
-    // Silent notification update
-    await notifee.displayNotification({
-      id: NOTIFICATION_ID,
-      title: 'Workout in Progress',
-      body: isPaused ? `Paused at ${formatElapsed(elapsedSec)}` : `Elapsed: ${formatElapsed(elapsedSec)}`,
-      ios: {
-        categoryId: 'workout',
-        interruptionLevel: 'passive',
-      },
-    });
-
-    // Update Live Activity
-    if (liveActivityId) {
-      try {
-        const startDate = computeTimerStartDate(elapsedSec, isPaused, sessionStartedAt, lastResumedAt);
-
-        const state: LiveActivity.LiveActivityState = {
-          title: 'Workout in Progress',
-          subtitle: isPaused ? `Paused · ${formatElapsed(elapsedSec)}` : undefined,
-          progressBar: isPaused
-            ? { progress: 0 }
-            : {
-                elapsedTimer: { startDate: startDate! },
-              },
-          imageName: 'workout_icon',
-          dynamicIslandImageName: 'workout_icon',
-        };
-
-        LiveActivity.updateActivity(liveActivityId, state);
-      } catch (error) {
-        console.warn('Live Activity update error:', error);
-      }
-    }
-  }
-}
-
-export async function dismiss(): Promise<void> {
-  await notifee.cancelNotification(NOTIFICATION_ID);
-
-  // Stop Live Activity on iOS
-  if (liveActivityId) {
-    try {
-      LiveActivity.stopActivity(liveActivityId, {
-        title: 'Workout Complete',
-        progressBar: { progress: 1.0 },
-        imageName: 'workout_icon',
-        dynamicIslandImageName: 'workout_icon',
-      });
-    } catch (error) {
-      console.warn('Live Activity stop error:', error);
-    }
-    liveActivityId = undefined;
-  }
-}
-
-export function onAction(callback: NotificationActionCallback): () => void {
-  actionCallback = callback;
-
-  const unsubscribe = notifee.onForegroundEvent(({ type, detail }: Event) => {
-    if (type === EventType.ACTION_PRESS && detail.pressAction) {
-      const actionId = detail.pressAction.id;
-      if (actionId === 'pause' || actionId === 'resume' || actionId === 'finish') {
-        callback(actionId);
-      }
-    }
-  });
-
-  return () => {
-    actionCallback = null;
-    unsubscribe();
+export function buildWorkoutNotification(session: WorkoutSession): Notification {
+  const state = getWorkoutState(session);
+  const time = formatWorkoutElapsed(elapsedForSession(session));
+  const title = state === 'ready' ? 'Ready when you are' : state === 'paused' ? 'Take a breath' : 'Make this session count';
+  const body = state === 'ready' ? 'Your workout is ready. Tap Start to begin.'
+    : state === 'paused' ? `${time} elapsed · Your timer is paused`
+    : 'Training in progress · Your timer is running';
+  return {
+    id: NOTIFICATION_ID, title, body,
+    data: { sessionId: session.id, workoutState: state },
+    android: {
+      channelId: CHANNEL_ID,
+      // Keep this sticky: Notifee's shortService times out on Android 14+.
+      category: AndroidCategory.SERVICE, ongoing: true, autoCancel: false, onlyAlertOnce: true,
+      smallIcon: 'ic_stat_notification', color: colors.dark.primary, largeIcon: EQUIPMENT,
+      showChronometer: state === 'running', chronometerDirection: 'up',
+      timestamp: state === 'running' ? Date.now() - elapsedForSession(session) * 1000 : undefined,
+      showTimestamp: state === 'running',
+      style: { type: AndroidStyle.BIGPICTURE, picture: ARTWORK, largeIcon: null, title, summary: body },
+      actions: [
+        { title: workoutActionLabel[state], pressAction: { id: state === 'running' ? 'pause' : 'resume' } },
+        { title: 'Open workout', pressAction: { id: 'open', launchActivity: 'default' } },
+      ],
+      pressAction: { id: 'open', launchActivity: 'default' },
+    },
+    ios: {
+      categoryId: `workout-${state}`, interruptionLevel: 'passive',
+      foregroundPresentationOptions: { alert: false, badge: false, sound: false, banner: false, list: true },
+    },
   };
 }
 
-export function getActionCallback(): NotificationActionCallback | null {
-  return actionCallback;
+/** Serialize transitions so a slow artwork load cannot restore an older notification. */
+export function showActiveWorkout(session: WorkoutSession): Promise<void> {
+  queue = queue.then(async () => {
+    if (Platform.OS === 'web') return;
+    try { await notifee.displayNotification(buildWorkoutNotification(session)); }
+    catch (error) { console.warn('Workout notification unavailable', error); }
+    // Live Activities have separate authorization from notification banners.
+    await syncWorkoutLiveActivity(session);
+  }).catch((error) => { console.warn('Workout controls unavailable', error); });
+  return queue;
+}
+
+export const updateTimer = showActiveWorkout;
+
+export function dismiss(): Promise<void> {
+  queue = queue.then(async () => {
+    if (Platform.OS === 'web') return;
+    try { await notifee.cancelNotification(NOTIFICATION_ID); }
+    finally { await syncWorkoutLiveActivity(null); }
+  }).catch((error) => { console.warn('Could not clear workout controls', error); });
+  return queue;
+}
+
+export async function rememberOpenRequest(sessionId: string): Promise<void> {
+  await AsyncStorage.setItem(cacheKeys.workoutNotificationOpen, sessionId);
+}
+
+export async function consumeOpenRequest(): Promise<string | null> {
+  const stored = await AsyncStorage.getItem(cacheKeys.workoutNotificationOpen);
+  if (stored) await AsyncStorage.removeItem(cacheKeys.workoutNotificationOpen);
+  const initial = Platform.OS === 'android' ? await notifee.getInitialNotification() : null;
+  return stored ?? (initial?.notification.id === NOTIFICATION_ID && typeof initial.notification.data?.sessionId === 'string'
+    ? initial.notification.data.sessionId : null);
+}
+
+export function onAction(callback: ActionCallback): () => void {
+  return notifee.onForegroundEvent(({ type, detail }) => {
+    if (detail.notification?.id !== NOTIFICATION_ID) return;
+    const id = detail.notification.data?.sessionId;
+    if (typeof id !== 'string') return;
+    const action = type === EventType.PRESS ? 'open' : type === EventType.ACTION_PRESS ? detail.pressAction?.id : undefined;
+    if (action !== 'pause' && action !== 'resume' && action !== 'open') return;
+    const state = detail.notification.data?.workoutState as WorkoutNotificationState | undefined;
+    Promise.resolve(callback(action, id, state)).catch((error) => console.warn('Workout action failed', error));
+  });
 }

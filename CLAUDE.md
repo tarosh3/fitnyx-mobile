@@ -87,6 +87,12 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - **The timer never auto-starts** (user rule): `startWorkout()` creates the session then pauses it ("ready" = paused with `total_duration_sec === 0`, `isReady()`); Start or the first ✓ resumes it.
 - Every sheet (`ui/Sheet.tsx`) has ✕, swipe-down and tap-outside close. Full-screen workout flows hide the bottom nav (`bottomNavLayout.ts`) because they have their own `BottomBar`.
 
+**Diet (`src/features/diet/`, screens `app/diet/`)** — Today · meal detail · log food · insights (`/dashboard/diet` redirects):
+- Goals come from the AI plan (`GET /diet`, cached 24 h on the device); what was eaten is `diet_meal_logs` (`/diet/logs`, `/diet/summary`, `/diet/foods`). Pure logic lives in `model.ts` / `insights.ts`.
+- A logged plan meal = `source: 'plan'` + `plan_meal_index` (a swap logs the alternative under the same index). Food search uses the curated `foods` table (backend `seed_foods.sql`); quick add = `source: 'quick'`.
+- Logs are idempotent on the device-made `client_log_id`: save online, else queue `LOG_MEAL`; delete drops a still-queued create, else `DELETE_MEAL_LOG` (404 = done). Screens merge queued changes via `mergeDayLogs`.
+- Water stays device-local (`src/lib/water.ts`). Plans saved before 2026-10-14 have no `veg`/`ingredients`/`steps`/alternative nutrition — every screen must work without them.
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -175,7 +181,10 @@ _Claude updates this section automatically when corrections are made._
 
 ### TypeScript / Jest
 
+- **RNTL `render()` already wraps its update in `act`.** Do not put `render()` inside an outer async `act`; React 19 can report “Can't access .root on unmounted test renderer.” Render first, then await effects separately.
+
 - **Never use native dynamic `await import()` in src/** — jest throws `A dynamic import callback was invoked without --experimental-vm-modules` at runtime, silently breaking any code path that catches the error (e.g. fetchWithAuth's re-register). Use lazy `require('...') as typeof import('...')` instead (Metro handles it; jest executes it).
+- **Inside `waitFor`, never assert absence with `expect(screen.queryBy…()).toBeNull()`** — each failed check pretty-prints the whole React fiber (~1 s), so `waitFor`'s 1 s timeout runs out after one check: passes locally, fails on the slower CI runner (LibraryTab test, 2026-10-14). Use `.not.toBeOnTheScreen()`.
 - **New `app/` routes fail `tsc --noEmit` with typed-routes errors until `.expo/types/router.d.ts` regenerates** — `expo export` does NOT regenerate it; run `npx expo start` briefly (or let the dev server run) after adding/removing route files. CI is unaffected (no `.expo/` = loose types).
 
 ### Android build (`expo run:android`)
@@ -203,6 +212,8 @@ _Claude updates this section automatically when corrections are made._
 - **System back (root `BackHandler` in `app/_layout.tsx`)**: pop if `canGoBack()`, else go to Home (`/`) from any other tab, and only Home asks "press back again to exit".
 - **Verify navigation by walking real paths with back presses** (adb `input keyevent 4` + `uiautomator dump` to read the screen), including tab switches from deep inside a flow — opening screens by deep link alone never exercises the stack. Device px ≠ screenshot px: tab bar centres on a 1080-wide Pixel 7 are x≈116/327/540/751/963 (Home/Workouts/Coach/Stats/Settings), y≈2238.
 
+- **Maestro `rightOf` alone can select a switch on a different row.** For the currently unlabeled Settings switches, use the switch bounds from a fresh screenshot/hierarchy; `rightOf: Dark Mode` selected Notifications on iOS (2026-10-14). Dismiss its confirmation without changing notification settings. Tap percentages must be integers: `37%`, not `36.6%` (the installed CLI parses them as integers).
+
 ### Keyboard (Android, edge-to-edge)
 
 - **Android no longer resizes the window for the keyboard (edge-to-edge), so `KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}` does nothing on Android** — the keyboard covers the bottom of the form (found 2026-10-12: the auth screens' Log in / Create account button). Use `behavior="padding"` on both platforms, and don't pair a scrollable form with `keyboardDismissMode="on-drag"` on Android (scrolling to reach the button closed the keyboard).
@@ -211,9 +222,14 @@ _Claude updates this section automatically when corrections are made._
 
 ### Notifications (notifee)
 
+- **Workout notification clocks derive from the session, not the previous timer render.** Running time = stored duration + the current resume interval; paused time = stored duration only. Keep notification actions tied to their session ID and phase, and persist the confirmed API duration before an offline resume. The ready state must show Start and never resume on mount.
+- **Regenerate iOS cleanly when adding the Live Activity plugin.** The upstream `expo-live-activity` plugin adds another target during a non-clean prebuild, producing duplicate `LiveActivity.appex` outputs. Use `npx expo prebuild --clean --platform ios`, then build normally with signing enabled.
+
 - **Never request an exact alarm without checking access.** On Android 12+, `AlarmType.SET_EXACT*` without the user-granted SCHEDULE_EXACT_ALARM makes notifee DROP the trigger ("Missing SCHEDULE_EXACT_ALARM permission. Trigger not scheduled") — it does not fall back. Use `canScheduleExactAlarms()` in `src/lib/reminders.ts` and fall back to `SET_AND_ALLOW_WHILE_IDLE` (found 2026-10-11: every reminder silently failed). Verify scheduling with `adb shell dumpsys alarm | grep fitnyx` and `adb logcat | grep -i notifee`, not just "no error thrown".
 
 ### React / providers
+
+- **Bundled `Image` assets keep their intrinsic dimensions unless overridden.** For an image filling an absolute-positioned card, use `StyleSheet.absoluteFill` plus `{ width: undefined, height: undefined }`; percentage dimensions can leave a strip along a padded parent. Verify the crop on a device (found in the workout hero, 2026-10-14).
 
 - **Never memoize a callback that calls a `useWorkout()` action (`finishActiveSession`, `abandonActiveSession`, `pauseActiveSession`, `resumeActiveSession`) without listing that action in the deps.** Those actions close over `activeSession` and are re-created when it changes; a screen that mounts before the provider has the session (e.g. right after `offlineStartSession` → `router.push`) captures the `activeSession = null` version and the action silently no-ops. Verified 2026-10-08 with a Jest probe against `app/workouts/session/[id].tsx` (`completeWorkout`/`abandonWorkout` memoized on `[sessionId]` only).
 
@@ -242,4 +258,10 @@ _Claude updates this section automatically when corrections are made._
 - **`uiautomator dump` fails ("could not get idle state") while a live clock or ring animates** (workout timer, rest bar). Tap by known coordinates or pause the timer first; the scratchpad helper's dump needs a timeout or it hangs the shell.
 - **In dev builds the Expo "Tools" floating button sits over the logger's Finish button** (top-right) — taps there open the dev menu. Turn "Tools button" off in the dev menu when testing; release builds don't have it.
 - **Unlogged rows of exercises added mid-workout live only in memory** — a reload/reopen rebuilds ad-hoc blocks from logged sets only. Planned (routine/program) rows always come back.
+
+### Local full-stack testing (2026-10-14)
+
+- **`EXPO_PUBLIC_*` set on the command line does NOT beat `.env`, and Metro caches the inlined values.** To point a dev build at another backend, write a temporary `.env.local` (gitignored, higher priority) and start Metro with `--clear`; delete it afterwards. Confirm where the app really connects with `lsof -nP -iTCP:<port>` — the backend's request log only prints non-2xx responses, so a quiet log proves nothing.
+- **The running Pixel_7 emulator (qemu) can hold host port 8081**, so Metro can't use it: run `npx expo start --port 8082 --dev-client`, `adb reverse tcp:8082 tcp:8082`, and open `exp+fitnyx-mobile://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8082`.
+- **A local backend uses the production Supabase DB (`DB_URL`)** — anything logged while testing lands on the signed-in user's real account. Undo it in the app and hard-delete the test rows afterwards; verify SQL with a throwaway `cmd/zz_*` probe inside a rolled-back transaction where possible.
 

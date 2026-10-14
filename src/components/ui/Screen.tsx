@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname } from 'expo-router';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { useWorkoutOverlayInset } from '@/src/providers/WorkoutOverlayProvider';
 import { bottomNavClearance, isBottomNavRoute } from '@/src/components/navigation/bottomNavLayout';
 
 interface ScreenProps {
@@ -17,9 +18,10 @@ export function Screen({ children, scroll = true, contentContainerStyle, style }
   const palette = useThemeColors();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const workoutInset = useWorkoutOverlayInset();
   const requestedBottom = StyleSheet.flatten(contentContainerStyle)?.paddingBottom;
   const navigationPadding = isBottomNavRoute(pathname) ? {
-    paddingBottom: Math.max(typeof requestedBottom === 'number' ? requestedBottom : 100, bottomNavClearance(insets.bottom) + 16),
+    paddingBottom: Math.max(typeof requestedBottom === 'number' ? requestedBottom : 100, bottomNavClearance(insets.bottom) + 16) + workoutInset,
   } : undefined;
 
   const containerStyle: ViewStyle = {

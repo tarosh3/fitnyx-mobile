@@ -8,6 +8,7 @@ import { fmtKm, fmtVolume, plural } from '@/src/features/workouts/model';
 import { RecentRow } from '@/src/features/workouts/train/TrainSections';
 import { weekKeys } from '@/src/features/workouts/train/WeekCard';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { useWorkoutOverlayInset } from '@/src/providers/WorkoutOverlayProvider';
 import { localDateKey, type HistorySession } from '@/src/lib/api/workoutSessions';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
@@ -82,6 +83,7 @@ function MonthCalendar({ sessions }: { sessions: HistorySession[] }) {
 type Item = { kind: 'head'; title: string } | { kind: 'row'; s: HistorySession; first: boolean; last: boolean };
 
 export function HistoryTab({ header }: { header: React.ReactElement }) {
+  const workoutInset = useWorkoutOverlayInset();
   const c = useThemeColors();
   const history = useWorkoutHistory();
   const [filter, setFilter] = useState<Filter>('all');
@@ -144,7 +146,7 @@ export function HistoryTab({ header }: { header: React.ReactElement }) {
           }} />
         </View>
       )}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: 140 + workoutInset }]}
       showsVerticalScrollIndicator={false}
     />
   );

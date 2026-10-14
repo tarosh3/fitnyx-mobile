@@ -10,6 +10,7 @@ jest.mock('@/src/lib/offline/offlineStore', () => ({
   getActiveOfflineSessionId: jest.fn(async () => mockStore.activeId),
   getOfflineSession: jest.fn(async (id: string) => mockStore.sessions[id] ?? null),
   isOfflineId: (id: string) => id.startsWith('offline-'),
+  resolveId: async (id: string) => id,
   persistSessionState: jest.fn(async () => {}),
   setActiveOfflineSessionId: jest.fn(async (id: string | null) => {
     mockStore.activeId = id;
@@ -30,7 +31,8 @@ jest.mock('@/src/lib/api/workoutSessions', () => ({
 }));
 jest.mock('@/src/lib/api', () => ({ isAuthError: () => false }));
 jest.mock('@/src/lib/workoutNotification', () => ({
-  initialize: jest.fn(),
+  initialize: jest.fn(async () => {}),
+  consumeOpenRequest: jest.fn(async () => null),
   showActiveWorkout: jest.fn(),
   updateTimer: jest.fn(),
   dismiss: jest.fn(async () => {}),
@@ -43,6 +45,7 @@ jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => mockAuth }));
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { WorkoutProvider, useWorkout } from '@/src/providers/WorkoutProvider';
+import { offlinePauseSession, offlineResumeSession } from '@/src/lib/offline/offlineApi';
 
 let ctx: ReturnType<typeof useWorkout> | null = null;
 function Probe() {
@@ -131,6 +134,40 @@ describe('WorkoutProvider active-session fallback', () => {
       await ctx!.finishActiveSession();
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['retentionMetrics', 'u1'] });
+    r.unmount();
+  });
+
+  it('uses the latest state when starting then pausing the same workout', async () => {
+    const r = await mount();
+    const ready = { ...inProgress('s-controls'), status: 'paused', total_duration_sec: 0 };
+    const running = { ...ready, status: 'in_progress', last_resumed_at: new Date().toISOString() };
+    const paused = { ...ready, total_duration_sec: 12 };
+    jest.mocked(offlineResumeSession).mockResolvedValueOnce(running as any);
+    jest.mocked(offlinePauseSession).mockResolvedValueOnce(paused as any);
+    await act(async () => ctx!.setActiveSession(ready as any));
+    expect(ctx!.activeSession?.status).toBe('paused');
+    await act(async () => { await ctx!.resumeActiveSession(); });
+    expect(ctx!.activeSession?.status).toBe('in_progress');
+    await act(async () => { await ctx!.pauseActiveSession(); });
+    expect(ctx!.activeSession?.total_duration_sec).toBe(12);
+    expect(ctx!.activeSession?.status).toBe('paused');
+    r.unmount();
+  });
+
+  it('deduplicates rapid pause taps before the state update renders', async () => {
+    const r = await mount();
+    const running = inProgress('s-double');
+    await act(async () => ctx!.setActiveSession(running as any));
+    let resolve!: (value: any) => void;
+    jest.mocked(offlinePauseSession).mockClear().mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    const pause = ctx!.pauseActiveSession;
+    await act(async () => {
+      const first = pause();
+      await pause();
+      expect(offlinePauseSession).toHaveBeenCalledTimes(1);
+      resolve({ ...running, status: 'paused', total_duration_sec: 3 });
+      await first;
+    });
     r.unmount();
   });
 });

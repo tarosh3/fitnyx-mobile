@@ -20,6 +20,8 @@ export const cacheKeys = {
   workoutHistory: (userId: string) => `workouts:history:${userId}`,
   workoutSession: (sessionId: string) => `workouts:session:${sessionId}`,
   programs: 'workouts:programs',
+  workoutLiveActivity: 'workouts:live-activity',
+  workoutNotificationOpen: 'workouts:notification-open',
   roamActivity: (userId: string, id: string) => `roam:activity:${userId}:${id}`,
   // Diet — per local day / range, user-scoped so accounts on one device never mix.
   dietLogs: (userId: string, date: string) => `diet:logs:${userId}:${date}`,

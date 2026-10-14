@@ -7,7 +7,7 @@ import { plural } from '@/src/features/workouts/model';
 import { Rings } from '@/src/features/workouts/ui/bits';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
-import { radii, spacing, type } from '@/src/styles/tokens';
+import { spacing, type } from '@/src/styles/tokens';
 
 export interface WeekSession {
   id: string;
@@ -58,7 +58,7 @@ export function WeekCard({ sessions }: { sessions: WeekSession[] }) {
   return (
     <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
       <View style={styles.top}>
-        <Rings rings={[
+        <Rings size={96} stroke={9} rings={[
           { value: week.workouts, goal: WEEKLY_GOAL.workouts, color: c.primary },
           { value: week.minutes, goal: WEEKLY_GOAL.minutes, color: c.parts.back.fg },
           { value: week.sets, goal: WEEKLY_GOAL.sets, color: c.parts.legs.fg },
@@ -98,25 +98,25 @@ export function WeekCard({ sessions }: { sessions: WeekSession[] }) {
         })}
       </View>
       <Text style={[styles.note, { color: c.mutedText }]}>
-        {left <= 0 ? 'Weekly goal reached. Brilliant!' : `${plural(left, 'more workout')} to close your rings this week.`}
+        {left <= 0 ? 'Weekly workout goal reached. Keep it going.' : `${plural(left, 'more workout')} to hit your weekly workout goal.`}
       </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, padding: spacing.base, gap: spacing.md },
+  card: { borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: spacing.base, gap: spacing.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.base },
-  legend: { flex: 1, gap: spacing.sm },
+  legend: { flex: 1, gap: 6 },
   title: { fontFamily: type.weight.bold, fontSize: 16 },
   lg: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 10, height: 10, borderRadius: 5 },
   lgLabel: { flex: 1, fontFamily: type.weight.medium, fontSize: 14 },
   lgValue: { fontFamily: type.weight.extrabold, fontSize: 14, fontVariant: ['tabular-nums'] },
   days: { flexDirection: 'row', justifyContent: 'space-between' },
-  day: { alignItems: 'center', gap: 4, minWidth: 40, minHeight: 56 },
+  day: { flex: 1, alignItems: 'center', gap: 4, minHeight: 56 },
   dayLetter: { fontFamily: type.weight.semibold, fontSize: 12 },
-  circle: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  circle: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   dayNum: { fontFamily: type.weight.bold, fontSize: 14 },
-  note: { fontFamily: type.weight.regular, fontSize: 14 },
+  note: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18 },
 });

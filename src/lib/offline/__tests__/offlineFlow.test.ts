@@ -28,10 +28,12 @@ import {
   offlineDeleteLog,
   offlineFinishSession,
   offlineLogSet,
+  offlinePauseSession,
+  offlineResumeSession,
   offlineStartSession,
   offlineUpdateLog,
 } from '../offlineApi';
-import { getActiveOfflineSessionId, getOfflineLogs } from '../offlineStore';
+import { getActiveOfflineSessionId, getOfflineLogs, getOfflineSession, persistSessionState } from '../offlineStore';
 import { processOfflineQueue } from '../syncEngine';
 
 const setOnline = (online: boolean) =>
@@ -46,6 +48,23 @@ beforeEach(async () => {
 });
 
 afterAll(() => setOnline(true));
+
+it('keeps confirmed pause time when the next resume happens offline', async () => {
+  const running = {
+    id: 's-pause', user_id: 'u1', status: 'in_progress' as const, total_duration_sec: 60,
+    started_at: new Date().toISOString(), last_resumed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(), workout_date: '2026-10-14',
+  };
+  await persistSessionState(running, []);
+  setOnline(true);
+  mockApi.sessionAction.mockResolvedValueOnce({ ...running, status: 'paused', total_duration_sec: 125 } as any);
+  await offlinePauseSession(running.id);
+  expect((await getOfflineSession(running.id))?.total_duration_sec).toBe(125);
+  setOnline(false);
+  const resumed = await offlineResumeSession(running.id);
+  expect(resumed.total_duration_sec).toBe(125);
+  expect(resumed.status).toBe('in_progress');
+});
 
 it('continues an offline-started workout online after it syncs', async () => {
   setOnline(false);

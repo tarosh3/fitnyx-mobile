@@ -363,15 +363,9 @@ async function offlineSessionAction(
         // Update local copy to match server state
         const localSession = await getOfflineSession(sessionId);
         if (localSession) {
-          if (actionType === 'pause') {
-            localSession.status = 'paused';
-            localSession.paused_at = new Date().toISOString();
-          } else {
-            localSession.status = 'in_progress';
-            localSession.last_resumed_at = new Date().toISOString();
-            localSession.paused_at = undefined;
-          }
-          await saveOfflineSession(localSession);
+          // Keep the confirmed accumulated time too: a later offline resume
+          // must not restart from the pre-pause duration.
+          await saveOfflineSession({ ...localSession, ...result });
         }
       }
       return result;
@@ -382,7 +376,7 @@ async function offlineSessionAction(
         try {
           const { getActiveSession } = require('@/src/lib/api/workoutSessions');
           const resp = await getActiveSession();
-          if (resp.active && resp.session) {
+          if (resp.active && resp.session?.id === sessionId) {
             // Sync local copy with server state
             const localSession = await getOfflineSession(sessionId);
             if (localSession) {
@@ -422,14 +416,16 @@ async function offlineSessionAction(
 
   switch (actionType) {
     case 'pause': {
+      if (session.status === 'paused') return session;
       const lastResumed = new Date(session.last_resumed_at || session.started_at).getTime();
-      const additionalSec = Math.floor((nowMs - lastResumed) / 1000);
+      const additionalSec = Math.max(0, Math.floor((nowMs - lastResumed) / 1000));
       session.status = 'paused';
       session.paused_at = now;
       session.total_duration_sec += additionalSec;
       break;
     }
     case 'resume':
+      if (session.status === 'in_progress') return session;
       session.status = 'in_progress';
       session.last_resumed_at = now;
       session.paused_at = undefined;

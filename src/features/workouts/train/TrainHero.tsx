@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { Play } from 'lucide-react-native';
+import { ArrowUpRight, Play } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { agoLabel, fmtClock, partOf, plural, trackingOf } from '@/src/features/workouts/model';
 import { isReady, startWorkout } from '@/src/features/workouts/start';
-import { Hero } from '@/src/features/workouts/ui/Hero';
+import { TrainingHeroCard as Hero } from '@/src/features/workouts/train/TrainingHeroCard';
 import { Avatars } from '@/src/features/workouts/train/Avatars';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { Routine } from '@/src/lib/api/routines';
@@ -71,16 +71,17 @@ export function TrainHero({ routines, trainedToday, program, firstVisit, onError
   }
   if (firstVisit) {
     return (
-      <Hero eyebrow="Welcome" title="Let’s get your first workout done" subtitle="One tap to start. Add exercises as you go.">
+      <Hero eyebrow="Your next chapter" title="Stronger starts here." subtitle="Your first workout. Your own pace.">
         {primary('Start a workout', () => go(), 'hero-start-empty')}
       </Hero>
     );
   }
   if (trainedToday) {
     return (
-      <Hero eyebrow="Done for today" title="Great work. Rest and recover." subtitle="Your next workout shows up here tomorrow.">
-        <Pressable onPress={() => go()} accessibilityRole="button" style={[styles.secondary, { borderColor: c.hero.line }]}>
-          <Text style={[styles.primaryText, { color: c.hero.text }]}>Start another workout</Text>
+      <Hero recovered eyebrow="Today, accomplished" title={"Great work.\nRecovery counts."} subtitle="Take a breath. Come back stronger tomorrow.">
+        <Pressable testID="hero-start-another" onPress={() => go()} disabled={busy} accessibilityRole="button"
+          style={({ pressed }) => [styles.secondary, { borderColor: c.hero.line, backgroundColor: c.hero.line }, pressed && styles.pressed]}>
+          {busy ? <ActivityIndicator color={c.hero.text} /> : <><Text style={[styles.primaryText, { color: c.hero.text }]}>Start another workout</Text><ArrowUpRight size={20} color={c.hero.accent} /></>}
         </Pressable>
       </Hero>
     );
@@ -108,16 +109,16 @@ export function TrainHero({ routines, trainedToday, program, firstVisit, onError
     );
   }
   return (
-    <Hero eyebrow="Ready to train?" title="Start a workout" subtitle="Add exercises as you go. Save it as a routine at the end.">
+    <Hero eyebrow="Make today count" title={"Your next rep\nstarts here."} subtitle="Build your workout as you go. Make it yours.">
       {primary('Start empty workout', () => go(), 'hero-start-empty')}
     </Hero>
   );
 }
 
 const styles = StyleSheet.create({
-  primary: { minHeight: 56, borderRadius: radii.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  primaryText: { fontFamily: type.weight.bold, fontSize: 17 },
-  secondary: { minHeight: 56, borderRadius: radii.lg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.12)' },
+  primary: { minHeight: 56, borderRadius: radii.lg, paddingHorizontal: spacing.base, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  primaryText: { flexShrink: 1, textAlign: 'center', fontFamily: type.weight.bold, fontSize: 16 },
+  secondary: { minHeight: 54, borderRadius: radii.lg, paddingHorizontal: spacing.base, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: spacing.sm, borderWidth: 1 },
   quiet: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: -6 },
   quietText: { fontFamily: type.weight.semibold, fontSize: 15 },
   pressed: { transform: [{ scale: 0.97 }] },
