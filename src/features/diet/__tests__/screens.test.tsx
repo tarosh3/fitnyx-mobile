@@ -79,6 +79,28 @@ describe('diet today', () => {
   });
 });
 
+describe('diet tabs', () => {
+  it('switches Today and Insights in place, and a day in the strip returns to Today', async () => {
+    (fetchDietSummary as jest.Mock).mockResolvedValue({
+      from: today, to: today, streak_days: 3, top_foods: [{ name: 'Dal tadka', count: 4 }],
+      days: [{ date: today, kcal: 450, protein_g: 16, carbs_g: 70, fat_g: 12, meals: 1, trained: false }],
+    });
+    const screen = render(<DietTodayScreen />);
+    expect(await screen.findByText('kcal left')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('tab', { name: 'Insights' }));
+    expect(await screen.findByText('Most logged')).toBeTruthy();
+    expect(screen.getByText('3 days')).toBeTruthy();
+    expect(screen.queryByText('kcal left')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Insights' })).toHaveProp('accessibilityState', expect.objectContaining({ selected: true }));
+    expect(mockPush).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByLabelText(/^Today, .*in progress$/));
+    expect(await screen.findByText('kcal left')).toBeTruthy();
+    expect(screen.queryByText('Most logged')).toBeNull();
+  });
+});
+
 describe('log food', () => {
   it('searches, adjusts portions and saves one log to the chosen slot', async () => {
     jest.useFakeTimers();

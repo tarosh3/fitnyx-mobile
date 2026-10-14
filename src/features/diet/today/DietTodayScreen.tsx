@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Plus, SlidersHorizontal } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -13,6 +13,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { spacing, type } from '@/src/styles/tokens';
 import { useDietDay, useDietPlan, useDietSummary } from '../data/useDiet';
 import { dateFromKey, dayStatus, fmt, goalsFromPlan, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, type PlanMeal } from '../model';
+import { InsightsPanel } from '../insights/InsightsPanel';
 import { DietSetup } from '../setup/DietSetup';
 import { SectionTitle } from '../ui/bits';
 import { Segments } from '../ui/Segments';
@@ -22,11 +23,15 @@ import { SummaryCard } from './SummaryCard';
 import { CoachTip, WaterCard } from './TodayCards';
 import { WeekStrip } from './WeekStrip';
 
+const shortDate = (d: string) => dateFromKey(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
 export function DietTodayScreen() {
   const c = useThemeColors();
   const router = useRouter();
   const { user } = useAuth();
   const today = localDateKey(new Date());
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState(params.tab === 'insights' ? 1 : 0);
   const [date, setDate] = useState(today);
   const [tipHidden, setTipHidden] = useState(false);
   const [removing, setRemoving] = useState<DietLog | null>(null);
@@ -34,7 +39,7 @@ export function DietTodayScreen() {
   const { plan, state, reload, replace } = useDietPlan(user?.id);
   const day = useDietDay(user?.id, date);
   const week = lastDays(today, 7);
-  const { summary } = useDietSummary(user?.id, week[0], today);
+  const summary = useDietSummary(user?.id, week[0], today);
 
   const meals = useMemo(() => planMeals(plan), [plan]);
   const goal = goalsFromPlan(plan);
@@ -43,7 +48,7 @@ export function DietTodayScreen() {
   const next = date === today ? nextMealIndex(meals, logged) : null;
   const shortG = date === today && !tipHidden ? planProteinShortfall(meals, goal) : null;
   const stripDays = week.map((d) => {
-    const t = summary?.days.find((s) => s.date === d);
+    const t = summary.summary?.days.find((s) => s.date === d);
     return { date: d, status: dayStatus(t?.kcal ?? 0, t?.meals ?? 0, goal?.kcal ?? 0) };
   });
 
@@ -60,7 +65,8 @@ export function DietTodayScreen() {
   const openLog = (params: Record<string, string> = {}) => router.push({ pathname: '/diet/log', params: { date, ...params } });
 
   const header = (
-    <TopBar title="Diet" subtitle={date === today ? 'Today' : dateFromKey(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+    <TopBar title="Diet" subtitle={tab === 1 ? `Last 7 days · ${shortDate(week[0])} – ${shortDate(today)}`
+      : date === today ? 'Today' : dateFromKey(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
       right={state === 'ready' ? <IconButton label="Change diet plan" onPress={() => router.push('/diet/setup')}><SlidersHorizontal size={20} color={c.text} /></IconButton> : null} />
   );
@@ -88,18 +94,20 @@ export function DietTodayScreen() {
     <View style={[styles.fill, { backgroundColor: c.background }]}>
       {header}
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomSpace }]} showsVerticalScrollIndicator={false}>
-        <WeekStrip days={stripDays} selected={date} today={today} onSelect={setDate} />
-        <Segments options={['Today', 'Insights']} selected={0} onSelect={(i) => i === 1 && router.push('/diet/insights')} />
-        {day.offline ? <Text style={[styles.offlineNote, { color: c.mutedText }]}>Offline — showing what’s saved on this phone. New meals sync when you’re back online.</Text> : null}
-        <SummaryCard eaten={eaten} goal={goal} />
-        {shortG ? <CoachTip shortG={shortG} onAction={() => openLog({ slot: 'snack', q: 'greek yogurt' })} onDismiss={() => setTipHidden(true)} /> : null}
-        {date === today ? <WaterCard /> : null}
-        <SectionTitle title="Meals" note={`${fmt(meals.reduce((t, m) => t + m.macros.kcal, 0))} kcal planned`} />
-        {meals.map((m) => (
-          <MealCard key={m.index} meal={m} log={logged.get(m.index)} next={next === m.index} onToggle={() => toggle(m)} onOpen={() => openMeal(m)} />
-        ))}
-        {others.length ? <SectionTitle title="Other food" note={`${fmt(sumLogs(others).kcal)} kcal`} /> : null}
-        <OtherLogs logs={others} onRemove={setRemoving} />
+        <WeekStrip days={stripDays} selected={tab === 0 ? date : ''} today={today} onSelect={(d) => { setDate(d); setTab(0); }} />
+        <Segments options={['Today', 'Insights']} selected={tab} onSelect={setTab} />
+        {tab === 1 ? <InsightsPanel summary={summary.summary} offline={summary.offline} goal={goal} today={today} /> : <>
+          {day.offline ? <Text style={[styles.offlineNote, { color: c.mutedText }]}>Offline — showing what’s saved on this phone. New meals sync when you’re back online.</Text> : null}
+          <SummaryCard eaten={eaten} goal={goal} />
+          {shortG ? <CoachTip shortG={shortG} onAction={() => openLog({ slot: 'snack', q: 'greek yogurt' })} onDismiss={() => setTipHidden(true)} /> : null}
+          {date === today ? <WaterCard /> : null}
+          <SectionTitle title="Meals" note={`${fmt(meals.reduce((t, m) => t + m.macros.kcal, 0))} kcal planned`} />
+          {meals.map((m) => (
+            <MealCard key={m.index} meal={m} log={logged.get(m.index)} next={next === m.index} onToggle={() => toggle(m)} onOpen={() => openMeal(m)} />
+          ))}
+          {others.length ? <SectionTitle title="Other food" note={`${fmt(sumLogs(others).kcal)} kcal`} /> : null}
+          <OtherLogs logs={others} onRemove={setRemoving} />
+        </>}
       </ScrollView>
       <BottomBar>
         <Button title="Log food" icon={<Plus size={20} color={c.primaryText} strokeWidth={2.4} />} onPress={() => openLog()} />

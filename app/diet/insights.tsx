@@ -1,5 +1,6 @@
-import { InsightsScreen } from '@/src/features/diet/insights/InsightsScreen';
+import { Redirect } from 'expo-router';
 
+/** Insights is a tab of the Diet screen; this keeps old links working. */
 export default function DietInsightsRoute() {
-  return <InsightsScreen />;
+  return <Redirect href={{ pathname: '/diet', params: { tab: 'insights' } }} />;
 }
