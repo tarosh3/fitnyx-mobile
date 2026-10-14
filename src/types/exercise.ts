@@ -55,6 +55,8 @@ export interface ExerciseFilters {
   search?: string;
   muscle?: string;
   is_warmup?: boolean;
+  /** 'summary' = list-row columns only (no how-to, variations, alternatives). */
+  fields?: 'summary';
   page: number;
   limit: number;
 }

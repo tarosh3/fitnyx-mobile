@@ -1,7 +1,7 @@
 import { ExerciseFilters, ExerciseResponse, Exercise } from '@/src/types/exercise';
 import { fetchWithAuth } from '@/src/lib/api';
 
-export async function fetchExercises({ page = 1, limit = 20, search = '', muscle = '', is_warmup = false }: ExerciseFilters): Promise<ExerciseResponse> {
+export async function fetchExercises({ page = 1, limit = 20, search = '', muscle = '', is_warmup = false, fields }: ExerciseFilters): Promise<ExerciseResponse> {
   const query = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -11,6 +11,9 @@ export async function fetchExercises({ page = 1, limit = 20, search = '', muscle
 
   if (is_warmup) {
     query.append('is_warmup', 'true');
+  }
+  if (fields) {
+    query.append('fields', fields);
   }
 
   return fetchWithAuth(`/view/exercises?${query.toString()}`);

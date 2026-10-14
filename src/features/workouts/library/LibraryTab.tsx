@@ -7,11 +7,29 @@ import { type Part, PARTS, partLabel, partOf } from '@/src/features/workouts/mod
 import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchExercises } from '@/src/lib/api/exercises';
-import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { cacheGet, cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import type { Exercise } from '@/src/types/exercise';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
 const PAGE = 30;
+
+type ListPage = { data: Exercise[]; total: number };
+
+const listKey = (query: string, part: Part | null) => cacheKeys.exerciseListPage(`${query}|${part ?? ''}|lib`);
+
+const fetchPage = (query: string, part: Part | null, page: number) =>
+  fetchExercises({ page, limit: PAGE, search: query, muscle: part ?? '', fields: 'summary' });
+
+/** Warms the first page of every body-part chip (skipping fresh ones), one at a time, so switching chips is instant. */
+async function prefetchParts() {
+  for (const { key } of PARTS) {
+    const cacheKey = listKey('', key);
+    if (await cacheGet<ListPage>(cacheKey)) continue;
+    const res = await fetchPage('', key, 1);
+    const data = res.data ?? [];
+    await cacheSet(cacheKey, { data, total: res.meta?.total ?? data.length }, cacheTTL.DAY);
+  }
+}
 
 export function LibraryTab({ header }: { header: React.ReactElement }) {
   const c = useThemeColors();
@@ -24,17 +42,21 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const req = useRef(0);
+  const prefetched = useRef(false);
 
   const load = async (nextPage: number) => {
     const id = ++req.current;
-    const filterKey = cacheKeys.exerciseListPage(`${query.trim()}|${part ?? ''}|lib`);
+    const filterKey = listKey(query.trim(), part);
     setLoading(true);
     if (nextPage === 1) {
-      const cached = await cacheGetStale<{ data: Exercise[]; total: number }>(filterKey);
-      if (cached && id === req.current) { setItems(cached.data); setTotal(cached.total); }
+      const cached = await cacheGetStale<ListPage>(filterKey);
+      if (id !== req.current) return;
+      // No cache: drop the previous filter's rows so the spinner shows instead of a stale list.
+      setItems(cached?.data ?? []);
+      setTotal(cached?.total ?? 0);
     }
     try {
-      const res = await fetchExercises({ page: nextPage, limit: PAGE, search: query.trim(), muscle: part ?? '' });
+      const res = await fetchPage(query.trim(), part, nextPage);
       if (id !== req.current) return;
       const data = res.data ?? [];
       setItems((prev) => (nextPage === 1 ? data : [...prev, ...data.filter((d) => !prev.some((p) => p.uuid === d.uuid))]));
@@ -42,6 +64,10 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
       setPage(nextPage);
       setFailed(false);
       if (nextPage === 1) cacheSet(filterKey, { data, total: res.meta?.total ?? data.length }, cacheTTL.DAY).catch(() => undefined);
+      if (nextPage === 1 && !prefetched.current) {
+        prefetched.current = true;
+        prefetchParts().catch(() => undefined);
+      }
     } catch {
       if (id === req.current) setFailed(true);
     } finally {
