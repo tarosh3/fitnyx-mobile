@@ -430,6 +430,17 @@ export interface DietFoodItem {
     extras?: string;
   };
   ingredients?: string[];
+  /** Set on alternatives in plans generated from 2026-10-14 on. */
+  veg?: boolean;
+  calories?: number;
+  macros?: { p: string; c: string; f: string };
+}
+
+/** A measured ingredient of a planned meal (plans generated from 2026-10-14 on). */
+export interface DietPlanIngredient {
+  name: string;
+  qty: string;
+  kcal?: number;
 }
 
 export interface DietPlan {
@@ -446,6 +457,10 @@ export interface DietPlan {
       alternatives?: Array<DietFoodItem | string>;
       calories: number;
       macros: { p: string; c: string; f: string };
+      /** Missing on plans generated before 2026-10-14. */
+      veg?: boolean;
+      ingredients?: DietPlanIngredient[];
+      steps?: string[];
     }[];
   };
   preferences: any;

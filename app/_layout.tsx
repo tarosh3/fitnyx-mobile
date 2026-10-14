@@ -268,6 +268,11 @@ function ThemedStack() {
       <Stack.Screen name="exercises" options={{ animation: 'fade' }} />
       <Stack.Screen name="dashboard/stats" options={{ animation: 'fade' }} />
       <Stack.Screen name="dashboard/diet" />
+      <Stack.Screen name="diet/index" />
+      <Stack.Screen name="diet/meal/[index]" />
+      <Stack.Screen name="diet/log" />
+      <Stack.Screen name="diet/insights" />
+      <Stack.Screen name="diet/setup" />
       <Stack.Screen name="workouts/index" options={{ animation: 'fade' }} />
       <Stack.Screen name="workouts/routine/[id]" />
       <Stack.Screen name="workouts/routine/edit" />

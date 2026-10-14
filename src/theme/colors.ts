@@ -27,6 +27,18 @@ export const colors = {
       core: { fg: '#5fc793', bg: '#14231C' },
       cardio: { fg: '#FF7A95', bg: '#2E121A' },
     },
+    /** Diet: macro colours (differ in lightness too), veg marks, meal-slot tiles. */
+    diet: {
+      protein: '#5fc793', carbs: '#8AAEFF', fat: '#F2C94C', track: '#262626',
+      veg: '#4ADE80', nonVeg: '#FB923C', over: '#F59E0B', water: '#8AAEFF',
+      hero: '#102419', plate: '#141414',
+      slots: {
+        breakfast: { fg: '#F2C94C', bg: '#2A2410' },
+        lunch: { fg: '#5fc793', bg: '#14231C' },
+        snack: { fg: '#FF7A95', bg: '#2E121A' },
+        dinner: { fg: '#8AAEFF', bg: '#151D35' },
+      },
+    },
     /** Deep-green hero card (same feel in both themes). */
     hero: { from: '#1A6140', to: '#08180F', text: '#F2FBF6', muted: 'rgba(242,251,246,0.76)', accent: '#B8F0D3', line: 'rgba(255,255,255,0.12)' },
     gold: { from: '#FFE7A3', to: '#F2B705', text: '#5A3B00' },
@@ -54,6 +66,17 @@ export const colors = {
       arms: { fg: '#C2410C', bg: '#FDE8DC' },
       core: { fg: '#23734A', bg: '#E2F2E8' },
       cardio: { fg: '#BE123C', bg: '#FDE4EA' },
+    },
+    diet: {
+      protein: '#23734A', carbs: '#2F5BEA', fat: '#A35E00', track: '#E9E9EC',
+      veg: '#15803D', nonVeg: '#9A3412', over: '#B45309', water: '#2F5BEA',
+      hero: '#DDEFE3', plate: '#FFFFFF',
+      slots: {
+        breakfast: { fg: '#A35E00', bg: '#FFF1DA' },
+        lunch: { fg: '#23734A', bg: '#E3F3EA' },
+        snack: { fg: '#BE123C', bg: '#FDE4EA' },
+        dinner: { fg: '#2F5BEA', bg: '#E4EBFD' },
+      },
     },
     hero: { from: '#1E6E47', to: '#0B3522', text: '#F2FBF6', muted: 'rgba(242,251,246,0.76)', accent: '#B8F0D3', line: 'rgba(255,255,255,0.12)' },
     gold: { from: '#FFE7A3', to: '#F2B705', text: '#5A3B00' },

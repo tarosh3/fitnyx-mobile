@@ -1,5 +1,6 @@
 import { saveMetric } from '@/src/lib/api';
 import { createActivity } from '@/src/lib/api/activities';
+import { createDietLog, deleteDietLog } from '@/src/lib/api/diet';
 import {
   logExerciseSet,
   updateExerciseLog,
@@ -182,6 +183,22 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
     case 'SAVE_ACTIVITY': {
       // A Roam saved while offline. Idempotent server-side (client_activity_id).
       await createActivity(payload);
+      break;
+    }
+
+    case 'LOG_MEAL': {
+      // A diet log saved while offline. Idempotent server-side (client_log_id).
+      await createDietLog(payload);
+      break;
+    }
+
+    case 'DELETE_MEAL_LOG': {
+      try {
+        await deleteDietLog(payload.clientLogId);
+      } catch (error) {
+        // Already gone (deleted on another device): nothing left to do.
+        if ((error as { status?: number }).status !== 404) throw error;
+      }
       break;
     }
 

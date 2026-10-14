@@ -25,7 +25,7 @@ export function QuickActionsGrid() {
 
     const actions = [
         { label: 'Ask AI Coach', icon: BrainCircuit, color: PALE_ORANGE, onPress: openCenteredChat, highlight: true },
-        { label: 'Diet & Nutrition', icon: Salad, color: NEON_LIME, onPress: () => router.push('/dashboard/diet') },
+        { label: 'Diet & Nutrition', icon: Salad, color: NEON_LIME, onPress: () => router.push('/diet') },
         { label: 'Workouts', icon: Dumbbell, color: NEON_LIME, onPress: () => router.push('/workouts') },
         { label: 'Workout History', icon: History, color: NEON_LIME, onPress: () => router.push('/workouts?tab=history') },
         { label: 'Body Stats', icon: User, color: NEON_LIME, onPress: () => router.push('/dashboard/stats') },
