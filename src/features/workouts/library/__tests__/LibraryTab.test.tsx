@@ -50,6 +50,6 @@ describe('exercise library', () => {
     const screen = render(<LibraryTab header={<></>} />);
     expect(await screen.findByText('all move')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Legs' }));
-    await waitFor(() => expect(screen.queryByText('all move')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('all move')).not.toBeOnTheScreen());
   });
 });
