@@ -6,7 +6,7 @@ export const bottomNavClearance = (bottomInset: number) => BOTTOM_NAV_HEIGHT + B
 
 const hiddenRoutePrefixes = [
   '/onboarding', '/settings/coach-memory', '/reminders', '/water', '/profile',
-  '/fitness-profile', '/dashboard/stats', '/login', '/signup', '/workouts/summary',
+  '/fitness-profile', '/dashboard/stats', '/dashboard/diet', '/diet', '/login', '/signup', '/workouts/summary',
   // Workouts flows with their own action bar (Start, Repeat, Add…).
   '/workouts/session', '/workouts/routine', '/workouts/history', '/workouts/exercise', '/workouts/programs', '/roam/record', '/update-password', '/privacy-policy',
   '/terms-of-service', '/delete-account', '/email-verified', '/verification-failed',

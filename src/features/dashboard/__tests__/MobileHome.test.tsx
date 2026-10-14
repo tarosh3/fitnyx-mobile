@@ -82,7 +82,7 @@ describe('MobileHome actions and data states', () => {
 
     for (const [id, route] of [
       ['home-roam', '/roam'],
-      ['home-nutrition', '/dashboard/diet'],
+      ['home-nutrition', '/diet'],
       ['home-water', '/water'],
       ['home-profile', '/profile'],
     ]) {

@@ -67,7 +67,7 @@ describe('BottomNav navigation and visibility', () => {
     ['home', '/', '/workouts/plans/plan-1'],
     ['workouts', '/workouts', '/dashboard'],
     ['stats', '/dashboard', '/workouts'],
-    ['settings', '/settings', '/dashboard/diet'],
+    ['settings', '/settings', '/achievements'],
   ])('opens the %s root after clearing the pushed stack', (tab, destination, current) => {
     mockPathname = current;
     const screen = render(<BottomNav />);
@@ -111,7 +111,7 @@ describe('BottomNav navigation and visibility', () => {
   it.each([
     ['workouts', '/exercises', '/workouts'],
     ['home', '/roam/activity-1', '/'],
-    ['stats', '/dashboard/diet', '/dashboard'],
+    ['settings', '/settings/notifications', '/settings'],
   ])('selects %s on %s while allowing return to its root', (tab, current, destination) => {
     mockPathname = current;
     const screen = render(<BottomNav />);

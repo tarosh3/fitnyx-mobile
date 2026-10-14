@@ -21,6 +21,10 @@ export const cacheKeys = {
   workoutSession: (sessionId: string) => `workouts:session:${sessionId}`,
   programs: 'workouts:programs',
   roamActivity: (userId: string, id: string) => `roam:activity:${userId}:${id}`,
+  // Diet — per local day / range, user-scoped so accounts on one device never mix.
+  dietLogs: (userId: string, date: string) => `diet:logs:${userId}:${date}`,
+  dietSummary: (userId: string, from: string, to: string) => `diet:summary:${userId}:${from}:${to}`,
+  dietRecentFoods: (userId: string) => `diet:recent-foods:${userId}`,
 } as const;
 
 export const cacheTTL = {
