@@ -1,6 +1,5 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import { File as FsFile } from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -40,6 +39,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { getProfile, updateProfile } from '@/src/lib/api/users';
 import { checkAndLockUsername, claimUsername } from '@/src/lib/api/username';
 import { countries } from '@/src/lib/countries';
+import { uploadAvatar as uploadAvatarImage } from '@/src/lib/avatarUpload';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { elevation, radii, spacing, type as t } from '@/src/styles/tokens';
@@ -208,8 +208,9 @@ export default function ProfileScreen() {
     try {
       const processed = await manipulateAsync(
         result.assets[0].uri,
-        [{ resize: { width: 512, height: 512 } }],
-        { compress: 0.85, format: SaveFormat.JPEG }
+        // 256 px shows sharp at avatar sizes and stays ~15 KB (Cloudinary free storage).
+        [{ resize: { width: 256, height: 256 } }],
+        { compress: 0.8, format: SaveFormat.JPEG }
       );
       setNewAvatarLocalUri(processed.uri);
       setAvatarUri(processed.uri);
@@ -223,19 +224,8 @@ export default function ProfileScreen() {
     if (!newAvatarLocalUri || !user) return null;
     setUploading(true);
     try {
-      const filePath = `avatars/${user.id}-${Date.now()}.jpg`;
-      // RN+Android: fetch(uri).blob() returns 0-byte blobs intermittently.
-      // Use the expo-file-system File class which reads the file natively and
-      // returns a real ArrayBuffer.
-      const fileHandle = new FsFile(newAvatarLocalUri);
-      const arrayBuffer = await fileHandle.arrayBuffer();
-      const { error } = await supabase.storage.from('profiles').upload(filePath, arrayBuffer, {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
-      if (error) throw error;
-      const { data } = supabase.storage.from('profiles').getPublicUrl(filePath);
-      return data.publicUrl;
+      // One image per user in Cloudinary, replaced on every change.
+      return await uploadAvatarImage(newAvatarLocalUri);
     } finally {
       setUploading(false);
     }
