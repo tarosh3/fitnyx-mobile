@@ -5,7 +5,9 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, T
 
 import { type Part, PARTS, partLabel, partOf } from '@/src/features/workouts/model';
 import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
+import { WorkoutGlyph } from '@/src/features/workouts/ui/WorkoutGlyph';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { useWorkoutOverlayInset } from '@/src/providers/WorkoutOverlayProvider';
 import { fetchExercises } from '@/src/lib/api/exercises';
 import { cacheGet, cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import type { Exercise } from '@/src/types/exercise';
@@ -32,6 +34,7 @@ async function prefetchParts() {
 }
 
 export function LibraryTab({ header }: { header: React.ReactElement }) {
+  const workoutInset = useWorkoutOverlayInset();
   const c = useThemeColors();
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -95,7 +98,7 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
           return (
             <Pressable key={p ?? 'all'} onPress={() => setPart(p)} accessibilityRole="button" accessibilityState={{ selected: on }}
               style={[styles.chip, { borderColor: on ? (tone?.fg ?? c.text) : c.border, backgroundColor: on ? (tone?.bg ?? c.text) : c.card }]}>
-              {tone ? <View style={[styles.dot, { backgroundColor: tone.fg }]} /> : null}
+              {p && tone ? <WorkoutGlyph part={p} size={22} color={on ? tone.fg : c.mutedText} /> : null}
               <Text style={[styles.chipText, { color: on ? (tone?.fg ?? c.background) : c.text }]}>{p ? partLabel(p) : 'All'}</Text>
             </Pressable>
           );
@@ -135,7 +138,7 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
           <ChevronRight size={20} color={c.mutedText} />
         </Pressable>
       )}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: 140 + workoutInset }]}
       showsVerticalScrollIndicator={false}
     />
   );
@@ -148,7 +151,6 @@ const styles = StyleSheet.create({
   chipRow: { marginHorizontal: -16, marginTop: spacing.md, flexGrow: 0 },
   chips: { paddingHorizontal: 16, gap: spacing.sm },
   chip: { minHeight: 44, paddingHorizontal: spacing.base, borderRadius: radii.pill, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
   chipText: { fontFamily: type.weight.semibold, fontSize: 15 },
   count: { fontFamily: type.weight.regular, fontSize: 13, marginTop: spacing.md, marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, minHeight: 80, borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth },

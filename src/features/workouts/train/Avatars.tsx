@@ -1,8 +1,9 @@
-import { Dumbbell, HeartPulse, PersonStanding, Timer } from 'lucide-react-native';
+import { Timer } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { Part } from '@/src/features/workouts/model';
+import { WorkoutGlyph } from '@/src/features/workouts/ui/WorkoutGlyph';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { TrackingType } from '@/src/types/exercise';
 import { type } from '@/src/styles/tokens';
@@ -15,10 +16,10 @@ export function Avatars({ items, max = 5, ring }: { items: { part: Part; trackin
     <View style={styles.row} accessible={false} importantForAccessibility="no-hide-descendants">
       {items.slice(0, max).map((it, i) => {
         const tone = c.parts[it.part];
-        const Icon = it.tracking === 'cardio' ? HeartPulse : it.tracking === 'duration' ? Timer : it.tracking === 'reps' ? PersonStanding : Dumbbell;
         return (
           <View key={i} style={[styles.av, { backgroundColor: tone.bg, borderColor: ring }]}>
-            <Icon size={16} color={tone.fg} />
+            {it.tracking === 'duration' ? <Timer size={17} color={tone.fg} strokeWidth={1.7} />
+              : <WorkoutGlyph part={it.tracking === 'cardio' ? 'cardio' : it.part} size={23} color={tone.fg} />}
           </View>
         );
       })}

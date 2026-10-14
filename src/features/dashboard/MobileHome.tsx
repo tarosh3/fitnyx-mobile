@@ -14,6 +14,7 @@ import type { UserProfile } from '@/src/lib/api/users';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAICoach } from '@/src/providers/AICoachProvider';
+import { useWorkoutOverlayInset } from '@/src/providers/WorkoutOverlayProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
@@ -29,6 +30,7 @@ interface MobileHomeProps {
 const FALLBACK_INSIGHT = 'Make room for a little movement today. Small, consistent steps add up.';
 
 export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
+  const workoutInset = useWorkoutOverlayInset();
   const router = useRouter();
   const { openCenteredChat } = useAICoach();
   const palette = useThemeColors();
@@ -92,7 +94,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
       style={styles.screen}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingTop: insets.top + spacing.base, paddingBottom: bottomNavClearance(insets.bottom) + spacing['2xl'], paddingLeft: Math.max(insets.left, spacing.xl), paddingRight: Math.max(insets.right, spacing.xl) },
+        { paddingTop: insets.top + spacing.base, paddingBottom: bottomNavClearance(insets.bottom) + spacing['2xl'] + workoutInset, paddingLeft: Math.max(insets.left, spacing.xl), paddingRight: Math.max(insets.right, spacing.xl) },
       ]}
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="never"

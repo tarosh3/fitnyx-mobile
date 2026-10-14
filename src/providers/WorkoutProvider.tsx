@@ -27,6 +27,9 @@ import { onOfflineSync } from '@/src/lib/offline/syncEngine';
 import * as WorkoutNotification from '@/src/lib/workoutNotification';
 import { retentionMetricsKey } from '@/src/hooks/queryKeys';
 import { useAuth } from '@/src/providers/AuthProvider';
+import { elapsedForSession } from '@/src/lib/workoutNotificationState';
+import { useWorkoutNotifications } from '@/src/hooks/useWorkoutNotifications';
+import { WorkoutOverlayProvider } from '@/src/providers/WorkoutOverlayProvider';
 
 // --- Timer context (changes every second — only subscribe if you need the live timer) ---
 
@@ -66,13 +69,13 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [elapsedTime, setElapsedTime] = useState(0);
   const notificationInitialized = useRef(false);
-  const lastIosUpdate = useRef(0);
+  const timerActionPending = useRef(false);
 
   // Initialize notification channel on mount
   useEffect(() => {
     if (!notificationInitialized.current) {
       notificationInitialized.current = true;
-      WorkoutNotification.initialize();
+      WorkoutNotification.initialize().catch((error) => console.warn('Workout controls unavailable', error));
     }
   }, []);
 
@@ -168,10 +171,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const baseTime = activeSession.total_duration_sec;
-      const lastResumed = new Date(activeSession.last_resumed_at || activeSession.started_at).getTime();
-      const currentInterval = Math.floor((Date.now() - lastResumed) / 1000);
-      const total = baseTime + currentInterval;
+      const total = elapsedForSession(activeSession);
       setElapsedTime(total);
 
       // Auto-close if the session exceeds 12 hours
@@ -228,80 +228,17 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [user, isOnline, !!activeSession, refreshActiveSession]);
 
-  // Notification lifecycle: show/dismiss based on activeSession
-  useEffect(() => {
-    if (activeSession) {
-      const isPaused = activeSession.status === 'paused';
-      WorkoutNotification.showActiveWorkout(
-        elapsedTime,
-        isPaused,
-        activeSession.started_at,
-        activeSession.last_resumed_at,
-      );
-    } else {
-      WorkoutNotification.dismiss();
-    }
-  }, [activeSession?.id, activeSession?.status]);
-
-  // Update iOS notification periodically (Android uses native chronometer)
-  useEffect(() => {
-    if (!activeSession || activeSession.status === 'paused') return;
-
-    const now = Date.now();
-    if (now - lastIosUpdate.current >= 10000) {
-      lastIosUpdate.current = now;
-      WorkoutNotification.updateTimer(
-        elapsedTime,
-        false,
-        activeSession.started_at,
-        activeSession.last_resumed_at,
-      );
-    }
-  }, [elapsedTime, activeSession]);
-
-  // Use a ref to always access the latest action handlers from the notification callback
-  const actionHandlersRef = useRef<{
-    pause: () => Promise<void>;
-    resume: () => Promise<void>;
-    finish: () => Promise<void>;
-  } | null>(null);
-
-  // Handle notification action presses (foreground)
-  useEffect(() => {
-    if (!activeSession) return;
-
-    const unsubscribe = WorkoutNotification.onAction(async (action) => {
-      const handlers = actionHandlersRef.current;
-      if (!handlers) return;
-
-      switch (action) {
-        case 'pause':
-          await handlers.pause();
-          break;
-        case 'resume':
-          await handlers.resume();
-          break;
-        case 'finish':
-          await handlers.finish();
-          break;
-      }
-    });
-
-    return unsubscribe;
-  }, [activeSession?.id, activeSession?.status]);
-
   const pauseActiveSessionInternal = async () => {
-    if (!activeSession) return;
+    if (!activeSession || activeSession.status !== 'in_progress' || timerActionPending.current) return;
+    timerActionPending.current = true;
     const previousSession = activeSession;
 
     // Optimistic update: immediately reflect paused state in the UI
-    const lastResumed = new Date(activeSession.last_resumed_at || activeSession.started_at).getTime();
-    const additionalSec = Math.floor((Date.now() - lastResumed) / 1000);
     const optimistic: WorkoutSession = {
       ...activeSession,
       status: 'paused',
       paused_at: new Date().toISOString(),
-      total_duration_sec: activeSession.total_duration_sec + additionalSec,
+      total_duration_sec: elapsedForSession(activeSession),
     };
     setActiveSession(optimistic);
 
@@ -311,12 +248,14 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       setActiveSession(previousSession); // Revert on failure
       if (isAuthError(error)) return; // signed out elsewhere — handled globally
-      console.error('Failed to pause session', error);
-    }
+      console.warn('Failed to pause session', error);
+      throw error;
+    } finally { timerActionPending.current = false; }
   };
 
   const resumeActiveSessionInternal = async () => {
-    if (!activeSession) return;
+    if (!activeSession || activeSession.status !== 'paused' || timerActionPending.current) return;
+    timerActionPending.current = true;
     const previousSession = activeSession;
 
     // Optimistic update: immediately reflect resumed state in the UI
@@ -334,8 +273,9 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       setActiveSession(previousSession); // Revert on failure
       if (isAuthError(error)) return; // signed out elsewhere — handled globally
-      console.error('Failed to resume session', error);
-    }
+      console.warn('Failed to resume session', error);
+      throw error;
+    } finally { timerActionPending.current = false; }
   };
 
   const finishActiveSessionInternal = async () => {
@@ -350,17 +290,6 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   };
-
-  // Update ref synchronously during render (safe for refs, after function declarations)
-  if (activeSession) {
-    actionHandlersRef.current = {
-      pause: pauseActiveSessionInternal,
-      resume: resumeActiveSessionInternal,
-      finish: finishActiveSessionInternal,
-    };
-  } else {
-    actionHandlersRef.current = null;
-  }
 
   const abandonActiveSessionInternal = async () => {
     if (!activeSession) return;
@@ -413,19 +342,21 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
 
   const pauseActiveSession = useCallback(async () => {
     await pauseActiveSessionInternal();
-  }, [activeSession?.id]);
+  }, [activeSession]);
 
   const resumeActiveSession = useCallback(async () => {
     await resumeActiveSessionInternal();
-  }, [activeSession?.id]);
+  }, [activeSession]);
 
   const finishActiveSession = useCallback(async () => {
     await finishActiveSessionInternal();
-  }, [activeSession?.id]);
+  }, [activeSession]);
 
   const abandonActiveSession = useCallback(async () => {
     await abandonActiveSessionInternal();
-  }, [activeSession?.id]);
+  }, [activeSession]);
+
+  useWorkoutNotifications({ activeSession, loading, pause: pauseActiveSession, resume: resumeActiveSession });
 
   // Main context value — only changes on session state transitions, NOT every second
   const value = useMemo(
@@ -451,7 +382,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   return (
     <WorkoutContext.Provider value={value}>
       <WorkoutTimerContext.Provider value={timerValue}>
-        {children}
+        <WorkoutOverlayProvider>{children}</WorkoutOverlayProvider>
       </WorkoutTimerContext.Provider>
     </WorkoutContext.Provider>
   );

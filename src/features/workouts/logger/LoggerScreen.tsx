@@ -16,6 +16,7 @@ import { blockDone, nextUp, pendingCount, pendingRows } from '@/src/features/wor
 import { SetEditorSheet } from '@/src/features/workouts/logger/SetEditorSheet';
 import { useHoldTimer } from '@/src/features/workouts/logger/useHoldTimer';
 import { useWorkoutLogger } from '@/src/features/workouts/logger/useWorkoutLogger';
+import { useNotificationWorkoutAction } from '@/src/features/workouts/logger/useNotificationWorkoutAction';
 import { type DraftSet, describeSet, logToDraft, trackingOf } from '@/src/features/workouts/model';
 import { isReady } from '@/src/features/workouts/start';
 import { Button } from '@/src/features/workouts/ui/Chrome';
@@ -47,6 +48,7 @@ export function LoggerScreen() {
   const { activeSession, pauseActiveSession, resumeActiveSession, finishActiveSession, abandonActiveSession } = useWorkout();
   const { elapsedTime } = useWorkoutTimer();
   const lg = useWorkoutLogger(sessionId);
+  useNotificationWorkoutAction(sessionId, !lg.loading, () => toast('Couldn’t update the timer. Please try again.'));
   const routines = useRoutines();
 
   // null = follow the first unfinished exercise; { key: null } = all closed.
@@ -101,12 +103,14 @@ export function LoggerScreen() {
   const startTimer = async (announce: boolean) => {
     if (state === 'running') return;
     const first = state === 'ready';
-    await resumeActiveSession();
+    try { await resumeActiveSession(); }
+    catch { toast('Couldn’t start the timer. Please try again.'); return; }
     if (announce || first) toast(first ? 'Timer started' : 'Timer resumed');
   };
 
   const pauseTimer = async () => {
-    await pauseActiveSession();
+    try { await pauseActiveSession(); }
+    catch { toast('Couldn’t pause the timer. Please try again.'); return; }
     toast('Paused — tap ▶ to carry on');
   };
 
