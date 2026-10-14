@@ -27,7 +27,7 @@ export interface UserProfile {
   subscription_tier: string;
 }
 
-export async function updateProfile(data: UpdateProfileData) {
+export async function updateProfile(data: UpdateProfileData): Promise<UserProfile> {
   return fetchWithAuth('/users/me', {
     method: 'PUT',
     body: JSON.stringify(data),

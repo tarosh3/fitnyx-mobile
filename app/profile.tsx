@@ -59,7 +59,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { user, loading: authLoading, avatarUrl: authAvatarUrl, userProfile: cachedProfile } = useAuth();
+  const { user, loading: authLoading, avatarUrl: authAvatarUrl, userProfile: cachedProfile, profileUpdated } = useAuth();
   const { isOnline } = useNetworkStatus();
 
   const [loading, setLoading] = useState(true);
@@ -264,7 +264,7 @@ export default function ProfileScreen() {
 
       const normalizedPhone = phone ? `${countryCode}${phone.replace(/[^0-9]/g, '')}` : '';
 
-      await updateProfile({
+      const saved = await updateProfile({
         username: username.trim(),
         first_name: firstName.trim(),
         last_name: lastName.trim(),
@@ -274,6 +274,7 @@ export default function ProfileScreen() {
         gender: gender || undefined,
         dob: dob ? dob.toISOString() : undefined,
       });
+      if (saved?.id) profileUpdated(saved);
 
       await supabase.auth.updateUser({
         data: {
@@ -370,7 +371,8 @@ export default function ProfileScreen() {
 
           {/* Avatar */}
           <View style={styles.avatarSection}>
-            <Pressable onPress={selectImage} style={[styles.avatarRing, { borderColor: c.primary }]}>
+            <Pressable onPress={selectImage} accessibilityRole="button" accessibilityLabel="Change profile photo" disabled={uploading}
+              style={[styles.avatarRing, { borderColor: c.primary }]}>
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
               ) : (
