@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/react-native';
 import { isAuthRetryableFetchError, type User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { _registerAuthFailureHandler, isAuthError, isInviteGateError, saveMetric } from '@/src/lib/api';
@@ -38,6 +38,8 @@ interface AuthContextType {
   markOnboardingComplete: () => void;
   avatarUrl: string | null;
   userProfile: UserProfile | null;
+  /** After the profile is saved: every screen (Home avatar, header) shows the new data right away. */
+  profileUpdated: (profile: UserProfile) => void;
   /** Called by the invite screens after a successful redeem + re-registration. */
   onInviteRedeemed: () => Promise<void>;
 }
@@ -148,6 +150,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserProfile(profile);
     setAvatarUrl(profile.avatar_url ?? null);
   };
+
+  const profileUpdated = useCallback((profile: UserProfile) => {
+    applyProfile(profile);
+    if (profile.id) cacheSet(cacheKeys.userProfile(profile.id), profile, cacheTTL.DAY).catch(() => undefined);
+  }, []);
 
   const fetchUserProfile = async (userId: string) => {
     const cacheKey = cacheKeys.userProfile(userId);
@@ -564,6 +571,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       markOnboardingComplete,
       avatarUrl,
       userProfile,
+      profileUpdated,
       onInviteRedeemed,
     }),
     [user, loading, onboardingComplete, avatarUrl, userProfile, isAuthOpen, authMode]
