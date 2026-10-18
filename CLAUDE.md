@@ -95,6 +95,11 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Logs are idempotent on the device-made `client_log_id`: save online, else queue `LOG_MEAL`; delete drops a still-queued create, else `DELETE_MEAL_LOG` (404 = done). Screens merge queued changes via `mergeDayLogs`.
 - Water stays device-local (`src/lib/water.ts`). Plans saved before 2026-10-14 have no `veg`/`ingredients`/`steps`/alternative nutrition — every screen must work without them.
 
+**Share cards (`src/features/share/`)** — achievement images after a Roam (detail screen) or a workout (summary): `cardData.ts` (pure, tested) → `ShareCard` (Story 360×640 / Post 360×450 logical) → `react-native-view-shot` → `expo-sharing` / `expo-media-library` (save only).
+- view-shot's `width`/`height` are **points** (multiplied by the pixel ratio): pass `1080 / PixelRatio.get()` — passing 1080 gave 3240-px, 10 MB files.
+- The app's toasts render **under** RN `Modal`s (the `Sheet`), so give feedback inside the sheet.
+- Never add Android `READ_MEDIA_*` (Play photo-permission policy): saving needs none on Android 13+; they're in `android.blockedPermissions` and the media-library plugin uses `granularPermissions: []`.
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -110,7 +115,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `home` · `onboarding` · `roam` · `workouts`
+`auth` · `dashboard` · `diet` · `home` · `onboarding` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
