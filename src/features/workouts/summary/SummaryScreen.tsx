@@ -6,7 +6,7 @@ import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRoutines, useWorkoutHistory } from '@/src/features/workouts/hooks';
-import { workoutCardData, type ShareCardData } from '@/src/features/share/cardData';
+import { setLoad, workoutCardData, type ShareCardData } from '@/src/features/share/cardData';
 import { ShareCardSheet } from '@/src/features/share/ShareCardSheet';
 import { useSessionDetail } from '@/src/features/workouts/history/useSessionDetail';
 import { describeSet, fmtClock, fmtKm, fmtVolume, plural, workoutXp } from '@/src/features/workouts/model';
@@ -66,11 +66,17 @@ export function SummaryScreen() {
 
   const done = () => router.dismissTo('/workouts');
 
-  // The achievement card: new bests first, then the biggest exercises.
+  // The achievement card: each exercise with its best set, records first.
   const share = () => {
     if (!s) return;
-    const bests = prLogs.map((l) => `🏆 ${d.exercises[l.exercise_uuid]?.title ?? 'Exercise'} — ${describeSet(d.typeOf(l.exercise_uuid), l)}`);
-    const rest = [...d.groups].sort((a, b) => b.logs.length - a.logs.length).map((g) => `${g.exercise?.title ?? 'Exercise'} · ${plural(g.logs.length, 'set')}`);
+    const best = (l: (typeof d.logs)[number]) => (l.weight_kg ?? 0) * 1000 + l.reps + (l.distance_m ?? 0) + (l.duration_sec ?? 0);
+    const rows = d.groups
+      .map((g) => {
+        const top = g.logs.reduce((a, b) => (best(b) > best(a) ? b : a), g.logs[0]);
+        return { name: g.exercise?.title ?? 'Exercise', detail: describeSet(d.typeOf(g.uuid), top), pr: g.logs.some((l) => l.is_pr), sets: g.logs.length };
+      })
+      .sort((a, b) => Number(b.pr) - Number(a.pr) || b.sets - a.sets)
+      .map(({ name, detail, pr }) => ({ name, detail, pr }));
     setCard(
       workoutCardData({
         name,
@@ -79,9 +85,9 @@ export function SummaryScreen() {
         volumeKg: t.volumeKg,
         distanceM: cardioOnly ? t.distanceM : 0,
         sets: t.sets,
-        exercises: d.groups.length,
         prs: t.prs,
-        highlights: [...bests, ...rest],
+        rows,
+        bars: [...d.logs].sort((a, b) => a.created_at.localeCompare(b.created_at)).map(setLoad),
         xp,
       }),
     );

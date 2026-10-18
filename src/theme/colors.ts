@@ -1,3 +1,22 @@
+/**
+ * Share cards — fixed art direction, the same in both themes (a card shared
+ * from dark mode must look like one shared from light mode).
+ */
+const share = {
+  /** "Glow": near-black with brand-green and teal light blooms. */
+  night: { bg: '#040706', glowA: '#5fc793', glowB: '#18AFC4', text: '#F3FBF6', muted: 'rgba(243,251,246,0.56)', faint: 'rgba(243,251,246,0.13)', accent: '#86E8B6' },
+  /** The route line, start → end. */
+  route: ['#E2FFF0', '#5fc793', '#14A9C2'],
+  /** "Paper": warm off-white, editorial ink. */
+  paper: { bg: '#F2EEE5', ink: '#0F1211', muted: '#6F736F', faint: 'rgba(15,18,17,0.14)', accent: '#127F4E', routeA: '#0F1211', routeB: '#127F4E' },
+  /** "Receipt": a slip of till paper on a dark backdrop. */
+  receipt: { paper: '#FBFAF5', ink: '#17191B', muted: '#7B7E81', rule: 'rgba(23,25,27,0.4)' },
+  /** "Photo": the user's picture under a dark scrim. */
+  photo: { scrim: 'rgba(2,5,4,0.9)', clear: 'rgba(2,5,4,0)', text: '#FFFFFF', muted: 'rgba(255,255,255,0.74)', placeholderA: '#1A3A2B', placeholderB: '#07120D' },
+  /** "Sticker": white on transparent, with a soft shadow; checkerboard only in the preview. */
+  sticker: { text: '#FFFFFF', muted: 'rgba(255,255,255,0.86)', shadow: 'rgba(0,0,0,0.55)', checkA: '#3A403D', checkB: '#2A2F2D' },
+} as const;
+
 export const colors = {
   dark: {
     background: '#0A0A0A',
@@ -49,6 +68,7 @@ export const colors = {
     /** Deep-green hero card (same feel in both themes). */
     hero: { from: '#1A6140', to: '#08180F', text: '#F2FBF6', muted: 'rgba(242,251,246,0.76)', accent: '#B8F0D3', line: 'rgba(255,255,255,0.12)' },
     gold: { from: '#FFE7A3', to: '#F2B705', text: '#5A3B00' },
+    share,
   },
   light: {
     background: '#F7F7F8',
@@ -94,6 +114,7 @@ export const colors = {
     },
     hero: { from: '#1E6E47', to: '#0B3522', text: '#F2FBF6', muted: 'rgba(242,251,246,0.76)', accent: '#B8F0D3', line: 'rgba(255,255,255,0.12)' },
     gold: { from: '#FFE7A3', to: '#F2B705', text: '#5A3B00' },
+    share,
   },
 } as const;
 
