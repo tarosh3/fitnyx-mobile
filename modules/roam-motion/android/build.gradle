@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.fitnyx.roammotion'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.roammotion"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Same version expo-location already ships, for Activity Recognition.
+  implementation 'com.google.android.gms:play-services-location:21.0.1'
+}

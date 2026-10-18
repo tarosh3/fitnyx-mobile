@@ -25,6 +25,8 @@ interface Props {
   onNameChange: (name: string) => void;
   onSave: () => void;
   onDiscard: () => void;
+  /** Hidden accuracy-testing tool: long-press the heading to share the raw GPS track. */
+  onExportRaw?: () => void;
 }
 
 /** After Finish: review the Roam, then save or discard. Numbers are final once the server recomputes them. */
@@ -39,13 +41,16 @@ export function RecordingSummaryView({
   onNameChange,
   onSave,
   onDiscard,
+  onExportRaw,
 }: Props) {
   const palette = useThemeColors();
   return (
     <View style={styles.wrap}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View>
-          <Text style={[styles.eyebrow, { color: palette.primary }]}>{ACTIVITY_LABEL[type].toUpperCase()} COMPLETE</Text>
+          <Text style={[styles.eyebrow, { color: palette.primary }]} onLongPress={onExportRaw} suppressHighlighting>
+            {ACTIVITY_LABEL[type].toUpperCase()} COMPLETE
+          </Text>
           {/* The title reads as a heading but is editable in place. */}
           <View style={[styles.nameRow, { borderBottomColor: palette.border }]}>
             <TextInput
@@ -84,6 +89,7 @@ export function RecordingSummaryView({
           avgSpeedMps={stats.avgSpeedMps}
           maxSpeedMps={stats.maxSpeedMps}
           vehicleDetected={stats.vehicleDetected}
+          steps={stats.steps}
         />
 
         <SplitsList splits={stats.splits} distanceM={stats.distanceM} movingSec={stats.movingTimeSec} />

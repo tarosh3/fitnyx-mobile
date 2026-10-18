@@ -1,5 +1,5 @@
 import { fetchWithAuth } from '@/src/lib/api';
-import type { ActivityType, RoamPoint } from '@/src/features/roam/geo';
+import type { ActivityType, RoamPoint, VehicleWindow } from '@/src/features/roam/geo';
 
 // Mirrors backend internal/handlers/activity_handler.go (activitySummary /
 // activityDetail). All numbers are computed server-side from the track.
@@ -21,6 +21,10 @@ export interface ActivitySummary {
   vehicle_detected: boolean;
   xp_eligible: boolean;
   xp: number;
+  /** Pedometer steps (pauses excluded); null without them. Absent from older backends. */
+  steps?: number | null;
+  /** Total climb from open terrain data; null when unknown. Absent from older backends. */
+  elevation_gain_m?: number | null;
 }
 
 /** Reserved for a future photos feature — the backend returns [] for now. */
@@ -41,6 +45,8 @@ export interface ActivityDetail extends ActivitySummary {
   /** Inclusive [start, end] indices into the decoded route travelled by vehicle. */
   vehicle_ranges: [number, number][];
   splits: { km: number; sec: number }[];
+  /** Ground height (m) per route point, for the elevation profile; [] when unknown. */
+  elevations?: number[];
 }
 
 export interface ActivityWeek {
@@ -65,7 +71,10 @@ export interface CreateActivityInput {
   local_date: string;
   /** Optional title; blank = the app's default ("Morning Run"). */
   name?: string;
+  /** [lat, lng, t, accuracy, segment, gpsSpeed, steps] — see RoamPoint. */
   points: RoamPoint[];
+  /** Periods the phone's motion sensors reported as in a vehicle. */
+  vehicle_windows?: VehicleWindow[];
 }
 
 export async function createActivity(input: CreateActivityInput): Promise<ActivityDetail> {
@@ -77,6 +86,20 @@ export async function createActivity(input: CreateActivityInput): Promise<Activi
 
 export async function listActivities(page = 1, limit = 20): Promise<ActivityListResponse> {
   return fetchWithAuth(`/activities?page=${page}&limit=${limit}`);
+}
+
+/** One Roam on the personal heatmap: a thinned route (≤ 400 points). */
+export interface HeatmapRoute {
+  id: string;
+  activity_type: ActivityType;
+  started_at: string;
+  /** Google-encoded polyline (decode with decodePolyline). */
+  polyline: string;
+}
+
+/** The user's newest Roams (up to 300) as thinned routes, for the heatmap. */
+export async function getActivityHeatmap(): Promise<{ routes: HeatmapRoute[] }> {
+  return fetchWithAuth('/activities/heatmap');
 }
 
 export async function getActivity(id: string): Promise<ActivityDetail> {

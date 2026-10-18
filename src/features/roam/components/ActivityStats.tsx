@@ -14,6 +14,8 @@ export function ActivityStats({ activity }: { activity: ActivitySummary }) {
       maxSpeedMps={activity.max_speed_mps}
       vehicleDetected={activity.vehicle_detected}
       xp={{ earned: activity.xp, eligible: activity.xp_eligible }}
+      steps={activity.steps}
+      elevationGainM={activity.elevation_gain_m}
     />
   );
 }

@@ -264,3 +264,8 @@ function positionIndexAtProgress(tl: ReplayTimeline, p: number): number {
 export function playbackSeconds(movingTimeSec: number): number {
   return Math.min(40, Math.max(14, 10 + Math.sqrt(movingTimeSec / 60) * 3));
 }
+
+/** Which km markers to draw so a long Roam's map isn't crowded: every 1, 2 or 5 km. */
+export function kmMarkerStep(totalKm: number): number {
+  return totalKm > 30 ? 5 : totalKm > 12 ? 2 : 1;
+}

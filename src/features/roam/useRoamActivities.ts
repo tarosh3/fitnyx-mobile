@@ -19,7 +19,7 @@ import { onOfflineSync } from '@/src/lib/offline/syncEngine';
  * XP is only known once it's uploaded.
  */
 export function pendingSummary(input: CreateActivityInput): ActivitySummary {
-  const stats = computeStats(input.points, input.activity_type);
+  const stats = computeStats(input.points, input.activity_type, input.vehicle_windows);
   const elapsed = (new Date(input.ended_at).getTime() - new Date(input.started_at).getTime()) / 1000;
   return {
     id: `pending-${input.client_activity_id}`,
@@ -38,6 +38,7 @@ export function pendingSummary(input: CreateActivityInput): ActivitySummary {
     vehicle_detected: stats.vehicleDetected,
     xp_eligible: stats.xpEligible,
     xp: 0,
+    steps: stats.steps,
   };
 }
 

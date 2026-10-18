@@ -1,5 +1,5 @@
 import { currentSpeedMps, type RoamPoint } from '@/src/features/roam/geo';
-import { buildTimeline, gradientExpression, playbackSeconds, positionAt, rampColor } from '@/src/features/roam/replay';
+import { buildTimeline, gradientExpression, kmMarkerStep, playbackSeconds, positionAt, rampColor } from '@/src/features/roam/replay';
 import type { LngLatPair } from '@/src/features/roam/routeGeometry';
 
 // A straight eastward line near Delhi: n points `stepM` metres apart.
@@ -123,9 +123,34 @@ describe('currentSpeedMps', () => {
     expect(currentSpeedMps(still, 10)).toBe(0);
   });
 
+  it('reads the GPS speeds when the fixes have them', () => {
+    // Positions say 3 m/s; the GPS speed says 4 — trust the GPS.
+    const setSpeed = ([lat, lng, t, acc, seg]: RoamPoint, v: number): RoamPoint => [lat, lng, t, acc, seg, v];
+    const pts = walk(10, 3).map((p) => setSpeed(p, 4));
+    expect(currentSpeedMps(pts, 18)).toBe(4);
+    // One bad reading among the latest doesn't move it.
+    pts[8] = setSpeed(pts[8], 20);
+    expect(currentSpeedMps(pts, 18)).toBe(4);
+  });
+
+  it('a shaken phone standing still reads 0', () => {
+    // Fix wanders ±6 m inside its 10 m accuracy; GPS speed unknown, or zero.
+    for (const speed of [-1, 0]) {
+      const drift: RoamPoint[] = Array.from({ length: 8 }, (_, i) => [28.6, 77.2 + (i % 2 ? 6 : 0) / METRES_PER_DEG_LNG, i * 2, 10, 0, speed]);
+      expect(currentSpeedMps(drift, 14)).toBe(0);
+    }
+  });
+
   it('only looks at the current segment (after a pause)', () => {
     const before = walk(5, 3, 0);
     const after: RoamPoint[] = [[28.6, 77.3, 100, 5, 1]];
     expect(currentSpeedMps([...before, ...after], 101)).toBeNull(); // one fix — not enough yet
   });
+});
+
+it('thins km markers on long Roams so the map stays readable', () => {
+  expect(kmMarkerStep(5)).toBe(1);
+  expect(kmMarkerStep(12)).toBe(1);
+  expect(kmMarkerStep(19)).toBe(2);
+  expect(kmMarkerStep(42)).toBe(5);
 });

@@ -27,13 +27,32 @@ beforeEach(async () => {
 });
 
 describe('recordingStore', () => {
-  it('persists fixes as [lat, lng, t, acc, segment] relative to the start', async () => {
+  it('turns Android\'s since-boot step counter into steps since the start, across a reboot', async () => {
+    await startRecording('walk', 'u1', T0);
+    const stepsAt = async (counter: number | null, sec: number) => {
+      await appendFixes([fix(sec)], { counter });
+      const pts = await loadPoints();
+      return pts[pts.length - 1][6];
+    };
+    expect(await stepsAt(null, 1)).toBe(-1); // no reading yet
+    expect(await stepsAt(51_000, 2)).toBe(0); // first reading = 0 steps
+    expect(await stepsAt(51_040, 4)).toBe(40);
+    expect(await stepsAt(12, 6)).toBe(40); // rebooted: counter reset, steps carry on
+    expect(await stepsAt(30, 8)).toBe(58);
+  });
+
+  it('persists fixes as [lat, lng, t, acc, segment, speed, steps, course, altitude] relative to the start', async () => {
     await startRecording('run', 'u1', T0);
-    await appendFixes([fix(0), fix(2.5), fix(5, 19.08, 72.88, null)]);
+    await appendFixes([
+      { ...fix(0), speed: 2.345, course: 181.26, altitude: 215.44 },
+      { ...fix(2.5), speed: -1, course: -1 },
+      fix(5, 19.08, 72.88, null),
+      fix(6, 19.08, 72.88, -1), // iOS: invalid fix — dropped
+    ], { sinceStart: 12 });
     expect(await loadPoints()).toEqual([
-      [19.07, 72.87, 0, 5, 0],
-      [19.07, 72.87, 2.5, 5, 0],
-      [19.08, 72.88, 5, 0, 0], // unknown accuracy stored as 0
+      [19.07, 72.87, 0, 5, 0, 2.35, -1, 181.3, 215.4],
+      [19.07, 72.87, 2.5, 5, 0, -1, -1, -1, null], // iOS: -1 = no speed / course
+      [19.08, 72.88, 5, 0, 0, -1, 12, -1, null], // the step reading goes on the batch's last fix
     ]);
     expect((await getRecording())?.pointCount).toBe(3);
   });
