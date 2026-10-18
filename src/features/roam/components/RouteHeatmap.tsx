@@ -6,7 +6,7 @@ import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { RouteSketch } from '@/src/features/roam/components/RouteSketch';
 import { routeBounds } from '@/src/features/roam/routeGeometry';
 import { useBasemap } from '@/src/features/roam/useBasemap';
-import type { HeatmapLine } from '@/src/features/roam/useRoamHeatmap';
+import { focusLines, type HeatmapLine } from '@/src/features/roam/useRoamHeatmap';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useTheme } from '@/src/providers/ThemeProvider';
 
@@ -24,7 +24,7 @@ export function RouteHeatmap({ lines, style }: { lines: HeatmapLine[]; style?: S
     }),
     [lines],
   );
-  const bounds = useMemo(() => routeBounds(lines.flatMap((l) => l.coords)), [lines]);
+  const bounds = useMemo(() => routeBounds(focusLines(lines).flatMap((l) => l.coords)), [lines]);
   const basemap = useBasemap(theme);
   // No basemap (offline): sketch the most recent route so the screen isn't blank.
   if (basemap.style === null) {
@@ -52,14 +52,14 @@ export function RouteHeatmap({ lines, style }: { lines: HeatmapLine[]; style?: S
             type="line"
             id="roam-heat-glow"
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-            paint={{ 'line-color': palette.primary, 'line-opacity': 0.12, 'line-width': HEAT_GLOW, 'line-blur': 6 }}
+            paint={{ 'line-color': palette.primary, 'line-opacity': 0.2, 'line-width': HEAT_GLOW, 'line-blur': 6 }}
           />
           <Layer
             key="roam-heat-line"
             type="line"
             id="roam-heat-line"
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-            paint={{ 'line-color': palette.primary, 'line-opacity': 0.45, 'line-width': HEAT_WIDTH }}
+            paint={{ 'line-color': palette.primary, 'line-opacity': 0.6, 'line-width': HEAT_WIDTH }}
           />
         </GeoJSONSource>
       </Map>
@@ -68,8 +68,8 @@ export function RouteHeatmap({ lines, style }: { lines: HeatmapLine[]; style?: S
 }
 
 const NO_RANGES: [number, number][] = [];
-const HEAT_WIDTH = ['interpolate', ['linear'], ['zoom'], 9, 1.5, 13, 2.5, 17, 4] as never;
-const HEAT_GLOW = ['interpolate', ['linear'], ['zoom'], 9, 5, 13, 9, 17, 14] as never;
+const HEAT_WIDTH = ['interpolate', ['linear'], ['zoom'], 9, 2, 12, 3, 15, 4.5, 17, 5.5] as never;
+const HEAT_GLOW = ['interpolate', ['linear'], ['zoom'], 9, 7, 12, 11, 15, 15, 17, 18] as never;
 
 const styles = StyleSheet.create({
   wrap: { overflow: 'hidden', borderRadius: 16 },
