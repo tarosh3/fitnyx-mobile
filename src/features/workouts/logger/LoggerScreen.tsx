@@ -1,3 +1,4 @@
+import { useWorkoutDetails, updateWorkoutDetails, loadWorkoutDetails } from '@/src/lib/workoutActivityDetails';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Plus, Timer } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
@@ -57,7 +58,9 @@ export function LoggerScreen() {
   const [menuBi, setMenuBi] = useState<number | null>(null);
   const [removeBi, setRemoveBi] = useState<number | null>(null);
   const [picker, setPicker] = useState<{ swapBi: number | null } | null>(null);
-  const [rest, setRest] = useState<{ seconds: number; key: number } | null>(null);
+  const activityDetails = useWorkoutDetails(sessionId);
+  const restEnd = activityDetails.restEnd;
+  useEffect(() => { void loadWorkoutDetails(sessionId); }, [sessionId]);
   const [pr, setPr] = useState<{ title: string; detail: string } | null>(null);
   const [finishOpen, setFinishOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -77,6 +80,10 @@ export function LoggerScreen() {
   const currentIdx = blocks.findIndex((b) => !blockDone(b));
   const expandedIdx = open ? (open.key ? blocks.findIndex((b) => b.key === open.key) : -1) : currentIdx;
   const setsDone = blocks.reduce((n, b) => n + b.logs.length, 0);
+  const volumeKg = blocks.reduce((total, block) => total + block.logs.reduce((sum, log) => sum + (log.reps ?? 0) * (log.weight_kg ?? 0), 0), 0);
+  useEffect(() => {
+    if (!lg.loading && isActive) void updateWorkoutDetails(sessionId, { title, sets: setsDone, volumeKg });
+  }, [sessionId, lg.loading, isActive, title, setsDone, volumeKg]);
   const setsLeft = blocks.reduce((n, b) => n + pendingCount(b), 0);
 
   // Opened a finished workout (old link, notification): show it in history instead.
@@ -129,7 +136,7 @@ export function LoggerScreen() {
         haptic.success();
         setPr({ title: b.exercise?.title ?? 'Exercise', detail: describeSet(trackingOf(b.exercise), res.log) });
       }
-      if (res.restSec) setRest({ seconds: res.restSec, key: Date.now() });
+      if (res.restSec) void updateWorkoutDetails(sessionId, { restEnd: Date.now() + res.restSec * 1000 });
       if (pendingCount(b) === 1 && open?.key === b.key) setOpen(null);
     } catch {
       toast('Couldn’t save that set. Try again.');
@@ -248,7 +255,7 @@ export function LoggerScreen() {
         segments={blocks.map((b, i) => (blockDone(b) ? 'done' : i === expandedIdx ? 'current' : 'todo'))}
         onBack={leave} onStart={() => startTimer(true)} onPause={pauseTimer} onFinish={() => setFinishOpen(true)} onJump={jump} />
 
-      <ScrollView ref={scroll} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + (rest ? 200 : spacing['2xl']) }]}>
+      <ScrollView ref={scroll} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + (restEnd ? 200 : spacing['2xl']) }]}>
         {state === 'ready' ? (
           <View style={[styles.ready, { backgroundColor: c.accentSoft }]}>
             <Timer size={24} color={c.accent} />
@@ -279,7 +286,7 @@ export function LoggerScreen() {
           icon={<Plus size={20} color={blocks.length ? c.text : c.primaryText} />} onPress={() => setPicker({ swapBi: null })} style={styles.addBtn} />
       </ScrollView>
 
-      {rest ? <RestBar key={rest.key} seconds={rest.seconds} onDone={() => setRest(null)}
+      {restEnd ? <RestBar endTimestamp={restEnd} seconds={Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))} onAdjust={(end) => { void updateWorkoutDetails(sessionId, { restEnd: end }); }} onDone={() => { void updateWorkoutDetails(sessionId, { restEnd: undefined }); }}
         next={nextUp(blocks, (b, d) => describeSet(trackingOf(b.exercise), asLog(d)))} /> : null}
 
       {eb && evalue ? (

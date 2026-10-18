@@ -11,6 +11,8 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 
 interface Props {
   seconds: number;
+  endTimestamp?: number;
+  onAdjust?: (end: number) => void;
   next: string | null;
   onDone: () => void;
 }
@@ -20,13 +22,22 @@ interface Props {
  * time (not by decrementing), so it stays right after the app was in the
  * background. Buzzes at 0, then closes itself.
  */
-export function RestBar({ seconds, next, onDone }: Props) {
+export function RestBar({ seconds, next, onDone, endTimestamp, onAdjust }: Props) {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
-  const endAt = useRef(Date.now() + seconds * 1000);
+  const endAt = useRef(endTimestamp ?? Date.now() + seconds * 1000);
   const [total, setTotal] = useState(seconds);
   const [left, setLeft] = useState(seconds);
   const buzzed = useRef(false);
+
+  useEffect(() => {
+    if (endTimestamp !== undefined) {
+      endAt.current = endTimestamp;
+      const remaining = Math.max(0, Math.ceil((endTimestamp - Date.now()) / 1000));
+      setLeft(remaining);
+      setTotal((value) => Math.max(value, remaining));
+    }
+  }, [endTimestamp]);
 
   useEffect(() => {
     const id = setInterval(() => setLeft(Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000))), 250);
@@ -42,6 +53,7 @@ export function RestBar({ seconds, next, onDone }: Props) {
 
   const adjust = (d: number) => {
     endAt.current = Math.max(Date.now() + 1000, endAt.current + d * 1000);
+    onAdjust?.(endAt.current);
     const nextLeft = Math.ceil((endAt.current - Date.now()) / 1000);
     setLeft(nextLeft);
     setTotal((tot) => Math.max(tot, nextLeft));

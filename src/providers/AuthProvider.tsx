@@ -69,6 +69,8 @@ async function clearRoamOnSignOut(): Promise<void> {
     const { clearRecording } = require('@/src/features/roam/recordingStore') as typeof import('@/src/features/roam/recordingStore');
     await stopLocationUpdates();
     await clearRecording();
+    const { syncRoamNotification } = require('@/src/features/roam/notifications') as typeof import('@/src/features/roam/notifications');
+    await syncRoamNotification(true);
   } catch {
     // best-effort
   }

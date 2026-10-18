@@ -20,6 +20,7 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "CADisableMinimumFrameDurationOnPhone": true,
+        "NSMotionUsageDescription": "FitNyx counts your steps and notices vehicle travel during a Roam, so your distance and cadence stay accurate.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -69,6 +70,7 @@
       "./plugins/withNotifIcon",
       "expo-live-activity",
       "./plugins/withWorkoutLiveActivity",
+      "./plugins/withRoamNotification",
       [
         "@sentry/react-native/expo",
         {

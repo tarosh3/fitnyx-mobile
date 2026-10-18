@@ -70,10 +70,15 @@ export function buildWorkoutNotification(session: WorkoutSession): Notification 
 export function showActiveWorkout(session: WorkoutSession): Promise<void> {
   queue = queue.then(async () => {
     if (Platform.OS === 'web') return;
+    // The Live Activity is the iOS workout surface. Avoid a duplicate plain
+    // notification below it; retain notification actions as an availability fallback.
+    if (Platform.OS === 'ios' && await syncWorkoutLiveActivity(session)) {
+      await notifee.cancelNotification(NOTIFICATION_ID);
+      return;
+    }
     try { await notifee.displayNotification(buildWorkoutNotification(session)); }
     catch (error) { console.warn('Workout notification unavailable', error); }
-    // Live Activities have separate authorization from notification banners.
-    await syncWorkoutLiveActivity(session);
+
   }).catch((error) => { console.warn('Workout controls unavailable', error); });
   return queue;
 }

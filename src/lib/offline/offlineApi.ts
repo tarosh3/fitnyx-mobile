@@ -103,6 +103,7 @@ export async function offlineStartSession(input: StartSessionInput): Promise<Wor
 // --- Get Session (with offline fallback) ---
 
 export async function offlineGetSession(requestedId: string): Promise<SessionWithLogs> {
+  await require('@/src/lib/nativeWorkoutControls').drainNativeWorkoutControls();
   // A session started offline that has since synced is fetched by its server id.
   const sessionId = await resolveId(requestedId);
   if (isOfflineId(sessionId)) {
@@ -467,14 +468,14 @@ async function offlineSessionAction(
   return session;
 }
 
-export async function offlinePauseSession(sessionId: string): Promise<WorkoutSession> {
-  const result = await offlineSessionAction('pause', sessionId);
+export async function offlinePauseSession(sessionId: string, at?: string): Promise<WorkoutSession> {
+  const result = await offlineSessionAction('pause', sessionId, at);
   if (!result) throw new Error('Failed to pause session');
   return result;
 }
 
-export async function offlineResumeSession(sessionId: string): Promise<WorkoutSession> {
-  const result = await offlineSessionAction('resume', sessionId);
+export async function offlineResumeSession(sessionId: string, at?: string): Promise<WorkoutSession> {
+  const result = await offlineSessionAction('resume', sessionId, at);
   if (!result) throw new Error('Failed to resume session');
   return result;
 }

@@ -1,3 +1,4 @@
+import { subscribeWorkoutDetails } from '@/src/lib/workoutActivityDetails';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
@@ -20,6 +21,11 @@ export function useWorkoutNotifications(props: Props) {
     if (props.activeSession) void notification.showActiveWorkout(props.activeSession);
     else void notification.dismiss();
   }, [props.loading, props.activeSession?.id, props.activeSession?.status, props.activeSession?.total_duration_sec, props.activeSession?.last_resumed_at]);
+
+  useEffect(() => subscribeWorkoutDetails(() => {
+    const current = latest.current;
+    if (!current.loading && current.activeSession) void notification.showActiveWorkout(current.activeSession);
+  }), []);
 
   useEffect(() => {
     const open = async (id: string) => {

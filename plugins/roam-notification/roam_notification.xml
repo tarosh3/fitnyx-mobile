@@ -1,0 +1,22 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:background="#071C15">
+  <TextView android:id="@+id/roam_brand" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#5FC793" android:textSize="11sp" android:textStyle="bold" android:letterSpacing="0.12" />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom" android:paddingTop="8dp" android:paddingBottom="10dp">
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1.25" android:layout_height="wrap_content" android:orientation="vertical">
+      <TextView android:id="@+id/roam_distance" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="34sp" android:textStyle="bold" android:textColor="#5FC793" android:maxLines="1" />
+      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="KILOMETRES" android:textSize="9sp" android:textColor="#ADC1B7" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+      <Chronometer android:id="@+id/roam_time" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="21sp" android:textStyle="bold" android:textColor="#FFFFFF" android:maxLines="1" />
+      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TIME" android:textSize="9sp" android:textColor="#ADC1B7" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1.15" android:layout_height="wrap_content" android:orientation="vertical">
+      <TextView android:id="@+id/roam_pace" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="19sp" android:textStyle="bold" android:textColor="#FFFFFF" android:maxLines="1" />
+      <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AVERAGE" android:textSize="9sp" android:textColor="#ADC1B7" />
+    </LinearLayout>
+  </LinearLayout>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+    <TextView android:id="@+id/roam_toggle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:gravity="center" android:background="@drawable/roam_primary" android:textColor="#062116" android:textSize="14sp" android:textStyle="bold" />
+    <TextView android:id="@+id/roam_open" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:layout_marginStart="8dp" android:gravity="center" android:background="@drawable/roam_secondary" android:text="View route ↗" android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold" />
+  </LinearLayout>
+  <TextView android:id="@+id/roam_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="8dp" android:textColor="#ADC1B7" android:textSize="10sp" android:maxLines="1" />
+</LinearLayout>
