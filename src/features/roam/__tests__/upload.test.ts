@@ -48,9 +48,21 @@ describe('buildActivityInput', () => {
       activity_type: 'run',
       started_at: new Date(T0).toISOString(),
       ended_at: new Date(T0 + 90_000).toISOString(),
-      points: pts,
+      // Old 5-value fixes gain "speed unknown"; nothing past speed is sent.
+      points: pts.map((p) => [...p, -1, -1]),
     });
     expect(input.local_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('sends [lat, lng, t, acc, segment, speed, steps] — course and altitude stay on the device', () => {
+    const full: RoamPoint[] = pts.map(([a, b, t, acc, seg]): RoamPoint => [a, b, t, acc, seg, 3.2, 41, 90, 215.4]);
+    expect(buildActivityInput(meta, full, T0 + 90_000)!.points[0]).toEqual([19.07, 72.87, 0, 5, 0, 3.2, 41]);
+  });
+
+  it('sends the phone\'s vehicle windows, clamped to the Roam', () => {
+    const input = buildActivityInput(meta, pts, T0 + 90_000, undefined, [[-5, 20], [40, 999], [95, 120]])!;
+    expect(input.vehicle_windows).toEqual([[0, 20], [40, 90]]);
+    expect(buildActivityInput(meta, pts, T0 + 90_000)).not.toHaveProperty('vehicle_windows');
   });
 
   it('caps a forgotten recording at the 12 h server limit and trims later points', () => {

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Droplet, Minus, Plus, Sparkles } from 'lucide-react-native';
+import { ArrowUpRight, Droplet, Minus, Plus, Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -18,11 +18,11 @@ export function CoachTip({ shortG, onAction, onDismiss }: { shortG: number; onAc
       <View style={styles.tipBody}>
         <Text style={[styles.tipText, { color: c.text }]}>
           <Text style={{ fontFamily: type.weight.bold }}>Filo: </Text>
-          Today’s plan lands {shortG} g under your protein goal. A protein snack — Greek yogurt, eggs or roasted chana — closes most of it.
+          Today’s plan lands {shortG} g under your protein goal. Explore a snack to fill the gap.
         </Text>
         <View style={styles.tipActions}>
-          <Pressable onPress={onAction} accessibilityRole="button" style={({ pressed }) => [styles.tipBtn, { backgroundColor: c.text }, pressed && { opacity: 0.8 }]}>
-            <Text style={[styles.tipBtnText, { color: c.background }]}>Find a protein snack</Text>
+          <Pressable onPress={onAction} accessibilityRole="button" style={({ pressed }) => [styles.tipBtn, { backgroundColor: c.accentSoft }, pressed && { opacity: 0.8 }]}>
+            <Text style={[styles.tipBtnText, { color: c.accent }]}>Find a protein snack</Text>
           </Pressable>
           <Pressable onPress={onDismiss} accessibilityRole="button" style={({ pressed }) => [styles.tipBtn, { borderWidth: 1, borderColor: c.border }, pressed && { opacity: 0.8 }]}>
             <Text style={[styles.tipBtnText, { color: c.text }]}>Not now</Text>
@@ -46,8 +46,9 @@ export function WaterCard() {
     <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
       <Pressable onPress={() => router.push('/water')} accessibilityRole="button" accessibilityLabel={`Water, ${litres(totalMl)} of ${litres(goalMl)} litres. Open water history`} style={styles.waterHead}>
         <Droplet size={20} color={c.diet.water} />
-        <Text style={[styles.cardTitle, { color: c.text }]}>Water</Text>
-        <Text style={[styles.muted, { color: c.mutedText }]}>{litres(totalMl)} of {litres(goalMl)} L</Text>
+        <Text style={[styles.cardTitle, { color: c.text }]}>Hydration</Text>
+        <Text style={[styles.muted, { color: c.mutedText }]}>{litres(totalMl)} / {litres(goalMl)} L</Text>
+        <ArrowUpRight size={18} color={c.mutedText} />
       </Pressable>
       <View style={styles.glasses} accessible={false}>
         {Array.from({ length: glasses }, (_, i) => (
@@ -80,9 +81,9 @@ const styles = StyleSheet.create({
   card: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, padding: spacing.base, gap: spacing.md },
   cardTitle: { fontFamily: type.weight.bold, fontSize: 16, flex: 1 },
   muted: { fontFamily: type.weight.regular, fontSize: 14 },
-  waterHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, minHeight: 32 },
+  waterHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, minHeight: 44 },
   glasses: { flexDirection: 'row', gap: 4 },
-  glass: { flex: 1, height: 10, borderRadius: 5 },
+  glass: { flex: 1, height: 6, borderRadius: 3 },
   waterActions: { flexDirection: 'row', gap: spacing.sm },
   waterBtn: { minWidth: 48, minHeight: 44, borderRadius: radii.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   waterAdd: { flex: 1, flexDirection: 'row', gap: spacing.sm },

@@ -3,7 +3,9 @@ import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
 import type { ActivityType } from '@/src/features/roam/geo';
-import { appendFixes } from '@/src/features/roam/recordingStore';
+import { drainRoamControls, syncRoamNotification } from '@/src/features/roam/notifications';
+import { readStepSample, startMotionTracking, stopMotionTracking } from '@/src/features/roam/motion';
+import { appendFixes, getRecording } from '@/src/features/roam/recordingStore';
 import { colors } from '@/src/theme/colors';
 
 // Background GPS for Roam. Imported once from app/_layout so the task is
@@ -22,14 +24,23 @@ type LocationTaskData = { locations?: Location.LocationObject[] };
 if (supported && !TaskManager.isTaskDefined(ROAM_LOCATION_TASK)) {
   TaskManager.defineTask<LocationTaskData>(ROAM_LOCATION_TASK, async ({ data, error }) => {
     if (error || !data?.locations?.length) return;
+    await drainRoamControls();
+    const meta = await getRecording();
+    const latestMs = Math.max(...data.locations.map((l) => l.timestamp));
+    const stepSample = meta && !meta.finishedAtMs ? await readStepSample(meta.startedAtMs, latestMs) : undefined;
     await appendFixes(
       data.locations.map((l) => ({
         lat: l.coords.latitude,
         lng: l.coords.longitude,
         timestampMs: l.timestamp,
         accuracy: l.coords.accuracy,
+        speed: l.coords.speed,
+        course: l.coords.heading,
+        altitude: l.coords.altitude,
       })),
+      stepSample,
     );
+    await syncRoamNotification();
   });
 }
 
@@ -63,11 +74,12 @@ export async function startLocationUpdates(type: ActivityType, force = false): P
     pausesUpdatesAutomatically: false, // iOS must not pause mid-run
     showsBackgroundLocationIndicator: true,
     foregroundService: {
-      notificationTitle: 'Roam in progress',
-      notificationBody: 'FitNyx is recording your route. Tap to return.',
+      notificationTitle: 'FITNYX ROAM',
+      notificationBody: 'Finding your stride · Connecting to GPS',
       notificationColor: colors.dark.primary,
     },
   });
+  await startMotionTracking();
 }
 
 export async function stopLocationUpdates(): Promise<void> {
@@ -75,4 +87,5 @@ export async function stopLocationUpdates(): Promise<void> {
   if (await Location.hasStartedLocationUpdatesAsync(ROAM_LOCATION_TASK)) {
     await Location.stopLocationUpdatesAsync(ROAM_LOCATION_TASK);
   }
+  await stopMotionTracking();
 }

@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   tile: { alignItems: 'center', justifyContent: 'center' },
   macroLine: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: spacing.xxs },
   macro: { fontFamily: type.weight.semibold, fontSize: 13 },
-  section: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: spacing.sm },
+  section: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between', marginTop: spacing.sm },
   sectionTitle: { fontFamily: type.weight.extrabold, fontSize: 20, letterSpacing: -0.3 },
   sectionNote: { fontFamily: type.weight.regular, fontSize: 13, borderRadius: radii.sm },
 });

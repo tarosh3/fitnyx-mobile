@@ -1,3 +1,4 @@
+import { drainNativeWorkoutControls, subscribeNativeWorkoutControls } from '@/src/lib/nativeWorkoutControls';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppState } from 'react-native';
@@ -87,6 +88,13 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    try { await drainNativeWorkoutControls(); }
+    catch (error) {
+      // Keep the native timer authoritative until its journal can be applied.
+      console.warn('Workout controls waiting to sync', error);
+      return;
+    }
+
     // Try API first if online
     if (isOnline) {
       try {
@@ -153,6 +161,8 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     refreshActiveSession();
   }, [refreshActiveSession]);
 
+  useEffect(() => subscribeNativeWorkoutControls(() => { void refreshActiveSession(); }), [refreshActiveSession]);
+
   // Auto-close a session left running for 12 hours (forgot to tap Finish)
   const MAX_SESSION_SECONDS = 12 * 60 * 60;
   const autoAbandonTriggered = useRef(false);
@@ -194,7 +204,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   // Refresh session state when app returns to foreground (handles background notification actions)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active' && activeSession) {
+      if (nextState === 'active' && user) {
         refreshActiveSession();
       }
     });

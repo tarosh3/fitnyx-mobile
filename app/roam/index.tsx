@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
+import { ChevronRight, Flame } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
@@ -72,6 +73,20 @@ export default function RoamScreen() {
       </View>
 
       {data ? <WeekSummary week={data.week} /> : null}
+      {data && data.data.length > 0 ? (
+        <Pressable
+          onPress={() => router.push('/roam/heatmap')}
+          accessibilityRole="button"
+          style={[styles.heatmapLink, { backgroundColor: palette.card, borderColor: palette.border }]}
+        >
+          <Flame size={18} color={palette.primary} />
+          <View style={styles.heatmapText}>
+            <Text style={[styles.heatmapTitle, { color: palette.text }]}>Your heatmap</Text>
+            <Text style={[styles.hint, { color: palette.mutedText, textAlign: 'left' }]}>Every Roam on one map</Text>
+          </View>
+          <ChevronRight size={18} color={palette.mutedText} />
+        </Pressable>
+      ) : null}
 
       <Text style={[styles.heading, { color: palette.mutedText }]}>YOUR ROAMS</Text>
       {loading && !data ? <ActivityIndicator color={palette.primary} /> : null}
@@ -117,4 +132,16 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, textAlign: 'center' },
   heading: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2, marginTop: 20, marginBottom: 10 },
   list: { gap: 10, paddingBottom: 40 },
+  heatmapLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 12,
+  },
+  heatmapText: { flex: 1, gap: 2 },
+  heatmapTitle: { fontSize: 15, fontWeight: '700' },
 });

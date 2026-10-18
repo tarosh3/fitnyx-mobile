@@ -3,7 +3,7 @@ import { createActivity, type ActivityDetail, type CreateActivityInput } from '@
 import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { addToOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { isTransientStatus } from '@/src/lib/offline/syncEngine';
-import type { RoamPoint } from '@/src/features/roam/geo';
+import type { RoamPoint, VehicleWindow } from '@/src/features/roam/geo';
 import type { RecordingMeta } from '@/src/features/roam/recordingStore';
 
 // The backend rejects activities longer than 12 h (a forgotten recording).
@@ -20,6 +20,7 @@ export function buildActivityInput(
   points: RoamPoint[],
   nowMs = Date.now(),
   name?: string,
+  vehicleWindows: VehicleWindow[] = [],
 ): CreateActivityInput | null {
   // Finish pauses the recording, so pausedAtMs is when the Roam ended — time
   // spent on the review screen (or waiting to sync offline) doesn't count.
@@ -34,7 +35,10 @@ export function buildActivityInput(
     ended_at: new Date(endedMs).toISOString(),
     local_date: localDateKey(new Date(meta.startedAtMs)),
     ...(name ? { name } : {}),
-    points: kept,
+    // The backend takes [lat, lng, t, acc, segment, speed, steps]; course and
+    // altitude are for the on-device raw export only.
+    points: kept.map(([lat, lng, t, acc, seg, speed, steps]): RoamPoint => [lat, lng, t, acc, seg, speed ?? -1, steps ?? -1]),
+    ...(vehicleWindows.length ? { vehicle_windows: vehicleWindows.filter(([, b]) => b > 0).map(([a, b]): VehicleWindow => [Math.max(0, a), Math.min(b, maxT)]).filter(([a, b]) => b > a) } : {}),
   };
 }
 
@@ -43,8 +47,13 @@ export function buildActivityInput(
  * queued for the offline sync (the upload is idempotent via client_activity_id);
  * a 4xx is thrown so the user can see it.
  */
-export async function saveRoam(meta: RecordingMeta, points: RoamPoint[], name?: string): Promise<SaveOutcome> {
-  const input = buildActivityInput(meta, points, Date.now(), name);
+export async function saveRoam(
+  meta: RecordingMeta,
+  points: RoamPoint[],
+  name?: string,
+  vehicleWindows: VehicleWindow[] = [],
+): Promise<SaveOutcome> {
+  const input = buildActivityInput(meta, points, Date.now(), name, vehicleWindows);
   if (!input) return { status: 'too-short' };
   try {
     return { status: 'saved', activity: await createActivity(input) };

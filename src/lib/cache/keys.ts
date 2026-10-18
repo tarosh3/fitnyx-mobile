@@ -15,6 +15,7 @@ export const cacheKeys = {
   bodyMetricsHistory: (userId: string) => `bodyMetrics:history:${userId}`,
   fitnessProfile: (userId: string) => `fitnessProfile:${userId}`,
   roamActivities: (userId: string) => `roam:activities:${userId}`,
+  roamHeatmap: (userId: string) => `roam:heatmap:${userId}`,
   // Workouts tab
   routines: (userId: string) => `workouts:routines:${userId}`,
   workoutHistory: (userId: string) => `workouts:history:${userId}`,

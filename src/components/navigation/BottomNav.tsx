@@ -1,39 +1,63 @@
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
 import { ChartNoAxesColumnIncreasing, Dumbbell, Home, Settings, Sparkles } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import React, { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { AccessibilityInfo, Keyboard, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { haptic } from '@/src/lib/haptics';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { elevation, motion, spacing, type } from '@/src/styles/tokens';
-import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_LIFT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
+import { motion, type } from '@/src/styles/tokens';
+import { BOTTOM_NAV_HEIGHT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
 
 const destinations = [
-  // Roam lives on Home (2026-10 workouts revamp), so its screens light up Home.
   { key: 'home', label: 'Home', icon: Home, href: '/', match: (p: string) => p === '/' || p === '/roam' || p.startsWith('/roam/') },
   { key: 'workouts', label: 'Workouts', icon: Dumbbell, href: '/workouts', match: (p: string) => p.startsWith('/workouts') || p.startsWith('/exercises') },
   { key: 'stats', label: 'Stats', icon: ChartNoAxesColumnIncreasing, href: '/dashboard', match: (p: string) => p === '/dashboard' || p.startsWith('/dashboard/') },
   { key: 'settings', label: 'Settings', icon: Settings, href: '/settings', match: (p: string) => p.startsWith('/settings') },
 ] as const;
 
-export function BottomNav() {
+const SPRING = { damping: 22, stiffness: 290, mass: 0.8, reduceMotion: ReduceMotion.System };
+
+export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> }) {
   const pathname = usePathname();
   const router = useRouter();
-  const palette = useThemeColors();
+  const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { user, onboardingComplete } = useAuth();
-  const { openCenteredChat } = useAICoach();
+  const { openCenteredChat, isOpen: coachOpen } = useAICoach();
   const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible());
+  const [reduceTransparency, setReduceTransparency] = useState(false);
+  const [railWidth, setRailWidth] = useState(0);
   const lastNavTime = useRef(0);
+  const index = destinations.findIndex((d) => d.match(pathname));
+  const cursor = useSharedValue(Math.max(index, 0));
+  const stretch = useSharedValue(1);
+  const previousIndex = useRef(index);
 
+  useEffect(() => {
+    cursor.value = withSpring(Math.max(index, 0), SPRING);
+    if (index >= 0 && previousIndex.current >= 0 && index !== previousIndex.current) {
+      stretch.value = withSequence(
+        ReduceMotion.System,
+        withTiming(1.08, { duration: 100, reduceMotion: ReduceMotion.System }),
+        withSpring(1, SPRING),
+      );
+    }
+    previousIndex.current = index;
+  }, [cursor, index, stretch]);
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => { show.remove(); hide.remove(); };
+    let mounted = true;
+    AccessibilityInfo.isReduceTransparencyEnabled().then((value) => { if (mounted) setReduceTransparency(value); }).catch(() => {});
+    const transparency = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setReduceTransparency);
+    return () => { mounted = false; show.remove(); hide.remove(); transparency.remove(); };
   }, []);
 
   const navigate = useCallback((href: string) => {
@@ -41,101 +65,119 @@ export function BottomNav() {
     const now = Date.now();
     if (now - lastNavTime.current < 300) return;
     lastNavTime.current = now;
-    // Selecting a destination starts a fresh stack, including from its sub-pages.
+    haptic.selection();
     if (router.canDismiss()) router.dismissAll();
     router.replace(href as never);
   }, [pathname, router]);
 
-  if (!user || !onboardingComplete || keyboardVisible || !isBottomNavRoute(pathname)) return null;
+  const cellWidth = Math.max(0, railWidth - 12) / 4;
+  const cursorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: cursor.value * cellWidth }, { scaleX: stretch.value }, { scaleY: 2 - stretch.value }],
+  }));
+  if (!user || !onboardingComplete || keyboardVisible || coachOpen || !isBottomNavRoute(pathname)) return null;
 
-  const renderTab = (item: typeof destinations[number]) => (
-    <DockItem key={item.key} id={item.key} label={item.label} icon={item.icon}
-      active={item.match(pathname)} onPress={() => navigate(item.href)} compact={width < 360} />
-  );
+  const gap = bottomNavGap(insets.bottom);
+  // Finish the fade at the dock's lower edge so the system gesture area stays clean.
+  const fadeEnd = (BOTTOM_NAV_HEIGHT + 28) / (BOTTOM_NAV_HEIGHT + gap + 28);
+  const canBlur = !reduceTransparency && (Platform.OS !== 'android' || (!!blurTarget && Number(Platform.Version) >= 31));
+  const blurProps = { blurTarget, blurMethod: 'dimezisBlurViewSdk31Plus' as const, tint: c.background === '#0A0A0A' ? 'dark' as const : 'light' as const };
 
   return (
-    <View pointerEvents="box-none" style={[
-      styles.wrap,
-      { bottom: bottomNavGap(insets.bottom), paddingLeft: Math.max(insets.left, width < 360 ? 12 : 16), paddingRight: Math.max(insets.right, width < 360 ? 12 : 16) },
-    ]}>
-      <View testID="bottom-nav" style={styles.dock}>
-        <View pointerEvents="none" style={[styles.dockSurface, { backgroundColor: palette.card, borderColor: palette.border }]} />
-        {destinations.slice(0, 2).map(renderTab)}
-        <DockItem id="coach" label="Coach" icon={Sparkles} active={false} coach onPress={openCenteredChat} compact={width < 360} />
-        {destinations.slice(2).map(renderTab)}
+    <View pointerEvents="box-none" style={[styles.wrap, { height: BOTTOM_NAV_HEIGHT + gap + 28 }]}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <LinearGradient colors={[`${c.background}00`, `${c.background}CC`, c.background]} locations={[0, 0.45, fadeEnd]} style={StyleSheet.absoluteFill} />
+      </View>
+      <View testID="bottom-nav" pointerEvents="box-none" style={[styles.dock, { bottom: gap, width: Math.min(520, width - Math.max(insets.left, width < 360 ? 12 : 20) - Math.max(insets.right, width < 360 ? 12 : 20)) }]}>
+        <View style={[styles.railShadow, { shadowColor: c.nav.shadow }]}>
+          <View style={[styles.rail, { borderColor: c.nav.edge }]} onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}>
+            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              {canBlur ? <BlurView {...blurProps} intensity={70} style={StyleSheet.absoluteFill} /> : null}
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: canBlur ? c.nav.glass : c.card }]} />
+              <LinearGradient colors={['transparent', c.nav.highlight, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.railHighlight} />
+            </View>
+            {railWidth > 0 && index >= 0 ? (
+              <Animated.View pointerEvents="none" testID="nav-selection" style={[styles.selection, { width: cellWidth - 4, borderColor: c.nav.selectedEdge }, cursorStyle]}>
+                <LinearGradient colors={[c.nav.selectedFrom, c.nav.selectedTo]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={StyleSheet.absoluteFill} />
+                <View style={[styles.selectionHighlight, { backgroundColor: c.nav.selectedEdge }]} />
+              </Animated.View>
+            ) : null}
+            {destinations.map((item, position) => (
+              <DockItem key={item.key} id={item.key} label={item.label} icon={item.icon}
+                active={item.match(pathname)} cursor={cursor} position={position} hasSelection={index >= 0}
+                onPress={() => navigate(item.href)} compact={width < 360} />
+            ))}
+          </View>
+        </View>
+        <CoachAction compact={width < 360} onPress={() => { haptic.light(); openCenteredChat(); }} />
       </View>
     </View>
   );
 }
 
-function DockItem({ id, label, icon: Icon, active, coach = false, onPress, compact }: {
-  id: string;
-  label: string;
-  icon: typeof Home;
-  active: boolean;
-  coach?: boolean;
-  onPress: () => void;
-  compact: boolean;
+function DockItem({ id, label, icon: Icon, active, cursor, position, hasSelection, onPress, compact }: {
+  id: string; label: string; icon: typeof Home; active: boolean; cursor: SharedValue<number>;
+  position: number; hasSelection: boolean; onPress: () => void; compact: boolean;
 }) {
-  const palette = useThemeColors();
-  const selection = useSharedValue(active ? 1 : 0);
+  const c = useThemeColors();
   const press = useSharedValue(1);
-
-  useEffect(() => {
-    selection.value = withTiming(active ? 1 : 0, { duration: motion.duration.fast, reduceMotion: ReduceMotion.System });
-  }, [active, selection]);
-
-  const selectedStyle = useAnimatedStyle(() => ({ opacity: selection.value }));
+  // Ink follows the moving surface, keeping each icon readable throughout the transition.
+  const inactiveStyle = useAnimatedStyle(() => ({ opacity: hasSelection ? Math.min(1, Math.abs(cursor.value - position)) : 1 }));
+  const selectedStyle = useAnimatedStyle(() => ({ opacity: hasSelection ? Math.max(0, 1 - Math.abs(cursor.value - position)) : 0 }));
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
-  const color = active ? palette.accent : palette.mutedText;
-
+  const content = (selected: boolean) => (
+    <>
+      <Icon size={23} strokeWidth={selected ? 2.2 : 1.7} color={selected ? c.nav.selectedInk : c.nav.inactive} accessible={false} />
+      <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.25} adjustsFontSizeToFit minimumFontScale={0.85}
+        style={[styles.label, compact && styles.compactLabel, { color: selected ? c.nav.selectedInk : c.nav.inactive, fontFamily: selected ? type.weight.bold : type.weight.medium }]}>{label}</Text>
+    </>
+  );
   return (
-    <Pressable
-      testID={`nav-${id}`}
-      accessibilityRole={coach ? 'button' : 'tab'}
-      accessibilityLabel={coach ? 'Open Filo, your AI coach' : label}
-      accessibilityState={coach ? undefined : { selected: active }}
+    <Pressable testID={`nav-${id}`} accessibilityRole="tab"
+      accessibilityLabel={label} accessibilityState={{ selected: active }}
       onPress={onPress}
-      onPressIn={() => { press.value = withSpring(0.94, { ...motion.spring.snappy, reduceMotion: ReduceMotion.System }); }}
-      onPressOut={() => { press.value = withSpring(1, { ...motion.spring.snappy, reduceMotion: ReduceMotion.System }); }}
-      style={[styles.tab, coach && styles.coachTab]}
-    >
-      <Animated.View style={[styles.tabContent, pressStyle]}>
-        {!coach && <Animated.View pointerEvents="none" style={[styles.selection, { backgroundColor: palette.accentSoft }, selectedStyle]} />}
-        {coach ? (
-          <View style={[styles.coachMount, { backgroundColor: palette.card }]}>
-            <View style={[styles.coachButton, { backgroundColor: palette.primary }]}>
-              <Icon size={25} strokeWidth={1.9} color={palette.primaryText} accessible={false} />
-            </View>
-          </View>
-        ) : (
-          <View style={styles.iconSlot}>
-            <Icon size={23} strokeWidth={active ? 2.25 : 1.75} color={color} accessible={false} />
-          </View>
-        )}
-        <Text numberOfLines={1} maxFontSizeMultiplier={1.25} adjustsFontSizeToFit minimumFontScale={0.85}
-          style={[styles.label, compact && styles.compactLabel, {
-            color: coach ? palette.text : color,
-            fontFamily: active || coach ? type.weight.semibold : type.weight.medium,
-          }]}>
-          {label}
-        </Text>
+      onPressIn={() => { press.value = withTiming(0.88, { duration: motion.duration.fast, reduceMotion: ReduceMotion.System }); }}
+      onPressOut={() => { press.value = withSpring(1, SPRING); }} style={styles.tab}>
+      <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.tabContent, pressStyle]}>
+        <Animated.View style={[styles.tabFace, inactiveStyle]}>{content(false)}</Animated.View>
+        <Animated.View style={[styles.tabFace, selectedStyle]}>{content(true)}</Animated.View>
       </Animated.View>
     </Pressable>
   );
 }
 
+function CoachAction({ onPress, compact }: { onPress: () => void; compact: boolean }) {
+  const c = useThemeColors();
+  const press = useSharedValue(1);
+  const surfaceStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
+  const lensStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${(1 - press.value) * 120}deg` }] }));
+  return (
+    <Animated.View style={[styles.coach, { backgroundColor: c.nav.coachTo, borderColor: c.nav.coachEdge }, surfaceStyle]}>
+      <LinearGradient pointerEvents="none" colors={[c.nav.coachFrom, c.nav.coachTo]} style={StyleSheet.absoluteFill} />
+      <Pressable testID="nav-coach" accessibilityRole="button" accessibilityLabel="Open Filo, your AI coach" onPress={onPress}
+        onPressIn={() => { press.value = withTiming(0.94, { duration: motion.duration.fast, reduceMotion: ReduceMotion.System }); }}
+        onPressOut={() => { press.value = withSpring(1, SPRING); }} style={styles.tab}>
+        <Animated.View style={[styles.coachLens, { backgroundColor: c.nav.coachLens, borderColor: c.nav.coachEdge }, lensStyle]}>
+          <Sparkles size={22} strokeWidth={1.8} color={c.nav.coachInk} accessible={false} />
+        </Animated.View>
+        <Text numberOfLines={1} maxFontSizeMultiplier={1.25} style={[styles.label, compact && styles.compactLabel, { color: c.nav.coachInk, fontFamily: type.weight.semibold }]}>Coach</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 0, right: 0, zIndex: 50, alignItems: 'center' },
-  dock: { width: '100%', maxWidth: 520, height: BOTTOM_NAV_HEIGHT + BOTTOM_NAV_LIFT, flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: spacing.sm, paddingBottom: 6 },
-  dockSurface: { position: 'absolute', top: BOTTOM_NAV_LIFT, bottom: 0, left: 0, right: 0, borderWidth: 1, borderRadius: 26, ...elevation.sm },
-  tab: { flex: 1, minHeight: 60, alignItems: 'center', justifyContent: 'center' },
-  coachTab: { height: 74, justifyContent: 'flex-end' },
-  tabContent: { width: '100%', height: 60, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 7, gap: 3 },
-  selection: { position: 'absolute', top: 0, bottom: 0, left: 2, right: 2, borderRadius: 18 },
-  iconSlot: { height: 29, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 11, lineHeight: 15, textAlign: 'center', width: '100%', paddingHorizontal: 1 },
-  compactLabel: { fontSize: 10 },
-  coachMount: { position: 'absolute', top: -14, width: 56, height: 56, padding: 4, borderRadius: 22 },
-  coachButton: { flex: 1, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 50 },
+  dock: { position: 'absolute', alignSelf: 'center', height: BOTTOM_NAV_HEIGHT, flexDirection: 'row', gap: 10 },
+  railShadow: { flex: 1, borderRadius: 27, shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  rail: { flex: 1, flexDirection: 'row', padding: 6, borderWidth: StyleSheet.hairlineWidth, borderRadius: 27, overflow: 'hidden' },
+  railHighlight: { position: 'absolute', top: 0, left: 24, right: 24, height: 1 },
+  selection: { position: 'absolute', left: 8, top: 7, bottom: 7, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  selectionHighlight: { position: 'absolute', top: 0, left: 14, right: 14, height: 1 },
+  coach: { width: 62, borderRadius: 25, borderWidth: StyleSheet.hairlineWidth, paddingVertical: 6, overflow: 'hidden' },
+  coachLens: { width: 34, height: 34, borderRadius: 17, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
+  tab: { flex: 1, minWidth: 44, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  tabContent: { width: '100%', height: 54 },
+  tabFace: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 5 },
+  label: { fontSize: 10, lineHeight: 14, textAlign: 'center', width: '88%' },
+  compactLabel: { fontSize: 9 },
 });

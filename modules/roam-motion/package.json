@@ -1,0 +1,8 @@
+{
+  "name": "roam-motion",
+  "version": "1.0.0",
+  "description": "Step counts and in-vehicle periods for Roam (CoreMotion / Android step counter + Activity Recognition)",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

@@ -1,3 +1,4 @@
+import { RoamNotificationSync } from '@/src/features/roam/RoamNotificationSync';
 // Register notification background handler at module level
 import '@/src/lib/notificationBackgroundHandler';
 // Defines the Roam background-location task at startup (required by the OS).
@@ -42,7 +43,8 @@ import { useFonts } from 'expo-font';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import { BlurTargetView } from 'expo-blur';
+import React, { useEffect, useRef } from 'react';
 import { AppState, BackHandler, LogBox, Pressable, Text, ToastAndroid, View, StyleSheet } from 'react-native';
 
 LogBox.ignoreLogs([
@@ -130,6 +132,7 @@ function DynamicStatusBar() {
 }
 
 function RootLayout() {
+  const navBlurTarget = useRef<View>(null);
   const pathname = usePathname();
   const router = useRouter();
   const [loaded, error] = useFonts({
@@ -217,9 +220,11 @@ function RootLayout() {
             <WorkoutProvider>
               <AICoachProvider>
                 <View style={{ flex: 1 }}>
-                  <ToastProvider>
-                    <ThemedStack />
-                  </ToastProvider>
+                  <BlurTargetView ref={navBlurTarget} style={{ flex: 1 }}>
+                    <ToastProvider>
+                      <ThemedStack />
+                    </ToastProvider>
+                  </BlurTargetView>
                   
                   {showAnimated && (
                     <View style={StyleSheet.absoluteFill}>
@@ -234,7 +239,8 @@ function RootLayout() {
                       <DynamicStatusBar />
                       <BackendKeepAlive />
                       <SyncManager />
-                      <BottomNav />
+                      <RoamNotificationSync />
+                      <BottomNav blurTarget={navBlurTarget} />
                       <ActiveSessionIndicator />
                       <AICoachChat />
                     </>

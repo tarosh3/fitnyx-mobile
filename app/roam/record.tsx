@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
@@ -10,6 +10,9 @@ import { cleanActivityName, defaultActivityName } from '@/src/features/roam/acti
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
 import { LiveRecordingView } from '@/src/features/roam/components/LiveRecordingView';
 import { RecordingSummaryView } from '@/src/features/roam/components/RecordingSummaryView';
+import { computeStats, type VehicleWindow } from '@/src/features/roam/geo';
+import { readVehicleWindows } from '@/src/features/roam/motion';
+import { shareRawTrack } from '@/src/features/roam/rawExport';
 import { clearRecording } from '@/src/features/roam/recordingStore';
 import { saveRoam } from '@/src/features/roam/upload';
 import { useRoamRecording } from '@/src/features/roam/useRoamRecording';
@@ -31,11 +34,35 @@ export default function RoamRecordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Modal>(null);
   const [name, setName] = useState('');
+  // The phone's own "in a vehicle" periods, read once the Roam is finished.
+  const [vehicleWindows, setVehicleWindows] = useState<VehicleWindow[]>([]);
 
   // Nothing recording (opened directly / already saved) → back to Roam home.
   useEffect(() => {
     if (!recording.loading && !recording.meta) router.dismissTo('/roam');
   }, [recording.loading, recording.meta, router]);
+
+  useEffect(() => {
+    if (recording.meta?.finishedAtMs) setPhase('summary');
+  }, [recording.meta?.finishedAtMs]);
+
+  const { meta: doneMeta } = recording;
+  useEffect(() => {
+    if (!doneMeta?.finishedAtMs) return;
+    let live = true;
+    void readVehicleWindows(doneMeta.startedAtMs, doneMeta.pausedAtMs ?? doneMeta.finishedAtMs).then((w) => {
+      if (live) setVehicleWindows(w);
+    });
+    return () => {
+      live = false;
+    };
+  }, [doneMeta?.finishedAtMs, doneMeta?.startedAtMs, doneMeta?.pausedAtMs]);
+
+  // The review shows what the server will compute — including the vehicle windows.
+  const reviewStats = useMemo(
+    () => (doneMeta && vehicleWindows.length ? computeStats(recording.points, doneMeta.type, vehicleWindows) : recording.stats),
+    [doneMeta, recording.points, recording.stats, vehicleWindows],
+  );
 
   const finish = async () => {
     setModal(null);
@@ -61,7 +88,7 @@ export default function RoamRecordScreen() {
       // rename back to "Morning Run" and the default stay the same thing.
       const cleaned = cleanActivityName(name);
       const custom = cleaned && cleaned !== defaultActivityName(recording.meta.type, new Date(recording.meta.startedAtMs));
-      const outcome = await saveRoam(recording.meta, recording.points, custom ? cleaned : undefined);
+      const outcome = await saveRoam(recording.meta, recording.points, custom ? cleaned : undefined, vehicleWindows);
       if (outcome.status === 'too-short') {
         setModal('too-short');
         return;
@@ -98,7 +125,8 @@ export default function RoamRecordScreen() {
     );
   }
 
-  const { meta, stats } = recording;
+  const { meta } = recording;
+  const stats = phase === 'live' ? recording.stats : reviewStats;
   return (
     <Screen scroll={false} contentContainerStyle={styles.screen}>
       <PageHeader
@@ -120,6 +148,7 @@ export default function RoamRecordScreen() {
           onNameChange={setName}
           onSave={save}
           onDiscard={() => setModal('discard')}
+          onExportRaw={() => void shareRawTrack(meta, recording.points).catch(() => undefined)}
         />
       )}
 

@@ -144,6 +144,121 @@ describe('computeStats (mirrors backend rules)', () => {
   });
 });
 
+describe('GPS speed + drift (mirrors metrics_test.go)', () => {
+  const setSpeed = ([lat, lng, t, acc, seg]: RoamPoint, v: number): RoamPoint => [lat, lng, t, acc, seg, v];
+  const withSpeed = (tr: Track, v: number, from = 0) => {
+    for (let i = from; i < tr.pts.length; i++) tr.pts[i] = setSpeed(tr.pts[i], v);
+    return tr;
+  };
+
+  it('a shaken phone standing still does not accumulate distance', () => {
+    for (const speed of [-1, 0]) {
+      const tr = new Track();
+      for (let i = 0; i < 150; i++) {
+        tr.t += 2;
+        tr.east(i % 2 === 0 ? 6 : -6);
+        tr.add(10);
+      }
+      const s = stats(withSpeed(tr, speed), 'walk');
+      expect(s.distanceM).toBe(0);
+      expect(s.movingTimeSec).toBe(0);
+    }
+  });
+
+  it('keeps a walk\'s distance at poor accuracy, with or without GPS speeds', () => {
+    const tr = new Track();
+    tr.add(10);
+    for (let i = 0; i < 360; i++) {
+      tr.t += 2;
+      tr.east(2.8);
+      tr.add(10);
+    }
+    expect(Math.abs(stats(tr, 'walk').distanceM - 1008)).toBeLessThan(12);
+    expect(Math.abs(stats(withSpeed(tr, 1.4), 'walk').distanceM - 1008)).toBeLessThan(12);
+  });
+
+  it('max speed comes from GPS speeds: true peak, one spike ignored, capped at the limit', () => {
+    const tr = withSpeed(new Track().move(8, 2, 60), 8);
+    let n = tr.pts.length;
+    withSpeed(tr.move(15, 2, 3), 15, n);
+    n = tr.pts.length;
+    withSpeed(tr.move(8, 2, 60), 8, n);
+    expect(stats(tr, 'cycle').maxSpeedMps).toBeCloseTo(15, 2);
+    tr.pts[30] = setSpeed(tr.pts[30], 30);
+    expect(stats(tr, 'cycle').maxSpeedMps).toBeCloseTo(15, 2);
+
+    const fast = withSpeed(new Track().move(16, 2, 100), 18);
+    expect(stats(fast, 'cycle').maxSpeedMps).toBeCloseTo(60 / 3.6, 2);
+  });
+
+  it('keeps the position window when GPS speeds are missing (Android reports 0)', () => {
+    const s = stats(withSpeed(new Track().move(3, 2, 150).move(4.5, 2, 30).move(3, 2, 150), 0), 'run');
+    expect(s.maxSpeedMps).toBeCloseTo(4.5, 1);
+  });
+
+  it('counts the first move after a stop (no fixes while still)', () => {
+    const build = (speed: number) => {
+      const tr = new Track();
+      tr.add();
+      for (let stop = 0; stop < 10; stop++) {
+        tr.move(5, 2, 50);
+        tr.t += 60;
+      }
+      return withSpeed(tr.move(5, 2, 50), speed);
+    };
+    const s = stats(build(5), 'cycle');
+    expect(Math.abs(s.distanceM - 5500)).toBeLessThan(1);
+    expect(s.movingTimeSec).toBe(1100);
+    expect(s.vehicleDetected).toBe(false);
+    expect(Math.abs(stats(build(-1), 'cycle').distanceM - 5400)).toBeLessThan(1); // can't time it: dropped
+  });
+
+  it('noisy walk: distance comes from GPS speeds, not the zig-zag', () => {
+    const metresPerDeg = (6371000 * Math.PI) / 180;
+    const tr = new Track();
+    tr.add();
+    for (let i = 0; i < 360; i++) {
+      tr.t += 2;
+      tr.east(2.8);
+      tr.lat += (i % 2 === 0 ? 6 : -6) / metresPerDeg; // ±3 m across the path
+      tr.add();
+    }
+    expect(Math.abs(stats(withSpeed(tr, 1.4), 'walk').distanceM - 1008)).toBeLessThan(5);
+  });
+
+  it('drift beyond the accuracy is still when the GPS speed says still', () => {
+    const tr = withSpeed(new Track().move(1.4, 2, 100), 1.4);
+    for (let i = 0; i < 150; i++) {
+      tr.t += 2;
+      tr.east(i % 2 === 0 ? 20 : -20);
+      tr.add(10);
+      tr.pts[tr.pts.length - 1] = setSpeed(tr.pts[tr.pts.length - 1], 0.1);
+    }
+    const s = stats(tr, 'walk');
+    expect(Math.abs(s.distanceM - 280)).toBeLessThan(3);
+    expect(Math.abs(s.movingTimeSec - 200)).toBeLessThanOrEqual(2);
+  });
+
+  it('a GPS speed spike adds nothing', () => {
+    const tr = withSpeed(new Track().move(3, 2, 300), 3);
+    tr.pts[150] = setSpeed(tr.pts[150], 40);
+    const s = stats(tr, 'run');
+    expect(Math.abs(s.distanceM - 1800)).toBeLessThan(0.5);
+    expect(s.maxSpeedMps).toBeCloseTo(3, 2);
+  });
+
+  it('one stray GPS speed reading does not let drift count', () => {
+    const tr = new Track();
+    for (let i = 0; i < 150; i++) {
+      tr.t += 2;
+      tr.east(i % 2 === 0 ? 6 : -6);
+      tr.add(10);
+      if (i % 5 === 0) tr.pts[tr.pts.length - 1] = setSpeed(tr.pts[tr.pts.length - 1], 1);
+    }
+    expect(stats(tr, 'walk').distanceM).toBe(0);
+  });
+});
+
 describe('polyline + formatting', () => {
   it('decodes the Google reference polyline (same vector as the Go encoder test)', () => {
     const pts = decodePolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@');
@@ -170,5 +285,45 @@ describe('formatDurationHuman', () => {
     expect(formatDurationHuman(1686)).toBe('28m 6s');
     expect(formatDurationHuman(120)).toBe('2m');
     expect(formatDurationHuman(45)).toBe('45s');
+  });
+});
+
+describe('steps + phone vehicle windows (mirrors metrics_test.go)', () => {
+  const set = (tr: Track, i: number, speed: number, steps: number) => {
+    const [lat, lng, t, acc, seg] = tr.pts[i];
+    tr.pts[i] = [lat, lng, t, acc, seg, speed, steps];
+  };
+
+  it('a walk whose pedometer stops (on a bus) stops counting after STEP_STILL_SEC', () => {
+    const tr = new Track().move(1.4, 2, 50);
+    const n = tr.pts.length;
+    tr.move(4, 2, 150);
+    tr.pts.forEach((_, i) => set(tr, i, i < n ? 1.4 : 4, Math.min(i, n - 1) * 3));
+    const s = stats(tr, 'walk');
+    expect(Math.abs(s.distanceM - (140 + 4 * 15))).toBeLessThan(10);
+    expect(s.steps).toBe((n - 1) * 3);
+    expect(Math.abs(stats(tr, 'cycle').distanceM - 1340)).toBeLessThan(15); // rides ignore steps
+  });
+
+  it('steps exclude pauses; no pedometer data means no step rule', () => {
+    const tr = new Track().move(1.4, 2, 50);
+    tr.seg++;
+    tr.t += 120;
+    tr.move(1.4, 2, 50);
+    tr.pts.forEach((_, i) => set(tr, i, -1, i <= 50 ? i * 3 : 300 + (i - 51) * 3));
+    expect(stats(tr, 'walk').steps).toBe(150 + 147);
+    const plain = stats(new Track().move(3, 2, 100), 'run');
+    expect(plain.steps).toBeNull();
+    expect(Math.abs(plain.distanceM - 600)).toBeLessThan(1);
+  });
+
+  it('a phone-reported vehicle window turns a "ride" at motorbike speed into vehicle travel', () => {
+    const tr = new Track().move(8, 2, 100).move(14, 2, 100);
+    const s = computeStats(tr.pts, 'cycle', [[200, 400]]);
+    expect(Math.abs(s.distanceM - 1600)).toBeLessThan(5);
+    expect(Math.abs(s.vehicleDistanceM - 2800)).toBeLessThan(5);
+    expect(s.vehicleRanges).toHaveLength(1);
+    const walk = computeStats(new Track().move(1.4, 2, 100).pts, 'walk', [[0, 200]]);
+    expect(Math.abs(walk.distanceM - 280)).toBeLessThan(1); // slow movement still counts
   });
 });

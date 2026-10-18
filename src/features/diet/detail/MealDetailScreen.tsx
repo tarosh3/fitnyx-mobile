@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +13,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { useDietDay, useDietPlan } from '../data/useDiet';
 import { fmt, goalsFromPlan, loggedPlanMeals, planLogItem, planMeals, scaleMacros, SLOT_LABELS, sumLogs } from '../model';
-import { SectionTitle, VegMark } from '../ui/bits';
+import { MealGlyph, SectionTitle, VegMark } from '../ui/bits';
 import { AfterThis, Ingredients, PORTIONS, PortionStepper, Steps, SwapOptions } from './DetailParts';
 import { MacroPlate } from './MacroPlate';
 
@@ -79,24 +80,27 @@ export function MealDetailScreen() {
   return (
     <View style={[styles.fill, { backgroundColor: c.background }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: bottomSpace }} showsVerticalScrollIndicator={false}>
-        <View style={[styles.hero, { backgroundColor: c.diet.hero, paddingTop: insets.top + spacing['3xl'] }]}>
+        <LinearGradient colors={[c.hero.from, c.hero.to]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { paddingTop: insets.top + 76 }]}>
           <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" hitSlop={6}
-            style={({ pressed }) => [styles.back, { top: insets.top + spacing.sm, backgroundColor: c.card }, pressed && { opacity: 0.7 }]}>
-            <ChevronLeft size={24} color={c.text} />
+            style={({ pressed }) => [styles.back, { top: insets.top + 8, backgroundColor: c.hero.line }, pressed && { opacity: 0.7 }]}>
+            <ChevronLeft size={24} color={c.hero.text} />
           </Pressable>
-          <MacroPlate macros={macros} />
-        </View>
-        <View style={[styles.sheet, { backgroundColor: c.background }]}>
-          <View style={styles.titleBlock}>
-            <View style={styles.meta}>
-              <Text style={[styles.slotPill, { color: c.diet.slots[meal.slot].fg, backgroundColor: c.diet.slots[meal.slot].bg }]}>
-                {meal.label || SLOT_LABELS[meal.slot]}{meal.time ? ` · ${meal.time}` : ''}
-              </Text>
-              <VegMark veg={alt ? alt.veg : meal.veg} />
+          <View style={styles.heroMeta}>
+            <MealGlyph slot={meal.slot} size={52} />
+            <View style={styles.titleBlock}>
+              <Text style={[styles.eyebrow, { color: c.hero.accent }]}>{meal.label || SLOT_LABELS[meal.slot]}</Text>
+              <Text style={[styles.muted, { color: c.hero.muted }]}>{meal.time || 'Your planned meal'}</Text>
             </View>
-            <Text style={[styles.title, { color: c.text }]} accessibilityRole="header">{alt?.title ?? meal.title}</Text>
-            {alt ? <Text style={[styles.muted, { color: c.mutedText }]}>Instead of the planned {meal.title}</Text> : null}
           </View>
+          <Text style={[styles.title, { color: c.hero.text }]} accessibilityRole="header">{alt?.title ?? meal.title}</Text>
+          <View style={styles.meta}>
+            <VegMark veg={alt ? alt.veg : meal.veg} />
+            <Text style={[styles.muted, { color: c.hero.muted }]}>{alt ? 'Alternative meal' : 'From your personal plan'}</Text>
+          </View>
+          {alt ? <Text style={[styles.muted, { color: c.hero.muted }]}>Instead of {meal.title}</Text> : null}
+        </LinearGradient>
+        <View style={[styles.sheet, { backgroundColor: c.background }]}>
+          <MacroPlate macros={macros} />
           <PortionStepper portion={portion} onChange={setPortion} />
           {goal && date === localDateKey(new Date()) ? <AfterThis kcal={goal.kcal - others.kcal - macros.kcal} protein={goal.protein - others.protein - macros.protein} /> : null}
           {alt ? (alt.desc ? <><SectionTitle title="What’s in it" /><Text style={[styles.body, { color: c.text }]}>{alt.desc}</Text></> : null) : (
@@ -120,13 +124,15 @@ export function MealDetailScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  hero: { alignItems: 'center', paddingBottom: spacing['2xl'] + spacing.xl },
+  hero: { paddingHorizontal: 24, paddingBottom: 48, gap: 18 },
+  heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  eyebrow: { fontFamily: type.weight.bold, fontSize: 13, letterSpacing: 1 },
   back: { position: 'absolute', left: spacing.base, width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   sheet: { marginTop: -spacing.xl, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: spacing.lg, paddingTop: spacing.xl, gap: spacing.lg },
   titleBlock: { gap: spacing.sm },
   meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   slotPill: { fontFamily: type.weight.bold, fontSize: 13, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radii.pill, overflow: 'hidden' },
-  title: { fontFamily: type.weight.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.5 },
+  title: { fontFamily: type.weight.extrabold, fontSize: 32, lineHeight: 39, letterSpacing: -0.5 },
   muted: { fontFamily: type.weight.regular, fontSize: 14 },
   body: { fontFamily: type.weight.regular, fontSize: 15, lineHeight: 22 },
   undo: { flex: 0, paddingHorizontal: spacing.xl },

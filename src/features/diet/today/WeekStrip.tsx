@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, type } from '@/src/styles/tokens';
@@ -18,7 +18,7 @@ export function WeekStrip({ days, selected, today, onSelect }: {
 }) {
   const c = useThemeColors();
   return (
-    <View style={styles.row}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       {days.map(({ date, status }) => {
         const d = dateFromKey(date);
         const on = date === selected;
@@ -28,7 +28,7 @@ export function WeekStrip({ days, selected, today, onSelect }: {
         return (
           <Pressable key={date} onPress={() => onSelect(date)} accessibilityRole="button" accessibilityState={{ selected: on }}
             accessibilityLabel={`${isToday ? 'Today, ' : ''}${d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}, ${isToday ? 'in progress' : STATUS_TEXT[status]}`}
-            style={({ pressed }) => [styles.day, { backgroundColor: on ? c.primary : c.card, borderColor: on ? c.primary : c.border }, pressed && { opacity: 0.8 }]}>
+            style={({ pressed }) => [styles.day, { backgroundColor: on ? c.primary : 'transparent', borderColor: 'transparent' }, pressed && { opacity: 0.8 }]}>
             <Text style={[styles.dow, { color: on ? c.primaryText : c.mutedText }]}>{isToday ? 'Today' : d.toLocaleDateString('en-GB', { weekday: 'short' })}</Text>
             <Text style={[styles.date, { color: on ? c.primaryText : c.text }]}>{d.getDate()}</Text>
             <View style={[styles.dot, isToday
@@ -37,13 +37,13 @@ export function WeekStrip({ days, selected, today, onSelect }: {
           </Pressable>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 6 },
-  day: { flex: 1, minHeight: 72, borderRadius: radii.lg, borderWidth: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  row: { flexDirection: 'row', flexGrow: 1, gap: 2 },
+  day: { flex: 1, minWidth: 44, minHeight: 62, borderRadius: radii.lg, borderWidth: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   dow: { fontFamily: type.weight.medium, fontSize: 11 },
   date: { fontFamily: type.weight.bold, fontSize: 17 },
   dot: { width: 6, height: 6, borderRadius: 3, marginTop: 3 },

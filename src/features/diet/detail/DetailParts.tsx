@@ -28,13 +28,15 @@ export function PortionStepper({ portion, onChange }: { portion: number; onChang
   );
   return (
     <View style={[styles.card, styles.portion, { backgroundColor: c.card, borderColor: c.border }]}>
-      <View style={styles.grow}>
+      <View style={[styles.grow, { minWidth: 100 }]}>
         <Text style={[styles.label, { color: c.text }]}>Portion</Text>
         <Text style={[styles.muted, { color: c.mutedText }]}>{portion === 1 ? 'As planned' : `${portionLabel(portion)} × the planned serving`}</Text>
       </View>
+      <View style={styles.controls}>
       {btn(-1, 'Smaller portion', Minus, i <= 0)}
       <Text style={[styles.portionValue, { color: c.text }]} accessibilityLiveRegion="polite">{portionLabel(portion)}×</Text>
       {btn(1, 'Larger portion', Plus, i >= PORTIONS.length - 1)}
+      </View>
     </View>
   );
 }
@@ -111,7 +113,8 @@ export function Steps({ steps }: { steps: string[] }) {
 
 const styles = StyleSheet.create({
   card: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  portion: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: 14, paddingLeft: spacing.base },
+  controls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  portion: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md, padding: 14, paddingLeft: spacing.base },
   grow: { flex: 1, minWidth: 0 },
   label: { fontFamily: type.weight.bold, fontSize: 15 },
   muted: { fontFamily: type.weight.regular, fontSize: 13 },

@@ -64,6 +64,21 @@ async function main() {
     fs.readFileSync(path.join(projectRoot, 'assets/images/workouts/strength-equipment.png')),
   );
 
+  // Register against a real project fixture too: both targets need the intent,
+  // and regenerating must not duplicate build sources or compiler conditions.
+  const xcode = require('xcode');
+  const project = xcode.project(path.join(projectRoot, 'ios/FitNyx.xcodeproj/project.pbxproj')).parseSync();
+  fs.mkdirSync(path.join(temporaryRoot, 'FitNyx'), { recursive: true });
+  plugin.registerWorkoutControls(projectRoot, temporaryRoot, project);
+  const registered = project.writeSync();
+  plugin.registerWorkoutControls(projectRoot, temporaryRoot, project);
+  assert.equal(project.writeSync(), registered, 'Native target registration must be idempotent.');
+  const native = fs.readFileSync(path.join(temporaryRoot, 'FitNyx/WorkoutControlIntent.swift'), 'utf8');
+  assert.ok(native.includes('openAppWhenRun = false'));
+  assert.ok(generated.includes('Button(intent: WorkoutControlIntent'));
+  assert.ok(!generated.includes('notificationAction'));
+  assert.ok(registered.includes('FITNYX_APP'));
+
   if (process.argv.includes('--typecheck')) {
     const sdk = execFileSync('xcrun', ['--sdk', 'iphonesimulator', '--show-sdk-path'], { encoding: 'utf8' }).trim();
     const files = fs.readdirSync(target).filter((name) => name.endsWith('.swift')).map((name) => path.join(target, name));

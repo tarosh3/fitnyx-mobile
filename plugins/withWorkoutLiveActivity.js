@@ -45,6 +45,8 @@ function writeWorkoutLiveActivity(projectRoot, platformProjectRoot) {
   // workouts. Reuse the already registered filename: no duplicate Xcode sources.
   fs.writeFileSync(path.join(target, 'LiveActivityWidget.swift'), upstream.slice(0, marker) + template);
 
+  fs.copyFileSync(path.join(__dirname, 'workout-live-activity/WorkoutControlIntent.swift'), path.join(target, 'WorkoutControlIntent.swift'));
+
   const imageSet = path.join(target, 'Assets.xcassets/FitNyxStrength.imageset');
   fs.mkdirSync(imageSet, { recursive: true });
   fs.copyFileSync(path.join(projectRoot, 'assets/images/workouts/strength-equipment.png'), path.join(imageSet, 'strength-equipment.png'));
@@ -52,6 +54,52 @@ function writeWorkoutLiveActivity(projectRoot, platformProjectRoot) {
     images: [{ filename: 'strength-equipment.png', idiom: 'universal' }],
     info: { author: 'xcode', version: 1 },
   }, null, 2) + '\n');
+}
+
+function registerWorkoutControls(projectRoot, platformProjectRoot, project) {
+  const targets = Object.entries(project.pbxNativeTargetSection()).filter(([, value]) => value.name);
+  const app = targets.find(([, value]) => value.productType === '"com.apple.product-type.application"');
+  const widget = targets.find(([, value]) => value.name.replaceAll('"', '') === 'LiveActivity');
+  if (!app || !widget) throw new Error('Workout controls require app and LiveActivity targets.');
+  const appName = app[1].name.replaceAll('"', '');
+  const folder = path.join(platformProjectRoot, appName);
+  const appGroup = project.findPBXGroupKey({ name: appName });
+  const widgetGroup = project.findPBXGroupKey({ name: 'LiveActivity' });
+  const generated = fs.readFileSync(path.join(platformProjectRoot, 'LiveActivity/LiveActivityWidget.swift'), 'utf8');
+  fs.writeFileSync(path.join(folder, 'WorkoutLiveActivityAttributes.swift'), generated.slice(0, generated.indexOf('// Generated after')));
+  for (const name of ['WorkoutControlIntent.swift', 'WorkoutControlEngine.swift', 'FitNyxWorkoutControls.swift', 'FitNyxWorkoutControls.m']) {
+    fs.copyFileSync(path.join(__dirname, 'workout-live-activity', name), path.join(folder, name));
+  }
+  for (const name of ['WorkoutLiveActivityAttributes.swift', 'WorkoutControlIntent.swift', 'WorkoutControlEngine.swift', 'FitNyxWorkoutControls.swift', 'FitNyxWorkoutControls.m']) {
+    project.addSourceFile(`${appName}/${name}`, { target: app[0], sourceTree: 'SOURCE_ROOT' }, appGroup);
+  }
+  // Distinct path prevents xcode's global hasFile check from skipping the
+  // intent's second target membership.
+  const intent = project.addSourceFile('LiveActivity/WorkoutControlIntent.swift', { target: widget[0], sourceTree: 'SOURCE_ROOT' }, widgetGroup);
+  // xcode's addSourceFile puts the build file into the first Sources phase it
+  // finds (the app's), not the target's — the widget then fails to compile
+  // ("cannot find type 'WorkoutActivityData'"). Move it to the widget's phase.
+  if (intent) moveToSourcesPhase(project, intent.uuid, widget[1]);
+  const configs = project.pbxXCBuildConfigurationSection();
+  const list = project.pbxXCConfigurationList()[app[1].buildConfigurationList];
+  for (const ref of list.buildConfigurations) {
+    const settings = configs[ref.value].buildSettings;
+    const current = String(settings.SWIFT_ACTIVE_COMPILATION_CONDITIONS || '$(inherited)').replaceAll('"', '');
+    settings.SWIFT_ACTIVE_COMPILATION_CONDITIONS = '"' + (current.includes('FITNYX_APP') ? current : current + ' FITNYX_APP') + '"';
+  }
+}
+
+function moveToSourcesPhase(project, buildFileUuid, target) {
+  const phases = project.hash.project.objects.PBXSourcesBuildPhase;
+  const targetPhase = target.buildPhases.find((p) => phases[p.value])?.value;
+  if (!targetPhase) throw new Error('[withWorkoutLiveActivity] LiveActivity target has no Sources phase.');
+  let entry;
+  for (const [key, phase] of Object.entries(phases)) {
+    if (key.endsWith('_comment') || !phase.files) continue;
+    const i = phase.files.findIndex((f) => f.value === buildFileUuid);
+    if (i >= 0) entry = phase.files.splice(i, 1)[0];
+  }
+  phases[targetPhase].files.push(entry ?? { value: buildFileUuid, comment: 'WorkoutControlIntent.swift in Sources' });
 }
 
 module.exports = function withWorkoutLiveActivity(config) {
@@ -63,9 +111,12 @@ module.exports = function withWorkoutLiveActivity(config) {
       // first, otherwise expo-live-activity would overwrite our files afterward.
       const generated = await nextMod({ ...rest, modRequest });
       writeWorkoutLiveActivity(modRequest.projectRoot, modRequest.platformProjectRoot);
+      if (generated.modResults.pbxNativeTargetSection) registerWorkoutControls(modRequest.projectRoot, modRequest.platformProjectRoot, generated.modResults);
       return generated;
     },
   });
 };
 
 module.exports.writeWorkoutLiveActivity = writeWorkoutLiveActivity;
+
+module.exports.registerWorkoutControls = registerWorkoutControls;

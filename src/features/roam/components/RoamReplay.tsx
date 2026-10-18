@@ -3,10 +3,11 @@ import type { FeatureCollection, Point } from 'geojson';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ElevationProfile } from '@/src/features/roam/components/ElevationProfile';
 import { ReplayControls } from '@/src/features/roam/components/ReplayControls';
 import { RouteMap } from '@/src/features/roam/components/RouteMap';
 import { decodePolyline, formatDistance, formatDuration, formatSpeed } from '@/src/features/roam/geo';
-import { buildTimeline, gradientExpression, positionAt, rampColor } from '@/src/features/roam/replay';
+import { buildTimeline, gradientExpression, kmMarkerStep, positionAt, rampColor } from '@/src/features/roam/replay';
 import type { LngLatPair } from '@/src/features/roam/routeGeometry';
 import { useReplayPlayer } from '@/src/features/roam/useReplayPlayer';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -47,23 +48,23 @@ export function RoamReplay({ activity }: { activity: ActivityDetail }) {
     () => ({
       type: 'FeatureCollection',
       features: (tl?.kms ?? [])
-        .filter((k) => k.t <= player.position + 1e-6)
+        .filter((k) => k.t <= player.position + 1e-6 && k.km % kmMarkerStep(tl?.kms.length ?? 0) === 0)
         .map((k) => ({ type: 'Feature', properties: { km: k.km }, geometry: { type: 'Point', coordinates: k.coord } })),
     }),
     [tl, player.position],
   );
 
   // Follow camera: re-centre on the playhead every FOLLOW_EVERY_MS.
-  const [followAt, setFollowAt] = useState<LngLatPair | null>(null);
+  const [followAt, setFollowAt] = useState<{ coord: LngLatPair; bearing: number } | null>(null);
   const lastFollow = useRef(0);
   useEffect(() => {
     if (!follow || !player.active || !at) return setFollowAt(null);
     const now = Date.now();
     if (now - lastFollow.current >= FOLLOW_EVERY_MS || !player.playing) {
       lastFollow.current = now;
-      setFollowAt(at.coord);
+      setFollowAt({ coord: at.coord, bearing: at.bearing });
     }
-  }, [follow, player.active, player.playing, at?.coord[0], at?.coord[1]]);
+  }, [follow, player.active, player.playing, at?.coord[0], at?.coord[1], at?.bearing]);
 
   if (!tl || !at) return <RouteMap route={route} vehicleRanges={activity.vehicle_ranges} style={styles.map} />;
 
@@ -83,6 +84,7 @@ export function RoamReplay({ activity }: { activity: ActivityDetail }) {
           follow={followAt}
           kmMarks={kmMarks}
           sketchProgress={player.active ? at.progress : undefined}
+          controlsHidden={player.active}
           style={styles.map}
         />
         {player.active ? (
@@ -99,6 +101,13 @@ export function RoamReplay({ activity }: { activity: ActivityDetail }) {
       </View>
 
       <ReplayControls player={player} duration={tl.duration} follow={follow} onToggleFollow={() => setFollow((f) => !f)} />
+
+      <ElevationProfile
+        route={route}
+        elevations={activity.elevations}
+        gainM={activity.elevation_gain_m}
+        progress={player.active ? at.progress : null}
+      />
 
       {/* Without timing every point has the same speed — a legend would mean nothing. */}
       {tl.timed ? (

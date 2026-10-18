@@ -17,6 +17,10 @@ export interface RoamStatsPanelProps {
   vehicleDetected?: boolean;
   /** Earned XP once saved; omitted on the pre-save review (the server decides it). */
   xp?: { earned: number; eligible: boolean };
+  /** Pedometer steps (runs and walks); null/omitted without them. */
+  steps?: number | null;
+  /** Climb from terrain data; null/omitted when unknown. */
+  elevationGainM?: number | null;
 }
 
 /**
@@ -29,6 +33,7 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
   const palette = useThemeColors();
   const [explain, setExplain] = useState(false);
   const notMovingSec = Math.max(0, p.elapsedSec - p.movingSec);
+  const extras = extraTiles(p);
 
   return (
     <View style={[styles.panel, { backgroundColor: palette.card, borderColor: palette.border }]}>
@@ -46,6 +51,15 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
           <StatTile label="Elapsed" value={formatDurationHuman(p.elapsedSec)} />
         )}
       </View>
+
+      {extras.map((pair) => (
+        <View key={pair[0].label} style={styles.row}>
+          {pair.map((t) => (
+            <StatTile key={t.label} label={t.label} value={t.value} />
+          ))}
+          {pair.length === 1 ? <View style={styles.spacer} /> : null}
+        </View>
+      ))}
 
       <View style={[styles.footer, { borderTopColor: palette.border }]}>
         <View style={styles.metas}>
@@ -71,7 +85,8 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
 
       {explain ? (
         <View style={[styles.explainer, { backgroundColor: palette.surface }]}>
-          <Explain term="Top speed" text="your quickest 10 seconds." />
+          <Explain term="Top speed" text="your fastest few seconds, from the GPS's own speed reading." />
+          {p.steps ? <Explain term="Cadence" text="steps per minute while moving." /> : null}
           <Explain
             term="Moving time"
             text={p.vehicleDetected ? 'excludes stops and vehicle travel.' : 'excludes stops, so they never lower your average speed.'}
@@ -80,6 +95,19 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
       ) : null}
     </View>
   );
+}
+
+/** Steps, cadence and elevation gain when known, two tiles per row. */
+function extraTiles(p: RoamStatsPanelProps): { label: string; value: string }[][] {
+  const tiles: { label: string; value: string }[] = [];
+  if (p.steps) {
+    tiles.push({ label: 'Steps', value: p.steps.toLocaleString('en-IN') });
+    if (p.movingSec >= 60) tiles.push({ label: 'Cadence', value: `${Math.round(p.steps / (p.movingSec / 60))} spm` });
+  }
+  if (p.elevationGainM != null) tiles.push({ label: 'Elevation gain', value: `${Math.round(p.elevationGainM)} m` });
+  const rows: { label: string; value: string }[][] = [];
+  for (let i = 0; i < tiles.length; i += 2) rows.push(tiles.slice(i, i + 2));
+  return rows;
 }
 
 function Meta({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
@@ -105,6 +133,7 @@ const styles = StyleSheet.create({
   panel: { borderRadius: 20, borderWidth: 1, paddingTop: 16, paddingHorizontal: 8, paddingBottom: 6 },
   rule: { height: StyleSheet.hairlineWidth, marginHorizontal: 16, marginTop: 10, marginBottom: 8 },
   row: { flexDirection: 'row', paddingVertical: 4 },
+  spacer: { flex: 1 },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',

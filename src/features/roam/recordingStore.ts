@@ -25,8 +25,21 @@ export interface RecordingMeta {
   segment: number;
   pausedAtMs: number | null;
   pausedTotalMs: number;
+  /** Active windows let delayed GPS batches skip native background pauses. */
+  segments?: { startMs: number; endMs?: number }[];
+  finishedAtMs?: number;
   chunkCount: number;
   pointCount: number;
+  /** Android step counter (counts since boot) at "0 steps"; set on the first reading. */
+  stepBase?: number;
+  /** Last step count since the start, to carry on across a reboot (counter reset). */
+  steps?: number;
+}
+
+/** A pedometer reading for a batch: iOS counts since the start, Android's counter since boot. */
+export interface StepSample {
+  sinceStart?: number | null;
+  counter?: number | null;
 }
 
 type Listener = (points: RoamPoint[], meta: RecordingMeta) => void;
@@ -88,6 +101,7 @@ export function startRecording(type: ActivityType, userId: string | null, nowMs 
       startedAtMs: nowMs,
       status: 'recording',
       segment: 0,
+      segments: [{ startMs: nowMs }],
       pausedAtMs: null,
       pausedTotalMs: 0,
       chunkCount: 0,
@@ -103,21 +117,35 @@ export function startRecording(type: ActivityType, userId: string | null, nowMs 
  * after pause/finish must not leak in). Times are seconds since the start.
  */
 export function appendFixes(
-  fixes: { lat: number; lng: number; timestampMs: number; accuracy: number | null }[],
+  fixes: {
+    lat: number;
+    lng: number;
+    timestampMs: number;
+    accuracy: number | null;
+    speed?: number | null;
+    course?: number | null;
+    altitude?: number | null;
+  }[],
+  stepSample?: StepSample,
 ): Promise<void> {
   return serial(async () => {
     const meta = await getRecording();
     if (!meta || meta.status !== 'recording' || fixes.length === 0) return;
-    const pts: RoamPoint[] = fixes
-      .map((f): RoamPoint => [
-        f.lat,
-        f.lng,
-        Math.round((f.timestampMs - meta.startedAtMs) / 100) / 10,
-        f.accuracy ?? 0,
-        meta.segment,
-      ])
-      .filter((p) => p[2] >= 0);
+    const steps = stepsSinceStart(meta, stepSample);
+    const pts: RoamPoint[] = fixes.flatMap((f): RoamPoint[] => {
+      const windows = meta.segments;
+      const segment = windows ? windows.findIndex((w) => f.timestampMs >= w.startMs && (w.endMs == null || f.timestampMs <= w.endMs)) : meta.segment;
+      // Negative accuracy = iOS marking the fix invalid (the backend rejects it).
+      if (segment < 0 || f.timestampMs < meta.startedAtMs || (f.accuracy != null && f.accuracy < 0)) return [];
+      // GPS speed and course: iOS reports -1 and web null when unknown.
+      const speed = f.speed != null && f.speed >= 0 ? Math.round(f.speed * 100) / 100 : -1;
+      const course = f.course != null && f.course >= 0 ? Math.round(f.course * 10) / 10 : -1;
+      const altitude = f.altitude != null && Number.isFinite(f.altitude) ? Math.round(f.altitude * 10) / 10 : null;
+      const t = Math.round((f.timestampMs - meta.startedAtMs) / 100) / 10;
+      return [[f.lat, f.lng, t, f.accuracy ?? 0, segment, speed, -1, course, altitude]];
+    });
     if (pts.length === 0) return;
+    pts[pts.length - 1][6] = steps; // the reading is "now": the batch's latest kept fix
 
     let last = meta.chunkCount > 0 ? ((await readJson<RoamPoint[]>(KEYS.chunk(meta.chunkCount - 1))) ?? []) : [];
     let chunkIndex = Math.max(meta.chunkCount - 1, 0);
@@ -137,6 +165,18 @@ export function appendFixes(
   });
 }
 
+/** Steps since the start from a reading (-1 unknown); keeps Android's baseline in `meta`. */
+function stepsSinceStart(meta: RecordingMeta, sample?: StepSample): number {
+  if (sample?.sinceStart != null && sample.sinceStart >= 0) return sample.sinceStart;
+  const counter = sample?.counter;
+  if (counter == null || counter < 0) return -1;
+  // First reading, or the counter went backwards (phone rebooted): continue
+  // from the last count instead of losing or double-counting steps.
+  if (meta.stepBase == null || counter - meta.stepBase < (meta.steps ?? 0)) meta.stepBase = counter - (meta.steps ?? 0);
+  meta.steps = counter - meta.stepBase;
+  return meta.steps;
+}
+
 export async function loadPoints(): Promise<RoamPoint[]> {
   const meta = await getRecording();
   if (!meta) return [];
@@ -149,7 +189,8 @@ export async function loadPoints(): Promise<RoamPoint[]> {
 export function pauseRecording(nowMs = Date.now()): Promise<RecordingMeta | null> {
   return serial(async () => {
     const meta = await getRecording();
-    if (!meta || meta.status !== 'recording') return meta;
+    if (!meta || meta.finishedAtMs || meta.status !== 'recording') return meta;
+    if (meta.segments?.length) meta.segments[meta.segments.length - 1].endMs = nowMs;
     meta.status = 'paused';
     meta.pausedAtMs = nowMs;
     await AsyncStorage.setItem(KEYS.meta, JSON.stringify(meta));
@@ -161,11 +202,12 @@ export function pauseRecording(nowMs = Date.now()): Promise<RecordingMeta | null
 export function resumeRecording(nowMs = Date.now()): Promise<RecordingMeta | null> {
   return serial(async () => {
     const meta = await getRecording();
-    if (!meta || meta.status !== 'paused') return meta;
-    meta.pausedTotalMs += nowMs - (meta.pausedAtMs ?? nowMs);
+    if (!meta || meta.finishedAtMs || meta.status !== 'paused') return meta;
+    meta.pausedTotalMs += Math.max(0, nowMs - (meta.pausedAtMs ?? nowMs));
     meta.pausedAtMs = null;
     meta.status = 'recording';
     meta.segment += 1;
+    meta.segments?.push({ startMs: nowMs });
     await AsyncStorage.setItem(KEYS.meta, JSON.stringify(meta));
     listeners.forEach((l) => l([], meta));
     return meta;
@@ -195,4 +237,22 @@ export function subscribe(listener: Listener): () => void {
   return () => {
     listeners.delete(listener);
   };
+}
+
+/** Review is terminal for live controls, even if the app closes before saving. */
+export function finishRecording(): Promise<RecordingMeta | null> {
+  return serial(async () => {
+    const meta = await getRecording();
+    if (!meta) return null;
+    const now = Date.now();
+    if (meta.status === 'recording') {
+      meta.status = 'paused';
+      meta.pausedAtMs = now;
+      if (meta.segments?.length) meta.segments[meta.segments.length - 1].endMs = now;
+    }
+    meta.finishedAtMs = now;
+    await AsyncStorage.setItem(KEYS.meta, JSON.stringify(meta));
+    listeners.forEach((listener) => listener([], meta));
+    return meta;
+  });
 }

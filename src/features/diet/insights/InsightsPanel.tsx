@@ -1,3 +1,4 @@
+import { ChartNoAxesCombined } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -20,8 +21,17 @@ export function InsightsPanel({ summary, offline, goal, today }: {
       : <ActivityIndicator color={c.primary} style={styles.loader} />;
   }
   const r = analyzeDays(summary.days, goal, today);
+  if (!summary.days.some((d) => d.meals > 0)) {
+    return <View style={[styles.empty, { backgroundColor: c.card, borderColor: c.border }]}>
+      <View style={[styles.emptyIcon, { backgroundColor: c.accentSoft }]}><ChartNoAxesCombined size={32} color={c.accent} /></View>
+      <Text style={[styles.heading, { color: c.text }]}>Small habits. A bigger picture.</Text>
+      <Text style={[styles.note, { color: c.mutedText, textAlign: 'center' }]}>Start with one meal. Your weekly calorie trends, macro balance and most-loved foods will take shape here.</Text>
+      <View style={[styles.hint, { backgroundColor: c.accentSoft }]}><Text style={[styles.hintText, { color: c.accent }]}>Tap Log food to begin</Text></View>
+    </View>;
+  }
   return (
     <>
+      <View style={styles.intro}><Text style={[styles.heading, { color: c.text }]}>Your week, in focus.</Text><Text style={[styles.note, { color: c.mutedText }]}>Averages use logged days, excluding today.</Text></View>
       <View style={styles.tiles}>
         <Tile label="Avg intake" value={r.avgKcal !== null ? fmt(r.avgKcal) : '—'}
           note={r.pctOfGoal !== null ? `${r.pctOfGoal}% of goal` : 'Log a full day'} tone={r.pctOfGoal !== null && r.pctOfGoal > 110 ? c.diet.over : c.mutedText} />
@@ -62,16 +72,22 @@ function Tile({ label, value, note, tone }: { label: string; value: string; note
     <View style={[styles.tile, { backgroundColor: c.card, borderColor: c.border }]} accessible accessibilityLabel={`${label}: ${value}. ${note}`}>
       <Text style={[styles.tileLabel, { color: c.mutedText }]}>{label}</Text>
       <Text style={[styles.tileValue, { color: c.text }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={[styles.tileNote, { color: tone }]} numberOfLines={1}>{note}</Text>
+      <Text style={[styles.tileNote, { color: tone }]}>{note}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  intro: { gap: 6, marginTop: 8, marginBottom: 4 },
+  heading: { fontFamily: type.weight.extrabold, fontSize: 24, letterSpacing: -0.6 },
+  empty: { borderRadius: 28, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', padding: 28, gap: 16, marginTop: 8 },
+  emptyIcon: { width: 76, height: 76, borderRadius: 26, alignItems: 'center', justifyContent: 'center', marginVertical: 12 },
+  hint: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 14, marginTop: 8 },
+  hintText: { fontFamily: type.weight.semibold, fontSize: 13 },
   loader: { marginTop: spacing['3xl'] },
   note: { fontFamily: type.weight.regular, fontSize: 14, lineHeight: 20 },
-  tiles: { flexDirection: 'row', gap: spacing.sm + 2 },
-  tile: { flex: 1, borderRadius: radii.lg + 2, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 4 },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm + 2 },
+  tile: { flex: 1, minWidth: 90, borderRadius: radii.lg + 2, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 4 },
   tileLabel: { fontFamily: type.weight.semibold, fontSize: 12 },
   tileValue: { fontFamily: type.weight.extrabold, fontSize: 20 },
   tileNote: { fontFamily: type.weight.semibold, fontSize: 12 },
