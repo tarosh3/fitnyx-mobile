@@ -176,7 +176,7 @@ export function AICoachChat() {
                     <Archive color={c.mutedText} size={16} strokeWidth={2} />
                   </Pressable>
                 ) : null}
-                <Pressable onPress={toggleChat} hitSlop={8} style={[styles.iconBtn, { backgroundColor: c.surface }]}>
+                <Pressable onPress={toggleChat} accessibilityRole="button" accessibilityLabel="Close coach" hitSlop={8} style={[styles.iconBtn, { backgroundColor: c.surface }]}>
                   <X color={c.text} size={16} strokeWidth={2} />
                 </Pressable>
               </View>

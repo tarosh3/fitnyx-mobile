@@ -65,6 +65,7 @@ export function SettingRow({
         ) : null}
         {isSwitch ? (
           <Switch
+            accessibilityLabel={`${label} switch`}
             value={switchValue}
             onValueChange={onSwitchChange}
             trackColor={{ false: c.border, true: c.primary }}

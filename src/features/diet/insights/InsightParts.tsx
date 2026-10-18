@@ -25,7 +25,7 @@ export function CaloriesChart({ days, goal, today }: { days: DietDayTotals[]; go
         {days.map((d) => {
           const isToday = d.date === today;
           const status = dayStatus(d.kcal, d.meals, goal);
-          const fill = isToday ? 'transparent' : status === 'over' ? c.diet.over : status === 'none' ? c.diet.track : c.primary;
+          const fill = isToday ? 'transparent' : status === 'over' ? c.diet.over : status === 'none' ? c.diet.track : status === 'under' ? c.mutedText : c.primary;
           const label = isToday ? 'Today' : dateFromKey(d.date).toLocaleDateString('en-GB', { weekday: 'short' });
           return (
             <View key={d.date} style={styles.col} accessible
@@ -39,7 +39,8 @@ export function CaloriesChart({ days, goal, today }: { days: DietDayTotals[]; go
         })}
       </View>
       <View style={styles.legend}>
-        <Legend color={c.primary} label="Within 10% of goal" />
+        <Legend color={c.primary} label="On target" />
+        <Legend color={c.mutedText} label="Under" />
         <Legend color={c.diet.over} label="Over" />
       </View>
     </View>
@@ -65,7 +66,7 @@ export function MacroBalance({ you, target }: { you: Split; target: Split | null
     <View style={styles.split}>
       {([['protein', c.diet.protein], ['carbs', c.diet.carbs], ['fat', c.diet.fat]] as const).map(([k, color]) => (
         <View key={k} style={[styles.seg, { flex: Math.max(s[k], 1), backgroundColor: soft ? c.surface : color, borderColor: color, borderWidth: soft ? 1.5 : 0 }]}>
-          <Text style={[styles.segText, { color: soft ? color : c.card }]}>{s[k]}%</Text>
+
         </View>
       ))}
     </View>
@@ -75,10 +76,12 @@ export function MacroBalance({ you, target }: { you: Split; target: Split | null
       <Text style={[styles.h2, { color: c.text }]} accessibilityRole="header">Macro balance</Text>
       <View accessible accessibilityLabel={`You: ${you.protein}% protein, ${you.carbs}% carbs, ${you.fat}% fat`} style={styles.splitBlock}>
         <Text style={[styles.label, { color: c.text }]}>You, on average</Text>{bar(you, false)}
+        <Text style={[styles.muted, { color: c.mutedText }]}>P {you.protein}% · C {you.carbs}% · F {you.fat}%</Text>
       </View>
       {target ? (
         <View accessible accessibilityLabel={`Target: ${target.protein}% protein, ${target.carbs}% carbs, ${target.fat}% fat`} style={styles.splitBlock}>
           <Text style={[styles.label, { color: c.text }]}>Your plan’s target</Text>{bar(target, true)}
+          <Text style={[styles.muted, { color: c.mutedText }]}>P {target.protein}% · C {target.carbs}% · F {target.fat}%</Text>
         </View>
       ) : null}
       <View style={styles.legend}>
@@ -107,7 +110,7 @@ export function Pattern({ icon, title, text }: { icon: keyof typeof ICONS; title
 
 const styles = StyleSheet.create({
   card: { borderRadius: radii['2xl'], borderWidth: StyleSheet.hairlineWidth, padding: spacing.lg, gap: spacing.base },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  head: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', alignItems: 'baseline' },
   h2: { fontFamily: type.weight.extrabold, fontSize: 18 },
   muted: { fontFamily: type.weight.regular, fontSize: 13 },
   chart: { height: CHART_H + 44, flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
   legendText: { fontFamily: type.weight.semibold, fontSize: 12 },
   splitBlock: { gap: 6 },
   label: { fontFamily: type.weight.bold, fontSize: 15 },
-  split: { flexDirection: 'row', height: 28, gap: 2, borderRadius: radii.sm, overflow: 'hidden' },
+  split: { flexDirection: 'row', height: 12, gap: 2, borderRadius: radii.sm, overflow: 'hidden' },
   seg: { alignItems: 'center', justifyContent: 'center' },
   segText: { fontFamily: type.weight.bold, fontSize: 12 },
   pattern: { flexDirection: 'row', gap: spacing.md, padding: spacing.base, borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth },

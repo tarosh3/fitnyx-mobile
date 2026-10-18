@@ -18,7 +18,7 @@ const TIPS = [
 ];
 
 /** The preferences wizard, then Filo builds the plan (takes up to a minute). */
-export function DietSetup({ userId, onCreated }: { userId: string; onCreated: (plan: DietPlan) => void }) {
+export function DietSetup({ userId, onCreated, onStepChange }: { userId: string; onCreated: (plan: DietPlan) => void; onStepChange?: () => void }) {
   const c = useThemeColors();
   const { isOnline } = useNetworkStatus();
   const [generating, setGenerating] = useState(false);
@@ -67,7 +67,7 @@ export function DietSetup({ userId, onCreated }: { userId: string; onCreated: (p
   return (
     <View>
       {error ? <Text style={[styles.error, { color: c.destructive }]} accessibilityRole="alert">{error}</Text> : null}
-      <DietWizard onComplete={generate} isLoading={generating} />
+      <DietWizard onComplete={generate} isLoading={generating} onStepChange={onStepChange} />
     </View>
   );
 }

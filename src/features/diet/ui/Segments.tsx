@@ -13,8 +13,8 @@ export function Segments({ options, selected, onSelect }: { options: string[]; s
         const on = i === selected;
         return (
           <Pressable key={o} onPress={() => onSelect(i)} accessibilityRole="tab" accessibilityState={{ selected: on }}
-            style={[styles.seg, on && [styles.on, { backgroundColor: c.card }]]}>
-            <Text style={[styles.text, { color: on ? c.text : c.mutedText }]}>{o}</Text>
+            style={[styles.seg, on && [styles.on, { backgroundColor: c.accentSoft }]]}>
+            <Text style={[styles.text, { color: on ? c.accent : c.mutedText }]}>{o}</Text>
           </Pressable>
         );
       })}
@@ -24,7 +24,7 @@ export function Segments({ options, selected, onSelect }: { options: string[]; s
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: radii.md + 2, borderWidth: StyleSheet.hairlineWidth },
-  seg: { flex: 1, minHeight: 40, borderRadius: radii.md - 1, alignItems: 'center', justifyContent: 'center' },
-  on: { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  seg: { flex: 1, minHeight: 44, borderRadius: radii.md - 1, alignItems: 'center', justifyContent: 'center' },
+  on: {},
   text: { fontFamily: type.weight.semibold, fontSize: 15 },
 });

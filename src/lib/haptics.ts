@@ -13,6 +13,7 @@ function run(fn: () => Promise<void>) {
 }
 
 export const haptic = {
+  selection: () => run(() => Haptics.selectionAsync()),
   light: () => run(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
   medium: () => run(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)),
   heavy: () => run(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)),

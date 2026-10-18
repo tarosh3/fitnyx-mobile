@@ -1,6 +1,7 @@
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
-import { Keyboard, type KeyboardEvent, type KeyboardEventName } from 'react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { BlurView } from 'expo-blur';
+import { AccessibilityInfo, Keyboard, type KeyboardEvent, type KeyboardEventName } from 'react-native';
 
 const mockReplace = jest.fn();
 const mockDismissAll = jest.fn();
@@ -10,6 +11,7 @@ const mockSendMessage = jest.fn();
 let mockPathname = '/';
 let mockUser: { id: string } | null = { id: 'nav-user' };
 let mockOnboardingComplete = true;
+let mockCoachOpen = false;
 
 jest.mock('expo-router', () => ({
   usePathname: () => mockPathname,
@@ -21,7 +23,7 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: mockUser, onboardingComplete: mockOnboardingComplete }) }));
 jest.mock('@/src/providers/AICoachProvider', () => ({
-  useAICoach: () => ({ openCenteredChat: mockOpenCoach, sendMessage: mockSendMessage }),
+  useAICoach: () => ({ openCenteredChat: mockOpenCoach, sendMessage: mockSendMessage, isOpen: mockCoachOpen }),
 }));
 jest.mock('@/src/providers/ThemeProvider', () => ({ useTheme: () => ({ theme: 'dark' }) }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -36,6 +38,7 @@ jest.mock('react-native-reanimated', () => ({
   useAnimatedStyle: (style: () => unknown) => style(),
   withSpring: (value: number) => value,
   withTiming: (value: number) => value,
+  withSequence: (...values: unknown[]) => values[values.length - 1],
 }));
 
 import { BottomNav } from '../BottomNav';
@@ -49,6 +52,7 @@ describe('BottomNav navigation and visibility', () => {
     mockPathname = '/';
     mockUser = { id: 'nav-user' };
     mockOnboardingComplete = true;
+    mockCoachOpen = false;
     mockCanDismiss.mockReturnValue(true);
     keyboardListeners.clear();
     keyboardSubscriptions.length = 0;
@@ -141,6 +145,29 @@ describe('BottomNav navigation and visibility', () => {
     const screen = render(<BottomNav />);
 
     expect(screen.queryByTestId('bottom-nav')).toBeNull();
+  });
+
+  it('hides behind Coach and restores the selected destination when Coach closes', () => {
+    mockPathname = '/workouts';
+    const screen = render(<BottomNav />);
+    mockCoachOpen = true;
+    screen.rerender(<BottomNav />);
+    expect(screen.queryByTestId('bottom-nav')).toBeNull();
+
+    mockCoachOpen = false;
+    screen.rerender(<BottomNav />);
+    expect(screen.getByTestId('nav-workouts')).toHaveProp('accessibilityState', { selected: true });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('uses a solid dock when Reduce Transparency is enabled', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceTransparencyEnabled').mockResolvedValue(true);
+    const screen = render(<BottomNav />);
+
+    await waitFor(() => expect(screen.UNSAFE_queryAllByType(BlurView)).toHaveLength(0));
+    expect(screen.getByTestId('bottom-nav')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('nav-workouts'));
+    expect(mockReplace).toHaveBeenCalledWith('/workouts');
   });
 
   it('hides the dock when signed out', () => {

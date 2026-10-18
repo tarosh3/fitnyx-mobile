@@ -80,5 +80,5 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: type.weight.regular, fontSize: 13 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: spacing.md, paddingHorizontal: spacing.base, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm + 2 },
   btn: { minHeight: 56, borderRadius: radii.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, flex: 1 },
-  btnText: { fontFamily: type.weight.bold, fontSize: 17 },
+  btnText: { flexShrink: 1, textAlign: 'center', fontFamily: type.weight.bold, fontSize: 17 },
 });

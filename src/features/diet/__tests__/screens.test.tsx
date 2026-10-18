@@ -122,6 +122,13 @@ describe('log food', () => {
     fireEvent.press(screen.getByLabelText('More Roti, whole wheat'));
     expect(screen.getByText('Add 2 items · 392 kcal to Dinner')).toBeTruthy();
 
+    // A new search must not hide the selected foods or their portion controls.
+    fireEvent.press(screen.getByLabelText('Clear search'));
+    expect(screen.getByText('Your selection')).toBeTruthy();
+    expect(screen.getByLabelText('Remove Dal tadka')).toBeTruthy();
+    expect(screen.getByLabelText('More Roti, whole wheat')).toBeTruthy();
+    expect(screen.getByText('Add 2 items · 392 kcal to Dinner')).toBeTruthy();
+
     await act(async () => { fireEvent.press(screen.getByText('Add 2 items · 392 kcal to Dinner')); });
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     expect(createDietLog).toHaveBeenCalledWith(expect.objectContaining({

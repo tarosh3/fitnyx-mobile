@@ -54,13 +54,13 @@ export function FoodRow({ food, qty, first, onToggle, onQty }: {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm + 2, paddingLeft: spacing.base, paddingRight: spacing.md, minHeight: 64 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 16, paddingLeft: spacing.base, paddingRight: spacing.md, minHeight: 64 },
   body: { flex: 1, minWidth: 0, gap: 2 },
   title: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { fontFamily: type.weight.semibold, fontSize: 15, flexShrink: 1 },
   meta: { fontFamily: type.weight.regular, fontSize: 13 },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
-  stepBtn: { width: 44, height: 40, borderRadius: radii.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  qty: { fontFamily: type.weight.bold, fontSize: 14, minWidth: 96, textAlign: 'center' },
-  toggle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
+  stepBtn: { width: 44, height: 44, borderRadius: radii.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  qty: { fontFamily: type.weight.bold, fontSize: 14, flex: 1, textAlign: 'center' },
+  toggle: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
 });

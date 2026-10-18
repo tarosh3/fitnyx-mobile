@@ -1,3 +1,4 @@
+import { ArrowRight, Zap } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -7,7 +8,7 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 const MAX_KCAL = 5000;
 
 /** For food that isn't in the list: just calories (and protein if known). */
-export function QuickAdd({ onAdd }: { onAdd: (name: string, kcal: number, protein: number) => void }) {
+export function QuickAdd({ onAdd, busy = false }: { busy?: boolean; onAdd: (name: string, kcal: number, protein: number) => void }) {
   const c = useThemeColors();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -19,8 +20,10 @@ export function QuickAdd({ onAdd }: { onAdd: (name: string, kcal: number, protei
   if (!open) {
     return (
       <Pressable onPress={() => setOpen(true)} accessibilityRole="button"
-        style={({ pressed }) => [styles.open, { borderColor: c.border }, pressed && { opacity: 0.7 }]}>
-        <Text style={[styles.openText, { color: c.text }]}>Can’t find it? Quick-add calories</Text>
+        style={({ pressed }) => [styles.open, { borderColor: c.border, backgroundColor: c.card }, pressed && { opacity: 0.7 }]}>
+        <View style={[styles.icon, { backgroundColor: c.accentSoft }]}><Zap size={20} color={c.accent} /></View>
+        <View style={styles.openBody}><Text style={[styles.openText, { color: c.text }]}>Quick add</Text><Text style={[styles.caption, { color: c.mutedText }]}>Know the calories? Log them directly.</Text></View>
+        <ArrowRight size={18} color={c.mutedText} />
       </Pressable>
     );
   }
@@ -36,16 +39,19 @@ export function QuickAdd({ onAdd }: { onAdd: (name: string, kcal: number, protei
         <TextInput value={protein} onChangeText={(t) => setProtein(t.replace(/[^0-9]/g, ''))} placeholder="Protein g (optional)" placeholderTextColor={c.mutedText}
           accessibilityLabel="Protein in grams" keyboardType="number-pad" maxLength={3} style={[input, styles.grow]} />
       </View>
-      <Pressable onPress={() => valid && onAdd(name.trim() || 'Quick add', k, p)} disabled={!valid} accessibilityRole="button" accessibilityState={{ disabled: !valid }}
+      <Pressable onPress={() => valid && !busy && onAdd(name.trim() || 'Quick add', k, p)} disabled={!valid || busy} accessibilityRole="button" accessibilityState={{ disabled: !valid || busy, busy }}
         style={({ pressed }) => [styles.add, { backgroundColor: valid ? c.primary : c.surface }, pressed && valid && { opacity: 0.8 }]}>
-        <Text style={[styles.addText, { color: valid ? c.primaryText : c.mutedText }]}>{valid ? `Add ${k} kcal` : 'Enter calories'}</Text>
+        <Text style={[styles.addText, { color: valid ? c.primaryText : c.mutedText }]}>{busy ? 'Saving…' : valid ? `Add ${k} kcal` : 'Enter calories'}</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  open: { minHeight: 48, borderRadius: radii.md + 2, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  open: { minHeight: 80, padding: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  icon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  openBody: { flex: 1, gap: 4 },
+  caption: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18 },
   openText: { fontFamily: type.weight.semibold, fontSize: 15 },
   card: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, padding: spacing.base, gap: spacing.md },
   title: { fontFamily: type.weight.bold, fontSize: 16 },

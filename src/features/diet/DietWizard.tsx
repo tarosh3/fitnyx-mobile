@@ -1,21 +1,25 @@
 import { Check, ChevronRight, Info } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Input } from '@/src/components/ui/Input';
+import { type } from '@/src/styles/tokens';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { sanitizeGeneralText, MAX_SHORT_TEXT, MAX_MEDIUM_TEXT, MAX_LONG_TEXT } from '@/src/lib/validators';
 
 interface DietWizardProps {
   onComplete: (preferences: any) => void;
   isLoading: boolean;
+  onStepChange?: () => void;
 }
 
-const NEON_LIME = '#5fc793';
-const STEPS = ['GOALS', 'ACTIVITY', 'HEALTH'];
+const STEPS = ['Your goals', 'Your routine', 'Your preferences'];
+const TITLES = ['A plan that fits your life.', 'Make it work for your day.', 'The details make it yours.'];
+const DESCRIPTIONS = ['Start with your goal and the food you enjoy.', 'Tell us how you move and when you like to eat.', 'Add allergies, dislikes and anything else to consider.'];
 
-export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
+export function DietWizard({ onComplete, isLoading, onStepChange }: DietWizardProps) {
   const palette = useThemeColors();
+  const { fontScale } = useWindowDimensions();
   const styles = React.useMemo(() => getStyles(palette), [palette]);
   const [currentStep, setCurrentStep] = useState(0);
   const [preferences, setPreferences] = useState({
@@ -37,6 +41,7 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
   const next = () => {
     if (currentStep < STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1);
+      onStepChange?.();
       return;
     }
     onComplete(preferences);
@@ -45,42 +50,22 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
   const back = () => {
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
+      onStepChange?.();
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>CREATE YOUR PLAN</Text>
-        <Text style={styles.subtitle}>Answer a few questions for a tailored experience</Text>
+      <View style={styles.stepIndicatorContainer} accessible accessibilityLabel={`Step ${currentStep + 1} of 3: ${STEPS[currentStep]}`}>
+        <View style={styles.progressLabels}><Text style={styles.stepTextActive}>{STEPS[currentStep]}</Text><Text style={styles.stepText}>{currentStep + 1} / 3</Text></View>
+        <View style={styles.progressTrack}>{STEPS.map((step, idx) => <View key={step} style={[styles.progressSegment, { backgroundColor: idx <= currentStep ? palette.accent : palette.border }]} />)}</View>
       </View>
-
-      {/* Modern Step Indicator */}
-      <View style={styles.stepIndicatorContainer}>
-        {STEPS.map((step, idx) => {
-          const isActive = idx === currentStep;
-          const isCompleted = idx < currentStep;
-          return (
-            <View key={step} style={styles.stepWrapper}>
-              <View style={[
-                styles.stepCircle,
-                isActive && styles.stepCircleActive,
-                isCompleted && styles.stepCircleCompleted
-              ]}>
-                {isCompleted ? (
-                  <Check size={12} color="#000" strokeWidth={3} />
-                ) : (
-                  <Text style={[styles.stepNumber, isActive && { color: '#000' }]}>{idx + 1}</Text>
-                )}
-              </View>
-              <Text style={[styles.stepText, isActive && styles.stepTextActive]}>{step}</Text>
-              {idx < STEPS.length - 1 && (
-                <View style={[styles.stepLine, isCompleted && { backgroundColor: NEON_LIME }]} />
-              )}
-            </View>
-          );
-        })}
+      <View style={styles.header}>
+        <View style={{ flex: 1, gap: 10 }}>
+          <Text style={styles.title} accessibilityRole="header">{TITLES[currentStep]}</Text>
+          <Text style={styles.subtitle}>{DESCRIPTIONS[currentStep]}</Text>
+        </View>
+        {currentStep === 0 && fontScale < 1.3 ? <Image source={require('../../../assets/images/nutrition/fuel-bowl.png')} style={{ width: 88, height: 88 }} accessible={false} /> : null}
       </View>
 
       {/* Form Content */}
@@ -212,26 +197,30 @@ export function DietWizard({ onComplete, isLoading }: DietWizardProps) {
       <View style={styles.actions}>
         {currentStep > 0 && (
           <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isLoading }}
             onPress={back}
             disabled={isLoading}
             style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
           >
-            <Text style={styles.backBtnText}>BACK</Text>
+            <Text style={styles.backBtnText}>Back</Text>
           </Pressable>
         )}
         <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isLoading, busy: isLoading }}
           onPress={next}
           disabled={isLoading}
           style={({ pressed }) => [styles.nextBtn, pressed && { opacity: 0.9, scale: 0.99 }]}
         >
           {isLoading ? (
-            <ActivityIndicator size="small" color="#000" />
+            <ActivityIndicator size="small" color={palette.primaryText} />
           ) : (
             <>
               <Text style={styles.nextBtnText}>
-                {currentStep === STEPS.length - 1 ? 'GENERATE PLAN' : 'CONTINUE'}
+                {currentStep === STEPS.length - 1 ? 'Create my plan' : 'Continue'}
               </Text>
-              <ChevronRight color="#000" size={18} strokeWidth={3} />
+              <ChevronRight color={palette.primaryText} size={18} strokeWidth={3} />
             </>
           )}
         </Pressable>
@@ -253,6 +242,7 @@ function OptionGroup({
 }) {
   const palette = useThemeColors();
   const styles = React.useMemo(() => getStyles(palette), [palette]);
+  const numeric = options.every(([id]) => /^\d+$/.test(id));
   return (
     <View style={styles.group}>
       <Text style={styles.groupLabel}>{title}</Text>
@@ -262,9 +252,12 @@ function OptionGroup({
           return (
             <Pressable
               key={id}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: active }}
               onPress={() => onChange(id)}
               style={({ pressed }) => [
                 styles.option,
+                numeric && styles.numberOption,
                 active && styles.optionActive,
                 pressed && { opacity: 0.8, scale: 0.98 }
               ]}
@@ -272,6 +265,7 @@ function OptionGroup({
               <Text style={[styles.optionText, active && styles.optionTextActive]}>
                 {label}
               </Text>
+              {!numeric ? active ? <Check size={16} color={palette.accent} /> : <View style={styles.unchecked} /> : null}
             </Pressable>
           );
         })}
@@ -310,6 +304,8 @@ function CheckboxGroup({
           return (
             <Pressable
               key={option}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: active }}
               onPress={() => toggle(option)}
               style={({ pressed }) => [
                 styles.option,
@@ -320,6 +316,7 @@ function CheckboxGroup({
               <Text style={[styles.optionText, active && styles.optionTextActive]}>
                 {option}
               </Text>
+              {active ? <Check size={16} color={palette.accent} /> : <View style={styles.unchecked} />}
             </Pressable>
           );
         })}
@@ -328,171 +325,32 @@ function CheckboxGroup({
   );
 }
 
-const getStyles = (palette: any) => StyleSheet.create({
-  container: {
-    paddingHorizontal: 4,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    color: palette.text,
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  subtitle: {
-    color: palette.mutedText,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  stepIndicatorContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 32,
-  },
-  stepWrapper: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    flex: 1,
-  },
-  stepCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: palette.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  stepCircleActive: {
-    backgroundColor: NEON_LIME,
-    borderColor: NEON_LIME,
-    shadowColor: NEON_LIME,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  stepCircleCompleted: {
-    backgroundColor: NEON_LIME,
-    borderColor: NEON_LIME,
-  },
-  stepNumber: {
-    color: palette.mutedText,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  stepText: {
-    color: palette.mutedText,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  stepTextActive: {
-    color: NEON_LIME,
-  },
-  stepLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: palette.border,
-    marginRight: 8,
-  },
-  formContainer: {
-    gap: 24,
-  },
-  group: {
-    gap: 12,
-  },
-  groupLabel: {
-    color: palette.mutedText,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  optionWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  option: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  optionActive: {
-    backgroundColor: 'rgba(95, 199, 147, 0.1)',
-    borderColor: NEON_LIME,
-  },
-  optionText: {
-    color: palette.mutedText,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  optionTextActive: {
-    color: NEON_LIME,
-    fontWeight: '800',
-  },
-  label: {
-    color: palette.mutedText,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  textArea: {
-    minHeight: 100,
-    backgroundColor: palette.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 16,
-    color: palette.text,
-    textAlignVertical: 'top',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  nextBtn: {
-    flex: 2,
-    backgroundColor: NEON_LIME,
-    height: 56,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  nextBtnText: {
-    color: '#0A0A0A',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  backBtn: {
-    flex: 1,
-    height: 56,
-    borderRadius: 20,
-    backgroundColor: palette.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  backBtnText: {
-    color: palette.mutedText,
-    fontSize: 15,
-    fontWeight: '700',
-  },
+const getStyles = (palette: ReturnType<typeof useThemeColors>) => StyleSheet.create({
+  container: { paddingHorizontal: 4 },
+  stepIndicatorContainer: { gap: 12, marginTop: 12, marginBottom: 28 },
+  progressLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  progressTrack: { flexDirection: 'row', gap: 6 },
+  progressSegment: { flex: 1, height: 4, borderRadius: 2 },
+  stepText: { color: palette.mutedText, fontFamily: type.weight.semibold, fontSize: 12 },
+  stepTextActive: { color: palette.accent, fontFamily: type.weight.bold, fontSize: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 32 },
+  title: { color: palette.text, fontFamily: type.weight.extrabold, fontSize: 28, lineHeight: 34, letterSpacing: -0.8 },
+  subtitle: { color: palette.mutedText, fontFamily: type.weight.regular, fontSize: 14, lineHeight: 21 },
+  formContainer: { gap: 24 },
+  group: { gap: 12 },
+  groupLabel: { color: palette.text, fontFamily: type.weight.bold, fontSize: 16 },
+  optionWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  option: { flexGrow: 1, flexBasis: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 56, paddingHorizontal: 14, paddingVertical: 14, borderRadius: 16, backgroundColor: palette.card, borderWidth: 1, borderColor: palette.border },
+  numberOption: { flexBasis: 0, minWidth: 44, justifyContent: 'center', paddingHorizontal: 8 },
+  optionActive: { backgroundColor: palette.accentSoft, borderColor: palette.accent },
+  optionText: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: 14, flexShrink: 1 },
+  optionTextActive: { color: palette.accent, fontFamily: type.weight.bold },
+  unchecked: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: palette.border },
+  label: { color: palette.text, fontFamily: type.weight.semibold, fontSize: 14 },
+  textArea: { minHeight: 100, backgroundColor: palette.card, borderRadius: 16, borderWidth: 1, borderColor: palette.border, padding: 16, color: palette.text, textAlignVertical: 'top' },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 28, marginBottom: 24 },
+  nextBtn: { flex: 2, backgroundColor: palette.primary, minHeight: 56, paddingVertical: 12, borderRadius: 18, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  nextBtnText: { color: palette.primaryText, fontFamily: type.weight.bold, fontSize: 16 },
+  backBtn: { flex: 1, minHeight: 56, borderRadius: 18, backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: palette.border },
+  backBtnText: { color: palette.text, fontFamily: type.weight.semibold, fontSize: 15 },
 });
