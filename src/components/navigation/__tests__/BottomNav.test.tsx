@@ -164,7 +164,9 @@ describe('BottomNav navigation and visibility', () => {
     jest.spyOn(AccessibilityInfo, 'isReduceTransparencyEnabled').mockResolvedValue(true);
     const screen = render(<BottomNav />);
 
-    await waitFor(() => expect(screen.UNSAFE_queryAllByType(BlurView)).toHaveLength(0));
+    // Compare the count, not the array: a failed toHaveLength pretty-prints the
+    // fibers (~1 s each), which used up waitFor's budget on the slower CI runner.
+    await waitFor(() => expect(screen.UNSAFE_queryAllByType(BlurView).length).toBe(0));
     expect(screen.getByTestId('bottom-nav')).toBeTruthy();
     fireEvent.press(screen.getByTestId('nav-workouts'));
     expect(mockReplace).toHaveBeenCalledWith('/workouts');

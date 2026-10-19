@@ -195,6 +195,7 @@ _Claude updates this section automatically when corrections are made._
 - **RNTL `render()` already wraps its update in `act`.** Do not put `render()` inside an outer async `act`; React 19 can report “Can't access .root on unmounted test renderer.” Render first, then await effects separately.
 
 - **Never use native dynamic `await import()` in src/** — jest throws `A dynamic import callback was invoked without --experimental-vm-modules` at runtime, silently breaking any code path that catches the error (e.g. fetchWithAuth's re-register). Use lazy `require('...') as typeof import('...')` instead (Metro handles it; jest executes it).
+- **Inside `waitFor`, assert on counts/booleans, not element arrays** — `expect(UNSAFE_queryAllByType(X)).toHaveLength(0)` pretty-prints fibers on each failed poll and timed out on CI (BottomNav reduce-transparency test, 2026-10-19); use `.length).toBe(0)`.
 - **Inside `waitFor`, never assert absence with `expect(screen.queryBy…()).toBeNull()`** — each failed check pretty-prints the whole React fiber (~1 s), so `waitFor`'s 1 s timeout runs out after one check: passes locally, fails on the slower CI runner (LibraryTab test, 2026-10-14). Use `.not.toBeOnTheScreen()`.
 - **New `app/` routes fail `tsc --noEmit` with typed-routes errors until `.expo/types/router.d.ts` regenerates** — `expo export` does NOT regenerate it; run `npx expo start` briefly (or let the dev server run) after adding/removing route files. CI is unaffected (no `.expo/` = loose types).
 
