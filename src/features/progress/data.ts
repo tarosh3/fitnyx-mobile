@@ -60,9 +60,9 @@ function useStored<T>(storeKey: string | null, fetcher: () => Promise<T>) {
 }
 
 /** Daily totals for the range and the equally long period before it, in one request. */
-export function useProgressDaily(userId: string | undefined, r: DateRange) {
+export function useProgressDaily(userId: string | undefined, r: DateRange, enabled = true) {
   const from = previousRange(r).from;
-  return useStored<ProgressDaily>(userId ? cacheKeys.progressDaily(userId, from, r.to) : null, () => fetchProgressDaily(from, r.to));
+  return useStored<ProgressDaily>(userId && enabled ? cacheKeys.progressDaily(userId, from, r.to) : null, () => fetchProgressDaily(from, r.to));
 }
 
 export function useProgressStrength(userId: string | undefined, r: DateRange, enabled = true) {
@@ -71,6 +71,11 @@ export function useProgressStrength(userId: string | undefined, r: DateRange, en
 
 export function useProgressSummary(userId: string | undefined) {
   return useStored<ProgressSummary>(userId ? cacheKeys.progressSummary(userId) : null, fetchProgressSummary);
+}
+
+/** Goal, level, location… — without the weight history useBodyMetrics also loads. */
+export function useFitnessProfile(userId: string | undefined) {
+  return useStored<FitnessProfile>(userId ? cacheKeys.fitnessProfile(userId) : null, getFitnessProfile).data ?? null;
 }
 
 /** Shares the Body stats screen's caches, so both show the same entries offline. */

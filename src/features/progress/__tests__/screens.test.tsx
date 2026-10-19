@@ -85,13 +85,17 @@ describe('Progress tab', () => {
   });
 
   it('shows a loading state, not zeros, until the first data arrives', async () => {
-    // Two daily requests: the selected range and the calendar month.
+    // The range request (plus, early in a month, a separate calendar-month one) stays pending.
     const pending: ((v: unknown) => void)[] = [];
-    (fetchProgressDaily as jest.Mock).mockImplementation(() => new Promise((r) => { pending.push(r); }));
+    let released = false;
+    (fetchProgressDaily as jest.Mock).mockImplementation(() => (released
+      ? Promise.resolve({ from: today, to: today, days: [] })
+      : new Promise((r) => { pending.push(r); })));
     const screen = renderWithQuery(<ProgressScreen />);
     expect(await screen.findByTestId('progress-loading')).toBeTruthy();
     expect(screen.queryByText('Active time')).toBeNull();
-    await waitFor(() => expect(pending.length).toBe(2));
+    await waitFor(() => expect(pending.length).toBeGreaterThan(0));
+    released = true;
     pending.forEach((r) => r({ from: today, to: today, days: [] }));
     expect(await screen.findByText('Active time')).toBeTruthy();
     expect(screen.queryByTestId('progress-loading')).toBeNull();
@@ -104,6 +108,16 @@ describe('Progress tab', () => {
     await waitFor(() => expect(fetchProgressDaily).toHaveBeenCalledWith(addDays(today, -729), today));
     expect(screen.getByTestId('gran-day')).toHaveProp('accessibilityState', expect.objectContaining({ disabled: true }));
     expect(screen.getByTestId('gran-month')).toHaveProp('accessibilityState', expect.objectContaining({ selected: true }));
+  });
+
+  it('reuses the range data for the calendar month instead of fetching it again', async () => {
+    const screen = renderWithQuery(<ProgressScreen />);
+    await screen.findByLabelText(/1 hours 30 minutes/);
+    (fetchProgressDaily as jest.Mock).mockClear();
+    fireEvent.press(screen.getByTestId('range-30d'));
+    await waitFor(() => expect(fetchProgressDaily).toHaveBeenCalledWith(addDays(today, -59), today));
+    // 60 days back always reaches the 1st of this month: one request, not two.
+    expect(fetchProgressDaily).toHaveBeenCalledTimes(1);
   });
 
   it('loads strength only when its view opens', async () => {

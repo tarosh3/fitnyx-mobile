@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout';
 import { Card } from '@/src/components/ui/Card';
-import { useBodyMetrics, useProgressSummary } from '@/src/features/progress/data';
+import { useFitnessProfile, useProgressSummary } from '@/src/features/progress/data';
 import { badgesFor, effortName, formatClock, formatKg } from '@/src/features/progress/records';
 import { BigNumber, CardTitle, Muted } from '@/src/features/progress/ui/bits';
 import { Medal } from '@/src/features/progress/ui/Medal';
@@ -30,7 +30,7 @@ export function ProfileScreen() {
   const { user, userProfile, avatarUrl } = useAuth();
   const metrics = useRetentionMetrics(user?.id);
   const { data: summary } = useProgressSummary(user?.id);
-  const { fitness } = useBodyMetrics(user?.id);
+  const fitness = useFitnessProfile(user?.id);
   const roams = useRoamActivities(user?.id);
 
   const name = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ') || userProfile?.username || 'Athlete';
