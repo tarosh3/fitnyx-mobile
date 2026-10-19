@@ -95,6 +95,15 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Logs are idempotent on the device-made `client_log_id`: save online, else queue `LOG_MEAL`; delete drops a still-queued create, else `DELETE_MEAL_LOG` (404 = done). Screens merge queued changes via `mergeDayLogs`.
 - Water stays device-local (`src/lib/water.ts`). Plans saved before 2026-10-14 have no `veg`/`ingredients`/`steps`/alternative nutrition — every screen must work without them.
 
+**Share cards (`src/features/share/`)** — achievement images after a Roam (detail screen) or a workout (summary): `cardData.ts` (pure, tested: stats, playful facts, receipt rows, per-set loads) → `ShareCard` picks a template from `cards/` (Glow · Photo · Sticker · Paper · Receipt/Splits; Story 360×640 / Post 360×450 logical, `SAFE` keeps clear of Instagram's UI) → `react-native-view-shot` → `expo-sharing` / `expo-media-library` (save only). Palette lives in `colors.share` (same in both themes); display type is Anton.
+- Card visuals (route / set bars) sit in `Measured`, which hands them the exact leftover space — fixed heights overlapped the text on tall routes and long workouts.
+- Tile the grain with `Grain` (a grid of images): `resizeMode="repeat"` drew one tile, a visible lighter square.
+- Anton fills its whole line box: a label right above a big Anton number needs `marginBottom` (~5) or it touches the digits.
+- Review card design with realistic data (6 exercises / 18 sets); the test account's 1–2-set workouts hide layout problems. A temporary `app/zz-*` preview route works — delete it before committing.
+- view-shot's `width`/`height` are **points** (multiplied by the pixel ratio): pass `1080 / PixelRatio.get()` — passing 1080 gave 3240-px, 10 MB files.
+- The app's toasts render **under** RN `Modal`s (the `Sheet`), so give feedback inside the sheet.
+- Never add Android `READ_MEDIA_*` (Play photo-permission policy): saving needs none on Android 13+; they're in `android.blockedPermissions` and the media-library plugin uses `granularPermissions: []`.
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -110,7 +119,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `home` · `onboarding` · `roam` · `workouts`
+`auth` · `dashboard` · `diet` · `home` · `onboarding` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
@@ -186,6 +195,7 @@ _Claude updates this section automatically when corrections are made._
 - **RNTL `render()` already wraps its update in `act`.** Do not put `render()` inside an outer async `act`; React 19 can report “Can't access .root on unmounted test renderer.” Render first, then await effects separately.
 
 - **Never use native dynamic `await import()` in src/** — jest throws `A dynamic import callback was invoked without --experimental-vm-modules` at runtime, silently breaking any code path that catches the error (e.g. fetchWithAuth's re-register). Use lazy `require('...') as typeof import('...')` instead (Metro handles it; jest executes it).
+- **Inside `waitFor`, assert on counts/booleans, not element arrays** — `expect(UNSAFE_queryAllByType(X)).toHaveLength(0)` pretty-prints fibers on each failed poll and timed out on CI (BottomNav reduce-transparency test, 2026-10-19); use `.length).toBe(0)`.
 - **Inside `waitFor`, never assert absence with `expect(screen.queryBy…()).toBeNull()`** — each failed check pretty-prints the whole React fiber (~1 s), so `waitFor`'s 1 s timeout runs out after one check: passes locally, fails on the slower CI runner (LibraryTab test, 2026-10-14). Use `.not.toBeOnTheScreen()`.
 - **New `app/` routes fail `tsc --noEmit` with typed-routes errors until `.expo/types/router.d.ts` regenerates** — `expo export` does NOT regenerate it; run `npx expo start` briefly (or let the dev server run) after adding/removing route files. CI is unaffected (no `.expo/` = loose types).
 

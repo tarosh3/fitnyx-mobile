@@ -16,6 +16,8 @@ import { RoamReplay } from '@/src/features/roam/components/RoamReplay';
 import { SplitsList } from '@/src/features/roam/components/SplitsList';
 import { VehicleBanner } from '@/src/features/roam/components/VehicleBanner';
 import { formatDistance } from '@/src/features/roam/geo';
+import { roamCardData } from '@/src/features/share/cardData';
+import { ShareCardSheet } from '@/src/features/share/ShareCardSheet';
 import { retentionMetricsKey } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { isAuthError } from '@/src/lib/api';
@@ -38,6 +40,7 @@ export default function RoamDetailScreen() {
   const activityId = Array.isArray(id) ? id[0] : id;
   const [activity, setActivity] = useState<ActivityDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -160,11 +163,13 @@ export default function RoamDetailScreen() {
             message={`${formatDistance(activity.vehicle_distance_m)} was vehicle travel and isn't counted${activity.xp_eligible ? '' : ' — this Roam earned no XP'}.`}
           />
         ) : null}
+        <Button title="SHARE ACHIEVEMENT" onPress={() => setSharing(true)} />
         <ActivityStats activity={activity} />
         <SplitsList splits={activity.splits} distanceM={activity.distance_m} movingSec={activity.moving_time_sec} />
         {error ? <Text style={[styles.note, { color: palette.destructive }]}>{error}</Text> : null}
         <Button title="DELETE ROAM" variant="ghost" onPress={() => setConfirmDelete(true)} loading={deleting} />
       </View>
+      <ShareCardSheet visible={sharing} data={sharing ? roamCardData(activity) : null} onClose={() => setSharing(false)} />
       <RenameRoamSheet
         visible={renaming}
         initialName={activity.name ?? ''}

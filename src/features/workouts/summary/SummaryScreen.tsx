@@ -2,10 +2,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Flame, Medal, Share2, Trophy, TrendingDown, TrendingUp, Zap } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRoutines, useWorkoutHistory } from '@/src/features/workouts/hooks';
+import { setLoad, workoutCardData, type ShareCardData } from '@/src/features/share/cardData';
+import { ShareCardSheet } from '@/src/features/share/ShareCardSheet';
 import { useSessionDetail } from '@/src/features/workouts/history/useSessionDetail';
 import { describeSet, fmtClock, fmtKm, fmtVolume, plural, workoutXp } from '@/src/features/workouts/model';
 import { BottomBar, Button, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
@@ -46,6 +48,7 @@ export function SummaryScreen() {
   const metrics = useRetentionMetrics(user?.id);
   const [saving, setSaving] = useState(false);
   const [savedAs, setSavedAs] = useState<string | null>(null);
+  const [card, setCard] = useState<ShareCardData | null>(null);
   const pop = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => { Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: true }).start(); }, [pop]);
@@ -63,9 +66,31 @@ export function SummaryScreen() {
 
   const done = () => router.dismissTo('/workouts');
 
+  // The achievement card: each exercise with its best set, records first.
   const share = () => {
-    const bits = [fmtClock(s?.total_duration_sec ?? 0), cardioOnly ? `${fmtKm(t.distanceM)} km` : `${fmtVolume(t.volumeKg)} kg lifted`, t.prs ? plural(t.prs, 'new best') : null].filter(Boolean);
-    Share.share({ message: `Just finished ${name} on FitNyx 💪 ${bits.join(' · ')}` }).catch(() => undefined);
+    if (!s) return;
+    const best = (l: (typeof d.logs)[number]) => (l.weight_kg ?? 0) * 1000 + l.reps + (l.distance_m ?? 0) + (l.duration_sec ?? 0);
+    const rows = d.groups
+      .map((g) => {
+        const top = g.logs.reduce((a, b) => (best(b) > best(a) ? b : a), g.logs[0]);
+        return { name: g.exercise?.title ?? 'Exercise', detail: describeSet(d.typeOf(g.uuid), top), pr: g.logs.some((l) => l.is_pr), sets: g.logs.length };
+      })
+      .sort((a, b) => Number(b.pr) - Number(a.pr) || b.sets - a.sets)
+      .map(({ name, detail, pr }) => ({ name, detail, pr }));
+    setCard(
+      workoutCardData({
+        name,
+        startedAt: s.started_at,
+        durationSec: s.total_duration_sec,
+        volumeKg: t.volumeKg,
+        distanceM: cardioOnly ? t.distanceM : 0,
+        sets: t.sets,
+        prs: t.prs,
+        rows,
+        bars: [...d.logs].sort((a, b) => a.created_at.localeCompare(b.created_at)).map(setLoad),
+        xp,
+      }),
+    );
   };
 
   const saveRoutine = async () => {
@@ -159,6 +184,7 @@ export function SummaryScreen() {
         <Button variant="secondary" title="Share" icon={<Share2 size={20} color={c.text} />} onPress={share} style={styles.noFlex} />
         <Button testID="summary-done" title="Done" onPress={done} />
       </BottomBar>
+      <ShareCardSheet visible={card !== null} data={card} onClose={() => setCard(null)} />
     </View>
   );
 }
