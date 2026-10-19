@@ -1,10 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Plus, RotateCcw, Trash2 } from 'lucide-react-native';
+import { Plus, RotateCcw, Share2, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import type { ShareCardData } from '@/src/features/share/cardData';
+import { ShareCardSheet } from '@/src/features/share/ShareCardSheet';
 import { LoggedGroup } from '@/src/features/workouts/history/LoggedGroup';
 import { useSessionDetail } from '@/src/features/workouts/history/useSessionDetail';
+import { sessionCardData } from '@/src/features/workouts/history/workoutCard';
 import { useRoutines, useWorkoutHistory } from '@/src/features/workouts/hooks';
 import { nextSetNumber } from '@/src/features/workouts/logger/rows';
 import { SetEditorSheet } from '@/src/features/workouts/logger/SetEditorSheet';
@@ -26,7 +29,7 @@ import { spacing, type } from '@/src/styles/tokens';
 
 type Editor = { kind: 'log'; logId: string } | { kind: 'new'; uuid: string; exercise: Exercise | null };
 
-/** A finished workout: every set, fixable after the fact; Repeat / Save as routine / Delete. */
+/** A finished workout: every set, fixable after the fact; Share / Repeat / Save as routine / Delete. */
 export function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessionId = String(id ?? '');
@@ -43,6 +46,7 @@ export function WorkoutDetailScreen() {
   const [picking, setPicking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [card, setCard] = useState<ShareCardData | null>(null);
 
   const s = d.session;
   const routine = s?.plan_id ? routines.data?.find((r) => r.id === s.plan_id) : undefined;
@@ -132,7 +136,14 @@ export function WorkoutDetailScreen() {
 
   return (
     <View style={[styles.flex, { backgroundColor: c.background }]}>
-      <TopBar title={name} subtitle={date} right={<IconButton label="Delete this workout" onPress={() => setConfirmDelete(true)}><Trash2 size={20} color={c.destructive} /></IconButton>} />
+      <TopBar title={name} subtitle={date} right={
+        <View style={styles.actions}>
+          {s?.status === 'completed' && t.sets ? (
+            <IconButton label="Share this workout" onPress={() => setCard(sessionCardData(name, { ...d, session: s }))}><Share2 size={20} color={c.text} /></IconButton>
+          ) : null}
+          <IconButton label="Delete this workout" onPress={() => setConfirmDelete(true)}><Trash2 size={20} color={c.destructive} /></IconButton>
+        </View>
+      } />
       {d.loading && !s ? <ActivityIndicator style={styles.spinner} color={c.primary} /> : (
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: space }]}>
           <View style={styles.pills}>
@@ -167,6 +178,8 @@ export function WorkoutDetailScreen() {
         addedUuids={d.groups.map((g) => g.uuid)} emptyLabel="Pick one" confirmLabel={() => 'Next'}
         onConfirm={(p) => { setPicking(false); if (p[0]) setEditor({ kind: 'new', uuid: p[0].uuid, exercise: p[0] }); }} />
 
+      <ShareCardSheet visible={card !== null} data={card} onClose={() => setCard(null)} />
+
       <Sheet visible={confirmDelete} title={`Delete ${name} from ${date}?`} onClose={() => setConfirmDelete(false)}
         footer={<>
           <Button variant="danger" title="Delete workout" loading={busy} onPress={remove} />
@@ -182,6 +195,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   spinner: { marginTop: spacing['3xl'] },
   content: { paddingHorizontal: spacing.base, gap: spacing.md },
+  actions: { flexDirection: 'row', gap: spacing.sm },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   hint: { fontFamily: type.weight.regular, fontSize: 15 },
   noFlex: { flex: 0 },

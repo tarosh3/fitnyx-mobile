@@ -6,9 +6,10 @@ import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRoutines, useWorkoutHistory } from '@/src/features/workouts/hooks';
-import { setLoad, workoutCardData, type ShareCardData } from '@/src/features/share/cardData';
+import type { ShareCardData } from '@/src/features/share/cardData';
 import { ShareCardSheet } from '@/src/features/share/ShareCardSheet';
 import { useSessionDetail } from '@/src/features/workouts/history/useSessionDetail';
+import { sessionCardData } from '@/src/features/workouts/history/workoutCard';
 import { describeSet, fmtClock, fmtKm, fmtVolume, plural, workoutXp } from '@/src/features/workouts/model';
 import { BottomBar, Button, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
 import { useToast } from '@/src/features/workouts/ui/Toast';
@@ -62,35 +63,11 @@ export function SummaryScreen() {
   const change = previous && previous.total_volume_kg > 0 && t.volumeKg > 0 ? Math.round(((t.volumeKg - previous.total_volume_kg) / previous.total_volume_kg) * 100) : null;
   const xp = s ? workoutXp(s.total_duration_sec, t.volumeKg) : 0;
   const prLogs = d.logs.filter((l) => l.is_pr);
-  const cardioOnly = t.volumeKg === 0 && t.cardioSec > 0;
 
   const done = () => router.dismissTo('/workouts');
 
-  // The achievement card: each exercise with its best set, records first.
   const share = () => {
-    if (!s) return;
-    const best = (l: (typeof d.logs)[number]) => (l.weight_kg ?? 0) * 1000 + l.reps + (l.distance_m ?? 0) + (l.duration_sec ?? 0);
-    const rows = d.groups
-      .map((g) => {
-        const top = g.logs.reduce((a, b) => (best(b) > best(a) ? b : a), g.logs[0]);
-        return { name: g.exercise?.title ?? 'Exercise', detail: describeSet(d.typeOf(g.uuid), top), pr: g.logs.some((l) => l.is_pr), sets: g.logs.length };
-      })
-      .sort((a, b) => Number(b.pr) - Number(a.pr) || b.sets - a.sets)
-      .map(({ name, detail, pr }) => ({ name, detail, pr }));
-    setCard(
-      workoutCardData({
-        name,
-        startedAt: s.started_at,
-        durationSec: s.total_duration_sec,
-        volumeKg: t.volumeKg,
-        distanceM: cardioOnly ? t.distanceM : 0,
-        sets: t.sets,
-        prs: t.prs,
-        rows,
-        bars: [...d.logs].sort((a, b) => a.created_at.localeCompare(b.created_at)).map(setLoad),
-        xp,
-      }),
-    );
+    if (s) setCard(sessionCardData(name, { ...d, session: s }));
   };
 
   const saveRoutine = async () => {
