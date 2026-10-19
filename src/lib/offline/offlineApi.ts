@@ -30,6 +30,7 @@ import {
   OfflineExerciseLog,
 } from './offlineStore';
 import { canStartSession, canAddSet } from './offlineLimits';
+import { isExerciseQueued } from './customExercises';
 
 async function checkOnline(): Promise<boolean> {
   const state = await NetInfo.fetch();
@@ -140,7 +141,9 @@ export async function offlineLogSet(requestedId: string, data: LogExerciseInput)
   const sessionId = await resolveId(requestedId);
   const online = await checkOnline();
 
-  if (online && !isOfflineId(sessionId)) {
+  // A custom exercise still waiting in the queue: the server doesn't know it
+  // yet, so its set queues behind it instead of failing with a 400.
+  if (online && !isOfflineId(sessionId) && !(await isExerciseQueued(data.exercise_uuid))) {
     try {
       const log = await logExerciseSet(sessionId, data);
       return log;

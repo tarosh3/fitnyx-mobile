@@ -1,7 +1,7 @@
-import { ExerciseFilters, ExerciseResponse, Exercise } from '@/src/types/exercise';
+import { ExerciseFilters, ExerciseResponse, Exercise, TrackingType } from '@/src/types/exercise';
 import { fetchWithAuth } from '@/src/lib/api';
 
-export async function fetchExercises({ page = 1, limit = 20, search = '', muscle = '', is_warmup = false, fields }: ExerciseFilters): Promise<ExerciseResponse> {
+export async function fetchExercises({ page = 1, limit = 20, search = '', muscle = '', is_warmup = false, fields, mine }: ExerciseFilters): Promise<ExerciseResponse> {
   const query = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -15,12 +15,43 @@ export async function fetchExercises({ page = 1, limit = 20, search = '', muscle
   if (fields) {
     query.append('fields', fields);
   }
+  if (mine) {
+    query.append('mine', 'true');
+  }
 
   return fetchWithAuth(`/view/exercises?${query.toString()}`);
 }
 
 export async function fetchExerciseByUUID(uuid: string): Promise<Exercise> {
   return fetchWithAuth(`/view/exercise/${uuid}`);
+}
+
+// --- Custom exercises (one user's own; backend caps active ones at MAX_CUSTOM_EXERCISES) ---
+
+export const MAX_CUSTOM_EXERCISES = 10;
+export const CUSTOM_MUSCLES = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Abs', 'Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Full body'] as const;
+export const CUSTOM_EQUIPMENT = ['Barbell', 'Dumbbell', 'Kettlebell', 'Cable', 'Machine', 'Bodyweight', 'Band', 'Other'] as const;
+
+export interface CustomExerciseInput {
+  /** Made on the device, so an offline retry creates it once. */
+  uuid: string;
+  title: string;
+  tracking_type: TrackingType;
+  primary_muscle?: string;
+  equipment?: string;
+  /** Also ask for it to be added to the catalog for everyone. */
+  suggest: boolean;
+  note?: string;
+}
+
+/** 201 created / 200 already created (same uuid). 409 `code`: custom_limit | duplicate_title | uuid_taken. */
+export async function createCustomExercise(input: CustomExerciseInput): Promise<Exercise> {
+  return fetchWithAuth('/exercises/custom', { method: 'POST', body: JSON.stringify(input) });
+}
+
+/** Hides it from lists (past sets keep it) and withdraws a pending suggestion. */
+export async function archiveCustomExercise(uuid: string): Promise<void> {
+  await fetchWithAuth(`/exercises/custom/${uuid}`, { method: 'DELETE' });
 }
 
 // --- Per-exercise progress history (logged sets grouped by workout day) ---

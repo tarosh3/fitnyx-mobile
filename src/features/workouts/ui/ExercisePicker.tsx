@@ -1,8 +1,9 @@
-import { Check, Search } from 'lucide-react-native';
+import { Check, Plus, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { type Part, PARTS, partLabel, partOf } from '@/src/features/workouts/model';
+import { CreateExerciseForm } from '@/src/features/workouts/ui/CreateExerciseForm';
 import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -36,6 +37,7 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [picked, setPicked] = useState<Exercise[]>([]);
+  const [creating, setCreating] = useState(false);
   const reqId = useRef(0);
 
   useEffect(() => {
@@ -43,7 +45,15 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     setPicked([]);
     setQuery('');
     setPart(initialPart);
+    setCreating(false);
   }, [visible, initialPart]);
+
+  // A new custom exercise goes to the top of the list, already picked.
+  const created = (ex: Exercise) => {
+    setItems((prev) => [ex, ...prev.filter((x) => x.uuid !== ex.uuid)]);
+    setPicked((p) => (mode === 'single' ? [ex] : [...p, ex]));
+    setCreating(false);
+  };
 
   useEffect(() => {
     if (!visible) return;
@@ -80,6 +90,14 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
       <Text style={[styles.ctaText, { color: picked.length ? c.primaryText : c.mutedText }]}>{picked.length ? confirmLabel(picked) : emptyLabel}</Text>
     </Pressable>
   );
+
+  if (creating) {
+    return (
+      <Sheet visible={visible} title="New exercise" subtitle="Not in the library? Add your own." onClose={onClose} testID="exercise-picker">
+        <CreateExerciseForm initialTitle={query.trim()} onCreated={created} onCancel={() => setCreating(false)} />
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet visible={visible} title={title} subtitle={subtitle} onClose={onClose} footer={footer} testID="exercise-picker">
@@ -139,6 +157,13 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
           />
         )}
       </View>
+      <Pressable testID="picker-create" onPress={() => setCreating(true)} accessibilityRole="button"
+        style={({ pressed }) => [styles.create, pressed && { opacity: 0.7 }]}>
+        <Plus size={18} color={c.accent} />
+        <Text style={[styles.createText, { color: c.accent }]} numberOfLines={1}>
+          {query.trim() ? `Can’t find it? Create “${query.trim()}”` : 'Can’t find it? Create your own'}
+        </Text>
+      </Pressable>
     </Sheet>
   );
 }
@@ -160,6 +185,8 @@ const styles = StyleSheet.create({
   added: { fontFamily: type.weight.bold, fontSize: 14 },
   empty: { fontFamily: type.weight.regular, fontSize: 15, textAlign: 'center', padding: spacing.lg },
   pad: { padding: spacing.lg },
+  create: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48, paddingTop: spacing.sm },
+  createText: { flex: 1, fontFamily: type.weight.semibold, fontSize: 15 },
   cta: { minHeight: 56, borderRadius: radii.lg, alignItems: 'center', justifyContent: 'center' },
   ctaText: { fontFamily: type.weight.bold, fontSize: 17 },
 });

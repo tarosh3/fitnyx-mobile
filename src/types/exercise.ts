@@ -39,6 +39,10 @@ export interface Exercise {
   /** Missing on data cached before the 2026-10 revamp — treat as 'weight_reps'. */
   tracking_type?: TrackingType;
   is_warmup?: boolean;
+  /** Set on the user's own custom exercise (only its owner ever receives it). */
+  owner_id?: string;
+  /** A removed custom exercise: hidden from lists, past sets still open it. */
+  archived_at?: string;
 }
 
 export interface ExerciseResponse {
@@ -57,6 +61,8 @@ export interface ExerciseFilters {
   is_warmup?: boolean;
   /** 'summary' = list-row columns only (no how-to, variations, alternatives). */
   fields?: 'summary';
+  /** Only the user's own custom exercises. */
+  mine?: boolean;
   page: number;
   limit: number;
 }

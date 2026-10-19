@@ -30,6 +30,9 @@ jest.mock('@/src/lib/offline/offlineStore', () => {
 jest.mock('@/src/lib/api', () => ({ saveMetric: jest.fn() }));
 const mockCreateActivity = jest.fn(async (..._a: unknown[]) => ({ id: 'act-1' }));
 jest.mock('@/src/lib/api/activities', () => ({ createActivity: (...a: unknown[]) => mockCreateActivity(...a) }));
+const mockCreateExercise = jest.fn(async (p: { uuid: string }) => ({ uuid: p.uuid, title: 'Mine' }));
+jest.mock('@/src/lib/api/exercises', () => ({ createCustomExercise: (p: { uuid: string }) => mockCreateExercise(p) }));
+jest.mock('@/src/lib/offline/exerciseCache', () => ({ cacheExercise: jest.fn(async () => {}) }));
 const mockLogSet = jest.fn();
 const mockUpdateLog = jest.fn(async (..._a: unknown[]) => ({}));
 jest.mock('@/src/lib/api/workoutSessions', () => ({
@@ -198,5 +201,55 @@ describe('processOfflineQueue — SAVE_ACTIVITY', () => {
 
     expect(mockCreateActivity).toHaveBeenCalledWith(payload);
     expect(mockQueue).toHaveLength(0);
+  });
+});
+
+describe('custom exercises created offline', () => {
+  beforeEach(() => {
+    mockQueue.length = 0;
+    mockLogSet.mockReset();
+    mockCreateExercise.mockReset();
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  function queueCustom() {
+    mockQueue.push({ id: 'c1', type: 'CREATE_EXERCISE', payload: { uuid: 'ex', title: 'Mine', tracking_type: 'reps', suggest: false }, timestamp: 1 });
+    mockQueue.push({ id: 'm1', type: 'LOG_SET', payload: { sessionId: 'real-session', exerciseUuid: 'ex', setNumber: 1, reps: 8 }, timestamp: 2 });
+    mockQueue.push({ id: 'm2', type: 'LOG_SET', payload: { sessionId: 'real-session', exerciseUuid: 'other', setNumber: 1, reps: 8 }, timestamp: 3 });
+  }
+
+  it('creates the exercise before logging its sets', async () => {
+    queueCustom();
+    const order: string[] = [];
+    mockCreateExercise.mockImplementation(async (p) => { order.push('create'); return { uuid: p.uuid, title: 'Mine' }; });
+    mockLogSet.mockImplementation(async (_s: string, d: { exercise_uuid: string }) => { order.push(`log:${d.exercise_uuid}`); return { id: `srv-${d.exercise_uuid}` }; });
+
+    await processOfflineQueue();
+
+    expect(order).toEqual(['create', 'log:ex', 'log:other']);
+    expect(mockQueue).toHaveLength(0);
+  });
+
+  it('holds its sets while the create can’t reach the server', async () => {
+    queueCustom();
+    mockCreateExercise.mockRejectedValue(new Error('Network request failed'));
+    mockLogSet.mockResolvedValue({ id: 'srv' });
+
+    await processOfflineQueue();
+
+    expect(mockLogSet).toHaveBeenCalledTimes(1); // only the set for another exercise
+    expect(mockQueue.map((m) => m.id)).toEqual(['c1', 'm1']);
+  });
+
+  it('drops its sets when the server refuses the exercise', async () => {
+    queueCustom();
+    mockCreateExercise.mockRejectedValue(httpError(409));
+    mockLogSet.mockResolvedValue({ id: 'srv' });
+
+    const result = await processOfflineQueue();
+
+    expect(mockLogSet).toHaveBeenCalledTimes(1);
+    expect(mockQueue).toHaveLength(0);
+    expect(result.errors.map((e) => e.mutation.id)).toEqual(['c1', 'm1']);
   });
 });
