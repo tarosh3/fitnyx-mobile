@@ -1,6 +1,6 @@
 import { defaultActivityName } from '@/src/features/roam/activityName';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
-import { decodePolyline, formatDuration } from '@/src/features/roam/geo';
+import { decodePolyline, formatDuration, type ActivityType } from '@/src/features/roam/geo';
 import type { LngLatPair } from '@/src/features/roam/routeGeometry';
 import type { ActivityDetail } from '@/src/lib/api/activities';
 
@@ -22,6 +22,8 @@ export interface ShareRow {
 
 export interface ShareCardData {
   kind: 'roam' | 'workout';
+  /** Select activity artwork independently of names or display labels. */
+  activityType?: ActivityType;
   /** "RIDE" / "WORKOUT" — the activity, in caps. */
   kicker: string;
   title: string;
@@ -122,6 +124,7 @@ export function roamCardData(a: ActivityDetail): ShareCardData {
   }
   return {
     kind: 'roam',
+    activityType: a.activity_type,
     kicker: ACTIVITY_LABEL[a.activity_type].toUpperCase(),
     title: a.name || defaultActivityName(a.activity_type, a.started_at),
     date: cardDate(a.started_at),
