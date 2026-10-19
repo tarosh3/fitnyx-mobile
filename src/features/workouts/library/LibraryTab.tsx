@@ -17,10 +17,13 @@ const PAGE = 30;
 
 type ListPage = { data: Exercise[]; total: number };
 
-const listKey = (query: string, part: Part | null) => cacheKeys.exerciseListPage(`${query}|${part ?? ''}|lib`);
+/** A body part, or 'mine' = the user's own custom exercises. */
+type Filter = Part | 'mine';
 
-const fetchPage = (query: string, part: Part | null, page: number) =>
-  fetchExercises({ page, limit: PAGE, search: query, muscle: part ?? '', fields: 'summary' });
+const listKey = (query: string, part: Filter | null) => cacheKeys.exerciseListPage(`${query}|${part ?? ''}|lib`);
+
+const fetchPage = (query: string, part: Filter | null, page: number) =>
+  fetchExercises({ page, limit: PAGE, search: query, muscle: part && part !== 'mine' ? part : '', mine: part === 'mine', fields: 'summary' });
 
 /** Warms the first page of every body-part chip (skipping fresh ones), one at a time, so switching chips is instant. */
 async function prefetchParts() {
@@ -38,7 +41,7 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
   const c = useThemeColors();
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [part, setPart] = useState<Part | null>(null);
+  const [part, setPart] = useState<Filter | null>(null);
   const [items, setItems] = useState<Exercise[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -92,14 +95,14 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
           style={[styles.input, { color: c.text }]} accessibilityLabel="Search exercises" returnKeyType="search" autoCorrect={false} />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
-        {[null, ...PARTS.map((p) => p.key)].map((p) => {
+        {[null, 'mine' as const, ...PARTS.map((p) => p.key)].map((p) => {
           const on = part === p;
-          const tone = p ? c.parts[p] : null;
+          const tone = p && p !== 'mine' ? c.parts[p] : null;
           return (
             <Pressable key={p ?? 'all'} onPress={() => setPart(p)} accessibilityRole="button" accessibilityState={{ selected: on }}
               style={[styles.chip, { borderColor: on ? (tone?.fg ?? c.text) : c.border, backgroundColor: on ? (tone?.bg ?? c.text) : c.card }]}>
-              {p && tone ? <WorkoutGlyph part={p} size={22} color={on ? tone.fg : c.mutedText} /> : null}
-              <Text style={[styles.chipText, { color: on ? (tone?.fg ?? c.background) : c.text }]}>{p ? partLabel(p) : 'All'}</Text>
+              {p && p !== 'mine' && tone ? <WorkoutGlyph part={p} size={22} color={on ? tone.fg : c.mutedText} /> : null}
+              <Text style={[styles.chipText, { color: on ? (tone?.fg ?? c.background) : c.text }]}>{p === 'mine' ? 'Mine' : p ? partLabel(p) : 'All'}</Text>
             </Pressable>
           );
         })}
@@ -118,7 +121,9 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
       onEndReachedThreshold={0.5}
       ListEmptyComponent={loading ? <ActivityIndicator style={{ marginTop: spacing['2xl'] }} color={c.primary} /> : (
         <Text style={[styles.empty, { color: c.mutedText }]}>
-          {failed ? 'Couldn’t load exercises. Check your connection.' : 'No exercises match. Try a shorter word or another body part.'}
+          {failed ? 'Couldn’t load exercises. Check your connection.'
+            : part === 'mine' ? 'No exercises of your own yet. Add one from “Add exercise” in a workout or routine.'
+              : 'No exercises match. Try a shorter word or another body part.'}
         </Text>
       )}
       ListFooterComponent={loading && items.length ? <ActivityIndicator style={{ margin: spacing.lg }} color={c.primary} /> : null}
@@ -132,7 +137,7 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
           <View style={styles.grow}>
             <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>{item.title}</Text>
             <Text style={[styles.meta, { color: c.mutedText }]} numberOfLines={1}>
-              {partLabel(partOf(item))}{item.equipment?.[0]?.name ? ` · ${item.equipment[0].name}` : ''}
+              {item.owner_id ? 'Yours · ' : ''}{partLabel(partOf(item))}{item.equipment?.[0]?.name ? ` · ${item.equipment[0].name}` : ''}
             </Text>
           </View>
           <ChevronRight size={20} color={c.mutedText} />

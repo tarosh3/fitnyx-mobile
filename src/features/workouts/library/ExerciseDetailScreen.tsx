@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { Lightbulb, Maximize2, Plus } from 'lucide-react-native';
+import { Lightbulb, Maximize2, Plus, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -9,11 +9,13 @@ import { ExerciseProgress } from '@/src/features/workouts/library/ExerciseProgre
 import { howToSteps } from '@/src/features/workouts/library/text';
 import { partOf, trackingOf } from '@/src/features/workouts/model';
 import { startWorkout } from '@/src/features/workouts/start';
-import { BottomBar, Button, TopBar, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
+import { BottomBar, Button, IconButton, TopBar, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
 import { exerciseImage, ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
 import { PartChip, Pill } from '@/src/features/workouts/ui/bits';
+import { Sheet } from '@/src/features/workouts/ui/Sheet';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { removeCustomExercise } from '@/src/lib/offline/customExercises';
 import { fetchExerciseWithCache } from '@/src/lib/offline/exerciseCache';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 import type { Exercise, RelatedExercise } from '@/src/types/exercise';
@@ -52,6 +54,8 @@ export function ExerciseDetailScreen() {
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<Tab>('how');
   const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setExercise(null);
@@ -84,9 +88,27 @@ export function ExerciseDetailScreen() {
     }
   };
 
+  // The user's own exercise: removing hides it from lists; past sets keep it.
+  const mine = !!exercise.owner_id && !exercise.archived_at;
+  const remove = async () => {
+    setBusy(true);
+    try {
+      await removeCustomExercise(exercise.uuid);
+      setRemoving(false);
+      toast(`Removed ${exercise.title}`);
+      router.back();
+    } catch (e) {
+      toast((e as { status?: number; message?: string }).status ? 'Couldn’t remove it. Try again.' : (e as Error).message || 'You’re offline — try again when connected');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <View style={[styles.flex, { backgroundColor: c.background }]}>
-      <TopBar title={exercise.title} />
+      <TopBar title={exercise.title} right={mine ? (
+        <IconButton label="Remove from my exercises" onPress={() => setRemoving(true)}><Trash2 size={20} color={c.destructive} /></IconButton>
+      ) : undefined} />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: space }]}>
         <Video exercise={exercise} />
         <View style={styles.chips}>
@@ -140,6 +162,14 @@ export function ExerciseDetailScreen() {
       </BottomBar>
 
       <AddToRoutineSheet visible={adding} exercise={exercise} onStart={startWithIt} onClose={() => setAdding(false)} />
+
+      <Sheet visible={removing} title={`Remove ${exercise.title}?`} onClose={() => setRemoving(false)}
+        footer={<>
+          <Button variant="danger" title="Remove" loading={busy} onPress={remove} />
+          <Button variant="secondary" title="Keep it" onPress={() => setRemoving(false)} />
+        </>}>
+        <Text style={[styles.body, { color: c.mutedText }]}>It disappears from your exercise list. Sets you already logged keep it in your history.</Text>
+      </Sheet>
     </View>
   );
 }

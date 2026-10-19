@@ -1,6 +1,8 @@
 import { saveMetric } from '@/src/lib/api';
 import { createActivity } from '@/src/lib/api/activities';
 import { createDietLog, deleteDietLog } from '@/src/lib/api/diet';
+import { createCustomExercise } from '@/src/lib/api/exercises';
+import { cacheExercise } from '@/src/lib/offline/exerciseCache';
 import {
   logExerciseSet,
   updateExerciseLog,
@@ -192,6 +194,13 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       break;
     }
 
+    case 'CREATE_EXERCISE': {
+      // A custom exercise made offline. Idempotent server-side (device-made uuid).
+      const created = await createCustomExercise(payload);
+      await cacheExercise(created.uuid, created);
+      break;
+    }
+
     case 'DELETE_MEAL_LOG': {
       try {
         await deleteDietLog(payload.clientLogId);
@@ -258,12 +267,28 @@ async function processOfflineQueueInternal(): Promise<SyncResult> {
   // Offline sessions whose START the server permanently rejected — their sets
   // and actions can never sync, so they're dropped instead of retried forever.
   const rejectedSessions = new Set<string>();
+  // Custom exercises whose CREATE didn't reach the server this run. Their sets
+  // wait (a set for an unknown exercise is a hard 400 and would be dropped).
+  const waitingExercises = new Set<string>();
+  const rejectedExercises = new Set<string>();
 
   for (const mutation of sorted) {
     if (mutation.payload?.sessionId && rejectedSessions.has(mutation.payload.sessionId)) {
       await removeFromOfflineQueue(mutation.id);
       result.failed++;
       result.errors.push({ mutation, error: 'Session start was rejected by the server' });
+      continue;
+    }
+    const exerciseUuid = mutation.type === 'LOG_SET' ? mutation.payload?.exerciseUuid : undefined;
+    if (exerciseUuid && rejectedExercises.has(exerciseUuid)) {
+      await removeFromOfflineQueue(mutation.id);
+      result.failed++;
+      result.errors.push({ mutation, error: 'Custom exercise was rejected by the server' });
+      continue;
+    }
+    if (exerciseUuid && waitingExercises.has(exerciseUuid)) {
+      result.failed++;
+      result.errors.push({ mutation, error: 'Exercise not yet synced — will retry' });
       continue;
     }
     try {
@@ -281,6 +306,7 @@ async function processOfflineQueueInternal(): Promise<SyncResult> {
       //   Replaying a whole offline workout can exceed the 60 req/min limit;
       //   dropping on 429 would silently lose sets.
       if (message.includes('not yet synced') || !status || isTransientStatus(status)) {
+        if (mutation.type === 'CREATE_EXERCISE') waitingExercises.add(mutation.payload?.uuid);
         result.failed++;
         result.errors.push({ mutation, error: message });
         continue;
@@ -293,6 +319,7 @@ async function processOfflineQueueInternal(): Promise<SyncResult> {
         rejectedSessions.add(mutation.payload.tempId);
         await clearPersistedSession(mutation.payload.tempId);
       }
+      if (mutation.type === 'CREATE_EXERCISE') rejectedExercises.add(mutation.payload?.uuid);
       result.failed++;
       result.errors.push({ mutation, error: message });
     }
