@@ -4,74 +4,100 @@ import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import type { ShareCardData } from '@/src/features/share/cardData';
-import { BigNumber, CARD_SIZE, Label, Pill, SAFE, StatRow, Wordmark, type CardFormat } from '@/src/features/share/cards/parts';
-import { NeonRoute, SetBars } from '@/src/features/share/cards/visuals';
-import { useThemeColors } from '@/src/hooks/useThemeColors';
+import {
+  BigNumber,
+  CARD_SIZE,
+  CardFooter,
+  CardTitle,
+  Completed,
+  Label,
+  SAFE,
+  StatRow,
+  type CardFormat,
+} from '@/src/features/share/cards/parts';
+import { RouteArt } from '@/src/features/share/cards/visuals';
+import { share } from '@/src/theme/colors';
 import { type } from '@/src/styles/tokens';
 
-/** The user's own photo under a cinematic scrim, stats along the bottom. */
-export function PhotoCard({ data, format, photoUri }: { data: ShareCardData; format: CardFormat; photoUri?: string | null }) {
-  const c = useThemeColors().share;
-  const ph = c.photo;
-  const { width, height } = CARD_SIZE[format];
-  const safe = SAFE[format];
+/** The photo stays the subject; the lower scrim protects the result's contrast. */
+export function PhotoCard({
+  data,
+  format,
+  photoUri,
+  onPhotoLoad,
+  onPhotoError,
+}: {
+  data: ShareCardData;
+  format: CardFormat;
+  photoUri?: string | null;
+  onPhotoLoad?: () => void;
+  onPhotoError?: () => void;
+}) {
+  const p = share.photo;
   const story = format === 'story';
-  const shadow = { textShadowColor: c.sticker.shadow, textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 };
-
+  const safe = SAFE[format];
+  const { width, height } = CARD_SIZE[format];
   return (
-    <View style={{ width, height, overflow: 'hidden', backgroundColor: ph.placeholderB }}>
+    <View style={{ width, height, backgroundColor: p.placeholderB, overflow: 'hidden' }}>
       {photoUri ? (
-        <Image source={{ uri: photoUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Image
+          key={photoUri}
+          source={{ uri: photoUri }}
+          onLoad={onPhotoLoad}
+          onError={onPhotoError}
+          style={[StyleSheet.absoluteFill, { width: undefined, height: undefined }]}
+          resizeMode="cover"
+        />
       ) : (
-        <LinearGradient colors={[ph.placeholderA, ph.placeholderB]} style={[StyleSheet.absoluteFill, styles.placeholder]}>
-          <ImagePlus size={40} color={ph.muted} />
-          <Text style={[styles.placeholderText, { color: ph.muted }]}>Choose a photo below</Text>
-        </LinearGradient>
+        <View style={[StyleSheet.absoluteFill, styles.placeholder, { backgroundColor: p.placeholderA, paddingTop: story ? 135 : 85 }]}>
+          <ImagePlus size={30} color={p.text} strokeWidth={1.5} />
+          <Text allowFontScaling={false} style={[styles.placeholderTitle, { color: p.text }]}>
+            Your moment goes here.
+          </Text>
+          <Text allowFontScaling={false} style={[styles.placeholderText, { color: p.muted }]}>
+            Add a photo to make it yours
+          </Text>
+        </View>
       )}
-      <LinearGradient colors={[ph.scrim, ph.clear]} locations={[0, 1]} style={[styles.topScrim, { height: height * 0.24 }]} />
-      <LinearGradient colors={[ph.clear, ph.scrim]} locations={[0, 0.72]} style={[styles.bottomScrim, { height: height * (story ? 0.62 : 0.72) }]} />
-
+      <LinearGradient colors={[p.scrim, p.clear]} style={[styles.topScrim, { height: 140 }]} />
+      <LinearGradient
+        colors={[p.clear, p.scrim, p.scrim]}
+        locations={[0, 0.5, 1]}
+        style={[styles.bottomScrim, { height: height * 0.72 }]}
+      />
       <View style={[styles.body, { paddingTop: safe.top, paddingBottom: safe.bottom, paddingHorizontal: safe.side }]}>
         <View style={styles.header}>
-          <Wordmark color={ph.text} accent={c.night.accent} shadow={shadow} />
-          <Label color={ph.muted} style={shadow}>{data.date.toUpperCase()}</Label>
+          <Completed color={p.text} />
+          <Label color={p.text} size={8}>
+            {data.date.toUpperCase()}
+          </Label>
         </View>
         <View style={styles.spacer} />
-        {data.route ? (
+        {story && (data.route?.length ?? 0) > 1 ? (
           <View style={styles.route}>
-            <NeonRoute route={data.route} width={story ? 120 : 92} height={story ? 86 : 62} colors={c.route} dot={ph.text} stroke={2.5} pad={6} />
-          </View>
-        ) : data.bars?.length ? (
-          <View style={styles.route}>
-            <SetBars loads={data.bars} width={story ? 130 : 100} height={story ? 60 : 44} colors={c.route} />
+            <RouteArt route={data.route!} width={100} height={85} color={p.text} background={p.placeholderB} stroke={2.5} />
           </View>
         ) : null}
-        <Label color={c.night.accent} size={10} style={[shadow, styles.kicker]}>{`${data.kicker} · ${data.title.toUpperCase()}`}</Label>
-        <BigNumber stat={data.hero} size={story ? 92 : 68} color={ph.text} unitColor={c.night.accent} shadow={shadow} />
-        {data.fact ? <Text style={[styles.fact, { color: ph.muted }, shadow]}>{data.fact}</Text> : null}
-        <View style={[styles.rule, { backgroundColor: c.night.faint }]} />
-        <StatRow stats={data.stats} color={ph.text} muted={ph.muted} rule={c.night.faint} shadow={shadow} />
-        <View style={styles.footer}>
-          {data.badge ? <Pill text={data.badge} color={ph.text} bg={c.night.faint} border={c.night.faint} /> : <View />}
-          <Label color={ph.muted} size={8.5} style={shadow}>TRACKED ON FITNYX</Label>
+        <Label color={share.night.accent} size={8}>{`${data.kicker} / ${data.hero.label.toUpperCase()}`}</Label>
+        <BigNumber stat={data.hero} size={story ? 96 : 78} color={p.text} unitColor={p.text} />
+        <CardTitle title={data.title} color={p.text} size={story ? 27 : 23} />
+        <View style={[styles.stats, { borderColor: share.night.muted }]}>
+          <StatRow stats={data.stats} color={p.text} muted={p.muted} rule={share.night.muted} />
         </View>
+        <CardFooter data={data} color={p.text} muted={p.muted} />
       </View>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  kicker: { marginBottom: 5 },
   body: { flex: 1 },
-  // Icon + hint sit in the empty upper third, clear of the stats.
-  placeholder: { alignItems: 'center', justifyContent: 'flex-start', paddingTop: '34%', gap: 10 },
-  placeholderText: { fontFamily: type.weight.semibold, fontSize: 14 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  placeholder: { alignItems: 'center', gap: 9 },
+  placeholderTitle: { fontFamily: type.weight.semibold, fontSize: 17 },
+  placeholderText: { fontFamily: type.weight.regular, fontSize: 11 },
   topScrim: { position: 'absolute', top: 0, left: 0, right: 0 },
   bottomScrim: { position: 'absolute', bottom: 0, left: 0, right: 0 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   spacer: { flex: 1 },
-  route: { alignSelf: 'flex-start', marginBottom: 10 },
-  fact: { fontFamily: type.weight.semibold, fontSize: 13 },
-  rule: { height: StyleSheet.hairlineWidth, marginVertical: 12 },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 },
+  route: { marginBottom: 12 },
+  stats: { borderTopWidth: 1, paddingTop: 14, marginTop: 18, marginBottom: 22 },
 });

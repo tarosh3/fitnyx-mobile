@@ -1,66 +1,122 @@
 import React from 'react';
-import { Image, Platform, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { Platform, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { ArrowUpRight, Check } from 'lucide-react-native';
 
-import type { ShareStat } from '@/src/features/share/cardData';
+import type { ShareCardData, ShareStat } from '@/src/features/share/cardData';
 import { type } from '@/src/styles/tokens';
 
 export type CardFormat = 'story' | 'post';
-
-/** Logical size of each format; captured at 1080 px wide. */
 export const CARD_SIZE: Record<CardFormat, { width: number; height: number }> = {
-  story: { width: 360, height: 640 }, // 9:16 — stories, status
-  post: { width: 360, height: 450 }, // 4:5 — feed posts
+  story: { width: 360, height: 640 },
+  post: { width: 360, height: 450 },
 };
-
-/** Padding that keeps content clear of Instagram's own story UI (top bar, reply box). */
-export const SAFE: Record<CardFormat, { top: number; bottom: number; side: number }> = {
-  story: { top: 58, bottom: 84, side: 28 },
-  post: { top: 26, bottom: 24, side: 26 },
-};
-
+/** Clear of social apps' profile header and reply controls. */
+export const SAFE = {
+  story: { top: 58, bottom: 84, side: 26 },
+  post: { top: 24, bottom: 24, side: 26 },
+} as const;
 export const DISPLAY = 'Anton_400Regular';
 export const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
-/** FN mark + FIT/NYX wordmark. */
-export function Wordmark({ color, accent, size = 17, shadow }: { color: string; accent: string; size?: number; shadow?: TextStyle }) {
+/** A quiet, monochrome signature, with no opaque app-icon tile. */
+export function Wordmark({ color, accent, size = 16, shadow }: { color: string; accent: string; size?: number; shadow?: TextStyle }) {
   return (
     <View style={styles.brand}>
-      <Image source={require('@/assets/images/fitnyx-logo.png')} style={{ width: size * 1.45, height: size * 1.45 }} />
-      <Text style={[styles.wordmark, { color, fontSize: size }, shadow]}>
-        FIT<Text style={{ color: accent }}>NYX</Text>
+      <ArrowUpRight size={size + 2} strokeWidth={3} color={accent} />
+      <Text allowFontScaling={false} style={[styles.wordmark, { color, fontSize: size }, shadow]}>
+        fitnyx
       </Text>
     </View>
   );
 }
 
-/** Small caps with wide tracking — every label on the cards. */
-export function Label({ children, color, size = 9.5, style }: { children: React.ReactNode; color: string; size?: number; style?: TextStyle | TextStyle[] }) {
-  return <Text style={[styles.label, { color, fontSize: size, letterSpacing: size * 0.22 }, style]}>{children}</Text>;
-}
-
-/** The hero number in Anton, with its unit riding the baseline. */
-export function BigNumber({ stat, size, color, unitColor, shadow }: { stat: ShareStat; size: number; color: string; unitColor: string; shadow?: TextStyle }) {
+export function Label({
+  children,
+  color,
+  size = 9,
+  style,
+}: {
+  children: React.ReactNode;
+  color: string;
+  size?: number;
+  style?: TextStyle | TextStyle[];
+}) {
   return (
-    <Text style={[styles.big, { fontSize: size, lineHeight: size * 1.08, color }, shadow]} numberOfLines={1} adjustsFontSizeToFit>
-      {stat.value}
-      {stat.unit ? <Text style={{ fontSize: size * 0.3, color: unitColor }}> {stat.unit.toUpperCase()}</Text> : null}
+    <Text allowFontScaling={false} numberOfLines={1} style={[styles.label, { color, fontSize: size, letterSpacing: size * 0.15 }, style]}>
+      {children}
     </Text>
   );
 }
 
-/** Up to three stats in columns with hairline dividers. */
-export function StatRow({ stats, color, muted, rule, shadow }: { stats: ShareStat[]; color: string; muted: string; rule: string; shadow?: TextStyle }) {
+export function BigNumber({
+  stat,
+  size,
+  color,
+  unitColor,
+  shadow,
+}: {
+  stat: ShareStat;
+  size: number;
+  color: string;
+  unitColor: string;
+  shadow?: TextStyle;
+}) {
+  const characters = [...stat.value].reduce((sum, char) => sum + (/[.,:]/.test(char) ? 0.26 : 0.55), 0);
+  const unitWidth = stat.unit ? (stat.unit.length * 0.55 + 0.4) * 0.27 : 0;
+  const fitted = Math.min(size, 280 / (characters + unitWidth));
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+      <Text
+        allowFontScaling={false}
+        style={[styles.big, { fontSize: fitted, lineHeight: fitted * 1.16, color, flexShrink: 1 }, shadow]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.45}
+      >
+        {stat.value}
+      </Text>
+      {stat.unit ? (
+        <Text
+          allowFontScaling={false}
+          style={[{ fontFamily: DISPLAY, fontSize: fitted * 0.27, lineHeight: fitted * 0.34, color: unitColor }, shadow]}
+        >
+          {stat.unit}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+export function StatRow({
+  stats,
+  color,
+  muted,
+  rule,
+  shadow,
+}: {
+  stats: ShareStat[];
+  color: string;
+  muted: string;
+  rule: string;
+  shadow?: TextStyle;
+}) {
   return (
     <View style={styles.stats}>
       {stats.map((s, i) => (
-        <View key={s.label} style={[styles.stat, i > 0 && { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: rule, paddingLeft: 14 }]}>
-          <Text style={[styles.statValue, { color }, shadow]} numberOfLines={1} adjustsFontSizeToFit>
-            {s.value}
-            {s.unit ? <Text style={[styles.statUnit, { color: muted }]}> {s.unit}</Text> : null}
-          </Text>
-          <Label color={muted} size={8.5} style={shadow}>
+        <View key={s.label} style={[styles.stat, i > 0 && { borderLeftWidth: 1, borderLeftColor: rule, paddingLeft: 12 }]}>
+          <Label color={muted} size={8} style={shadow}>
             {s.label.toUpperCase()}
           </Label>
+          <Text
+            allowFontScaling={false}
+            style={[styles.statValue, { color }, shadow]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+          >
+            {s.value}
+            {s.unit ? <Text style={[styles.statUnit, { color: muted, lineHeight: 12 }]}> {s.unit}</Text> : null}
+          </Text>
         </View>
       ))}
     </View>
@@ -70,20 +126,71 @@ export function StatRow({ stats, color, muted, rule, shadow }: { stats: ShareSta
 export function Pill({ text, color, bg, border }: { text: string; color: string; bg: string; border: string }) {
   return (
     <View style={[styles.pill, { backgroundColor: bg, borderColor: border }]}>
-      <Text style={[styles.pillText, { color }]}>{text}</Text>
+      <Text allowFontScaling={false} style={[styles.pillText, { color }]}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+export function CardTitle({ title, color, size = 32, lines = 1 }: { title: string; color: string; size?: number; lines?: number }) {
+  const long = title.length > 30;
+  const lineHeight = (size * 1.17) / (long ? 2 : 1);
+  const fontSize = long ? Math.min(18, lineHeight * 0.9) : Math.min(size, 550 / Math.max(12, title.length));
+  return (
+    <Text
+      allowFontScaling={false}
+      numberOfLines={long ? 2 : lines}
+      adjustsFontSizeToFit
+      minimumFontScale={0.8}
+      style={{
+        fontFamily: DISPLAY,
+        fontSize,
+        lineHeight,
+        height: size * 1.17,
+        color,
+        textTransform: 'uppercase',
+        includeFontPadding: false,
+      }}
+    >
+      {title}
+    </Text>
+  );
+}
+
+export function CardFooter({ data, color, muted }: { data: ShareCardData; color: string; muted: string }) {
+  return (
+    <View style={styles.footer}>
+      <Wordmark color={color} accent={color} size={15} />
+      <Label color={muted} size={8}>
+        {data.badge ? `${data.badge}  /  EARNED` : 'MAKE IT COUNT.'}
+      </Label>
+    </View>
+  );
+}
+
+export function Completed({ color, label = 'SESSION COMPLETE' }: { color: string; label?: string }) {
+  return (
+    <View style={styles.completed}>
+      <Check size={12} strokeWidth={2.5} color={color} />
+      <Label color={color} size={8}>
+        {label}
+      </Label>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  wordmark: { fontFamily: DISPLAY, letterSpacing: 0.8 },
-  label: { fontFamily: type.weight.semibold },
-  big: { fontFamily: DISPLAY, letterSpacing: -0.5, includeFontPadding: false },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  wordmark: { fontFamily: type.weight.extrabold, letterSpacing: -0.8 },
+  label: { fontFamily: type.weight.semibold, includeFontPadding: false },
+  big: { fontFamily: DISPLAY, letterSpacing: -2, includeFontPadding: false },
   stats: { flexDirection: 'row' },
-  stat: { flex: 1, gap: 3 },
-  statValue: { fontFamily: DISPLAY, fontSize: 25, lineHeight: 30, letterSpacing: 0.2, includeFontPadding: false },
-  statUnit: { fontFamily: type.weight.semibold, fontSize: 11, letterSpacing: 0 },
-  pill: { alignSelf: 'flex-start', borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 11, paddingVertical: 5 },
-  pillText: { fontFamily: type.weight.bold, fontSize: 12, letterSpacing: 0.4 },
+  stat: { flex: 1, gap: 6, paddingRight: 6, minWidth: 0 },
+  statValue: { fontFamily: DISPLAY, fontSize: 24, lineHeight: 29, includeFontPadding: false },
+  statUnit: { fontFamily: type.weight.medium, fontSize: 10 },
+  pill: { alignSelf: 'flex-start', borderRadius: 99, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
+  pillText: { fontFamily: type.weight.bold, fontSize: 10, letterSpacing: 0.4 },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  completed: { flexDirection: 'row', gap: 5, alignItems: 'center' },
 });

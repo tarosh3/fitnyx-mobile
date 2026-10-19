@@ -1,75 +1,88 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { ShareCardData } from '@/src/features/share/cardData';
-import { BigNumber, CARD_SIZE, Label, Pill, SAFE, StatRow, Wordmark, type CardFormat } from '@/src/features/share/cards/parts';
-import { Glows, Grain, Measured, NeonRoute, SetBars } from '@/src/features/share/cards/visuals';
-import { Highlight } from '@/src/features/share/cards/RowList';
-import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { type } from '@/src/styles/tokens';
+import {
+  BigNumber,
+  CARD_SIZE,
+  CardFooter,
+  CardTitle,
+  Completed,
+  Label,
+  SAFE,
+  StatRow,
+  type CardFormat,
+} from '@/src/features/share/cards/parts';
+import { RoutePanel, SessionHighlight, SetBars } from '@/src/features/share/cards/visuals';
+import { share } from '@/src/theme/colors';
 
-/** Flagship look: near-black, brand light blooms, film grain, neon route, giant Anton number. */
+/** The signature poster: mint stock, oversized ink, a dark results band. */
 export function GlowCard({ data, format }: { data: ShareCardData; format: CardFormat }) {
-  const n = useThemeColors().share.night;
-  const route = useThemeColors().share.route;
-  const { width, height } = CARD_SIZE[format];
-  const safe = SAFE[format];
+  const n = share.night;
   const story = format === 'story';
-
+  const safe = SAFE[format];
+  const width = CARD_SIZE[format].width - safe.side * 2;
+  const roam = data.kind === 'roam';
   return (
-    <View style={{ width, height, backgroundColor: n.bg, overflow: 'hidden' }}>
-      <Glows width={width} height={height} a={n.glowA} b={n.glowB} />
-      <Grain tone="light" width={width} height={height} />
-      <View style={[styles.body, { paddingTop: safe.top, paddingBottom: safe.bottom, paddingHorizontal: safe.side }]}>
+    <View style={[CARD_SIZE[format], styles.card, { backgroundColor: n.bg }]}>
+      <View style={[styles.poster, { backgroundColor: n.panel, paddingHorizontal: safe.side, paddingTop: safe.top }]}>
         <View style={styles.header}>
-          <Wordmark color={n.text} accent={n.accent} />
-          <Label color={n.muted}>{`${data.date} · ${data.time}`.toUpperCase()}</Label>
+          <Label color={n.ink}>{`FITNYX / ${data.kicker}`}</Label>
+          <Label color={n.panelMuted} size={8}>
+            {data.date.toUpperCase()}
+          </Label>
         </View>
-
-        <View style={styles.titleBlock}>
-          <Label color={n.accent} size={10}>{data.kicker}</Label>
-          <Text style={[styles.title, { color: n.text }]} numberOfLines={1}>
-            {data.title}
-          </Text>
+        <View style={{ marginTop: story ? 22 : 14 }}>
+          <CardTitle title={data.title} color={n.ink} size={story ? 36 : 29} />
         </View>
-
-        <View style={styles.visual}>
-          <Measured>
-            {(w, h) =>
-              data.route ? (
-                <NeonRoute route={data.route} width={w} height={h} colors={route} dot={n.bg} stroke={story ? 4 : 3} />
-              ) : (
-                <SetBars loads={data.bars ?? []} width={w} height={Math.min(h, story ? 150 : 100)} colors={route} />
-              )
-            }
-          </Measured>
-          {data.route ? null : <Highlight rows={data.rows} color={n.accent} />}
+        <View style={{ marginTop: story ? 18 : 12 }}>
+          <Label color={n.panelMuted}>{data.hero.label.toUpperCase()}</Label>
+          <BigNumber stat={data.hero} size={story ? 112 : 88} color={n.ink} unitColor={n.ink} />
         </View>
-
-        <Label style={styles.heroLabel} color={n.muted}>{data.hero.label.toUpperCase()}</Label>
-        <BigNumber stat={data.hero} size={story ? 104 : 76} color={n.text} unitColor={n.accent} />
-        {data.fact ? <Text style={[styles.fact, { color: n.accent }]}>{data.fact}</Text> : null}
-
-        <View style={[styles.rule, { backgroundColor: n.faint }]} />
+        <View style={styles.art}>
+          {roam ? (
+            <RoutePanel data={data} width={width} height={story ? 122 : 76} color={n.ink} muted={n.panelMuted} background={n.panel} />
+          ) : (
+            <View style={styles.workoutArt}>
+              <SetBars loads={data.bars ?? []} width={width} height={story ? 50 : 34} color={n.ink} muted={n.panelMuted} />
+              <View style={styles.header}>
+                <Label color={n.panelMuted} size={7}>
+                  EVERY SET COUNTS.
+                </Label>
+                <Completed color={n.ink} />
+              </View>
+            </View>
+          )}
+        </View>
+        {roam ? (
+          <View style={[styles.header, styles.routeCaption]}>
+            <Completed color={n.ink} label="ROAM COMPLETE" />
+            <Label color={n.panelMuted} size={7}>
+              YOUR ROUTE. YOUR EFFORT.
+            </Label>
+          </View>
+        ) : null}
+      </View>
+      <View style={{ paddingHorizontal: safe.side, paddingTop: story ? 20 : 16, paddingBottom: safe.bottom }}>
         <StatRow stats={data.stats} color={n.text} muted={n.muted} rule={n.faint} />
-
-        <View style={styles.footer}>
-          {data.badge ? <Pill text={data.badge} color={n.accent} bg={n.faint} border={n.faint} /> : <View />}
-          <Label color={n.muted} size={8.5}>TRACKED ON FITNYX</Label>
+        {!roam && story ? (
+          <View style={styles.highlight}>
+            <SessionHighlight data={data} color={n.text} muted={n.accent} rule={n.faint} compact />
+          </View>
+        ) : null}
+        <View style={{ marginTop: story ? 20 : 16 }}>
+          <CardFooter data={data} color={n.accent} muted={n.muted} />
         </View>
       </View>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  heroLabel: { marginTop: 10, marginBottom: 5 },
-  body: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  titleBlock: { marginTop: 18, gap: 4 },
-  title: { fontFamily: type.weight.extrabold, fontSize: 21, letterSpacing: -0.3 },
-  visual: { flex: 1, justifyContent: 'center', alignItems: 'center', marginVertical: 8 },
-  fact: { fontFamily: type.weight.semibold, fontSize: 13, marginTop: 2 },
-  rule: { height: StyleSheet.hairlineWidth, marginVertical: 14 },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+  card: { overflow: 'hidden' },
+  poster: { flex: 1, paddingBottom: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  art: { flex: 1, minHeight: 0, justifyContent: 'center' },
+  workoutArt: { gap: 9 },
+  routeCaption: { marginTop: 4 },
+  highlight: { marginTop: 16 },
 });

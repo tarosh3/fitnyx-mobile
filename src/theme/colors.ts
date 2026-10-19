@@ -2,19 +2,14 @@
  * Share cards — fixed art direction, the same in both themes (a card shared
  * from dark mode must look like one shared from light mode).
  */
-const share = {
-  /** "Glow": near-black with brand-green and teal light blooms. */
-  night: { bg: '#040706', glowA: '#5fc793', glowB: '#18AFC4', text: '#F3FBF6', muted: 'rgba(243,251,246,0.56)', faint: 'rgba(243,251,246,0.13)', accent: '#86E8B6' },
-  /** The route line, start → end. */
-  route: ['#E2FFF0', '#5fc793', '#14A9C2'],
-  /** "Paper": warm off-white, editorial ink. */
-  paper: { bg: '#F2EEE5', ink: '#0F1211', muted: '#6F736F', faint: 'rgba(15,18,17,0.14)', accent: '#127F4E', routeA: '#0F1211', routeB: '#127F4E' },
-  /** "Receipt": a slip of till paper on a dark backdrop. */
-  receipt: { paper: '#FBFAF5', ink: '#17191B', muted: '#7B7E81', rule: 'rgba(23,25,27,0.4)' },
-  /** "Photo": the user's picture under a dark scrim. */
-  photo: { scrim: 'rgba(2,5,4,0.9)', clear: 'rgba(2,5,4,0)', text: '#FFFFFF', muted: 'rgba(255,255,255,0.74)', placeholderA: '#1A3A2B', placeholderB: '#07120D' },
-  /** "Sticker": white on transparent, with a soft shadow; checkerboard only in the preview. */
-  sticker: { text: '#FFFFFF', muted: 'rgba(255,255,255,0.86)', shadow: 'rgba(0,0,0,0.55)', checkA: '#3A403D', checkB: '#2A2F2D' },
+export const share = {
+  /** Fixed print palettes: exported cards never depend on the app's theme. */
+  night: { bg: '#101C18', text: '#F4F5EA', muted: '#AEBFB5', faint: '#35453D', accent: '#C5F5A6', panel: '#C5F5A6', ink: '#14251B', panelMuted: '#40583E' },
+  route: ['#14251B', '#14251B', '#14251B'],
+  paper: { bg: '#F4F1E8', ink: '#20271F', muted: '#62685E', faint: '#D4D7CB', accent: '#316844', routeA: '#316844', routeB: '#316844' },
+  receipt: { paper: '#F4F1E8', ink: '#20271F', muted: '#62685E', rule: '#CCD1C4' },
+  photo: { scrim: 'rgba(6,16,11,0.94)', clear: 'rgba(6,16,11,0)', text: '#FFFFFF', muted: '#E0E7DD', placeholderA: '#344D3C', placeholderB: '#101C18' },
+  sticker: { text: '#FFFFFF', muted: '#FFFFFF', shadow: 'rgba(0,0,0,0.6)', checkA: '#35473D', checkB: '#2A3A31' },
 } as const;
 
 export const colors = {

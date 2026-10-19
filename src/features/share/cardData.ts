@@ -36,6 +36,8 @@ export interface ShareCardData {
   fact?: string;
   /** Exercises (workout) or km splits (Roam), for lists and the receipt. */
   rows: ShareRow[];
+  /** Full count before the export list is shortened. */
+  rowCount?: number;
   /** Roam route as [lng, lat], for the line art. */
   route?: LngLatPair[];
   /** Workout: each set's load in the order done — "the shape of the workout". */
@@ -127,6 +129,7 @@ export function roamCardData(a: ActivityDetail): ShareCardData {
     hero: distanceStat(a.distance_m),
     stats: stats.slice(0, MAX_STATS),
     fact: roamFact(a),
+    rowCount: a.splits.length,
     rows: a.splits.slice(0, MAX_ROWS).map((s) => ({ name: `KM ${s.km}`, detail: formatDuration(s.sec) })),
     route: decodePolyline(a.route_polyline),
     badge: a.xp_eligible && a.xp > 0 ? `+${a.xp} XP` : undefined,
@@ -174,6 +177,7 @@ export function workoutCardData(w: WorkoutCardInput): ShareCardData {
     hero: lifted ? { label: 'Total lifted', value: Math.round(w.volumeKg).toLocaleString('en-US'), unit: 'kg' } : { label: 'Time', value: clock },
     stats: stats.slice(0, MAX_STATS),
     fact: lifted ? volumeFact(w.volumeKg) : undefined,
+    rowCount: w.rows.length,
     rows: w.rows.slice(0, MAX_ROWS),
     bars: w.bars.filter((b) => b > 0),
     badge: w.xp > 0 ? `+${w.xp} XP` : undefined,

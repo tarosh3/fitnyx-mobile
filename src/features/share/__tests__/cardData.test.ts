@@ -57,6 +57,12 @@ describe('roamCardData', () => {
     expect(d.badge).toBeUndefined();
   });
 
+  it('keeps the full split count when the export rows are shortened', () => {
+    const d = roamCardData(roam({ splits: Array.from({ length: 19 }, (_, i) => ({ km: i + 1, sec: 330 })) }));
+    expect(d.rows).toHaveLength(8);
+    expect(d.rowCount).toBe(19);
+  });
+
   it('short distances show metres', () => {
     expect(roamCardData(roam({ distance_m: 605 })).hero).toEqual({ label: 'Distance', value: '605', unit: 'm' });
   });
@@ -111,6 +117,12 @@ describe('workoutCardData', () => {
     expect(d.rows).toHaveLength(3);
     expect(d.bars).toEqual([480, 480, 400]); // empty sets left out
     expect(d.badge).toBe('+64 XP');
+  });
+
+  it('keeps the full exercise count when the export rows are shortened', () => {
+    const d = workoutCardData({ ...base, rows: Array.from({ length: 12 }, (_, i) => ({ name: `Exercise ${i + 1}`, detail: '10 reps' })) });
+    expect(d.rows).toHaveLength(8);
+    expect(d.rowCount).toBe(12);
   });
 
   it('no weights: time is the hero; cardio shows distance', () => {
