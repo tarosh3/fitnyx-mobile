@@ -3,6 +3,9 @@ import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
+const mockDismissAll = jest.fn();
+const mockCanDismiss = jest.fn(() => false);
 const mockRefresh = jest.fn(async () => {});
 const mockOpenCoach = jest.fn();
 const mockSendMessage = jest.fn();
@@ -33,7 +36,9 @@ function emptyMetrics() {
 
 let mockMetrics = emptyMetrics();
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush, replace: mockReplace, dismissAll: mockDismissAll, canDismiss: mockCanDismiss }),
+}));
 jest.mock('@/src/hooks/useRetentionMetrics', () => ({ useRetentionMetrics: () => mockMetrics }));
 jest.mock('@/src/providers/AICoachProvider', () => ({
   useAICoach: () => ({ openCenteredChat: mockOpenCoach, sendMessage: mockSendMessage }),
@@ -84,11 +89,16 @@ describe('MobileHome actions and data states', () => {
       ['home-roam', '/roam'],
       ['home-nutrition', '/diet'],
       ['home-water', '/water'],
-      ['home-profile', '/profile'],
     ]) {
       fireEvent.press(screen.getByTestId(id));
       expect(mockPush).toHaveBeenLastCalledWith(route);
     }
+    // The avatar opens the profile tab (not the edit form), resetting the stack like the dock.
+    mockCanDismiss.mockReturnValueOnce(true);
+    fireEvent.press(screen.getByTestId('home-profile'));
+    expect(mockDismissAll).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenLastCalledWith('/me');
+    expect(mockPush).not.toHaveBeenCalledWith('/profile');
     fireEvent.press(screen.getByTestId('home-coach'));
     expect(mockOpenCoach).toHaveBeenCalledTimes(1);
     expect(mockSendMessage).not.toHaveBeenCalled();

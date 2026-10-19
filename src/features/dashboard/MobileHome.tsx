@@ -111,7 +111,9 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
             testID="home-profile"
             accessibilityRole="button"
             accessibilityLabel="Open your profile"
-            onPress={() => router.push('/profile')}
+            // The profile is a tab: switch to it like the dock does (reset the stack, then replace),
+            // so back doesn't walk through a pushed copy. /profile is the edit form.
+            onPress={() => { if (router.canDismiss()) router.dismissAll(); router.replace('/me'); }}
             style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
           >
             {avatarUrl && !avatarFailed ? (
