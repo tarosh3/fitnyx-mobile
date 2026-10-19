@@ -54,7 +54,10 @@ export function ProgressScreen() {
   const monthRange = useMemo(() => ({ from: `${today.slice(0, 7)}-01`, to: today }), [today]);
 
   const daily = useProgressDaily(userId, range);
-  const month = useProgressDaily(userId, monthRange);
+  // The calendar needs this month's days; most ranges (with the period before
+  // them) already include them, so only fetch the month separately when not.
+  const monthCovered = range.to === today && previousRange(range).from <= monthRange.from;
+  const month = useProgressDaily(userId, monthRange, !monthCovered);
   const summary = useProgressSummary(userId);
   const strength = useProgressStrength(userId, range, segment === 'strength');
   const body = useBodyMetrics(userId, segment === 'body');
@@ -72,7 +75,7 @@ export function ProgressScreen() {
   };
   const refresh = async () => {
     setRefreshing(true);
-    await Promise.allSettled([daily.refetch(), month.refetch(), summary.refetch(), segment === 'strength' ? strength.refetch() : null]);
+    await Promise.allSettled([daily.refetch(), monthCovered ? null : month.refetch(), summary.refetch(), segment === 'strength' ? strength.refetch() : null]);
     setRefreshing(false);
   };
   const common = { buckets, totals, span, gran };
@@ -113,7 +116,7 @@ export function ProgressScreen() {
 
         {daily.data && segment === 'overview' ? (
           <OverviewView {...common} change={pctChange(totals.workoutSec + totals.roamSec, prev.workoutSec + prev.roamSec)}
-            summary={summary.data} monthDays={month.data?.days ?? []} today={today} insight={dailyInsight}
+            summary={summary.data} monthDays={(monthCovered ? daily.data?.days : month.data?.days) ?? []} today={today} insight={dailyInsight}
             onStrength={() => { setSegment('strength'); scroll.current?.scrollTo({ y: 0, animated: true }); }} />
         ) : null}
         {daily.data && segment === 'strength' ? <StrengthView {...common} change={pctChange(totals.volumeKg, prev.volumeKg)} strength={strength.data} loading={strength.loading} /> : null}
