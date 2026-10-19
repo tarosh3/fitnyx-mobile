@@ -67,10 +67,10 @@ export function Dot({ color }: { color: string }) {
   return <View style={[styles.dot, { backgroundColor: color }]} />;
 }
 
-export function Empty({ text, style }: { text: string; style?: StyleProp<ViewStyle> }) {
+export function Empty({ text, style, testID }: { text: string; style?: StyleProp<ViewStyle>; testID?: string }) {
   const c = useThemeColors();
   return (
-    <View style={[styles.empty, { borderColor: c.border }, style]}>
+    <View testID={testID} style={[styles.empty, { borderColor: c.border }, style]}>
       <Text style={[styles.muted, { color: c.mutedText, textAlign: 'center' }]}>{text}</Text>
     </View>
   );

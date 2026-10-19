@@ -84,6 +84,19 @@ describe('Progress tab', () => {
     expect(fetchProgressDaily).toHaveBeenCalledWith(addDays(today, -13), today);
   });
 
+  it('shows a loading state, not zeros, until the first data arrives', async () => {
+    // Two daily requests: the selected range and the calendar month.
+    const pending: ((v: unknown) => void)[] = [];
+    (fetchProgressDaily as jest.Mock).mockImplementation(() => new Promise((r) => { pending.push(r); }));
+    const screen = renderWithQuery(<ProgressScreen />);
+    expect(await screen.findByTestId('progress-loading')).toBeTruthy();
+    expect(screen.queryByText('Active time')).toBeNull();
+    await waitFor(() => expect(pending.length).toBe(2));
+    pending.forEach((r) => r({ from: today, to: today, days: [] }));
+    expect(await screen.findByText('Active time')).toBeTruthy();
+    expect(screen.queryByTestId('progress-loading')).toBeNull();
+  });
+
   it('disables day bars for a year and refetches for the new range', async () => {
     const screen = renderWithQuery(<ProgressScreen />);
     await screen.findByLabelText(/1 hours 30 minutes/);

@@ -14,7 +14,7 @@ import {
   autoGran, bucketize, pctChange, previousRange, rangeTitle, resolveGran, resolveRange, spanDays, sumDays,
   type Gran, type RangeChoice,
 } from './range';
-import { Muted } from './ui/bits';
+import { Empty, Muted } from './ui/bits';
 import { CustomRangeSheet } from './ui/CustomRangeSheet';
 import { GranSwitch, RangeChips } from './ui/RangeBar';
 import { BodyView } from './views/BodyView';
@@ -106,13 +106,18 @@ export function ProgressScreen() {
         </View>
         {daily.failed ? <Muted>Couldn't load your progress. Pull down to try again.</Muted> : null}
 
-        {segment === 'overview' ? (
+        {/* Totals from no data would read as real zeros ("0h 00m"), so wait for the first load. */}
+        {!daily.data && ['overview', 'strength', 'roam'].includes(segment) ? (
+          <Empty testID="progress-loading" text={daily.failed ? 'Nothing to show yet' : 'Loading your progress…'} />
+        ) : null}
+
+        {daily.data && segment === 'overview' ? (
           <OverviewView {...common} change={pctChange(totals.workoutSec + totals.roamSec, prev.workoutSec + prev.roamSec)}
             summary={summary.data} monthDays={month.data?.days ?? []} today={today} insight={dailyInsight}
             onStrength={() => { setSegment('strength'); scroll.current?.scrollTo({ y: 0, animated: true }); }} />
         ) : null}
-        {segment === 'strength' ? <StrengthView {...common} change={pctChange(totals.volumeKg, prev.volumeKg)} strength={strength.data} loading={strength.loading} /> : null}
-        {segment === 'roam' ? <RoamView {...common} change={pctChange(totals.distanceM, prev.distanceM)} summary={summary.data} today={today} /> : null}
+        {daily.data && segment === 'strength' ? <StrengthView {...common} change={pctChange(totals.volumeKg, prev.volumeKg)} strength={strength.data} loading={strength.loading} /> : null}
+        {daily.data && segment === 'roam' ? <RoamView {...common} change={pctChange(totals.distanceM, prev.distanceM)} summary={summary.data} today={today} /> : null}
         {segment === 'body' ? <BodyView history={body.history} targetKg={body.targetKg} range={range} /> : null}
         {segment === 'fuel' ? <FuelView userId={userId} range={range} buckets={buckets} gran={gran} /> : null}
       </ScrollView>
