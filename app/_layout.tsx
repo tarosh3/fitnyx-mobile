@@ -293,8 +293,10 @@ function ThemedStack() {
       <Stack.Screen name="workouts/customize" />
       <Stack.Screen name="workouts/plans/[id]" />
       <Stack.Screen name="achievements" />
+      <Stack.Screen name="trophies" />
+      <Stack.Screen name="me" options={{ animation: 'fade' }} />
       <Stack.Screen name="profile" />
-      <Stack.Screen name="settings" options={{ animation: 'fade' }} />
+      <Stack.Screen name="settings" />
       <Stack.Screen name="settings/coach-memory" />
       <Stack.Screen name="reminders" />
       <Stack.Screen name="water" />

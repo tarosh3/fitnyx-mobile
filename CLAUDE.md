@@ -95,7 +95,13 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Logs are idempotent on the device-made `client_log_id`: save online, else queue `LOG_MEAL`; delete drops a still-queued create, else `DELETE_MEAL_LOG` (404 = done). Screens merge queued changes via `mergeDayLogs`.
 - Water stays device-local (`src/lib/water.ts`). Plans saved before 2026-10-14 have no `veg`/`ingredients`/`steps`/alternative nutrition — every screen must work without them.
 
-**Share cards (`src/features/share/`)** — achievement images after a Roam (detail screen) or a workout (summary): `cardData.ts` (pure, tested: stats, playful facts, receipt rows, per-set loads) → `ShareCard` picks a template from `cards/` (Glow · Photo · Sticker · Paper · Receipt/Splits; Story 360×640 / Post 360×450 logical, `SAFE` keeps clear of Instagram's UI) → `react-native-view-shot` → `expo-sharing` / `expo-media-library` (save only). Palette lives in `colors.share` (same in both themes); display type is Anton.
+**Progress tab (`src/features/progress/`, route `app/dashboard/index.tsx`) + profile tab (`src/features/profile/`, route `app/me.tsx`)** — 2026-10-19:
+- The dock is Home · Workouts · Progress · profile (the user's photo, or initials via `src/components/ui/Avatar.tsx`, no label) + Coach. Settings is no longer a tab: `/settings` is pushed from the profile's gear and keeps the profile tab selected. `/achievements` redirects to `/trophies?tab=badges`.
+- One range drives every Progress view: presets 7D/30D/3M/1Y or a custom range of at most 366 days (`range.ts`, pure + tested). Day/Week/Month grouping is done **on the device** from `GET /progress/daily` (one row per active date), so switching grouping never refetches. Each request covers the range **plus the equally long period before it** (for "vs the N days before"), hence the backend's 732-day cap on `/progress/daily`.
+- `GET /progress/strength?from&to` (sets per muscle group, top-lift e1RM points) is fetched only when the Strength view opens; `GET /progress/summary` (weekly streak, lifetime totals, records) feeds Overview, Roam, the Trophy case and the profile. Badges are computed on the device from the summary (`records.ts`).
+- Body reads the Body stats screen's caches (`bodyMetricsHistory` holds the raw payload: an array or `{ data: [] }`); Fuel reuses the diet hooks (`useDietSummary`, max 366 days since the backend change).
+
+ — achievement images after a Roam (detail screen) or a workout (summary): `cardData.ts` (pure, tested: stats, playful facts, receipt rows, per-set loads) → `ShareCard` picks a template from `cards/` (Glow · Photo · Sticker · Paper · Receipt/Splits; Story 360×640 / Post 360×450 logical, `SAFE` keeps clear of Instagram's UI) → `react-native-view-shot` → `expo-sharing` / `expo-media-library` (save only). Palette lives in `colors.share` (same in both themes); display type is Anton.
 - Card visuals (route / set bars) sit in `Measured`, which hands them the exact leftover space — fixed heights overlapped the text on tall routes and long workouts.
 - Tile the grain with `Grain` (a grid of images): `resizeMode="repeat"` drew one tile, a visible lighter square.
 - Anton fills its whole line box: a label right above a big Anton number needs `marginBottom` (~5) or it touches the digits.
@@ -119,7 +125,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `home` · `onboarding` · `roam` · `share` · `workouts`
+`auth` · `dashboard` · `diet` · `onboarding` · `profile` · `progress` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
@@ -197,6 +203,7 @@ _Claude updates this section automatically when corrections are made._
 - **Never use native dynamic `await import()` in src/** — jest throws `A dynamic import callback was invoked without --experimental-vm-modules` at runtime, silently breaking any code path that catches the error (e.g. fetchWithAuth's re-register). Use lazy `require('...') as typeof import('...')` instead (Metro handles it; jest executes it).
 - **Inside `waitFor`, assert on counts/booleans, not element arrays** — `expect(UNSAFE_queryAllByType(X)).toHaveLength(0)` pretty-prints fibers on each failed poll and timed out on CI (BottomNav reduce-transparency test, 2026-10-19); use `.length).toBe(0)`.
 - **Inside `waitFor`, never assert absence with `expect(screen.queryBy…()).toBeNull()`** — each failed check pretty-prints the whole React fiber (~1 s), so `waitFor`'s 1 s timeout runs out after one check: passes locally, fails on the slower CI runner (LibraryTab test, 2026-10-14). Use `.not.toBeOnTheScreen()`.
+- **Never pipe `npx jest` into `grep … | head` while debugging.** If Jest can't exit (a React Query client's GC timer is still open), the pipe stays open and grep's block buffer shows nothing, so finished tests look like a hang (lost ~15 min on 2026-10-19). Redirect to a file (`> log 2>&1`) and read it; in tests that render a `QueryClientProvider`, `clear()` every client in `afterEach`.
 - **New `app/` routes fail `tsc --noEmit` with typed-routes errors until `.expo/types/router.d.ts` regenerates** — `expo export` does NOT regenerate it; run `npx expo start` briefly (or let the dev server run) after adding/removing route files. CI is unaffected (no `.expo/` = loose types).
 
 ### Android build (`expo run:android`)
