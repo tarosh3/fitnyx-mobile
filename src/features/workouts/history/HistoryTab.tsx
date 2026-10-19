@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight, History } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, FileText, History } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -85,6 +85,7 @@ type Item = { kind: 'head'; title: string } | { kind: 'row'; s: HistorySession; 
 export function HistoryTab({ header }: { header: React.ReactElement }) {
   const workoutInset = useWorkoutOverlayInset();
   const c = useThemeColors();
+  const router = useRouter();
   const history = useWorkoutHistory();
   const [filter, setFilter] = useState<Filter>('all');
   const sessions = history.data ?? [];
@@ -107,6 +108,16 @@ export function HistoryTab({ header }: { header: React.ReactElement }) {
   const top = (
     <View>
       {header}
+      <Pressable testID="open-reports" onPress={() => router.push('/workouts/report')} accessibilityRole="button"
+        accessibilityLabel="Reports: export a PDF or CSV, or read your AI report"
+        style={({ pressed }) => [styles.reports, { backgroundColor: c.card, borderColor: c.border }, pressed && { opacity: 0.7 }]}>
+        <FileText size={20} color={c.accent} />
+        <View style={styles.reportsText}>
+          <Text style={[styles.reportsTitle, { color: c.text }]}>Reports</Text>
+          <Text style={[styles.reportsSub, { color: c.mutedText }]}>PDF, CSV and your weekly AI report</Text>
+        </View>
+        <ChevronRight size={20} color={c.mutedText} />
+      </Pressable>
       {sessions.length ? (
         <>
           <View style={styles.gapTop}><MonthCalendar sessions={sessions} /></View>
@@ -154,6 +165,10 @@ export function HistoryTab({ header }: { header: React.ReactElement }) {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 140 },
+  reports: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.base, padding: spacing.md, minHeight: 64, borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth },
+  reportsText: { flex: 1, minWidth: 0 },
+  reportsTitle: { fontFamily: type.weight.bold, fontSize: 16 },
+  reportsSub: { fontFamily: type.weight.regular, fontSize: 14 },
   gapTop: { marginTop: spacing.base },
   card: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, padding: spacing.md + 2, gap: spacing.sm },
   calHead: { flexDirection: 'row', alignItems: 'center' },
