@@ -10,7 +10,7 @@ const hiddenRoutePrefixes = [
   // Workouts flows with their own action bar (Start, Repeat, Add…).
   '/workouts/session', '/workouts/routine', '/workouts/history', '/workouts/exercise', '/workouts/programs', '/roam/record', '/update-password', '/privacy-policy',
   '/terms-of-service', '/delete-account', '/email-verified', '/verification-failed',
-  '/invite', '/access-expired',
+  '/invite', '/access-expired', '/trophies',
 ];
 
 export const isBottomNavRoute = (pathname: string) =>

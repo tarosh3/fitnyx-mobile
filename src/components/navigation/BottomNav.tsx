@@ -1,12 +1,13 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
-import { ChartNoAxesColumnIncreasing, Dumbbell, Home, Settings, Sparkles } from 'lucide-react-native';
+import { ChartNoAxesColumnIncreasing, Dumbbell, Home, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { AccessibilityInfo, Keyboard, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/src/components/ui/Avatar';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { haptic } from '@/src/lib/haptics';
 import { useAICoach } from '@/src/providers/AICoachProvider';
@@ -17,8 +18,9 @@ import { BOTTOM_NAV_HEIGHT, bottomNavGap, isBottomNavRoute } from './bottomNavLa
 const destinations = [
   { key: 'home', label: 'Home', icon: Home, href: '/', match: (p: string) => p === '/' || p === '/roam' || p.startsWith('/roam/') },
   { key: 'workouts', label: 'Workouts', icon: Dumbbell, href: '/workouts', match: (p: string) => p.startsWith('/workouts') || p.startsWith('/exercises') },
-  { key: 'stats', label: 'Stats', icon: ChartNoAxesColumnIncreasing, href: '/dashboard', match: (p: string) => p === '/dashboard' || p.startsWith('/dashboard/') },
-  { key: 'settings', label: 'Settings', icon: Settings, href: '/settings', match: (p: string) => p.startsWith('/settings') },
+  { key: 'progress', label: 'Progress', icon: ChartNoAxesColumnIncreasing, href: '/dashboard', match: (p: string) => p === '/dashboard' || p.startsWith('/dashboard/') },
+  // The profile tab shows the user's photo (or initials) and no label; Settings lives inside it.
+  { key: 'profile', label: 'Profile', icon: null, href: '/me', match: (p: string) => p === '/me' || p.startsWith('/settings') },
 ] as const;
 
 const SPRING = { damping: 22, stiffness: 290, mass: 0.8, reduceMotion: ReduceMotion.System };
@@ -29,7 +31,8 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { user, onboardingComplete } = useAuth();
+  const { user, onboardingComplete, avatarUrl, userProfile } = useAuth();
+  const profileName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ') || userProfile?.username;
   const { openCenteredChat, isOpen: coachOpen } = useAICoach();
   const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible());
   const [reduceTransparency, setReduceTransparency] = useState(false);
@@ -103,6 +106,7 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
             ) : null}
             {destinations.map((item, position) => (
               <DockItem key={item.key} id={item.key} label={item.label} icon={item.icon}
+                avatar={item.icon ? undefined : { uri: avatarUrl, name: profileName }}
                 active={item.match(pathname)} cursor={cursor} position={position} hasSelection={index >= 0}
                 onPress={() => navigate(item.href)} compact={width < 360} />
             ))}
@@ -114,8 +118,8 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
   );
 }
 
-function DockItem({ id, label, icon: Icon, active, cursor, position, hasSelection, onPress, compact }: {
-  id: string; label: string; icon: typeof Home; active: boolean; cursor: SharedValue<number>;
+function DockItem({ id, label, icon: Icon, avatar, active, cursor, position, hasSelection, onPress, compact }: {
+  id: string; label: string; icon: typeof Home | null; avatar?: { uri?: string | null; name?: string | null }; active: boolean; cursor: SharedValue<number>;
   position: number; hasSelection: boolean; onPress: () => void; compact: boolean;
 }) {
   const c = useThemeColors();
@@ -124,13 +128,17 @@ function DockItem({ id, label, icon: Icon, active, cursor, position, hasSelectio
   const inactiveStyle = useAnimatedStyle(() => ({ opacity: hasSelection ? Math.min(1, Math.abs(cursor.value - position)) : 1 }));
   const selectedStyle = useAnimatedStyle(() => ({ opacity: hasSelection ? Math.max(0, 1 - Math.abs(cursor.value - position)) : 0 }));
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
-  const content = (selected: boolean) => (
+  const content = (selected: boolean) => (!Icon ? (
+    <Avatar uri={avatar?.uri} name={avatar?.name} size={34}
+      bg={selected ? c.nav.selectedInk : undefined} fg={selected ? c.nav.selectedFrom : undefined}
+      style={{ borderWidth: 1.5, borderColor: selected ? c.nav.selectedInk : c.nav.edge }} />
+  ) : (
     <>
       <Icon size={23} strokeWidth={selected ? 2.2 : 1.7} color={selected ? c.nav.selectedInk : c.nav.inactive} accessible={false} />
       <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.25} adjustsFontSizeToFit minimumFontScale={0.85}
         style={[styles.label, compact && styles.compactLabel, { color: selected ? c.nav.selectedInk : c.nav.inactive, fontFamily: selected ? type.weight.bold : type.weight.medium }]}>{label}</Text>
     </>
-  );
+  ));
   return (
     <Pressable testID={`nav-${id}`} accessibilityRole="tab"
       accessibilityLabel={label} accessibilityState={{ selected: active }}

@@ -35,6 +35,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 
+import { FitNyxWordmarkLetter } from '@/src/components/brand/FitNyxWordmark';
+import { WORDMARK_WIDTH, WORDMARK_HEIGHT } from '@/src/components/brand/wordmarkGeometry';
+
 import {
   LOGO_VIEWBOX,
   LOGO_PATH_1,
@@ -52,6 +55,8 @@ const LOGO_SIZE = SCREEN_W * 0.55;
 
 const PRIMARY = '#5fc793';
 const BG = '#050505';
+const BRAND_HEIGHT = 40;
+const BRAND_WIDTH = BRAND_HEIGHT * WORDMARK_WIDTH / WORDMARK_HEIGHT;
 
 interface Props {
   onAnimationComplete?: () => void;
@@ -295,12 +300,14 @@ export function AnimatedSplash({ onAnimationComplete }: Props) {
 
         {/* ── Wordmark (typewriter) ── */}
         <View style={styles.wordmarkWrap}>
-          <View style={styles.wordmarkRow}>
-            {LETTERS.map((letter, i) => (
-              <Animated.Text key={i} style={[styles.wordmarkLetter, letterStyles[i]]}>
-                {letter}
-              </Animated.Text>
-            ))}
+          <View style={styles.wordmarkRow} accessible accessibilityRole="image" accessibilityLabel="FitNyx">
+            <View style={{ width: BRAND_WIDTH, height: BRAND_HEIGHT }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              {LETTERS.map((letter, i) => (
+                <Animated.View key={letter} style={[StyleSheet.absoluteFill, letterStyles[i]]}>
+                  <FitNyxWordmarkLetter index={i} height={BRAND_HEIGHT} color="#FFFFFF" accentColor={PRIMARY} />
+                </Animated.View>
+              ))}
+            </View>
             <Animated.View style={[styles.cursor, cursorStyle]} />
           </View>
           <View style={styles.underline} />
@@ -351,15 +358,6 @@ const styles = StyleSheet.create({
   wordmarkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  wordmarkLetter: {
-    fontFamily: 'Anton_400Regular',
-    fontSize: 40,
-    color: '#FFFFFF',
-    marginHorizontal: 3,
-    textShadowColor: 'rgba(95, 199, 147, 0.4)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 15,
   },
   cursor: {
     width: 2,

@@ -30,6 +30,10 @@ export const cacheKeys = {
   dietRecentFoods: (userId: string) => `diet:recent-foods:${userId}`,
   // Reports: the last AI report status, so a written report opens offline.
   aiReport: (userId: string) => `reports:ai:${userId}`,
+  // Progress tab — per date range; the summary (streak, totals, records) is one per user.
+  progressDaily: (userId: string, from: string, to: string) => `progress:daily:${userId}:${from}:${to}`,
+  progressStrength: (userId: string, from: string, to: string) => `progress:strength:${userId}:${from}:${to}`,
+  progressSummary: (userId: string) => `progress:summary:${userId}`,
 } as const;
 
 export const cacheTTL = {

@@ -31,6 +31,7 @@ describe('roamCardData', () => {
   it('a run: distance hero, time, pace, steps, a playful fact and km splits for the receipt', () => {
     const d = roamCardData(roam({ steps: 6123 }));
     expect(d.kicker).toBe('RUN');
+    expect(d.activityType).toBe('run');
     expect(d.title).toMatch(/Run$/); // the default name
     expect(d.hero).toEqual({ label: 'Distance', value: '5.00', unit: 'km' });
     expect(d.stats).toEqual([
@@ -51,6 +52,7 @@ describe('roamCardData', () => {
   it('a ride: custom name, speed instead of pace, climb when known, no XP badge without XP', () => {
     const d = roamCardData(roam({ activity_type: 'cycle', name: 'Sunday loop', avg_speed_mps: 6.4, elevation_gain_m: 87.6, xp_eligible: false, xp: 0 }));
     expect(d.kicker).toBe('RIDE');
+    expect(d.activityType).toBe('cycle');
     expect(d.title).toBe('Sunday loop');
     expect(d.stats[1]).toEqual({ label: 'Avg speed', value: '23.0', unit: 'km/h' });
     expect(d.stats[2]).toEqual({ label: 'Climb', value: '88', unit: 'm' });

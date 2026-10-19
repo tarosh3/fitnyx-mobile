@@ -1,6 +1,8 @@
 import React from 'react';
 import { Platform, StyleSheet, Text, View, type TextStyle } from 'react-native';
-import { ArrowUpRight, Check } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
+
+import { FitNyxWordmark } from '@/src/components/brand/FitNyxWordmark';
 
 import type { ShareCardData, ShareStat } from '@/src/features/share/cardData';
 import { type } from '@/src/styles/tokens';
@@ -18,14 +20,11 @@ export const SAFE = {
 export const DISPLAY = 'Anton_400Regular';
 export const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
-/** A quiet, monochrome signature, with no opaque app-icon tile. */
+/** The same custom wordmark used by the app's primary brand surfaces. */
 export function Wordmark({ color, accent, size = 16, shadow }: { color: string; accent: string; size?: number; shadow?: TextStyle }) {
   return (
-    <View style={styles.brand}>
-      <ArrowUpRight size={size + 2} strokeWidth={3} color={accent} />
-      <Text allowFontScaling={false} style={[styles.wordmark, { color, fontSize: size }, shadow]}>
-        fitnyx
-      </Text>
+    <View style={shadow ? { shadowColor: shadow.textShadowColor, shadowOpacity: 1, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } } : undefined}>
+      <FitNyxWordmark height={size * 1.2} color={color} accentColor={accent} />
     </View>
   );
 }
@@ -181,8 +180,6 @@ export function Completed({ color, label = 'SESSION COMPLETE' }: { color: string
 }
 
 const styles = StyleSheet.create({
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  wordmark: { fontFamily: type.weight.extrabold, letterSpacing: -0.8 },
   label: { fontFamily: type.weight.semibold, includeFontPadding: false },
   big: { fontFamily: DISPLAY, letterSpacing: -2, includeFontPadding: false },
   stats: { flexDirection: 'row' },

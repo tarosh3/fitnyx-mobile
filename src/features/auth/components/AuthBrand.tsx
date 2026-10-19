@@ -1,24 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
 
-import { type } from '@/src/styles/tokens';
+import { FitNyxWordmark } from '@/src/components/brand/FitNyxWordmark';
 import { colors } from '@/src/theme/colors';
 
 export function AuthBrand() {
-  return (
-    <Text accessibilityLabel="FitNyx" style={styles.wordmark}>
-      FIT<Text style={styles.accent}>NYX</Text>
-    </Text>
-  );
+  return <FitNyxWordmark height={29} color={colors.dark.text} accentColor={colors.dark.primary} />;
 }
-
-const styles = StyleSheet.create({
-  wordmark: {
-    fontFamily: type.display.fontFamily,
-    fontSize: 25,
-    lineHeight: 34,
-    letterSpacing: 1.2,
-    color: colors.dark.text,
-  },
-  accent: { color: colors.dark.primary },
-});

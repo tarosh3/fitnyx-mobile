@@ -21,7 +21,9 @@ jest.mock('expo-router', () => ({
     canDismiss: mockCanDismiss,
   }),
 }));
-jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: mockUser, onboardingComplete: mockOnboardingComplete }) }));
+jest.mock('@/src/providers/AuthProvider', () => ({
+  useAuth: () => ({ user: mockUser, onboardingComplete: mockOnboardingComplete, avatarUrl: null, userProfile: { first_name: 'Tarosh', last_name: 'Mathuria', username: 'tarosh3' } }),
+}));
 jest.mock('@/src/providers/AICoachProvider', () => ({
   useAICoach: () => ({ openCenteredChat: mockOpenCoach, sendMessage: mockSendMessage, isOpen: mockCoachOpen }),
 }));
@@ -70,8 +72,9 @@ describe('BottomNav navigation and visibility', () => {
   it.each([
     ['home', '/', '/workouts/plans/plan-1'],
     ['workouts', '/workouts', '/dashboard'],
-    ['stats', '/dashboard', '/workouts'],
-    ['settings', '/settings', '/achievements'],
+    ['progress', '/dashboard', '/workouts'],
+    ['profile', '/me', '/roam'],
+    ['profile', '/me', '/settings'],
   ])('opens the %s root after clearing the pushed stack', (tab, destination, current) => {
     mockPathname = current;
     const screen = render(<BottomNav />);
@@ -97,8 +100,8 @@ describe('BottomNav navigation and visibility', () => {
   it.each([
     ['home', '/'],
     ['workouts', '/workouts'],
-    ['stats', '/dashboard'],
-    ['settings', '/settings'],
+    ['progress', '/dashboard'],
+    ['profile', '/me'],
   ])('does nothing when the selected %s root is tapped again', (tab, current) => {
     mockPathname = current;
     const screen = render(<BottomNav />);
@@ -115,17 +118,26 @@ describe('BottomNav navigation and visibility', () => {
   it.each([
     ['workouts', '/exercises', '/workouts'],
     ['home', '/roam/activity-1', '/'],
-    ['settings', '/settings/notifications', '/settings'],
+    ['profile', '/settings', '/me'],
   ])('selects %s on %s while allowing return to its root', (tab, current, destination) => {
     mockPathname = current;
     const screen = render(<BottomNav />);
 
-    for (const id of ['home', 'workouts', 'stats', 'settings']) {
+    for (const id of ['home', 'workouts', 'progress', 'profile']) {
       expect(screen.getByTestId(`nav-${id}`)).toHaveProp('accessibilityState', expect.objectContaining({ selected: id === tab }));
     }
     fireEvent.press(screen.getByTestId(`nav-${tab}`));
 
     expect(mockReplace).toHaveBeenCalledWith(destination);
+  });
+
+  it('shows the profile tab as initials without a label', () => {
+    const screen = render(<BottomNav />);
+
+    expect(screen.getByTestId('nav-profile')).toHaveProp('accessibilityLabel', 'Profile');
+    expect(screen.getAllByText('TM', { includeHiddenElements: true }).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Profile', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByText('Settings', { includeHiddenElements: true })).toBeNull();
   });
 
   it('opens Coach without navigating or sending a message', () => {
@@ -206,6 +218,7 @@ describe('BottomNav navigation and visibility', () => {
     '/verification-failed',
     '/invite',
     '/access-expired',
+    '/trophies',
   ])('keeps the dock hidden on full-screen route %s', (current) => {
     mockPathname = current;
     const screen = render(<BottomNav />);

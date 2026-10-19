@@ -19,6 +19,7 @@ const FORMATS: { label: string; value: CardFormat }[] = [
 ];
 const LOOK_NOTES: Record<ShareTemplate, string> = {
   glow: 'Big effort. Bold statement.',
+  motion: 'Your sport. Its own signature.',
   paper: 'A page from your personal best era.',
   receipt: 'Every effort, on the record.',
   photo: 'Your moment. Your numbers.',

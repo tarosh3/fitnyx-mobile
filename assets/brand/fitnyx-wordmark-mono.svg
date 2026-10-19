@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="284" height="56" viewBox="0 0 284 56" role="img" aria-label="FitNyx">
+  <g transform="matrix(1 0 -0.18 1 11 0)">
+    <g transform="translate(0 0)"><path d="M2 4H39L35 14H14V24H33L29 34H14V52H2Z" fill="currentColor"/></g>
+    <g transform="translate(47 0)"><path d="M0 4H12V52H0Z" fill="currentColor"/></g>
+    <g transform="translate(66 0)"><path d="M4 4H46L42 14H29V52H17V14H0Z" fill="currentColor"/></g>
+    <g transform="translate(116 0)"><path d="M0 4H12L33 33V4H45V52H33L12 23V52H0Z" fill="currentColor"/></g>
+    <g transform="translate(167 0)"><path d="M0 4H13L25 24L37 4H50L31 35V52H19V35Z" fill="currentColor"/></g>
+    <g transform="translate(220 0)"><path d="M0 4H14L22 19L14 29Z M31 34L38 24L55 52H41Z" fill="currentColor"/><path d="M35 4H49L14 52H0Z" fill="currentColor"/></g>
+  </g>
+</svg>

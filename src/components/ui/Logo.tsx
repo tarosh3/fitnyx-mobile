@@ -1,5 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { FitNyxWordmark } from '@/src/components/brand/FitNyxWordmark';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 interface LogoProps {
@@ -36,29 +38,11 @@ export function AppIconSvg({ size = 48, color = '#5fc793' }: LogoProps) {
  * Full Logo with Wordmark for Headers and Main Branding
  */
 export function FullLogoSvg({ size = 32, color = '#5fc793' }: LogoProps) {
-    // We scale the text relative to the icon size
-    const fontRatio = size * 0.8;
-    const wordWidth = fontRatio * 4;
-
+    const c = useThemeColors();
     return (
         <View style={[styles.fullLogoContainer, { height: size }]}>
             <AppIconSvg size={size} color={color} />
-
-            {/* Custom geometric SVG Wordmark spelling FITNYX */}
-            <Svg width={(134 * size) / 40} height={size} viewBox={`0 0 134 40`}>
-                <Path
-                    d="
-                    M10,12 v16 h6 v-6 h8 v-4 h-8 v-2 h10 v-4 h-16 z
-                    M30,12 v16 h6 v-16 h-6 z
-                    M40,12 v4 h5 v12 h6 v-12 h5 v-4 h-16 z
-                    M60,12 h6 l8,10 v-10 h6 v16 h-6 l-8,-10 v10 h-6 v-16 z
-                    M84,12 h6 l4,6 l4,-6 h6 l-7,10 v6 h-6 v-6 l-7,-10 z
-                    M104,12 h6 l4,6 l4,-6 h6 l-7,10 l7,6 h-6 l-4,-6 l-4,6 h-6 l7,-6 l-7,-10 z
-                    "
-                    fill="#FFFFFF"
-                    transform={`translate(0, 4)`}
-                />
-            </Svg>
+            <FitNyxWordmark height={size * 0.72} color={c.text} accentColor={color} />
         </View>
     );
 }
