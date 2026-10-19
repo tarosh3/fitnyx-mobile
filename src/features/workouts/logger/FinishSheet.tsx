@@ -25,7 +25,8 @@ interface Props {
 export function FinishSheet({ visible, setsDone, setsLeft, routineTitle, extras, busy, onFinish, onDiscard, onClose }: Props) {
   const c = useThemeColors();
   const [addExtras, setAddExtras] = useState(true);
-  useEffect(() => { if (visible) setAddExtras(true); }, [visible]);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  useEffect(() => { if (visible) { setAddExtras(true); setConfirmDiscard(false); } }, [visible]);
   const offerUpdate = !!routineTitle && extras.length > 0;
 
   if (setsDone === 0) {
@@ -40,11 +41,25 @@ export function FinishSheet({ visible, setsDone, setsLeft, routineTitle, extras,
     );
   }
 
+  // Logged sets are thrown away too, so ask once more.
+  if (confirmDiscard) {
+    return (
+      <Sheet visible={visible} title="Discard this workout?" subtitle={`${plural(setsDone, 'set')} logged`} onClose={onClose} testID="finish-sheet"
+        footer={<>
+          <Button testID="discard-confirm" variant="danger" title="Discard workout" loading={busy} onPress={onDiscard} />
+          <Button variant="secondary" title="Keep it" onPress={() => setConfirmDiscard(false)} />
+        </>}>
+        <Text style={[styles.body, { color: c.mutedText }]}>Every set you logged is deleted. It won’t show in your history or count toward records. This can’t be undone.</Text>
+      </Sheet>
+    );
+  }
+
   return (
     <Sheet visible={visible} title="Finish workout?" subtitle={`${plural(setsDone, 'set')} logged`} onClose={onClose} testID="finish-sheet"
       footer={<>
         <Button testID="finish-confirm" title="Finish workout" loading={busy} onPress={() => onFinish({ addExtras: offerUpdate && addExtras })} />
         <Button variant="secondary" title="Keep going" onPress={onClose} />
+        <Button testID="discard" variant="quiet" title="Discard workout" onPress={() => setConfirmDiscard(true)} />
       </>}>
       <View style={styles.body}>
         {setsLeft > 0 ? (
