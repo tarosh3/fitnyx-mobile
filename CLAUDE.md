@@ -284,6 +284,8 @@ _Claude updates this section automatically when corrections are made._
 ### Local full-stack testing (2026-10-14)
 
 - **`EXPO_PUBLIC_*` set on the command line does NOT beat `.env`, and Metro caches the inlined values.** To point a dev build at another backend, write a temporary `.env.local` (gitignored, higher priority) and start Metro with `--clear`; delete it afterwards. Confirm where the app really connects with `lsof -nP -iTCP:<port>` — the backend's request log only prints non-2xx responses, so a quiet log proves nothing.
+- **A 401 from production does not prove a route is deployed.** `https://fitnyx.onrender.com/api/v1/<anything>` returns 401 without a token, even for paths that don't exist (2026-10-19: a "deploy check" polling for 401 passed instantly, before Render had deployed). Check a new endpoint from the app instead (a range or screen the device has never cached, so `cacheGetStale` can't fake it) or with an authenticated request.
+- **Android emulator `INSTALL_FAILED_INSUFFICIENT_STORAGE`** (Pixel_7 `/data` ~93% full, the debug APK is ~106 MB): `adb shell pm trim-caches 4G`, then `adb install -r` — keeps the app's data and login, unlike uninstalling.
 - **The running Pixel_7 emulator (qemu) can hold host port 8081**, so Metro can't use it: run `npx expo start --port 8082 --dev-client`, `adb reverse tcp:8082 tcp:8082`, and open `exp+fitnyx-mobile://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8082`.
 - **A local backend uses the production Supabase DB (`DB_URL`)** — anything logged while testing lands on the signed-in user's real account. Undo it in the app and hard-delete the test rows afterwards; verify SQL with a throwaway `cmd/zz_*` probe inside a rolled-back transaction where possible.
 
