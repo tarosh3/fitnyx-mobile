@@ -16,18 +16,18 @@ export type ShareTemplate = 'glow' | 'photo' | 'sticker' | 'paper' | 'receipt';
 /** Templates offered for each kind, most shareable first. */
 export const TEMPLATES: Record<ShareCardData['kind'], { value: ShareTemplate; label: string }[]> = {
   roam: [
-    { value: 'glow', label: 'Glow' },
+    { value: 'glow', label: 'Poster' },
     { value: 'photo', label: 'Photo' },
-    { value: 'sticker', label: 'Sticker' },
-    { value: 'paper', label: 'Paper' },
+    { value: 'sticker', label: 'Cutout' },
+    { value: 'paper', label: 'Editorial' },
     { value: 'receipt', label: 'Splits' },
   ],
   workout: [
-    { value: 'glow', label: 'Glow' },
-    { value: 'receipt', label: 'Receipt' },
+    { value: 'glow', label: 'Poster' },
+    { value: 'receipt', label: 'Log' },
     { value: 'photo', label: 'Photo' },
-    { value: 'sticker', label: 'Sticker' },
-    { value: 'paper', label: 'Paper' },
+    { value: 'sticker', label: 'Cutout' },
+    { value: 'paper', label: 'Editorial' },
   ],
 };
 
@@ -36,14 +36,16 @@ interface Props {
   format: CardFormat;
   template: ShareTemplate;
   photoUri?: string | null;
+  onPhotoLoad?: () => void;
+  onPhotoError?: () => void;
 }
 
 /** The shareable card in the chosen template, at full logical size (scale it for previews). */
-export const ShareCard = forwardRef<View, Props>(function ShareCard({ data, format, template, photoUri }, ref) {
+export const ShareCard = forwardRef<View, Props>(function ShareCard({ data, format, template, photoUri, onPhotoLoad, onPhotoError }, ref) {
   return (
     <View ref={ref} collapsable={false}>
       {template === 'photo' ? (
-        <PhotoCard data={data} format={format} photoUri={photoUri} />
+        <PhotoCard data={data} format={format} photoUri={photoUri} onPhotoLoad={onPhotoLoad} onPhotoError={onPhotoError} />
       ) : template === 'sticker' ? (
         <StickerCard data={data} format={format} />
       ) : template === 'paper' ? (

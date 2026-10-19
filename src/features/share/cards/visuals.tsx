@@ -1,149 +1,162 @@
-import React, { useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import React from 'react';
+import { StyleSheet, View, Text } from 'react-native';
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
+import type { ShareCardData } from '@/src/features/share/cardData';
 import { projectToBox, thinForDisplay, type LngLatPair } from '@/src/features/roam/routeGeometry';
+import { Label } from '@/src/features/share/cards/parts';
+import { type } from '@/src/styles/tokens';
 
-// The graphic layers of the share cards: grain, light blooms, the neon
-// route, the workout's set bars, and the measured slot they sit in.
-
-const GRAIN_TILE = 120; // logical size of one noise tile (white noise tiles seamlessly)
-
-/**
- * Film grain over the whole card, laid as a grid of tiles — resizeMode
- * "repeat" drew a single tile, leaving a visibly lighter square.
- */
-export function Grain({ tone, width, height }: { tone: 'light' | 'dark'; width: number; height: number }) {
-  const source = tone === 'light' ? require('@/assets/images/share/grain-light.png') : require('@/assets/images/share/grain-dark.png');
-  const tiles: { x: number; y: number }[] = [];
-  for (let y = 0; y < height; y += GRAIN_TILE) for (let x = 0; x < width; x += GRAIN_TILE) tiles.push({ x, y });
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {tiles.map((t) => (
-        <Image key={`${t.x}-${t.y}`} source={source} style={{ position: 'absolute', left: t.x, top: t.y, width: GRAIN_TILE, height: GRAIN_TILE }} />
-      ))}
-    </View>
-  );
-}
-
-/** Two soft light blooms (top-right, bottom-left) — the "Glow" look. */
-export function Glows({ width, height, a, b }: { width: number; height: number; a: string; b: string }) {
-  return (
-    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-      <Defs>
-        <RadialGradient id="ga" cx="92%" cy="4%" rx="78%" ry="58%" fx="92%" fy="4%">
-          <Stop offset="0" stopColor={a} stopOpacity={0.62} />
-          <Stop offset="0.55" stopColor={a} stopOpacity={0.14} />
-          <Stop offset="1" stopColor={a} stopOpacity={0} />
-        </RadialGradient>
-        <RadialGradient id="gb" cx="0%" cy="100%" rx="80%" ry="52%" fx="0%" fy="100%">
-          <Stop offset="0" stopColor={b} stopOpacity={0.42} />
-          <Stop offset="0.6" stopColor={b} stopOpacity={0.08} />
-          <Stop offset="1" stopColor={b} stopOpacity={0} />
-        </RadialGradient>
-      </Defs>
-      <Rect width={width} height={height} fill="url(#ga)" />
-      <Rect width={width} height={height} fill="url(#gb)" />
-    </Svg>
-  );
-}
-
-/** The route as a neon line whose colour flows from start to end, with a soft glow. */
-export function NeonRoute({
+/** Real route geometry, north-up. A flat ink stroke exports crisply at every size. */
+export function RouteArt({
   route,
   width,
   height,
-  colors,
-  glow = true,
-  stroke = 4,
-  pad = 16,
-  dot,
+  color,
+  background,
+  stroke = 3.5,
 }: {
   route: LngLatPair[];
   width: number;
   height: number;
-  colors: readonly [string, string, string];
-  glow?: boolean;
+  color: string;
+  background: string;
   stroke?: number;
-  pad?: number;
-  /** Fill of the start/finish dots. */
-  dot: string;
 }) {
-  const pts = projectToBox(thinForDisplay(route, 700), width, height, pad);
+  const pts = projectToBox(thinForDisplay(route, 500), width, height, 14);
   if (pts.length < 2) return null;
   const d = `M${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L')}`;
   const [sx, sy] = pts[0];
   const [ex, ey] = pts[pts.length - 1];
-  const line = { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
   return (
     <Svg width={width} height={height}>
-      <Defs>
-        <LinearGradient id="rt" gradientUnits="userSpaceOnUse" x1={sx} y1={sy} x2={ex} y2={ey}>
-          <Stop offset="0" stopColor={colors[0]} />
-          <Stop offset="0.5" stopColor={colors[1]} />
-          <Stop offset="1" stopColor={colors[2]} />
-        </LinearGradient>
-      </Defs>
-      {glow ? <Path d={d} stroke="url(#rt)" strokeOpacity={0.12} strokeWidth={stroke * 5} {...line} /> : null}
-      {glow ? <Path d={d} stroke="url(#rt)" strokeOpacity={0.28} strokeWidth={stroke * 2.4} {...line} /> : null}
-      <Path d={d} stroke="url(#rt)" strokeWidth={stroke} {...line} />
-      <Circle cx={sx} cy={sy} r={stroke + 2.5} fill={dot} stroke={colors[0]} strokeWidth={2.5} />
-      <Circle cx={ex} cy={ey} r={stroke + 2.5} fill={colors[2]} stroke={dot} strokeWidth={2.5} />
+      <Path d={d} stroke={color} strokeWidth={stroke} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx={sx} cy={sy} r={5} fill={background} stroke={color} strokeWidth={2} />
+      <Circle cx={ex} cy={ey} r={5} fill={color} stroke={background} strokeWidth={2} />
     </Svg>
   );
 }
 
-/**
- * Fills the space left between a card's fixed parts and hands its exact size
- * to the visual (route / bars), so it can never overlap the text on any route
- * shape or format.
- */
-export function Measured({ children }: { children: (width: number, height: number) => React.ReactNode }) {
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  return (
-    <View style={styles.measured} onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-      {size && size.h > 20 ? children(size.w, size.h) : null}
-    </View>
-  );
-}
-
-/**
- * "The shape of the workout": one glowing bar per set in the order done, as
- * tall as its load — the workout's answer to a Roam's route line.
- */
-export function SetBars({ loads, width, height, colors, glow = true }: { loads: number[]; width: number; height: number; colors: readonly [string, string, string]; glow?: boolean }) {
-  if (loads.length === 0) return null;
-  const n = Math.min(loads.length, 40);
-  const shown = loads.slice(0, n);
+/** One bar per logged set, grouped if necessary; never fabricates activity. */
+export function SetBars({
+  loads,
+  width,
+  height,
+  color,
+  muted,
+}: {
+  loads: number[];
+  width: number;
+  height: number;
+  color: string;
+  muted: string;
+}) {
+  const valid = loads.filter((n) => Number.isFinite(n) && n > 0);
+  if (!valid.length) return null;
+  const count = Math.min(valid.length, 36);
+  const shown = Array.from({ length: count }, (_, i) => {
+    const group = valid.slice(Math.floor((i * valid.length) / count), Math.floor(((i + 1) * valid.length) / count));
+    return Math.max(...group);
+  });
   const max = Math.max(...shown);
-  const gap = n > 20 ? 3 : 6;
-  const barW = Math.min(26, (width - gap * (n - 1)) / n);
-  const total = barW * n + gap * (n - 1);
-  const x0 = (width - total) / 2;
+  const gap = 3;
+  const barW = (width - gap * (count - 1)) / count;
   return (
     <Svg width={width} height={height}>
-      <Defs>
-        <LinearGradient id="bar" x1="0" y1="1" x2="0" y2="0">
-          <Stop offset="0" stopColor={colors[2]} />
-          <Stop offset="0.6" stopColor={colors[1]} />
-          <Stop offset="1" stopColor={colors[0]} />
-        </LinearGradient>
-      </Defs>
       {shown.map((load, i) => {
-        const h = Math.max(height * 0.16, (load / max) * height * 0.92);
-        const x = x0 + i * (barW + gap);
-        const r = Math.min(barW / 2, 6);
+        const h = Math.max(3, (load / max) * (height - 4));
         return (
-          <React.Fragment key={i}>
-            {glow ? <Rect x={x - 3} y={height - h - 3} width={barW + 6} height={h + 3} rx={r + 3} fill="url(#bar)" opacity={0.18} /> : null}
-            <Rect x={x} y={height - h} width={barW} height={h} rx={r} fill="url(#bar)" />
-          </React.Fragment>
+          <Rect
+            key={i}
+            x={i * (barW + gap)}
+            y={height - h}
+            width={barW}
+            height={h}
+            fill={i === shown.indexOf(max) ? color : muted}
+            rx={1}
+          />
         );
       })}
     </Svg>
   );
 }
 
+/** Subtle survey marks frame the route without inventing a map or location. */
+export function RoutePanel({
+  data,
+  width,
+  height,
+  color,
+  muted,
+  background,
+}: {
+  data: ShareCardData;
+  width: number;
+  height: number;
+  color: string;
+  muted: string;
+  background: string;
+}) {
+  const hasRoute = (data.route?.length ?? 0) > 1;
+  return (
+    <View style={{ width, height }}>
+      <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+        {[14, width - 14].flatMap((x) =>
+          [14, height - 14].map((y) => (
+            <React.Fragment key={`${x}-${y}`}>
+              <Line x1={x - 4} x2={x + 4} y1={y} y2={y} stroke={muted} opacity={0.4} />
+              <Line x1={x} x2={x} y1={y - 4} y2={y + 4} stroke={muted} opacity={0.4} />
+            </React.Fragment>
+          )),
+        )}
+      </Svg>
+      {hasRoute ? (
+        <RouteArt route={data.route!} width={width} height={height} color={color} background={background} />
+      ) : (
+        <View style={styles.empty}>
+          <Label color={muted}>{data.kicker} COMPLETE</Label>
+        </View>
+      )}
+    </View>
+  );
+}
+
+export function SessionHighlight({
+  data,
+  color,
+  muted,
+  rule,
+  compact = false,
+}: {
+  data: ShareCardData;
+  color: string;
+  muted: string;
+  rule: string;
+  compact?: boolean;
+}) {
+  const row = data.rows.find((r) => r.pr) ?? data.rows[0];
+  if (!row) return null;
+  return (
+    <View style={[styles.highlight, { borderColor: rule, paddingVertical: compact ? 9 : 13 }]}>
+      <View style={styles.highlightCopy}>
+        <Label color={muted} size={8}>
+          {row.pr ? 'PERSONAL RECORD' : 'SESSION HIGHLIGHT'}
+        </Label>
+        <Text allowFontScaling={false} numberOfLines={1} style={[styles.exercise, { color }]}>
+          {row.name}
+        </Text>
+      </View>
+      <Text allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit style={[styles.detail, { color }]}>
+        {row.detail}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  measured: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  highlight: { flexDirection: 'row', gap: 12, alignItems: 'center', borderTopWidth: 1, borderBottomWidth: 1 },
+  highlightCopy: { flex: 1, gap: 6 },
+  exercise: { fontFamily: type.weight.semibold, fontSize: 13 },
+  detail: { maxWidth: '42%', fontFamily: type.weight.bold, fontSize: 15 },
 });

@@ -1,113 +1,122 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Path, Rect } from 'react-native-svg';
+import { ArrowUpRight } from 'lucide-react-native';
 
 import type { ShareCardData } from '@/src/features/share/cardData';
-import { CARD_SIZE, DISPLAY, MONO, SAFE, type CardFormat } from '@/src/features/share/cards/parts';
-import { Glows, Grain } from '@/src/features/share/cards/visuals';
-import { useThemeColors } from '@/src/hooks/useThemeColors';
+import {
+  BigNumber,
+  CARD_SIZE,
+  CardFooter,
+  CardTitle,
+  Completed,
+  Label,
+  SAFE,
+  StatRow,
+  type CardFormat,
+} from '@/src/features/share/cards/parts';
+import { share } from '@/src/theme/colors';
+import { type } from '@/src/styles/tokens';
 
-const TEETH = 9; // zig-zag tear at the bottom of the slip, px per tooth
-
-/** A gym "receipt": every exercise (or km split) itemised on a slip of till paper. */
+/** A collectible session log: numbered efforts, clear totals and real PRs. */
 export function ReceiptCard({ data, format }: { data: ShareCardData; format: CardFormat }) {
-  const c = useThemeColors().share;
-  const r = c.receipt;
-  const { width, height } = CARD_SIZE[format];
+  const r = share.receipt;
+  const n = share.night;
   const story = format === 'story';
-  const slipW = story ? 290 : 262;
-  const rows = data.rows.slice(0, story ? 8 : 4);
-  const mono = { fontFamily: MONO, color: r.ink };
-  const dashes = '-'.repeat(story ? 34 : 31);
-
+  const safe = SAFE[format];
+  const rows = data.rows.slice(0, story ? 5 : 3);
+  const remaining = Math.max(0, (data.rowCount ?? data.rows.length) - rows.length);
   return (
-    <View style={{ width, height, backgroundColor: c.night.bg, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-      <Glows width={width} height={height} a={c.night.glowA} b={c.night.glowB} />
-      <Grain tone="light" width={width} height={height} />
-      <View style={{ marginTop: story ? SAFE.story.top - 30 : 0, transform: [{ rotate: '-2deg' }] }}>
-        <View style={[styles.slip, { width: slipW, backgroundColor: r.paper, paddingVertical: story ? 22 : 14 }]}>
-          <Text style={[styles.brand, { color: r.ink }]}>FITNYX</Text>
-          <Text style={[mono, styles.center, styles.small, { color: r.muted }]}>{data.kind === 'roam' ? 'ACTIVITY' : 'WORKOUT'} RECEIPT</Text>
-          <Text style={[mono, styles.dash, { color: r.rule }]}>{dashes}</Text>
-          <Line l={data.title.toUpperCase()} r="" mono={mono} />
-          <Line l={data.date.toUpperCase()} r={data.time.toUpperCase()} mono={mono} muted={r.muted} />
-          <Text style={[mono, styles.dash, { color: r.rule }]}>{dashes}</Text>
-          {rows.map((row, i) => (
-            <Line key={i} l={`${row.pr ? '★ ' : ''}${row.name}`} r={row.detail} mono={mono} />
-          ))}
-          <Text style={[mono, styles.dash, { color: r.rule }]}>{dashes}</Text>
-          <View style={styles.total}>
-            <Text style={[mono, styles.totalLabel]}>{data.hero.label.toUpperCase()}</Text>
-            <Text style={[styles.totalValue, { color: r.ink }]}>
-              {data.hero.value}
-              {data.hero.unit ? ` ${data.hero.unit.toUpperCase()}` : ''}
-            </Text>
-          </View>
-          {data.stats.map((s) => (
-            <Line key={s.label} l={s.label.toUpperCase()} r={`${s.value}${s.unit ? ` ${s.unit}` : ''}`} mono={mono} muted={r.muted} />
-          ))}
-          {data.fact && story ? <Text style={[mono, styles.center, styles.fact]}>{data.fact}</Text> : null}
-          <Barcode seed={`${data.title}${data.date}${data.hero.value}`} color={r.ink} width={slipW - 44} height={story ? 38 : 26} />
-          <Text style={[mono, styles.center, styles.small]}>THANK YOU FOR SHOWING UP</Text>
-          {data.badge ? <Text style={[mono, styles.center, styles.small, { color: r.muted }]}>{`${data.badge} EARNED`}</Text> : null}
+    <View style={[CARD_SIZE[format], { backgroundColor: n.bg, paddingHorizontal: 18, paddingTop: safe.top, paddingBottom: safe.bottom }]}>
+      <View style={[styles.sheet, { backgroundColor: r.paper }]}>
+        <View style={styles.header}>
+          <Label color={r.ink} size={9}>
+            THE SESSION LOG
+          </Label>
+          <ArrowUpRight size={18} color={r.ink} />
         </View>
-        <Svg width={slipW} height={TEETH} style={styles.teeth}>
-          <Path d={zigzag(slipW)} fill={r.paper} />
-        </Svg>
+        <View style={[styles.date, { borderColor: r.ink }]}>
+          <Label color={r.muted} size={7}>
+            {data.date.toUpperCase()}
+          </Label>
+          <Label color={r.muted} size={7}>{`${data.kicker} / ${data.time.toUpperCase()}`}</Label>
+        </View>
+        <CardTitle title={data.title} color={r.ink} size={story ? 31 : 25} />
+        <View style={{ marginTop: 10 }}>
+          <Label color={r.muted} size={8}>
+            {data.hero.label.toUpperCase()}
+          </Label>
+          <BigNumber stat={data.hero} size={story ? 58 : 48} color={r.ink} unitColor={r.ink} />
+        </View>
+        <View style={[styles.columns, { borderColor: r.rule }]}>
+          <Label color={r.muted} size={7}>
+            {data.kind === 'roam' ? 'KILOMETRE' : 'EXERCISE'}
+          </Label>
+          <Label color={r.muted} size={7}>
+            {data.kind === 'roam' ? 'SPLIT TIME' : 'BEST SET'}
+          </Label>
+        </View>
+        <View style={styles.rows}>
+          {rows.map((row, i) => (
+            <View key={i} style={[styles.row, { borderColor: r.rule, paddingVertical: story ? 6 : 5 }]}>
+              <Text allowFontScaling={false} style={[styles.index, { color: r.muted }]}>
+                {String(i + 1).padStart(2, '0')}
+              </Text>
+              <Text allowFontScaling={false} numberOfLines={1} style={[styles.name, { color: r.ink }]}>
+                {row.name}
+              </Text>
+              {row.pr ? (
+                <View style={[styles.pr, { backgroundColor: n.panel }]}>
+                  <Text allowFontScaling={false} style={[styles.prText, { color: n.ink }]}>
+                    PR
+                  </Text>
+                </View>
+              ) : null}
+              <Text allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit style={[styles.detail, { color: r.ink }]}>
+                {row.detail}
+              </Text>
+            </View>
+          ))}
+          {remaining > 0 ? (
+            <Text
+              allowFontScaling={false}
+              style={[styles.more, { color: r.muted }]}
+            >{`+ ${remaining} more ${data.kind === 'roam' ? (remaining === 1 ? 'split' : 'splits') : remaining === 1 ? 'exercise' : 'exercises'}`}</Text>
+          ) : null}
+          {!rows.length ? (
+            <Text allowFontScaling={false} style={[styles.more, { color: r.muted }]}>
+              Every effort counts.
+            </Text>
+          ) : null}
+        </View>
+        <View style={[styles.stats, { borderColor: r.ink }]}>
+          <StatRow stats={data.stats} color={r.ink} muted={r.muted} rule={r.rule} />
+        </View>
+        {story ? (
+          <View style={styles.complete}>
+            <Completed color={share.paper.accent} label="EFFORT, ON THE RECORD." />
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.footer}>
+        <CardFooter data={data} color={n.accent} muted={n.muted} />
       </View>
     </View>
   );
 }
-
-function Line({ l, r, mono, muted }: { l: string; r: string; mono: object; muted?: string }) {
-  return (
-    <View style={styles.line}>
-      <Text style={[mono, styles.lineText, styles.flex]} numberOfLines={1}>
-        {l}
-      </Text>
-      {r ? <Text style={[mono, styles.lineText, muted ? { color: muted } : null]}>{r}</Text> : null}
-    </View>
-  );
-}
-
-function zigzag(w: number): string {
-  let d = `M0,0 L${w},0`;
-  for (let x = w; x > 0; x -= TEETH) d += ` L${x - TEETH / 2},${TEETH} L${Math.max(0, x - TEETH)},0`;
-  return `${d} Z`;
-}
-
-/** Deterministic bars from the receipt's content — decorative, the same for the same Roam. */
-function Barcode({ seed, color, width, height }: { seed: string; color: string; width: number; height: number }) {
-  let h = 2166136261;
-  const bars: { x: number; w: number }[] = [];
-  for (let x = 0; x < width; ) {
-    h = Math.imul(h ^ seed.charCodeAt(x % Math.max(1, seed.length)), 16777619) >>> 0;
-    const w = 1 + (h % 3);
-    if (h % 5 !== 0) bars.push({ x, w });
-    x += w + 1 + ((h >> 3) % 2);
-  }
-  return (
-    <Svg width={width} height={height} style={styles.barcode}>
-      {bars.map((b) => (
-        <Rect key={b.x} x={b.x} y={0} width={b.w} height={height} fill={color} />
-      ))}
-    </Svg>
-  );
-}
-
 const styles = StyleSheet.create({
-  slip: { paddingHorizontal: 22 },
-  teeth: { marginTop: -0.5 },
-  brand: { fontFamily: DISPLAY, fontSize: 28, letterSpacing: 3, textAlign: 'center' },
-  center: { textAlign: 'center' },
-  small: { fontSize: 10, letterSpacing: 1, marginTop: 2 },
-  dash: { fontSize: 11, marginVertical: 6, textAlign: 'center' },
-  line: { flexDirection: 'row', gap: 10, paddingVertical: 2 },
-  lineText: { fontSize: 11.5 },
-  flex: { flex: 1 },
-  total: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 },
-  totalLabel: { fontSize: 12, fontWeight: '700' },
-  totalValue: { fontFamily: DISPLAY, fontSize: 26 },
-  fact: { fontSize: 11, marginTop: 8 },
-  barcode: { alignSelf: 'center', marginTop: 14, marginBottom: 6 },
+  sheet: { flex: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, borderRadius: 2 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  date: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 2, paddingBottom: 10, marginTop: 8, marginBottom: 12 },
+  columns: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, paddingBottom: 7, marginTop: 10 },
+  rows: { flex: 1 },
+  row: { flexDirection: 'row', gap: 7, alignItems: 'center', borderBottomWidth: 1 },
+  index: { fontFamily: type.weight.medium, fontSize: 9 },
+  name: { flex: 1, fontFamily: type.weight.semibold, fontSize: 11 },
+  detail: { maxWidth: '37%', fontFamily: type.weight.medium, fontSize: 11 },
+  pr: { paddingHorizontal: 4, paddingVertical: 2, borderRadius: 3 },
+  prText: { fontFamily: type.weight.extrabold, fontSize: 7 },
+  more: { fontFamily: type.weight.medium, fontSize: 9, marginTop: 7 },
+  stats: { borderTopWidth: 2, paddingTop: 10, marginTop: 8 },
+  complete: { alignItems: 'center', marginTop: 10 },
+  footer: { marginTop: 16, paddingHorizontal: 8 },
 });

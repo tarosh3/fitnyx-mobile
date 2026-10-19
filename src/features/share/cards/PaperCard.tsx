@@ -2,75 +2,66 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { ShareCardData } from '@/src/features/share/cardData';
-import { BigNumber, CARD_SIZE, DISPLAY, Label, SAFE, StatRow, Wordmark, type CardFormat } from '@/src/features/share/cards/parts';
-import { Grain, Measured, NeonRoute, SetBars } from '@/src/features/share/cards/visuals';
-import { Highlight } from '@/src/features/share/cards/RowList';
-import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { BigNumber, CARD_SIZE, CardFooter, CardTitle, Label, SAFE, StatRow, type CardFormat } from '@/src/features/share/cards/parts';
+import { RoutePanel, SessionHighlight } from '@/src/features/share/cards/visuals';
+import { share } from '@/src/theme/colors';
 import { type } from '@/src/styles/tokens';
 
-/** Editorial: warm paper, black ink, a huge condensed title — a magazine page. */
+/** A personal sporting journal: warm paper, generous type and fine rules. */
 export function PaperCard({ data, format }: { data: ShareCardData; format: CardFormat }) {
-  const p = useThemeColors().share.paper;
-  const { width, height } = CARD_SIZE[format];
-  const safe = SAFE[format];
+  const p = share.paper;
   const story = format === 'story';
-
+  const safe = SAFE[format];
+  const width = CARD_SIZE[format].width - safe.side * 2;
   return (
-    <View style={{ width, height, backgroundColor: p.bg, overflow: 'hidden' }}>
-      <Grain tone="dark" width={width} height={height} />
-      <View style={[styles.body, { paddingTop: safe.top, paddingBottom: safe.bottom, paddingHorizontal: safe.side }]}>
-        <View style={styles.header}>
-          <Wordmark color={p.ink} accent={p.accent} />
-          <Label color={p.muted}>{data.date.toUpperCase()}</Label>
-        </View>
-        <View style={[styles.rule, { backgroundColor: p.ink }]} />
-
-        <Label color={p.accent} size={10}>{`${data.kicker} · ${data.time.toUpperCase()}`}</Label>
-        <Text style={[styles.title, { color: p.ink, fontSize: story ? 46 : 34, lineHeight: story ? 50 : 38 }]} numberOfLines={2}>
-          {data.title.toUpperCase()}
-        </Text>
-
-        <View style={styles.visual}>
-          <Measured>
-            {(w, h) =>
-              data.route ? (
-                <NeonRoute route={data.route} width={w} height={h} colors={[p.routeA, p.routeA, p.routeB]} glow={false} stroke={story ? 3.5 : 3} dot={p.bg} />
-              ) : (
-                <SetBars loads={data.bars ?? []} width={w} height={Math.min(h, story ? 130 : 80)} colors={[p.routeB, p.routeA, p.routeA]} glow={false} />
-              )
-            }
-          </Measured>
-          {data.route ? null : <Highlight rows={data.rows} color={p.accent} />}
-        </View>
-
-        <View style={styles.heroRow}>
-          <View style={styles.flex}>
-            <Label style={styles.heroLabel} color={p.muted}>{data.hero.label.toUpperCase()}</Label>
-            <BigNumber stat={data.hero} size={story ? 96 : 70} color={p.ink} unitColor={p.accent} />
-          </View>
-        </View>
-        {data.fact ? <Text style={[styles.fact, { color: p.accent }]}>{data.fact}</Text> : null}
-        <View style={[styles.thin, { backgroundColor: p.faint }]} />
-        <StatRow stats={data.stats} color={p.ink} muted={p.muted} rule={p.faint} />
-        <View style={styles.footer}>
-          <Label color={p.ink} size={8.5}>{data.badge ? `${data.badge}  ·  ` : ''}FITNYX</Label>
-          <Label color={p.muted} size={8.5}>SHOW UP. GET STRONGER.</Label>
-        </View>
+    <View
+      style={[
+        CARD_SIZE[format],
+        styles.card,
+        { backgroundColor: p.bg, paddingHorizontal: safe.side, paddingTop: safe.top, paddingBottom: safe.bottom },
+      ]}
+    >
+      <View style={[styles.header, { borderColor: p.ink }]}>
+        <Label color={p.ink} size={10}>
+          THE DAILY EFFORT
+        </Label>
+        <Label color={p.muted} size={8}>
+          {data.date.toUpperCase()}
+        </Label>
       </View>
+      <View style={{ marginTop: story ? 20 : 14, gap: 8 }}>
+        <Label color={p.accent} size={8}>{`${data.kicker} / ${data.time.toUpperCase()}`}</Label>
+        <CardTitle title={data.title} color={p.ink} size={story ? 49 : 37} lines={1} />
+      </View>
+      <View style={styles.visual}>
+        {data.kind === 'roam' ? (
+          <RoutePanel data={data} width={width} height={story ? 150 : 80} color={p.accent} muted={p.muted} background={p.bg} />
+        ) : (
+          <View style={{ alignSelf: 'stretch' }}>
+            <SessionHighlight data={data} color={p.ink} muted={p.accent} rule={p.faint} compact={!story} />
+          </View>
+        )}
+      </View>
+      <Label color={p.muted} size={8}>
+        {data.hero.label.toUpperCase()}
+      </Label>
+      <BigNumber stat={data.hero} size={story ? 91 : 72} color={p.ink} unitColor={p.accent} />
+      {data.fact && story ? (
+        <Text allowFontScaling={false} numberOfLines={1} style={[styles.fact, { color: p.muted }]}>
+          {data.fact}
+        </Text>
+      ) : null}
+      <View style={[styles.stats, { borderColor: p.ink }]}>
+        <StatRow stats={data.stats} color={p.ink} muted={p.muted} rule={p.faint} />
+      </View>
+      <CardFooter data={data} color={p.ink} muted={p.muted} />
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  heroLabel: { marginTop: 10, marginBottom: 5 },
-  body: { flex: 1 },
-  flex: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rule: { height: 2, marginTop: 12, marginBottom: 14 },
-  title: { fontFamily: DISPLAY, letterSpacing: 0.3, marginTop: 4, includeFontPadding: false },
-  visual: { flex: 1, justifyContent: 'center', alignItems: 'center', marginVertical: 8 },
-  heroRow: { flexDirection: 'row', alignItems: 'flex-end' },
-  fact: { fontFamily: type.weight.semibold, fontSize: 13 },
-  thin: { height: StyleSheet.hairlineWidth, marginVertical: 12 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
+  card: { overflow: 'hidden' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 2, paddingBottom: 12 },
+  visual: { flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 0, marginVertical: 8 },
+  fact: { fontFamily: type.weight.regular, fontSize: 11, marginTop: 3 },
+  stats: { borderTopWidth: 1, paddingTop: 14, marginTop: 14, marginBottom: 20 },
 });
