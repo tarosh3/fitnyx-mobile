@@ -28,6 +28,8 @@ export const cacheKeys = {
   dietLogs: (userId: string, date: string) => `diet:logs:${userId}:${date}`,
   dietSummary: (userId: string, from: string, to: string) => `diet:summary:${userId}:${from}:${to}`,
   dietRecentFoods: (userId: string) => `diet:recent-foods:${userId}`,
+  // Reports: the last AI report status, so a written report opens offline.
+  aiReport: (userId: string) => `reports:ai:${userId}`,
 } as const;
 
 export const cacheTTL = {

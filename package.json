@@ -47,6 +47,7 @@
     "expo-live-activity": "^0.5.0-alpha1",
     "expo-location": "~55.1.14",
     "expo-media-library": "~55.0.21",
+    "expo-print": "~55.0.19",
     "expo-router": "~55.0.5",
     "expo-secure-store": "^55.0.8",
     "expo-sharing": "~55.0.24",
