@@ -29,7 +29,7 @@ function Video({ exercise }: { exercise: Exercise }) {
   const view = useRef<VideoView>(null);
   const url = exercise.video_url || (exercise.media_url?.toLowerCase().endsWith('.mp4') ? exercise.media_url : null);
   const player = useVideoPlayer(url || null, (p) => { p.loop = true; p.muted = true; p.play(); });
-  const img = exerciseImage(exercise);
+  const img = exerciseImage(exercise, 480);
   if (!url) {
     return img ? <Image source={{ uri: img }} style={[styles.media, { backgroundColor: c.surface }]} resizeMode="cover" accessibilityIgnoresInvertColors />
       : <View style={[styles.media, styles.center, { backgroundColor: c.parts[partOf(exercise)].bg }]}><ExerciseThumb exercise={exercise} size={96} /></View>;

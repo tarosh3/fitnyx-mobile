@@ -3,7 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { Image } from 'react-native';
 
 import type { Exercise } from '@/src/types/exercise';
-import { ExerciseThumb, exerciseImage } from '../ExerciseThumb';
+import { ExerciseThumb, exerciseImage, videoPoster } from '../ExerciseThumb';
 
 jest.mock('@/src/providers/ThemeProvider', () => ({ useTheme: () => ({ theme: 'dark' }) }));
 
@@ -68,5 +68,25 @@ describe('ExerciseThumb image failures', () => {
 
     screen.rerender(<ExerciseThumb exercise={first} />);
     expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: first.media_url });
+  });
+});
+
+describe('videoPoster', () => {
+  const video = 'https://res.cloudinary.com/dgdczfeox/video/upload/v1772741303/fitnessai_migration/video/00391201-barbell-front-chest-squat.mp4';
+
+  it('turns a Cloudinary video into a mid-video JPEG frame', () => {
+    expect(videoPoster(video)).toBe('https://res.cloudinary.com/dgdczfeox/video/upload/so_50p,w_160,h_160,c_fill,q_auto,f_jpg/v1772741303/fitnessai_migration/video/00391201-barbell-front-chest-squat.jpg');
+    expect(videoPoster(`${video}?x=1`, 480)).toContain('/so_50p,w_480,h_480,');
+  });
+
+  it('ignores videos hosted elsewhere and empty values', () => {
+    expect(videoPoster('https://media.example/bench.mp4')).toBeNull();
+    expect(videoPoster('')).toBeNull();
+    expect(videoPoster(undefined)).toBeNull();
+  });
+
+  it('shows the video frame before the muscle illustration', () => {
+    expect(exerciseImage(exercise({ video_url: video, primary_muscles: [muscle('https://images.example/chest.png')] })))
+      .toContain('so_50p');
   });
 });
