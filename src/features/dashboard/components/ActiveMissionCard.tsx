@@ -38,7 +38,7 @@ export function ActiveMissionCard({
   const displayedDay = hasPlan && dayMatchesSession ? currentDay : null;
   const title = hasWorkout
     ? displayedDay?.day_name?.trim() || displayedPlan?.title?.trim() || 'Your workout'
-    : 'Find your\nstarting point.';
+    : 'Your plan\nis ready.';
   const planTitle = displayedPlan?.title?.trim();
   // A missing day is normalized to nextExercisesCount=0 by the metrics hook;
   // don't display that placeholder as a known empty workout.
@@ -52,8 +52,8 @@ export function ActiveMissionCard({
     ? emptyDay
       ? 'No exercises on this day yet. Add some to your plan.'
       : planTitle && planTitle !== title ? planTitle : hasSession ? 'Your session is ready when you are.' : 'Your next session, all laid out.'
-    : 'Choose a plan that fits your goals.';
-  const action = hasSession ? 'Continue workout' : emptyDay ? 'Open plan' : hasPlan ? 'View workout' : 'Explore plans';
+    : 'A starter program built from your answers.';
+  const action = hasSession ? 'Continue workout' : emptyDay ? 'Open plan' : hasPlan ? 'View workout' : 'See your plan';
   const knownDayProgress = Boolean(displayedDay) && typeof currentDayIndex === 'number' && Number.isInteger(currentDayIndex) && currentDayIndex > 0 &&
     typeof totalDays === 'number' && Number.isInteger(totalDays) && totalDays >= currentDayIndex;
   const metadata = hasWorkout ? [
@@ -64,7 +64,7 @@ export function ActiveMissionCard({
   const handlePress = () => {
     if (activeSession?.id) router.push(`/workouts/session/${activeSession.id}`);
     else if (activePlan?.id) router.push(`/workouts/programs/${activePlan.id}`);
-    else router.push('/workouts');
+    else router.push('/plan');
   };
 
   return (
@@ -72,7 +72,7 @@ export function ActiveMissionCard({
       testID="home-workout-card"
       accessibilityRole="button"
       accessibilityLabel={`${action}. ${title.replace(/\n/g, ' ')}${metadata ? `. ${metadata}` : ''}`}
-      accessibilityHint={hasSession ? 'Opens your current workout session.' : hasPlan ? 'Opens the plan so you can review your workout.' : 'Browse available workout plans.'}
+      accessibilityHint={hasSession ? 'Opens your current workout session.' : hasPlan ? 'Opens the plan so you can review your workout.' : 'Opens the plan built from your answers.'}
       onPress={handlePress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >

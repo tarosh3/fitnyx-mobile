@@ -34,6 +34,9 @@ export const cacheKeys = {
   progressDaily: (userId: string, from: string, to: string) => `progress:daily:${userId}:${from}:${to}`,
   progressStrength: (userId: string, from: string, to: string) => `progress:strength:${userId}:${from}:${to}`,
   progressSummary: (userId: string) => `progress:summary:${userId}`,
+  // Plan from the onboarding answers (GET /plan) and the Home "plan ready" card's dismissal.
+  plan: (userId: string) => `plan:${userId}`,
+  planIntroDismissed: (userId: string) => `plan:intro-dismissed:${userId}`,
 } as const;
 
 export const cacheTTL = {

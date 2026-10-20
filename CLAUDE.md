@@ -110,6 +110,12 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - The app's toasts render **under** RN `Modal`s (the `Sheet`), so give feedback inside the sheet.
 - Never add Android `READ_MEDIA_*` (Play photo-permission policy): saving needs none on Android 13+; they're in `android.blockedPermissions` and the media-library plugin uses `granularPermissions: []`.
 
+**Plan (`src/features/plan/`, route `app/plan.tsx`)** — 2026-10-20: what the onboarding answers turn into. `GET /plan` (backend `internal/fitplan`, pure + tested) returns daily calorie/macro targets (Mifflin-St Jeor → TDEE → goal adjustment), a schedule (days, minutes, time → reminder time), avoid/eat-more guidance and a rule-based starter program preview; `POST /plan/starter-program` saves it as the active plan (`source='starter'`, replaces an earlier one, doesn't count toward the 2-plan limit). Filo's fixed context, the daily insight (training vs rest day) and diet generation (must hit the calorie target, one retry) read the same numbers.
+- Shown on: `/plan?welcome=1` right after onboarding, Home `PlanTodayCard` (one-time "new" state for older users) + the no-program hero, Train `StarterCard`, Diet setup (wizard pre-filled from `diet_defaults`), Fitness profile link.
+- Onboarding Schedule screen is backend step **13** but shown after Frequency: `STEPS[i].id` is the backend number, `resumeStepIndex` maps numbers → positions, and 13 from the backend still means "all filled". Never renumber steps 9–12 (old app versions send them).
+- `plan/data.ts` must not import `src/lib/reminders` (notifee crashes jest for every screen that reads the plan); reminder helpers live in `plan/reminder.ts`. Daily reminders take optional `days` (0 = Sunday) → one WEEKLY trigger per day.
+- Starter exercises are curated per movement slot in `fitplan/starter.go` with hand-tagged knee/back/shoulder stress (the catalog has no injury data). Check new UUIDs against the live catalog; missing ones are skipped at runtime.
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -125,7 +131,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `onboarding` · `profile` · `progress` · `roam` · `share` · `workouts`
+`auth` · `dashboard` · `diet` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
@@ -195,6 +201,11 @@ Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, Ba
 ## Mistakes log
 
 _Claude updates this section automatically when corrections are made._
+
+### Fitness profile (found 2026-10-20)
+
+- **`PUT /fitness-profile` merges into the stored profile** (fields left out keep their value). It used to replace the whole JSON, and the Fitness Profile screen never sends `workout_frequency` / `workout_location` / `preferred_intensity` / `motivations`, so one save wiped those onboarding answers. Keep it a merge.
+- **Goal ids are the onboarding ones** (`lose_fat`, `build_muscle`, `improve_strength`, `improve_flexibility`, `improve_health`, `reduce_stress`). The Fitness Profile screen used `lose_weight`/`endurance`/`flexibility`/`wellness`; old rows are mapped by `fitplan.NormalizeGoal` (backend) and `LEGACY_GOALS` (screen). Never send `primary_goal: ''`.
 
 ### TypeScript / Jest
 

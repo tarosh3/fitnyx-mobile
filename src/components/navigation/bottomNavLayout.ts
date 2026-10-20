@@ -11,6 +11,8 @@ const hiddenRoutePrefixes = [
   '/workouts/session', '/workouts/routine', '/workouts/history', '/workouts/exercise', '/workouts/programs', '/roam/record', '/update-password', '/privacy-policy',
   '/terms-of-service', '/delete-account', '/email-verified', '/verification-failed',
   '/invite', '/access-expired', '/trophies',
+  // Has its own Start bar.
+  '/plan',
 ];
 
 export const isBottomNavRoute = (pathname: string) =>

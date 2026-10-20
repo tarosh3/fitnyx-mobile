@@ -1,9 +1,11 @@
-import { Sparkles } from 'lucide-react-native';
+import { Sparkles, Target } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { LoopingLottie } from '@/src/components/ui/LoopingLottie';
 import { DietWizard } from '@/src/features/diet/DietWizard';
+import { usePlan } from '@/src/features/plan/data';
+import { dietWizardDefaults, thousands } from '@/src/features/plan/model';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { generateDietPlan, type DietPlan } from '@/src/lib/api';
@@ -24,6 +26,7 @@ export function DietSetup({ userId, onCreated, onStepChange }: { userId: string;
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tip, setTip] = useState(0);
+  const plan = usePlan().data;
 
   useEffect(() => {
     if (!generating) return;
@@ -67,7 +70,15 @@ export function DietSetup({ userId, onCreated, onStepChange }: { userId: string;
   return (
     <View>
       {error ? <Text style={[styles.error, { color: c.destructive }]} accessibilityRole="alert">{error}</Text> : null}
-      <DietWizard onComplete={generate} isLoading={generating} onStepChange={onStepChange} />
+      {plan?.targets ? (
+        <View testID="diet-plan-target" style={[styles.target, { backgroundColor: c.accentSoft }]}>
+          <Target color={c.accent} size={16} />
+          <Text style={[styles.targetText, { color: c.text }]}>
+            Your plan: about {thousands(plan.targets.calories)} kcal and {plan.targets.protein_g} g protein a day. Filo sizes the meals to match.
+          </Text>
+        </View>
+      ) : null}
+      <DietWizard onComplete={generate} isLoading={generating} onStepChange={onStepChange} initial={dietWizardDefaults(plan)} />
     </View>
   );
 }
@@ -80,4 +91,6 @@ const styles = StyleSheet.create({
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md },
   tip: { fontFamily: type.weight.medium, fontSize: 14, lineHeight: 22, textAlign: 'center', flexShrink: 1 },
   error: { fontFamily: type.weight.semibold, fontSize: 13, textAlign: 'center', marginBottom: spacing.md },
+  target: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radii.lg, padding: spacing.md, marginBottom: spacing.md },
+  targetText: { flex: 1, fontFamily: type.weight.medium, fontSize: 14, lineHeight: 20 },
 });

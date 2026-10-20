@@ -58,6 +58,8 @@ jest.mock('expo-linear-gradient', () => ({
   LinearGradient: ({ children, ...props }: { children: React.ReactNode }) =>
     require('react').createElement(require('react-native').View, props, children),
 }));
+// Plan data has its own fetch + cache; Home's tests cover Home.
+jest.mock('../components/PlanTodayCard', () => ({ PlanTodayCard: () => null }));
 jest.mock('../components/ActivityHeatmap', () => ({
   ActivityHeatmap: () => require('react').createElement(require('react-native').View, { testID: 'history-heatmap' }),
 }));
@@ -120,9 +122,9 @@ describe('MobileHome actions and data states', () => {
   it('offers plan discovery and activity stats to a user with no workouts', () => {
     const screen = render(<MobileHome user={user} />);
 
-    expect(screen.getByText('Explore plans')).toBeTruthy();
+    expect(screen.getByText('See your plan')).toBeTruthy();
     fireEvent.press(screen.getByTestId('home-workout-card'));
-    expect(mockPush).toHaveBeenLastCalledWith('/workouts');
+    expect(mockPush).toHaveBeenLastCalledWith('/plan');
     fireEvent.press(screen.getByTestId('home-view-stats'));
     expect(mockPush).toHaveBeenLastCalledWith('/dashboard');
   });

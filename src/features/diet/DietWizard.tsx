@@ -11,13 +11,15 @@ interface DietWizardProps {
   onComplete: (preferences: any) => void;
   isLoading: boolean;
   onStepChange?: () => void;
+  /** Starting answers from the plan (onboarding goal, activity, diet type). */
+  initial?: { goal?: string; activity_level?: string; diet_type?: string };
 }
 
 const STEPS = ['Your goals', 'Your routine', 'Your preferences'];
 const TITLES = ['A plan that fits your life.', 'Make it work for your day.', 'The details make it yours.'];
 const DESCRIPTIONS = ['Start with your goal and the food you enjoy.', 'Tell us how you move and when you like to eat.', 'Add allergies, dislikes and anything else to consider.'];
 
-export function DietWizard({ onComplete, isLoading, onStepChange }: DietWizardProps) {
+export function DietWizard({ onComplete, isLoading, onStepChange, initial }: DietWizardProps) {
   const palette = useThemeColors();
   const { fontScale } = useWindowDimensions();
   const styles = React.useMemo(() => getStyles(palette), [palette]);
@@ -34,7 +36,20 @@ export function DietWizard({ onComplete, isLoading, onStepChange }: DietWizardPr
     state: '',
   });
 
+  const touched = React.useRef(false);
+  // The plan can arrive after the wizard opens; apply it until the user picks something.
+  React.useEffect(() => {
+    if (touched.current || !initial) return;
+    setPreferences((prev) => ({
+      ...prev,
+      ...(initial.goal ? { goal: initial.goal } : {}),
+      ...(initial.activity_level ? { activity_level: initial.activity_level } : {}),
+      ...(initial.diet_type ? { diet_type: initial.diet_type } : {}),
+    }));
+  }, [initial?.goal, initial?.activity_level, initial?.diet_type]);
+
   const update = (key: string, value: any) => {
+    touched.current = true;
     setPreferences((prev) => ({ ...prev, [key]: value }));
   };
 
