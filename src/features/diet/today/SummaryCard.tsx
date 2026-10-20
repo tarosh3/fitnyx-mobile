@@ -1,14 +1,17 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Flame } from 'lucide-react-native';
+import { Flame, Pencil } from 'lucide-react-native';
 import React from 'react';
-import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { type } from '@/src/styles/tokens';
 import { fmt, type Macros } from '../model';
 
-/** Food imagery is decorative; every number comes from the selected day's logs. */
-export function SummaryCard({ eaten, goal }: { eaten: Macros; goal: Macros }) {
+/**
+ * Food imagery is decorative; every number comes from the selected day's logs.
+ * burned: calories from that day's workouts + Roams (null = unknown, hidden).
+ */
+export function SummaryCard({ eaten, goal, burned, onEditGoals }: { eaten: Macros; goal: Macros; burned?: number | null; onEditGoals?: () => void }) {
   const c = useThemeColors();
   const { width, fontScale } = useWindowDimensions();
   const compact = width < 370 || fontScale > 1.2;
@@ -36,7 +39,16 @@ export function SummaryCard({ eaten, goal }: { eaten: Macros; goal: Macros }) {
         </View>
         <View style={styles.energyMeta}>
           <Text style={[styles.meta, { color: c.hero.muted }]}><Text style={{ color: c.hero.text, fontFamily: type.weight.bold }}>{fmt(eaten.kcal)}</Text> eaten</Text>
-          <Text style={[styles.meta, { color: c.hero.muted }]}>Goal <Text style={{ color: c.hero.text, fontFamily: type.weight.bold }}>{fmt(goal.kcal)}</Text> kcal</Text>
+          {burned ? (
+            <Text style={[styles.meta, { color: c.hero.muted }]} accessibilityLabel={`${fmt(burned)} kilocalories burned`}>
+              <Text style={{ color: c.hero.text, fontFamily: type.weight.bold }}>{fmt(burned)}</Text> burned
+            </Text>
+          ) : null}
+          <Pressable testID="diet-edit-goals" onPress={onEditGoals} disabled={!onEditGoals} hitSlop={10} accessibilityRole="button"
+            accessibilityLabel={`Calorie goal ${fmt(goal.kcal)} kilocalories. Edit goals`} style={styles.goalLink}>
+            <Text style={[styles.meta, { color: c.hero.muted }]}>Goal <Text style={{ color: c.hero.text, fontFamily: type.weight.bold }}>{fmt(goal.kcal)}</Text> kcal</Text>
+            {onEditGoals ? <Pencil size={12} color={c.hero.accent} /> : null}
+          </Pressable>
         </View>
       </LinearGradient>
       <View style={[styles.macros, fontScale > 1.4 && styles.stackMacros]}>
@@ -64,6 +76,7 @@ const styles = StyleSheet.create({
   bowl: { width: 108, height: 108, transform: [{ rotate: '-12deg' }] },
   energyMeta: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 9 },
   meta: { fontFamily: type.weight.medium, fontSize: 12 },
+  goalLink: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   macros: { flexDirection: 'row', gap: 18, padding: 18, paddingVertical: 16 },
   stackMacros: { flexDirection: 'column' },
   macro: { flex: 1, gap: 7 },

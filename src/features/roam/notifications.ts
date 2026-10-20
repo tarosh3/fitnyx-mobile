@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LiveActivity from 'expo-live-activity';
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import { activeElapsedMs, getRecording, loadPoints, pauseRecording, resumeRecording, type RecordingMeta } from './recordingStore';
-import { computeStats, type RoamPoint } from './geo';
+import { computeStats, type RoamPoint, type RoamStats } from './geo';
+import { checkGoalMilestones } from './goalTracker';
 import { colors } from '@/src/theme/colors';
 
 const activityKey = 'fitnyx-roam:live-activity';
@@ -42,8 +43,7 @@ export function drainRoamControls(): Promise<void> {
   return draining;
 }
 
-export function roamSnapshot(meta: RecordingMeta, points: RoamPoint[], now = Date.now()) {
-  const stats = computeStats(points, meta.type);
+export function roamSnapshot(meta: RecordingMeta, points: RoamPoint[], now = Date.now(), stats: RoamStats = computeStats(points, meta.type)) {
   const elapsed = Math.floor(activeElapsedMs(meta, now) / 1000);
   const pace = stats.avgPaceSecPerKm;
   const last = points.at(-1);
@@ -84,7 +84,11 @@ export function syncRoamNotification(force = false): Promise<void> {
       if (Platform.OS === 'android') await bridge?.clear();
       return;
     }
-    const snapshot = roamSnapshot(meta, await loadPoints());
+    const points = await loadPoints();
+    const stats = computeStats(points, meta.type);
+    // Daily goals: halfway / reached notifications, also while the screen is off.
+    if (meta.status === 'recording') void checkGoalMilestones(meta.clientId, stats);
+    const snapshot = roamSnapshot(meta, points, Date.now(), stats);
     if ((await pending()).some((action) => action.sessionId === meta.clientId)) return;
     if (Platform.OS === 'android') {
       await bridge?.update(JSON.stringify(snapshot));

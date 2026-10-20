@@ -7,9 +7,11 @@ import { MAX_ACTIVITY_NAME } from '@/src/features/roam/activityName';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
 import { RouteMap } from '@/src/features/roam/components/RouteMap';
 import { SplitsList } from '@/src/features/roam/components/SplitsList';
+import { RoamGoalsSummary } from '@/src/features/roam/components/RoamGoalsSummary';
 import { RoamStatsPanel } from '@/src/features/roam/components/RoamStatsPanel';
 import { VehicleBanner } from '@/src/features/roam/components/VehicleBanner';
 import { formatDistance, type ActivityType, type RoamStats } from '@/src/features/roam/geo';
+import { roamActivity, type GoalTracker } from '@/src/features/roam/goalTracker';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 interface Props {
@@ -27,6 +29,8 @@ interface Props {
   onDiscard: () => void;
   /** Hidden accuracy-testing tool: long-press the heading to share the raw GPS track. */
   onExportRaw?: () => void;
+  /** Today's goals + body weight, from when the Roam started; null = none. */
+  tracker?: GoalTracker | null;
 }
 
 /** After Finish: review the Roam, then save or discard. Numbers are final once the server recomputes them. */
@@ -42,8 +46,10 @@ export function RecordingSummaryView({
   onSave,
   onDiscard,
   onExportRaw,
+  tracker,
 }: Props) {
   const palette = useThemeColors();
+  const roam = roamActivity(type, stats, tracker?.weightKg ?? null);
   return (
     <View style={styles.wrap}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -90,7 +96,10 @@ export function RecordingSummaryView({
           maxSpeedMps={stats.maxSpeedMps}
           vehicleDetected={stats.vehicleDetected}
           steps={stats.steps}
+          kcal={roam.kcal}
         />
+
+        {tracker ? <RoamGoalsSummary tracker={tracker} roam={roam} /> : null}
 
         <SplitsList splits={stats.splits} distanceM={stats.distanceM} movingSec={stats.movingTimeSec} />
 

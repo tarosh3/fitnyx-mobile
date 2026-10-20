@@ -37,6 +37,9 @@ export const cacheKeys = {
   // Plan from the onboarding answers (GET /plan) and the Home "plan ready" card's dismissal.
   plan: (userId: string) => `plan:${userId}`,
   planIntroDismissed: (userId: string) => `plan:intro-dismissed:${userId}`,
+  // Daily activity + diet goals (GET /goals); a reached goal's notification, once per day.
+  goals: (userId: string) => `goals:${userId}`,
+  goalNotified: (userId: string, date: string) => `goals:notified:${userId}:${date}`,
 } as const;
 
 export const cacheTTL = {

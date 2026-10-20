@@ -14,6 +14,8 @@ export interface WorkoutSession {
   paused_at?: string;
   last_resumed_at?: string;
   completed_at?: string;
+  /** Estimated calories burned, set when the workout finishes; null without a body weight. */
+  kcal?: number | null;
   created_at: string;
 }
 

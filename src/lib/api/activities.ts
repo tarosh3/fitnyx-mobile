@@ -23,6 +23,8 @@ export interface ActivitySummary {
   xp: number;
   /** Pedometer steps (pauses excluded); null without them. Absent from older backends. */
   steps?: number | null;
+  /** Estimated calories burned; null without a body weight. Absent from older backends. */
+  kcal?: number | null;
   /** Total climb from open terrain data; null when unknown. Absent from older backends. */
   elevation_gain_m?: number | null;
 }

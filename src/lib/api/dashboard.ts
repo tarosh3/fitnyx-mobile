@@ -22,6 +22,8 @@ export interface DashboardSession {
   exercise_count: number;
   total_sets: number;
   total_volume_kg: number;
+  /** Estimated calories burned; null = unknown. Absent from older backends. */
+  kcal?: number | null;
   exercises: DashboardExerciseSummary[];
 }
 

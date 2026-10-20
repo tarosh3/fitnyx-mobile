@@ -11,6 +11,7 @@ import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon'
 import { LiveRecordingView } from '@/src/features/roam/components/LiveRecordingView';
 import { RecordingSummaryView } from '@/src/features/roam/components/RecordingSummaryView';
 import { computeStats, type VehicleWindow } from '@/src/features/roam/geo';
+import { getGoalTracker, type GoalTracker } from '@/src/features/roam/goalTracker';
 import { readVehicleWindows } from '@/src/features/roam/motion';
 import { shareRawTrack } from '@/src/features/roam/rawExport';
 import { clearRecording } from '@/src/features/roam/recordingStore';
@@ -36,6 +37,7 @@ export default function RoamRecordScreen() {
   const [name, setName] = useState('');
   // The phone's own "in a vehicle" periods, read once the Roam is finished.
   const [vehicleWindows, setVehicleWindows] = useState<VehicleWindow[]>([]);
+  const [tracker, setTracker] = useState<GoalTracker | null>(null);
 
   // Nothing recording (opened directly / already saved) → back to Roam home.
   useEffect(() => {
@@ -47,6 +49,9 @@ export default function RoamRecordScreen() {
   }, [recording.meta?.finishedAtMs]);
 
   const { meta: doneMeta } = recording;
+  useEffect(() => {
+    if (phase === 'summary') getGoalTracker(doneMeta?.clientId).then(setTracker);
+  }, [phase, doneMeta?.clientId]);
   useEffect(() => {
     if (!doneMeta?.finishedAtMs) return;
     let live = true;
@@ -149,6 +154,7 @@ export default function RoamRecordScreen() {
           onSave={save}
           onDiscard={() => setModal('discard')}
           onExportRaw={() => void shareRawTrack(meta, recording.points).catch(() => undefined)}
+          tracker={tracker}
         />
       )}
 

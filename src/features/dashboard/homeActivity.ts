@@ -12,6 +12,7 @@ export function getRecentTraining(sessions: DashboardSession[], today = new Date
   let workouts = 0;
   let volume = 0;
   let durationSeconds = 0;
+  let calories = 0;
   for (const session of sessions) {
     if (session.status !== 'completed') continue;
     const completedAt = new Date(session.finished_at || session.started_at);
@@ -19,13 +20,14 @@ export function getRecentTraining(sessions: DashboardSession[], today = new Date
     workouts += 1;
     volume += session.total_volume_kg || 0;
     durationSeconds += session.total_duration_sec || 0;
+    // The server's estimate (body weight × intensity); 350 kcal/h when it has none.
+    calories += session.kcal ?? Math.round(((session.total_duration_sec || 0) / 3600) * 350);
   }
 
   return {
     workouts,
     volume,
     durationMinutes: Math.round(durationSeconds / 60),
-    // Retain the existing estimate of 350 kcal per hour of training.
-    calories: Math.round((durationSeconds / 3600) * 350),
+    calories,
   };
 }

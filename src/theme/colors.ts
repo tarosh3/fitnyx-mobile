@@ -69,6 +69,8 @@ export const colors = {
       record: '#F2C14E', recordSoft: 'rgba(242,193,78,0.14)', empty: '#262626',
       heat: ['#1B1F1C', '#24503A', '#2F7A52', '#7FE0AE'], heatInk: ['#A1A1AA', '#F5F5F5', '#F5F5F5', '#0C0C0C'],
     },
+    /** Daily goal rings: Roam distance, calories burned, steps. */
+    goals: { distance: '#6F95FF', burn: '#FF7A45', steps: '#5fc793', track: '#262626' },
     share,
   },
   light: {
@@ -120,6 +122,7 @@ export const colors = {
       record: '#A36A00', recordSoft: 'rgba(242,183,5,0.16)', empty: '#E4E4E7',
       heat: ['#ECEDEE', '#BFE5CF', '#5FB98A', '#1E6E47'], heatInk: ['#52525B', '#103724', '#0B2A1A', '#F2FBF6'],
     },
+    goals: { distance: '#2F5BEA', burn: '#D9480F', steps: '#23734A', track: '#E9E9EC' },
     share,
   },
 } as const;

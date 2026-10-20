@@ -60,6 +60,7 @@ jest.mock('expo-linear-gradient', () => ({
 }));
 // Plan data has its own fetch + cache; Home's tests cover Home.
 jest.mock('../components/PlanTodayCard', () => ({ PlanTodayCard: () => null }));
+jest.mock('@/src/features/goals/ui/TodayGoalsCard', () => ({ TodayGoalsCard: () => null }));
 jest.mock('../components/ActivityHeatmap', () => ({
   ActivityHeatmap: () => require('react').createElement(require('react-native').View, { testID: 'history-heatmap' }),
 }));
