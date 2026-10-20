@@ -1,10 +1,13 @@
 import { Check, Plus, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { type Part, PARTS, partLabel, partOf } from '@/src/features/workouts/model';
+import { type EquipmentKey, finderMeta } from '@/src/features/workouts/finder';
+import { type Part } from '@/src/features/workouts/model';
 import { CreateExerciseForm } from '@/src/features/workouts/ui/CreateExerciseForm';
+import { ExercisePreview } from '@/src/features/workouts/ui/ExercisePreview';
 import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
+import { FinderChips } from '@/src/features/workouts/ui/FinderChips';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchExercises } from '@/src/lib/api/exercises';
@@ -33,6 +36,10 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
   const c = useThemeColors();
   const [query, setQuery] = useState('');
   const [part, setPart] = useState<Part | null>(initialPart);
+  // A muscle within the part (backend muscle-name term) and an equipment group.
+  const [muscle, setMuscle] = useState<string | null>(null);
+  const [equipment, setEquipment] = useState<EquipmentKey | null>(null);
+  const [preview, setPreview] = useState<Exercise | null>(null);
   const [items, setItems] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -45,6 +52,9 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     setPicked([]);
     setQuery('');
     setPart(initialPart);
+    setMuscle(null);
+    setEquipment(null);
+    setPreview(null);
     setCreating(false);
   }, [visible, initialPart]);
 
@@ -61,7 +71,9 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     const t = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetchExercises({ page: 1, limit: 40, search: query.trim(), muscle: part ? MUSCLE_TERM[part] : '' });
+        const res = await fetchExercises({
+          page: 1, limit: 40, search: query.trim(), muscle: muscle ?? (part ? MUSCLE_TERM[part] : ''), equipment: equipment ?? undefined,
+        });
         if (id === reqId.current) { setItems(res.data ?? []); setFailed(false); }
       } catch {
         if (id === reqId.current) setFailed(true);
@@ -70,7 +82,7 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
       }
     }, query ? 250 : 0);
     return () => clearTimeout(t);
-  }, [visible, query, part]);
+  }, [visible, query, part, muscle, equipment]);
 
   const added = useMemo(() => new Set(addedUuids), [addedUuids]);
   const toggle = (ex: Exercise) => {
@@ -103,27 +115,18 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     <Sheet visible={visible} title={title} subtitle={subtitle} onClose={onClose} footer={footer} testID="exercise-picker">
       <View style={[styles.search, { backgroundColor: c.surface, borderColor: c.border }]}>
         <Search size={20} color={c.mutedText} />
-        <TextInput value={query} onChangeText={setQuery} placeholder="Search by name" placeholderTextColor={c.mutedText}
+        <TextInput value={query} onChangeText={setQuery} placeholder="Search by name, muscle or equipment" placeholderTextColor={c.mutedText}
           style={[styles.input, { color: c.text }]} accessibilityLabel="Search exercises" returnKeyType="search" autoCorrect={false} />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipRow} keyboardShouldPersistTaps="handled">
-        {[null, ...PARTS.map((p) => p.key)].map((p) => {
-          const on = part === p;
-          return (
-            <Pressable key={p ?? 'all'} onPress={() => setPart(p)} accessibilityRole="button" accessibilityState={{ selected: on }}
-              style={[styles.chip, { borderColor: on ? c.text : c.border, backgroundColor: on ? c.text : c.card }]}>
-              <Text style={[styles.chipText, { color: on ? c.background : c.text }]}>{p ? partLabel(p) : 'All'}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <FinderChips part={part} muscle={muscle} equipment={equipment} onPart={setPart} onMuscle={setMuscle} onEquipment={setEquipment} />
+      {preview ? <ExercisePreview key={preview.uuid} exercise={preview} onClose={() => setPreview(null)} /> : null}
       <View style={[styles.list, { borderColor: c.border }]}>
         {loading && !items.length ? (
           <ActivityIndicator style={styles.pad} color={c.primary} />
         ) : failed && !items.length ? (
           <Text style={[styles.empty, { color: c.mutedText }]}>Couldn’t load exercises. Check your connection.</Text>
         ) : !items.length ? (
-          <Text style={[styles.empty, { color: c.mutedText }]}>No match. Try a shorter word or another body part.</Text>
+          <Text style={[styles.empty, { color: c.mutedText }]}>No match. Try a shorter word, another muscle or Any equipment.</Text>
         ) : (
           <FlatList
             data={items}
@@ -137,12 +140,12 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
                 <Pressable disabled={isAdded} onPress={() => toggle(item)} accessibilityRole="checkbox"
                   accessibilityState={{ checked: on, disabled: isAdded }} accessibilityLabel={`${item.title}${isAdded ? ', already added' : ''}`}
                   style={[styles.row, on && { backgroundColor: c.accentSoft }, isAdded && { opacity: 0.55 }]}>
-                  <ExerciseThumb exercise={item} size={48} />
+                  <Pressable onPress={() => setPreview(item)} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Watch ${item.title}`} testID={`preview-${item.uuid}`}>
+                    <ExerciseThumb exercise={item} size={56} />
+                  </Pressable>
                   <View style={styles.grow}>
-                    <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>{item.title}</Text>
-                    <Text style={[styles.meta, { color: c.mutedText }]} numberOfLines={1}>
-                      {partLabel(partOf(item))}{item.equipment?.[0]?.name ? ` · ${item.equipment[0].name}` : ''}
-                    </Text>
+                    <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>{item.title}</Text>
+                    <Text style={[styles.meta, { color: c.mutedText }]} numberOfLines={1}>{finderMeta(item)}</Text>
                   </View>
                   {isAdded ? (
                     <Text style={[styles.added, { color: c.accent }]}>Added</Text>
@@ -171,10 +174,6 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
 const styles = StyleSheet.create({
   search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radii.md + 2, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: spacing.md, minHeight: 52 },
   input: { flex: 1, fontFamily: type.weight.regular, fontSize: 16, minHeight: 48 },
-  chipRow: { marginHorizontal: -16, marginTop: spacing.md, flexGrow: 0 },
-  chips: { paddingHorizontal: 16, gap: spacing.sm },
-  chip: { minHeight: 44, paddingHorizontal: spacing.base, borderRadius: radii.pill, borderWidth: 1, justifyContent: 'center' },
-  chipText: { fontFamily: type.weight.semibold, fontSize: 15 },
   list: { marginTop: spacing.md, borderWidth: StyleSheet.hairlineWidth, borderRadius: radii.md + 2, maxHeight: 360, minHeight: 120, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: 10, minHeight: 68 },
   sep: { height: StyleSheet.hairlineWidth },

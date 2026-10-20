@@ -58,6 +58,8 @@ export interface ExerciseResponse {
 export interface ExerciseFilters {
   search?: string;
   muscle?: string;
+  /** An equipment group (bodyweight, dumbbell, barbell, machine, cable, band, kettlebell). */
+  equipment?: string;
   is_warmup?: boolean;
   /** 'summary' = list-row columns only (no how-to, variations, alternatives). */
   fields?: 'summary';

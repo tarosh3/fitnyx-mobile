@@ -8,18 +8,33 @@ import type { Exercise } from '@/src/types/exercise';
 import { WorkoutGlyph } from './WorkoutGlyph';
 
 interface Props {
-  exercise?: Pick<Exercise, 'primary_muscles' | 'tracking_type' | 'variations' | 'alternatives' | 'media_url'> | null;
+  exercise?: Pick<Exercise, 'primary_muscles' | 'tracking_type' | 'variations' | 'alternatives' | 'media_url' | 'video_url'> | null;
   size?: number;
 }
 
-/** Use this exercise's image or its primary muscle illustration, never another move. */
-export function exerciseImage(ex?: Props['exercise']): string | null {
+const VIDEO_EXT = /\.(?:mp4|m4v|mov|webm|avi|mkv|m3u8|mpd)$/i;
+const CLOUDINARY_VIDEO = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(.+)\.(?:mp4|m4v|mov|webm)$/i;
+
+/**
+ * A still frame of a Cloudinary-hosted exercise video (the catalog's videos
+ * live there): Cloudinary renders the frame halfway through as a JPEG, so the
+ * thumbnail shows the actual movement. Two sizes keep the CDN cache shared.
+ */
+export function videoPoster(url: string | null | undefined, px = 160): string | null {
+  const m = url?.trim().split(/[?#]/, 1)[0].match(CLOUDINARY_VIDEO);
+  return m ? `${m[1]}so_50p,w_${px},h_${px},c_fill,q_auto,f_jpg/${m[2]}.jpg` : null;
+}
+
+/** A frame of this exercise's video, else its image, else its primary muscle illustration — never another move. */
+export function exerciseImage(ex?: Props['exercise'], px = 160): string | null {
+  const poster = videoPoster(ex?.video_url, px) ?? videoPoster(ex?.media_url, px);
+  if (poster) return poster;
   const candidates = [ex?.media_url, ...(ex?.primary_muscles ?? []).map((muscle) => muscle.image)];
   for (const candidate of candidates) {
     const source = candidate?.trim();
     if (!source) continue;
     const path = source.split(/[?#]/, 1)[0];
-    if (!/\.(?:mp4|m4v|mov|webm|avi|mkv|m3u8|mpd)$/i.test(path)) return source;
+    if (!VIDEO_EXT.test(path)) return source;
   }
   return null;
 }
@@ -32,12 +47,12 @@ function ThumbnailImage({ source, size, fallback }: { source: string; size: numb
   );
 }
 
-/** Square tile in the exercise's body-part colour, with its picture when there is one. */
+/** Square tile in the exercise's body-part colour, with a frame of its video (or its picture) when there is one. */
 export function ExerciseThumb({ exercise, size = 56 }: Props) {
   const c = useThemeColors();
   const part = partOf(exercise);
   const tone = c.parts[part];
-  const img = exerciseImage(exercise);
+  const img = exerciseImage(exercise, size <= 64 ? 160 : 480);
   const t = trackingOf(exercise);
   const radius = Math.round(size / 4);
   const fallback = t === 'duration'
