@@ -197,23 +197,28 @@ export default function ProfileScreen() {
   };
 
   const selectImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setMessage({ type: 'error', text: 'Photo permission required.' });
-      return;
-    }
+    // The system photo picker needs no permission. On iOS, allowsEditing swaps the instant
+    // PHPicker for the legacy UIImagePickerController, which took 1–2 s to open, so iOS
+    // gets a centre crop instead; Android's picker opens fast and crops afterwards.
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      allowsEditing: Platform.OS === 'android',
       aspect: [1, 1],
       quality: 0.9,
     });
-    if (result.canceled || !result.assets[0]?.uri) return;
+    const asset = result.canceled ? undefined : result.assets[0];
+    if (!asset?.uri) return;
+    const side = Math.min(asset.width, asset.height);
     try {
       const processed = await manipulateAsync(
-        result.assets[0].uri,
+        asset.uri,
         // 256 px shows sharp at avatar sizes and stays ~15 KB (Cloudinary free storage).
-        [{ resize: { width: 256, height: 256 } }],
+        [
+          ...(side > 0 && asset.width !== asset.height
+            ? [{ crop: { originX: (asset.width - side) / 2, originY: (asset.height - side) / 2, width: side, height: side } }]
+            : []),
+          { resize: { width: 256, height: 256 } },
+        ],
         { compress: 0.8, format: SaveFormat.JPEG }
       );
       setNewAvatarLocalUri(processed.uri);

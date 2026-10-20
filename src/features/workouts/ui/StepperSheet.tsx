@@ -122,8 +122,8 @@ const styles = StyleSheet.create({
 export const stepFieldsFor = {
   sets: (v: number): StepField => ({ key: 'sets', label: 'Sets', value: v, step: 1, min: 1, max: 10 }),
   reps: (v: number): StepField => ({ key: 'reps', label: 'Reps', value: v, step: 1, min: 0, max: 200 }),
-  kg: (v: number, label = 'Weight'): StepField => ({ key: 'kg', label, hint: 'kg', value: v, step: 2.5, min: 0, max: 500, decimals: WEIGHT_DECIMALS }),
-  addKg: (v: number): StepField => ({ key: 'kg', label: 'Extra weight', hint: '0 = bodyweight', value: v, step: 2.5, min: 0, max: 200, decimals: WEIGHT_DECIMALS }),
+  kg: (v: number, label = 'Weight'): StepField => ({ key: 'kg', label, hint: 'kg', value: v, step: 0.5, min: 0, max: 500, decimals: WEIGHT_DECIMALS }),
+  addKg: (v: number): StepField => ({ key: 'kg', label: 'Extra weight', hint: '0 = bodyweight', value: v, step: 0.5, min: 0, max: 200, decimals: WEIGHT_DECIMALS }),
   holdSec: (v: number): StepField => ({ key: 'sec', label: 'Hold time', hint: 'seconds', value: v, step: 15, min: 5, max: 900 }),
   minutes: (v: number): StepField => ({ key: 'min', label: 'Time', hint: 'minutes', value: v, step: 1, min: 1, max: 300 }),
   km: (v: number): StepField => ({ key: 'km', label: 'Distance', hint: 'km', value: v, step: 0.1, min: 0, max: 200 }),

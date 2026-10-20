@@ -5,6 +5,7 @@ import ProfileScreen from '@/app/profile';
 import { uploadAvatar } from '@/src/lib/avatarUpload';
 import { getProfile, updateProfile } from '@/src/lib/api/users';
 import { manipulateAsync } from 'expo-image-manipulator';
+import { launchImageLibraryAsync } from 'expo-image-picker';
 
 const mockProfileUpdated = jest.fn();
 const mockUpdateUser = jest.fn(() => Promise.resolve({ data: {}, error: null }));
@@ -34,8 +35,7 @@ jest.mock('@/src/lib/api/users', () => ({ getProfile: jest.fn(), updateProfile: 
 jest.mock('@/src/lib/api/username', () => ({ checkAndLockUsername: jest.fn(() => Promise.resolve({ available: true })), claimUsername: jest.fn() }));
 jest.mock('@/src/lib/avatarUpload', () => ({ uploadAvatar: jest.fn() }));
 jest.mock('expo-image-picker', () => ({
-  requestMediaLibraryPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
-  launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: false, assets: [{ uri: 'file:///picked.heic' }] })),
+  launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: false, assets: [{ uri: 'file:///picked.heic', width: 3000, height: 4000 }] })),
 }));
 jest.mock('expo-image-manipulator', () => ({
   manipulateAsync: jest.fn(() => Promise.resolve({ uri: 'file:///resized.jpg' })),
@@ -57,7 +57,12 @@ describe('changing the profile photo', () => {
     const change = await screen.findByLabelText('Change profile photo');
 
     await act(async () => { fireEvent.press(change); });
-    expect(manipulateAsync).toHaveBeenCalledWith('file:///picked.heic', [{ resize: { width: 256, height: 256 } }], { compress: 0.8, format: 'jpeg' });
+    // iOS opens the fast picker (no editing, no permission prompt) and crops the centre square itself.
+    expect(launchImageLibraryAsync).toHaveBeenCalledWith(expect.objectContaining({ allowsEditing: false }));
+    expect(manipulateAsync).toHaveBeenCalledWith('file:///picked.heic', [
+      { crop: { originX: 0, originY: 500, width: 3000, height: 3000 } },
+      { resize: { width: 256, height: 256 } },
+    ], { compress: 0.8, format: 'jpeg' });
 
     await act(async () => { fireEvent.press(screen.getByText('Save Profile')); });
 
