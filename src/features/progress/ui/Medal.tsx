@@ -20,5 +20,5 @@ export function Medal({ mark, earned, size = 64 }: { mark: string; earned: boole
 
 const styles = StyleSheet.create({
   disc: { borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  mark: { ...type.display },
+  mark: { fontFamily: type.weight.extrabold, letterSpacing: -0.5 },
 });

@@ -9,13 +9,14 @@ export function Eyebrow({ children, color, style }: { children: React.ReactNode;
   return <Text style={[styles.eyebrow, { color: color ?? c.mutedText }, style]}>{children}</Text>;
 }
 
-/** A big display number (Anton) with an optional small unit after it. */
+/** A big display number with an optional small unit after it. */
 export function BigNumber({ value, unit, size = 48, color }: { value: string; unit?: string; size?: number; color?: string }) {
   const c = useThemeColors();
   return (
     <View style={styles.bigRow}>
-      <Text style={[styles.big, { fontSize: size, lineHeight: size * 1.1, color: color ?? c.text }]} maxFontSizeMultiplier={1.2}>{value}</Text>
-      {unit ? <Text style={[styles.unit, { color: c.mutedText }]}>{unit}</Text> : null}
+      <Text style={[styles.big, { fontSize: size, lineHeight: Math.round(size * 1.2), letterSpacing: -size * 0.03, color: color ?? c.text }]}
+        numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>{value}</Text>
+      {unit ? <Text style={[styles.unit, { color: c.mutedText }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>{unit}</Text> : null}
     </View>
   );
 }
@@ -78,9 +79,9 @@ export function Empty({ text, style, testID }: { text: string; style?: StyleProp
 
 const styles = StyleSheet.create({
   eyebrow: { fontFamily: type.weight.bold, fontSize: 11, letterSpacing: type.tracking.eyebrow, textTransform: 'uppercase' },
-  bigRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  big: { ...type.display },
-  unit: { fontFamily: type.weight.bold, fontSize: 15 },
+  bigRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  big: { fontFamily: type.weight.extrabold, fontVariant: ['tabular-nums'], flexShrink: 1 },
+  unit: { fontFamily: type.weight.semibold, fontSize: 15 },
   muted: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 18 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   title: { fontFamily: type.weight.bold, fontSize: 16 },

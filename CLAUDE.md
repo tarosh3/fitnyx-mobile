@@ -136,7 +136,7 @@ Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, Ba
 ## Fonts
 
 - Anton 400 — FITNYX wordmark/logo only
-- Inter 400/500/600/700/800 — all UI text
+- Inter 400/500/600/700/800 — all UI text, including big stat numbers: `Inter_800ExtraBold` + `fontVariant: ['tabular-nums']` (Progress `BigNumber`, logger clock). Anton on in-app numbers looked squashed and was reported as a display bug (2026-10-20); only share cards use Anton for numbers.
 
 ---
 
