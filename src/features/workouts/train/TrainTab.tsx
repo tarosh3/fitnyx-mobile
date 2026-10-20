@@ -8,6 +8,7 @@ import { ProgramCard } from '@/src/features/workouts/programs/ProgramCard';
 import { startWorkout } from '@/src/features/workouts/start';
 import { TrainHero } from '@/src/features/workouts/train/TrainHero';
 import { Challenges, FirstVisitChoices, QuickStart, RecentRow, RoutineList } from '@/src/features/workouts/train/TrainSections';
+import { StarterCard } from '@/src/features/workouts/train/StarterCard';
 import { WeekCard } from '@/src/features/workouts/train/WeekCard';
 import { SectionHead } from '@/src/features/workouts/ui/bits';
 import { ExercisePicker } from '@/src/features/workouts/ui/ExercisePicker';
@@ -65,6 +66,11 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
       <View style={styles.gapTop}>
         <WeekCard sessions={sessions} />
       </View>
+      {!metrics.loading && !metrics.activePlan ? (
+        <View style={styles.gapTop}>
+          <StarterCard />
+        </View>
+      ) : null}
 
       {firstVisit ? (
         <FirstVisitChoices onEmpty={() => start()} />

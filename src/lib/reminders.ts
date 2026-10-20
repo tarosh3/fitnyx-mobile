@@ -2,7 +2,8 @@
 // Persisted to AsyncStorage. Scheduled via notifee.
 //
 // Schedule kinds:
-//  - daily   : fires once per day at hour:minute (notifee DAILY repeat)
+//  - daily   : fires once per day at hour:minute (notifee DAILY repeat), or
+//              only on `days` (0 = Sunday … 6, one WEEKLY repeat per day)
 //  - times   : array of HH:MM (one daily-repeat per entry)
 //  - interval: every N minutes between startHour and endHour. We schedule
 //              the next 24h of one-shot triggers (capped at MAX_INTERVAL_SLOTS)
@@ -29,7 +30,7 @@ const BRAND_COLOR = '#5fc793';
 export type ReminderType = 'workout' | 'water' | 'food' | 'snack' | 'custom';
 
 export type ReminderSchedule =
-  | { kind: 'daily'; hour: number; minute: number }
+  | { kind: 'daily'; hour: number; minute: number; days?: number[] }
   | { kind: 'times'; times: string[] } // ["08:00","13:00"]
   | { kind: 'interval'; minutes: number; startHour: number; endHour: number };
 
@@ -203,6 +204,15 @@ function nextOccurrence(hour: number, minute: number, from = new Date()): Date {
   return d;
 }
 
+/** The next time it is `day` (0 = Sunday) at hour:minute, strictly after `from`. */
+export function nextWeekdayOccurrence(day: number, hour: number, minute: number, from = new Date()): Date {
+  const d = new Date(from);
+  d.setHours(hour, minute, 0, 0);
+  d.setDate(d.getDate() + ((day - d.getDay() + 7) % 7));
+  if (d.getTime() <= from.getTime()) d.setDate(d.getDate() + 7);
+  return d;
+}
+
 async function scheduleSingle(
   parentId: string,
   childKey: string,
@@ -240,7 +250,15 @@ export async function scheduleReminder(r: Reminder, opts: { prompt?: boolean } =
   const exact = await canScheduleExactAlarms();
 
   if (r.schedule.kind === 'daily') {
-    const fire = nextOccurrence(r.schedule.hour, r.schedule.minute);
+    const { hour, minute, days } = r.schedule;
+    if (days?.length) {
+      for (const day of days) {
+        const fire = nextWeekdayOccurrence(day, hour, minute);
+        await scheduleSingle(r.id, `w${day}`, buildTimestampTrigger(fire.getTime(), exact, RepeatFrequency.WEEKLY), notifBody(r));
+      }
+      return;
+    }
+    const fire = nextOccurrence(hour, minute);
     await scheduleSingle(r.id, 'd0', buildTimestampTrigger(fire.getTime(), exact, RepeatFrequency.DAILY), notifBody(r));
     return;
   }
@@ -335,6 +353,11 @@ export async function rescheduleAll(): Promise<void> {
 }
 
 export function describeSchedule(s: ReminderSchedule): string {
+  if (s.kind === 'daily' && s.days?.length && s.days.length < 7) {
+    const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const order = [1, 2, 3, 4, 5, 6, 0];
+    return `${order.filter((d) => s.days!.includes(d)).map((d) => names[d]).join(', ')} · ${pad(s.hour)}:${pad(s.minute)}`;
+  }
   if (s.kind === 'daily') return `Daily · ${pad(s.hour)}:${pad(s.minute)}`;
   if (s.kind === 'times') return `${s.times.length} time${s.times.length === 1 ? '' : 's'} daily`;
   return `Every ${s.minutes}m · ${pad(s.startHour)}:00–${pad(s.endHour)}:00`;

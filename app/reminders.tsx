@@ -81,6 +81,7 @@ const TYPE_META: Record<
 };
 
 type ScheduleKind = ReminderSchedule['kind'];
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function RemindersScreen() {
   const router = useRouter();
@@ -289,8 +290,9 @@ function ReminderEditor({
   const [enabled, setEnabled] = useState(true);
   const [kind, setKind] = useState<ScheduleKind>('daily');
 
-  // daily / first-time
+  // daily / first-time; days = weekdays it repeats on (0 = Sunday), empty = every day
   const [time, setTime] = useState(() => buildDate(8, 0));
+  const [days, setDays] = useState<number[]>([]);
   const [pickerOpen, setPickerOpen] = useState<null | number>(null);
 
   // times
@@ -311,6 +313,7 @@ function ReminderEditor({
       setKind(existing.schedule.kind);
       if (existing.schedule.kind === 'daily') {
         setTime(buildDate(existing.schedule.hour, existing.schedule.minute));
+        setDays(existing.schedule.days ?? []);
       } else if (existing.schedule.kind === 'times') {
         setTimes(
           existing.schedule.times.map((s) => {
@@ -329,6 +332,7 @@ function ReminderEditor({
       setEnabled(true);
       setKind('daily');
       setTime(buildDate(8, 0));
+      setDays([]);
       setTimes([buildDate(8, 0), buildDate(13, 0), buildDate(19, 0)]);
       setIntervalMin(30);
       setStartHour(8);
@@ -358,7 +362,9 @@ function ReminderEditor({
     const finalLabel = label.trim() || labelPlaceholder;
     let schedule: ReminderSchedule;
     if (kind === 'daily') {
-      schedule = { kind: 'daily', hour: time.getHours(), minute: time.getMinutes() };
+      // All seven days is the same as every day.
+      const picked = days.length && days.length < 7 ? [...days].sort((a, b) => a - b) : undefined;
+      schedule = { kind: 'daily', hour: time.getHours(), minute: time.getMinutes(), ...(picked ? { days: picked } : {}) };
     } else if (kind === 'times') {
       schedule = {
         kind: 'times',
@@ -466,13 +472,35 @@ function ReminderEditor({
           </View>
 
           {kind === 'daily' && (
-            <TimePickRow
-              label="Time"
-              value={time}
-              onChange={setTime}
-              open={pickerOpen === -1}
-              setOpen={(v) => setPickerOpen(v ? -1 : null)}
-            />
+            <View style={{ gap: spacing.md }}>
+              <TimePickRow
+                label="Time"
+                value={time}
+                onChange={setTime}
+                open={pickerOpen === -1}
+                setOpen={(v) => setPickerOpen(v ? -1 : null)}
+              />
+              <View>
+                <Text style={[styles.fieldLabel, { color: c.mutedText }]}>DAYS · NONE PICKED = EVERY DAY</Text>
+                <View style={styles.intervalRow}>
+                  {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+                    const active = days.includes(d);
+                    return (
+                      <Pressable
+                        key={d}
+                        onPress={() => setDays((prev) => (active ? prev.filter((x) => x !== d) : [...prev, d]))}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: active }}
+                        accessibilityLabel={WEEKDAY_NAMES[d]}
+                        style={[styles.intervalChip, { backgroundColor: active ? c.primary : c.surface, borderColor: active ? c.primary : c.border }]}
+                      >
+                        <Text style={[styles.intervalText, { color: active ? c.primaryText : c.text }]}>{WEEKDAY_NAMES[d].slice(0, 3)}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
           )}
 
           {kind === 'times' && (

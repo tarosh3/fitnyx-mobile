@@ -28,10 +28,13 @@ import { LocationStep } from '@/src/features/onboarding/steps/LocationStep';
 import { InjuriesStep } from '@/src/features/onboarding/steps/InjuriesStep';
 import { IntensityStep } from '@/src/features/onboarding/steps/IntensityStep';
 import { MotivationStep } from '@/src/features/onboarding/steps/MotivationStep';
+import { ScheduleStep } from '@/src/features/onboarding/steps/ScheduleStep';
 import { resumeStepIndex } from '@/src/features/onboarding/resumeStep';
 
 const PRIMARY = '#5FC793';
 
+// id = the backend's step number (PUT /onboarding/step/:id). Schedule is 13 so
+// older app versions keep their numbers; it is shown right after Frequency.
 const STEPS = [
   { id: 0, title: 'Welcome', component: WelcomeStep },
   { id: 1, title: 'Username', component: UsernameStep },
@@ -42,11 +45,13 @@ const STEPS = [
   { id: 6, title: 'Your Goal', component: GoalStep },
   { id: 7, title: 'Experience', component: ExperienceStep },
   { id: 8, title: 'Frequency', component: FrequencyStep },
+  { id: 13, title: 'Schedule', component: ScheduleStep },
   { id: 9, title: 'Location', component: LocationStep },
   { id: 10, title: 'Injuries', component: InjuriesStep },
   { id: 11, title: 'Intensity', component: IntensityStep },
   { id: 12, title: 'Motivation', component: MotivationStep },
 ];
+const STEP_NUMBERS = STEPS.map((s) => s.id);
 
 function DotProgress({ current, total }: { current: number; total: number }) {
   return (
@@ -82,7 +87,7 @@ export function OnboardingFlow() {
       try {
         const data = await getOnboarding();
         setOnboardingData(data);
-        setCurrentStep(resumeStepIndex(data.current_step, STEPS.length));
+        setCurrentStep(resumeStepIndex(data.current_step, STEP_NUMBERS));
       } catch (error) {
         console.error('Failed to load onboarding', error);
       } finally {
@@ -105,7 +110,7 @@ export function OnboardingFlow() {
       try {
         // Save to backend first — only sync Supabase metadata after backend succeeds
         // to avoid divergence if the backend rejects the change.
-        const updated = await saveOnboardingStep(currentStep, stepData);
+        const updated = await saveOnboardingStep(STEPS[currentStep].id, stepData);
         setOnboardingData(updated);
 
         if (currentStep === 1 && stepData.username) {
@@ -130,7 +135,8 @@ export function OnboardingFlow() {
       try {
         await completeOnboarding();
         markOnboardingComplete();
-        router.replace('/');
+        // Show what the answers turned into before Home.
+        router.replace('/plan?welcome=1');
       } catch (error) {
         console.error('Failed to complete onboarding', error);
       } finally {

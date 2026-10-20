@@ -21,7 +21,7 @@ interface Resource<T> {
  * offline — cache TTL is freshness, not lifetime), then refetches and saves.
  * Refetches whenever the screen comes back into focus.
  */
-function useCachedResource<T>(key: string | null, fetcher: () => Promise<T>, ttl: number): Resource<T> {
+export function useCachedResource<T>(key: string | null, fetcher: () => Promise<T>, ttl: number): Resource<T> {
   const [data, setDataState] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);

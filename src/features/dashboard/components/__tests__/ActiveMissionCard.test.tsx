@@ -19,13 +19,13 @@ const session: WorkoutSession = {
 beforeEach(() => jest.clearAllMocks());
 
 describe('ActiveMissionCard', () => {
-  it('offers plan exploration without inventing workout metrics for a new user', () => {
+  it('points a new user to the plan built from their answers, without inventing workout metrics', () => {
     render(<ActiveMissionCard activePlan={null} activeSession={null} currentDay={null} nextExercisesCount={0} currentDayIndex={1} totalDays={0} />);
-    expect(screen.getByText('Find your\nstarting point.')).toBeTruthy();
-    expect(screen.getByText('Explore plans')).toBeTruthy();
+    expect(screen.getByText('Your plan\nis ready.')).toBeTruthy();
+    expect(screen.getByText('See your plan')).toBeTruthy();
     expect(screen.queryByText(/exercises/)).toBeNull();
     fireEvent.press(screen.getByTestId('home-workout-card'));
-    expect(mockPush).toHaveBeenCalledWith('/workouts');
+    expect(mockPush).toHaveBeenCalledWith('/plan');
   });
 
   it('labels plan navigation accurately and shows the supplied workout details', () => {

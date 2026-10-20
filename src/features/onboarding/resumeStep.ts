@@ -1,11 +1,19 @@
+/** The backend's "everything is filled" step number (computeCurrentStep). */
+export const ALL_FILLED_STEP = 13;
+
 /**
  * Which screen to reopen onboarding on. The backend's current_step is the next
- * step to fill, numbered like STEPS (1 = Username, 2 = Date of birth…), so it
- * IS the index. It used to subtract 1, which reopened the step just saved:
- * any reload right after choosing a username asked for it again.
- * 0 / 1 → Welcome (fresh start); past the end → the last step.
+ * step to fill, in backend numbers (1 = Username, 2 = Date of birth…).
+ * `stepNumbers` is each screen's backend number in screen order (0 = Welcome).
+ * The optional Schedule screen is backend step 13 but sits after Frequency, so
+ * numbers aren't positions; and 13 from the backend still means "all filled".
+ * It used to subtract 1, which reopened the step just saved.
+ * 0 / 1 → Welcome (fresh start); all filled / unknown → the last screen.
  */
-export function resumeStepIndex(currentStep: number, stepCount: number): number {
+export function resumeStepIndex(currentStep: number, stepNumbers: number[]): number {
   if (!Number.isFinite(currentStep) || currentStep <= 1) return 0;
-  return Math.min(Math.floor(currentStep), stepCount - 1);
+  const last = stepNumbers.length - 1;
+  if (currentStep >= ALL_FILLED_STEP) return last;
+  const at = stepNumbers.indexOf(Math.floor(currentStep));
+  return at === -1 ? last : at;
 }

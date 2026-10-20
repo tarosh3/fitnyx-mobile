@@ -19,6 +19,7 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
 import { HomeLevelProgress, HomeWeekSummary } from './components/HomeProgress';
+import { PlanTodayCard } from './components/PlanTodayCard';
 import { getRecentTraining } from './homeActivity';
 
 interface MobileHomeProps {
@@ -156,6 +157,8 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
             totalDays={metrics.totalDays}
           />
         )}
+
+        <PlanTodayCard />
 
         <View style={styles.section}>
           <View style={styles.sectionHeading}>

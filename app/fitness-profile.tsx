@@ -44,13 +44,23 @@ import {
 import { kgToLbs, lbsToKg, useWeightUnit } from '@/src/lib/prefs';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
 
+// The onboarding goal ids (GoalStep): the plan, Filo and the diet read these.
 const PRIMARY_GOALS = [
-  { value: 'lose_weight', label: 'Lose weight', icon: Flame },
-  { value: 'build_muscle', label: 'Build muscle', icon: Dumbbell },
-  { value: 'endurance', label: 'Endurance', icon: Heart },
-  { value: 'flexibility', label: 'Flexibility', icon: Activity },
-  { value: 'wellness', label: 'Wellness', icon: Sparkles },
+  { value: 'lose_fat', label: 'Reduce body fat', icon: Flame },
+  { value: 'build_muscle', label: 'Gain muscle', icon: Dumbbell },
+  { value: 'improve_strength', label: 'Improve strength', icon: Zap },
+  { value: 'improve_flexibility', label: 'Stay active', icon: Activity },
+  { value: 'improve_health', label: 'Overall health', icon: Heart },
+  { value: 'reduce_stress', label: 'Boost energy', icon: Sparkles },
 ] as const;
+
+// Ids this screen saved before it used the onboarding goals.
+const LEGACY_GOALS: Record<string, string> = {
+  lose_weight: 'lose_fat',
+  endurance: 'improve_health',
+  flexibility: 'improve_flexibility',
+  wellness: 'improve_health',
+};
 
 const EXPERIENCE_LEVELS = [
   { value: 'beginner', label: 'Beginner' },
@@ -142,7 +152,7 @@ export default function FitnessProfileScreen() {
         profile = cached;
       }
       setLoadFailed(false);
-      setPrimaryGoal(profile.primary_goal || '');
+      setPrimaryGoal(LEGACY_GOALS[profile.primary_goal] ?? profile.primary_goal ?? '');
       const lvl = (profile.experience_level || 'beginner') as 'beginner' | 'intermediate' | 'advanced';
       setExperienceLevel(EXPERIENCE_LEVELS.some((l) => l.value === lvl) ? lvl : 'beginner');
       setYearsTraining(profile.years_training != null ? String(profile.years_training) : '');
@@ -193,7 +203,8 @@ export default function FitnessProfileScreen() {
         : undefined;
 
       const payload: Partial<FitnessProfile> = {
-        primary_goal: primaryGoal,
+        // Unset stays unset: the server merges, so leaving it out keeps the saved goal.
+        primary_goal: primaryGoal || undefined,
         experience_level: experienceLevel,
         years_training: yearsTraining ? parseInt(yearsTraining, 10) : undefined,
         target_weight_kg: targetWeightKg && !isNaN(targetWeightKg) ? targetWeightKg : undefined,
@@ -266,6 +277,15 @@ export default function FitnessProfileScreen() {
           contentContainerStyle={[styles.scroll, { paddingBottom: spacing['3xl'] + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
         >
+          <Pressable
+            testID="fitness-profile-plan"
+            onPress={() => router.push('/plan')}
+            accessibilityRole="button"
+            style={[styles.card, styles.planLink, { backgroundColor: c.accentSoft, borderColor: c.border }]}
+          >
+            <Text style={[styles.planLinkText, { color: c.text }]}>Your plan — calories, schedule and starter program — updates from these answers.</Text>
+            <Text style={[styles.planLinkCta, { color: c.accent }]}>See your plan</Text>
+          </Pressable>
           {tab === 'goals' ? (
             <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
               <Text style={[styles.fieldLabel, { color: c.mutedText }]}>PRIMARY GOAL</Text>
@@ -618,6 +638,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     gap: spacing.lg,
   },
+  planLink: { gap: spacing.xs },
+  planLinkText: { fontFamily: t.weight.medium, fontSize: 14, lineHeight: 20 },
+  planLinkCta: { fontFamily: t.weight.semibold, fontSize: 15 },
   fieldLabel: {
     fontFamily: t.weight.semibold,
     fontSize: t.size.xs,
