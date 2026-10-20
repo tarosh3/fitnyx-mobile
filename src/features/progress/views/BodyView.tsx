@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/src/components/ui/Card';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
+import { fmtWeight } from '@/src/lib/decimal';
 import { cmToFt, kgToLbs, useHeightUnit, useWeightUnit } from '@/src/lib/prefs';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import type { BodyMetric } from '../data';
@@ -46,14 +47,14 @@ export function BodyView({ history, targetKg, range }: { history: BodyMetric[]; 
         <View style={styles.head}>
           <View style={styles.flex}>
             <Eyebrow>Weight</Eyebrow>
-            <BigNumber value={w(latestW!).toFixed(1)} unit={wUnit} size={48} />
-            <Muted>{change === null ? 'One entry in this range' : Math.abs(change) < 0.05 ? 'No change in this range' : `${change < 0 ? '−' : '+'}${w(Math.abs(change)).toFixed(1)} ${wUnit} in this range`}</Muted>
+            <BigNumber value={fmtWeight(w(latestW!))} unit={wUnit} size={48} />
+            <Muted>{change === null ? 'One entry in this range' : Math.abs(change) < 0.05 ? 'No change in this range' : `${change < 0 ? '−' : '+'}${fmtWeight(w(Math.abs(change)))} ${wUnit} in this range`}</Muted>
           </View>
           {targetKg ? (
             <View style={styles.goal}>
               <Muted>Goal</Muted>
-              <Text style={[styles.goalValue, { color: c.text }]}>{w(targetKg).toFixed(1)} {wUnit}</Text>
-              <Muted>{w(Math.abs(latestW! - targetKg)).toFixed(1)} {wUnit} to go</Muted>
+              <Text style={[styles.goalValue, { color: c.text }]}>{fmtWeight(w(targetKg))} {wUnit}</Text>
+              <Muted>{fmtWeight(w(Math.abs(latestW! - targetKg)))} {wUnit} to go</Muted>
             </View>
           ) : null}
         </View>

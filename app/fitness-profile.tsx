@@ -42,6 +42,7 @@ import {
   updateFitnessProfile,
 } from '@/src/lib/api/onboarding';
 import { kgToLbs, lbsToKg, useWeightUnit } from '@/src/lib/prefs';
+import { fmtWeight, limitDecimals } from '@/src/lib/decimal';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
 
 // The onboarding goal ids (GoalStep): the plan, Filo and the diet read these.
@@ -159,7 +160,7 @@ export default function FitnessProfileScreen() {
       if (profile.target_weight_kg != null) {
         const display =
           weightUnit === 'kg' ? profile.target_weight_kg : kgToLbs(profile.target_weight_kg);
-        setTargetWeight(display.toFixed(1));
+        setTargetWeight(fmtWeight(display));
       }
       setWeeklyTarget(profile.weekly_workout_target ?? 3);
       setWorkoutTypes(profile.preferred_workout_type ?? []);
@@ -317,7 +318,7 @@ export default function FitnessProfileScreen() {
               <Field
                 label={`Target weight (${weightUnit})`}
                 value={targetWeight}
-                onChangeText={(v) => setTargetWeight(v.replace(/[^0-9.]/g, '').slice(0, 6))}
+                onChangeText={(v) => setTargetWeight(limitDecimals(v))}
                 keyboardType="decimal-pad"
                 placeholder="Optional"
                 leading={<Target size={16} color={c.mutedText} strokeWidth={1.8} />}

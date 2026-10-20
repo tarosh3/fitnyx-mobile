@@ -1,5 +1,6 @@
 import type { ExerciseLog } from '@/src/lib/api/workoutSessions';
 import type { WorkoutDayExercise } from '@/src/lib/api/workoutPlans';
+import { fmtWeight } from '@/src/lib/decimal';
 import type { Exercise, TrackingType } from '@/src/types/exercise';
 
 /** Body-part groups used for colour and filters (theme `parts` keys). */
@@ -53,8 +54,9 @@ export function fmtClock(totalSec: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
 
+/** A weight as entered, up to 2 decimals (1.25 kg plates): 61.25 → "61.25", 60 → "60". */
 export function fmtKg(kg: number): string {
-  return (Math.round(kg * 10) / 10).toString();
+  return fmtWeight(kg);
 }
 
 export function fmtKm(metres: number): string {

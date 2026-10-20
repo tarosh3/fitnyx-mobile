@@ -53,6 +53,7 @@ import { getFitnessProfile } from '@/src/lib/api/onboarding';
 import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { addToOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { useAuth } from '@/src/providers/AuthProvider';
+import { fmtWeight, limitDecimals } from '@/src/lib/decimal';
 import {
   cmToFt,
   ftInToCm,
@@ -382,7 +383,7 @@ function WeightChart({
               {formatDateShort(points[activeIndex].date)}
             </Text>
             <Text style={[styles.tooltipValue, { color: text }]}>
-              {points[activeIndex].value.toFixed(1)} {weightUnit}
+              {fmtWeight(points[activeIndex].value)} {weightUnit}
             </Text>
           </View>
         ) : null}
@@ -485,7 +486,7 @@ export default function StatsScreen() {
     if (!logOpen) return;
     if (latest?.weight_kg != null) {
       const w = weightUnit === 'kg' ? latest.weight_kg : kgToLbs(latest.weight_kg);
-      setWeight(w.toFixed(1));
+      setWeight(fmtWeight(w));
     }
     if (latest?.height_cm != null) {
       if (heightUnit === 'cm') {
@@ -887,7 +888,7 @@ export default function StatsScreen() {
               </View>
               <Field
                 value={weight}
-                onChangeText={(v) => setWeight(v.replace(/[^0-9.]/g, '').slice(0, 6))}
+                onChangeText={(v) => setWeight(limitDecimals(v))}
                 keyboardType="decimal-pad"
                 placeholder={weightUnit === 'kg' ? '74.0' : '163.0'}
                 leading={<Scale size={18} color={c.mutedText} strokeWidth={1.8} />}
