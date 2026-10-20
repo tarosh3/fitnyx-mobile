@@ -108,6 +108,7 @@ export function SummaryScreen() {
               : <Tile label="Exercises" value={String(d.groups.length)} />}
           <Tile label="Sets" value={String(t.sets)} />
           <Tile label="New bests" value={String(t.prs)} />
+          {s?.kcal ? <Tile label="Calories burned" value={s.kcal.toLocaleString('en-IN')} unit="kcal" /> : null}
         </View>
 
         {prLogs.length ? (

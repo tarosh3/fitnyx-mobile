@@ -3,7 +3,7 @@ import type { DietDayTotals, DietLog } from '@/src/lib/api/diet';
 import { analyzeDays } from '@/src/features/diet/insights';
 import {
   addDays, dayStatus, goalsFromPlan, grams, lastDays, loggedPlanMeals, macroSplit, nextMealIndex, planLogItem, planMeals,
-  planProteinShortfall, signed, slotForHour, slotForMeal, sumLogs,
+  planProteinShortfall, signed, slotForHour, slotForMeal, sumLogs, withDietGoals,
 } from '@/src/features/diet/model';
 
 const plan = {
@@ -112,5 +112,29 @@ describe('diet insights', () => {
   it('stays quiet without enough data', () => {
     const r = analyzeDays([day('2026-10-14', 450, 16), day('2026-10-13', 0, 0, false, 0)], goal, '2026-10-14');
     expect(r).toMatchObject({ loggedDays: 0, avgKcal: null, pctOfGoal: null, weekendHigh: null, restDayProtein: null, split: null });
+  });
+});
+
+describe('your own diet goals', () => {
+  const base = { kcal: 2000, protein: 150, carbs: 200, fat: 66 };
+  const goals = (diet_kcal: number | null, diet_protein_g: number | null) =>
+    ({ daily_distance_m: null, daily_burn_kcal: null, daily_steps: null, diet_kcal, diet_protein_g, weight_kg: null });
+
+  it('keeps the plan when no diet goal is set', () => {
+    expect(withDietGoals(base, goals(null, null))).toBe(base);
+    expect(withDietGoals(base, null)).toBe(base);
+    expect(withDietGoals(null, goals(2400, 160))).toBeNull();
+  });
+
+  it('replaces calories and protein and re-splits carbs and fat', () => {
+    const g = withDietGoals(base, goals(2400, 180))!;
+    expect(g.kcal).toBe(2400);
+    expect(g.protein).toBe(180);
+    expect(g.protein * 4 + g.carbs * 4 + g.fat * 9).toBeGreaterThan(2390);
+    expect(g.protein * 4 + g.carbs * 4 + g.fat * 9).toBeLessThan(2410);
+  });
+
+  it('can set only protein', () => {
+    expect(withDietGoals(base, goals(null, 170))).toMatchObject({ kcal: 2000, protein: 170 });
   });
 });

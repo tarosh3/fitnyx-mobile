@@ -117,6 +117,12 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - `plan/data.ts` must not import `src/lib/reminders` (notifee crashes jest for every screen that reads the plan); reminder helpers live in `plan/reminder.ts`. Daily reminders take optional `days` (0 = Sunday) → one WEEKLY trigger per day.
 - Starter exercises are curated per movement slot in `fitplan/starter.go` with hand-tagged knee/back/shoulder stress (the catalog has no injury data). Check new UUIDs against the live catalog; missing ones are skipped at runtime.
 
+**Goals + calories burned (`src/features/goals/`)** — 2026-10-20:
+- `GET/PUT /goals` (backend `goals_handler.go`, table `user_goals`): daily distance / burn / steps goals + the user's own diet calories / protein. PUT merges (left out = kept, `null` = cleared). Activity goals are **daily totals**: distance + steps from Roams, burn from Roams **and** workouts (`/progress/daily` → `kcal_burned`, `steps`).
+- Calories: backend stores `kcal` when a Roam is saved (`activity.Kcal`: MET by type + speed × weight × moving time) or a workout finishes (`fitplan.WorkoutKcal`, training intensity); nil without a body weight. `src/features/roam/calories.ts` mirrors `internal/activity/calories.go` for the live number — **change both together** and re-run the numeric parity check (0 mismatches over random inputs, as for geo.ts).
+- Diet goals replace the plan's on the backend inside `fitplan.ComputeTargets` (so `/plan`, Filo and diet generation follow) and on the device via `withDietGoals()` (Diet Today, meal detail, Progress Fuel).
+- A Roam's goal state lives in `roam/goalTracker.ts` (AsyncStorage `fitnyx-roam:goal-tracker`): created on Start with today's totals before the Roam + weight; `syncRoamNotification` calls `checkGoalMilestones`, so halfway/done notifications also fire from the background GPS task, once each.
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -132,7 +138,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
+`auth` · `dashboard` · `diet` · `goals` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
@@ -300,6 +306,7 @@ _Claude updates this section automatically when corrections are made._
 - **`EXPO_PUBLIC_*` set on the command line does NOT beat `.env`, and Metro caches the inlined values.** To point a dev build at another backend, write a temporary `.env.local` (gitignored, higher priority) and start Metro with `--clear`; delete it afterwards. Confirm where the app really connects with `lsof -nP -iTCP:<port>` — the backend's request log only prints non-2xx responses, so a quiet log proves nothing.
 - **A 401 from production does not prove a route is deployed.** `https://fitnyx.onrender.com/api/v1/<anything>` returns 401 without a token, even for paths that don't exist (2026-10-19: a "deploy check" polling for 401 passed instantly, before Render had deployed). Check a new endpoint from the app instead (a range or screen the device has never cached, so `cacheGetStale` can't fake it) or with an authenticated request.
 - **Android emulator `INSTALL_FAILED_INSUFFICIENT_STORAGE`** (Pixel_7 `/data` ~93% full, the debug APK is ~106 MB): `adb shell pm trim-caches 4G`, then `adb install -r` — keeps the app's data and login, unlike uninstalling.
+- **Never start Metro with `CI=1` when previewing new screens** — CI mode turns off file watching, so a route file added after start shows "Screen Not Found" until Metro restarts (lost ~5 min on 2026-10-20). Start it plainly with `< /dev/null` to keep it non-interactive in the background.
 - **The running Pixel_7 emulator (qemu) can hold host port 8081**, so Metro can't use it: run `npx expo start --port 8082 --dev-client`, `adb reverse tcp:8082 tcp:8082`, and open `exp+fitnyx-mobile://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8082`.
 - **A local backend uses the production Supabase DB (`DB_URL`)** — anything logged while testing lands on the signed-in user's real account. Undo it in the app and hard-delete the test rows afterwards; verify SQL with a throwaway `cmd/zz_*` probe inside a rolled-back transaction where possible.
 

@@ -8,9 +8,14 @@ import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { useGoals, useTodayActivity } from '@/src/features/goals/data';
+import { activityGoals } from '@/src/features/goals/model';
+import { ActivityGoalsSheet } from '@/src/features/goals/ui/ActivityGoalsSheet';
+import { RoamGoalsRow } from '@/src/features/goals/ui/RoamGoalsRow';
 import { ActivityRow } from '@/src/features/roam/components/ActivityRow';
 import { WeekSummary } from '@/src/features/roam/components/WeekSummary';
 import type { ActivityType } from '@/src/features/roam/geo';
+import { startGoalTracker } from '@/src/features/roam/goalTracker';
 import { getRecordingFor } from '@/src/features/roam/recordingStore';
 import { useRoamActivities } from '@/src/features/roam/useRoamActivities';
 import { useRoamRecording } from '@/src/features/roam/useRoamRecording';
@@ -33,6 +38,9 @@ export default function RoamScreen() {
   const [starting, setStarting] = useState(false);
   const [notice, setNotice] = useState<'denied' | 'blocked' | 'failed' | null>(null);
   const [inProgress, setInProgress] = useState(false);
+  const goals = useGoals();
+  const today = useTodayActivity();
+  const [editingGoals, setEditingGoals] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -44,7 +52,16 @@ export default function RoamScreen() {
     setStarting(true);
     try {
       const result = await recording.start(type);
-      if (result === 'granted') router.push('/roam/record');
+      if (result === 'granted') {
+        // Today's goals and what was done before this Roam, for the live rings + alerts.
+        const meta = await getRecordingFor(user?.id);
+        if (meta) {
+          await startGoalTracker({
+            clientId: meta.clientId, type, goals: activityGoals(goals.data), before: today.day, weightKg: goals.data?.weight_kg ?? null,
+          }).catch(() => undefined);
+        }
+        router.push('/roam/record');
+      }
       else if (result === 'denied' || result === 'blocked') setNotice(result);
       else setNotice('failed');
     } catch {
@@ -64,6 +81,7 @@ export default function RoamScreen() {
         ) : (
           <>
             <SegmentedControl options={TYPES} value={type} onChange={setType} />
+            {goals.data ? <RoamGoalsRow goals={goals.data} day={today.day} onEdit={() => setEditingGoals(true)} /> : null}
             <Button title={`START ${TYPES.find((t) => t.value === type)?.label.toUpperCase()}`} onPress={onStart} loading={starting} />
             <Text style={[styles.hint, { color: palette.mutedText }]}>
               Vehicle travel (car, bus, train, metro) is detected and never counts.
@@ -123,6 +141,7 @@ export default function RoamScreen() {
         }}
         onCancel={() => setNotice(null)}
       />
+      <ActivityGoalsSheet visible={editingGoals} goals={goals.data} onSave={goals.save} onClose={() => setEditingGoals(false)} />
     </Screen>
   );
 }

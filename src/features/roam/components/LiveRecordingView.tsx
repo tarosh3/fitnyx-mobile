@@ -1,11 +1,14 @@
 import { Pause, Play, Square } from 'lucide-react-native';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { addActivity } from '@/src/features/goals/model';
+import { GoalRingsRow } from '@/src/features/goals/ui/GoalRings';
 import { RouteMap } from '@/src/features/roam/components/RouteMap';
 import { StatTile } from '@/src/features/roam/components/StatTile';
 import { VehicleBanner } from '@/src/features/roam/components/VehicleBanner';
 import { currentSpeedMps, formatDistance, formatDuration, formatSpeed } from '@/src/features/roam/geo';
+import { getGoalTracker, roamActivity, type GoalTracker } from '@/src/features/roam/goalTracker';
 import type { RoamRecording } from '@/src/features/roam/useRoamRecording';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
@@ -18,6 +21,10 @@ interface Props {
 export function LiveRecordingView({ recording, onFinish }: Props) {
   const palette = useThemeColors();
   const { meta, stats, elapsedMs } = recording;
+  const [tracker, setTracker] = useState<GoalTracker | null>(null);
+  useEffect(() => {
+    getGoalTracker(meta?.clientId).then(setTracker);
+  }, [meta?.clientId]);
   if (!meta) return null;
   const paused = meta.status === 'paused';
   // Speed in km/h for every Roam type (runs and walks too — not min/km pace).
@@ -27,6 +34,10 @@ export function LiveRecordingView({ recording, onFinish }: Props) {
   const now = paused ? null : currentSpeedMps(recording.points, (Date.now() - meta.startedAtMs) / 1000);
   const rateNow = now == null ? '--' : formatSpeed(now);
   const nowLabel = paused ? 'Paused' : now == null ? 'Finding GPS' : now === 0 ? 'Stopped' : 'Speed now';
+  // This Roam in goal terms; the rings add what the day had before it.
+  const roam = roamActivity(meta.type, stats, tracker?.weightKg ?? null);
+  const showSteps = meta.type !== 'cycle' && stats?.steps != null;
+  const showKcal = !!tracker?.weightKg;
 
   return (
     <View style={styles.wrap}>
@@ -39,6 +50,13 @@ export function LiveRecordingView({ recording, onFinish }: Props) {
         <Text style={[styles.paused, { color: palette.warning }]}>PAUSED — distance isn't recorded</Text>
       ) : null}
 
+      {tracker?.goals.length ? (
+        <View style={[styles.goals, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <Text style={[styles.goalsLabel, { color: palette.mutedText }]}>TODAY’S GOALS</Text>
+          <GoalRingsRow goals={tracker.goals} day={addActivity(tracker.before, roam)} size={56} />
+        </View>
+      ) : null}
+
       <View style={[styles.panel, { backgroundColor: palette.card, borderColor: palette.border }]}>
         <StatTile big label="Distance" value={formatDistance(stats?.distanceM ?? 0)} />
         <View style={styles.row}>
@@ -46,6 +64,12 @@ export function LiveRecordingView({ recording, onFinish }: Props) {
           <StatTile label={nowLabel} value={rateNow} accent={!paused && now != null && now > 0} />
           <StatTile label="Avg speed" value={rate} />
         </View>
+        {showSteps || showKcal ? (
+          <View style={styles.row}>
+            {showSteps ? <StatTile label="Steps" value={roam.steps.toLocaleString('en-IN')} /> : null}
+            {showKcal ? <StatTile label="Calories" value={`${roam.kcal} kcal`} /> : null}
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.controls}>
@@ -77,6 +101,8 @@ const styles = StyleSheet.create({
   map: { flex: 1, minHeight: 220 },
   paused: { textAlign: 'center', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   panel: { borderRadius: 18, borderWidth: 1, paddingVertical: 8 },
+  goals: { borderRadius: 18, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 8, gap: 8 },
+  goalsLabel: { textAlign: 'center', fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   row: { flexDirection: 'row' },
   controls: { flexDirection: 'row', gap: 12 },
   control: {

@@ -15,6 +15,7 @@ export function ActivityStats({ activity }: { activity: ActivitySummary }) {
       vehicleDetected={activity.vehicle_detected}
       xp={{ earned: activity.xp, eligible: activity.xp_eligible }}
       steps={activity.steps}
+      kcal={activity.kcal}
       elevationGainM={activity.elevation_gain_m}
     />
   );

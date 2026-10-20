@@ -1,5 +1,6 @@
 import type { DietFoodItem, DietPlan } from '@/src/lib/api';
 import type { DietLog, DietLogItem, Food, MealSlot, RecentFood } from '@/src/lib/api/diet';
+import type { Goals } from '@/src/lib/api/goals';
 
 export interface Macros {
   kcal: number;
@@ -42,6 +43,22 @@ export function goalsFromPlan(plan: DietPlan | null): Macros | null {
   const d = plan?.plan_data;
   if (!d || !(d.total_calories > 0)) return null;
   return { kcal: d.total_calories, protein: grams(d.macros?.protein), carbs: grams(d.macros?.carbs), fat: grams(d.macros?.fats) };
+}
+
+/**
+ * The user's own calorie / protein goals replace the plan's; carbs and fat
+ * split what's left in the plan's carb:fat proportion (as the backend's
+ * fitplan.ComputeTargets does with the same goals).
+ */
+export function withDietGoals(base: Macros | null, goals: Goals | null | undefined): Macros | null {
+  if (!base || !goals || (!goals.diet_kcal && !goals.diet_protein_g)) return base;
+  const kcal = goals.diet_kcal || base.kcal;
+  const protein = goals.diet_protein_g || base.protein;
+  const carbE = base.carbs * 4;
+  const fatE = base.fat * 9;
+  const carbShare = carbE + fatE > 0 ? carbE / (carbE + fatE) : 0.6;
+  const rest = Math.max(kcal - protein * 4, 0);
+  return { kcal, protein, carbs: Math.round((rest * carbShare) / 4), fat: Math.round((rest * (1 - carbShare)) / 9) };
 }
 
 /** Plan meal names are free text ("Mid-Morning", "Evening Snack"); logs use four slots. */

@@ -19,6 +19,8 @@ export interface RoamStatsPanelProps {
   xp?: { earned: number; eligible: boolean };
   /** Pedometer steps (runs and walks); null/omitted without them. */
   steps?: number | null;
+  /** Estimated calories burned; null/omitted without a body weight. */
+  kcal?: number | null;
   /** Climb from terrain data; null/omitted when unknown. */
   elevationGainM?: number | null;
 }
@@ -97,9 +99,10 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
   );
 }
 
-/** Steps, cadence and elevation gain when known, two tiles per row. */
+/** Calories, steps, cadence and elevation gain when known, two tiles per row. */
 function extraTiles(p: RoamStatsPanelProps): { label: string; value: string }[][] {
   const tiles: { label: string; value: string }[] = [];
+  if (p.kcal) tiles.push({ label: 'Calories', value: `${p.kcal.toLocaleString('en-IN')} kcal` });
   if (p.steps) {
     tiles.push({ label: 'Steps', value: p.steps.toLocaleString('en-IN') });
     if (p.movingSec >= 60) tiles.push({ label: 'Cadence', value: `${Math.round(p.steps / (p.movingSec / 60))} spm` });

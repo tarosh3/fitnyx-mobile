@@ -4,6 +4,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
+import { useDayActivity, useGoals } from '@/src/features/goals/data';
 import { uuidV4 } from '@/src/features/roam/recordingStore';
 import { BottomBar, Button, IconButton, TopBar, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -12,7 +13,7 @@ import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { spacing, type } from '@/src/styles/tokens';
 import { useDietDay, useDietPlan, useDietSummary } from '../data/useDiet';
-import { dateFromKey, dayStatus, fmt, goalsFromPlan, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, type PlanMeal } from '../model';
+import { dateFromKey, dayStatus, fmt, goalsFromPlan, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
 import { InsightsPanel } from '../insights/InsightsPanel';
 import { DietSetup } from '../setup/DietSetup';
 import { SectionTitle } from '../ui/bits';
@@ -20,6 +21,7 @@ import { Segments } from '../ui/Segments';
 import { MealCard } from './MealCard';
 import { OtherLogs } from './OtherLogs';
 import { SummaryCard } from './SummaryCard';
+import { DietGoalsSheet } from './DietGoalsSheet';
 import { CoachTip, WaterCard } from './TodayCards';
 import { WeekStrip } from './WeekStrip';
 
@@ -41,9 +43,13 @@ export function DietTodayScreen() {
   const day = useDietDay(user?.id, date);
   const week = lastDays(today, 7);
   const summary = useDietSummary(user?.id, week[0], today);
+  const userGoals = useGoals();
+  const activity = useDayActivity(date);
+  const [editingGoals, setEditingGoals] = useState(false);
 
   const meals = useMemo(() => planMeals(plan), [plan]);
-  const goal = goalsFromPlan(plan);
+  const planGoal = goalsFromPlan(plan);
+  const goal = withDietGoals(planGoal, userGoals.data);
   const logged = loggedPlanMeals(day.logs);
   const eaten = sumLogs(day.logs);
   const next = date === today ? nextMealIndex(meals, logged) : null;
@@ -99,7 +105,8 @@ export function DietTodayScreen() {
         <Segments options={[date === today ? 'Today' : shortDate(date), 'Insights']} selected={tab} onSelect={setTab} />
         {tab === 1 ? <InsightsPanel summary={summary.summary} offline={summary.offline} goal={goal} today={today} /> : <>
           {day.offline ? <Text style={[styles.offlineNote, { color: c.mutedText }]}>Offline — showing what’s saved on this phone. New meals sync when you’re back online.</Text> : null}
-          <SummaryCard eaten={eaten} goal={goal} />
+          <SummaryCard eaten={eaten} goal={goal} burned={activity.loaded ? activity.day.kcal : null}
+            onEditGoals={userGoals.data ? () => setEditingGoals(true) : undefined} />
           <SectionTitle title="On your menu" note={`${logged.size} / ${meals.length} logged`} />
           {[...meals].sort((a, b) => Number(b.index === next) - Number(a.index === next)).map((m) => (
             <MealCard key={m.index} meal={m} log={logged.get(m.index)} next={next === m.index} onToggle={() => toggle(m)} onOpen={() => openMeal(m)} />
@@ -113,6 +120,7 @@ export function DietTodayScreen() {
       <BottomBar>
         <Button title="Log food" icon={<Plus size={20} color={c.primaryText} strokeWidth={2.4} />} onPress={() => openLog()} />
       </BottomBar>
+      {planGoal ? <DietGoalsSheet visible={editingGoals} plan={planGoal} goals={userGoals.data} onSave={userGoals.save} onClose={() => setEditingGoals(false)} /> : null}
       <ConfirmModal visible={!!removing} title="Remove this food?" message={removing ? `${removing.name} · ${removing.kcal} kcal` : ''}
         confirmLabel="Remove" variant="danger" onCancel={() => setRemoving(null)}
         onConfirm={() => { if (removing) day.remove(removing.client_log_id).catch(fail); setRemoving(null); }} />

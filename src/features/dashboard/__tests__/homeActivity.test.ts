@@ -56,4 +56,13 @@ describe('getRecentTraining', () => {
 
     expect(result.workouts).toBe(2);
   });
+
+  it("uses the server's calorie estimate, and 350 kcal/h only when it has none", () => {
+    const today = new Date(2026, 9, 12, 12);
+    const result = getRecentTraining([
+      session(new Date(2026, 9, 12, 9), { kcal: 240 }),
+      session(new Date(2026, 9, 11, 9), { kcal: null, total_duration_sec: 3600 }),
+    ], today);
+    expect(result.calories).toBe(240 + 350);
+  });
 });

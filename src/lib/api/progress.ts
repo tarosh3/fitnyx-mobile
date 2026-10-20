@@ -11,6 +11,10 @@ export interface ProgressDay {
   roams: number;
   roam_sec: number;
   distance_m: number;
+  /** Estimated calories from workouts + Roams. Absent from older backends. */
+  kcal_burned?: number;
+  /** Pedometer steps taken during Roams. Absent from older backends. */
+  steps?: number;
 }
 
 export interface ProgressDaily {

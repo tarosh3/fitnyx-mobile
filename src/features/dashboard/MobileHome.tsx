@@ -6,6 +6,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TodayGoalsCard } from '@/src/features/goals/ui/TodayGoalsCard';
 import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -183,6 +184,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
               </Pressable>
             ))}
           </View>
+          <TodayGoalsCard />
         </View>
 
         {!metrics.loading && !metrics.error && (
