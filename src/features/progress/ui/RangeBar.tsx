@@ -41,7 +41,7 @@ export function GranSwitch({ value, span, onChange }: { value: Gran; span: numbe
             accessibilityRole="tab" accessibilityState={{ selected: on, disabled: !ok[g.key] }}
             accessibilityLabel={`Group by ${g.label.toLowerCase()}`}
             style={[styles.seg, on && { backgroundColor: c.card }]}>
-            <Text style={[styles.segText, { color: on ? c.text : ok[g.key] ? c.mutedText : c.border }]}>{g.label}</Text>
+            <Text style={[styles.segText, { color: on ? c.text : c.mutedText }, !ok[g.key] && styles.segOff]}>{g.label}</Text>
           </Pressable>
         );
       })}
@@ -54,4 +54,5 @@ const styles = StyleSheet.create({
   switch: { flexDirection: 'row', padding: 3, borderRadius: radii.md, borderWidth: StyleSheet.hairlineWidth },
   seg: { minHeight: 34, paddingHorizontal: 10, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   segText: { fontFamily: type.weight.bold, fontSize: 12 },
+  segOff: { opacity: 0.45 },
 });

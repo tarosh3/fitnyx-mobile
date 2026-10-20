@@ -128,8 +128,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dateText: {
-    fontFamily: 'Anton_400Regular',
-    fontSize: 18,
-    letterSpacing: 0.5,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 17,
+    fontVariant: ['tabular-nums'],
   },
 });
