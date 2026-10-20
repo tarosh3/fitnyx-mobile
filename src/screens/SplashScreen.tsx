@@ -8,7 +8,6 @@
  *   1600-2100ms – Light sweep across logo
  *   2000-2500ms – Logo scale pop
  *   2200-2800ms – "FITNYX" wordmark fades in + slides up
- *   2600-3100ms – Tagline fades in
  *   3800-4300ms – Cinematic exit (scale up + fade)
  *   4400ms      – onAnimationComplete
  */
@@ -16,7 +15,6 @@
 import React, { useEffect } from 'react';
 import {
   View,
-  Text,
   Image,
   StyleSheet,
   Dimensions,
@@ -83,9 +81,6 @@ export function AnimatedSplash({ onAnimationComplete }: Props) {
 
   // Cursor blink
   const cursorOpacity = useSharedValue(0);
-
-  // Tagline
-  const taglineOpacity = useSharedValue(0);
 
   // Exit
   const exitScale = useSharedValue(1);
@@ -155,10 +150,6 @@ export function AnimatedSplash({ onAnimationComplete }: Props) {
         withDelay(200, withTiming(0, { duration: 300 }))
       )
     );
-
-    // ── Stage 7: Tagline (after typing completes) ──
-    const TAGLINE_START = TYPE_START + LETTERS.length * STAGGER + 400;
-    taglineOpacity.value = withDelay(TAGLINE_START, withTiming(1, { duration: 500 }));
 
     // ── Stage 8: Idle float (3000ms+) ──
     floatY.value = withDelay(
@@ -238,10 +229,6 @@ export function AnimatedSplash({ onAnimationComplete }: Props) {
     opacity: cursorOpacity.value,
   }));
 
-  const taglineStyle = useAnimatedStyle(() => ({
-    opacity: taglineOpacity.value,
-  }));
-
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={BG} translucent />
@@ -313,10 +300,6 @@ export function AnimatedSplash({ onAnimationComplete }: Props) {
           <View style={styles.underline} />
         </View>
 
-        {/* ── Tagline ── */}
-        <Animated.View style={taglineStyle}>
-          <Text style={styles.tagline}>YOUR AI FITNESS COMPANION</Text>
-        </Animated.View>
       </Animated.View>
     </View>
   );
@@ -375,12 +358,4 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 
-  // Tagline
-  tagline: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 10,
-    letterSpacing: 4,
-    color: 'rgba(255, 255, 255, 0.35)',
-    marginTop: 12,
-  },
 });
