@@ -193,3 +193,22 @@ describe('AuthProvider sign-out', () => {
     expect(clearAllOfflineData).not.toHaveBeenCalled();
   });
 });
+
+describe('AuthProvider onboarding complete', () => {
+  it('reloads the profile, so the username chosen in onboarding shows right away', async () => {
+    const { getProfile } = jest.requireMock('@/src/lib/api/users') as { getProfile: jest.Mock };
+    getProfile.mockResolvedValueOnce({ id: 'u1', username: 'user_u1' }).mockResolvedValue({ id: 'u1', username: 'tarosh' });
+    let auth: ReturnType<typeof useAuth> | null = null;
+    function Grab() {
+      auth = useAuth();
+      return null;
+    }
+    (supabase.auth.getSession as jest.Mock).mockResolvedValue({ data: { session }, error: null });
+    render(<AuthProvider><Grab /></AuthProvider>);
+    await act(async () => {});
+    expect(auth!.userProfile?.username).toBe('user_u1');
+
+    await act(async () => { auth!.markOnboardingComplete(); });
+    expect(auth!.userProfile?.username).toBe('tarosh');
+  });
+});

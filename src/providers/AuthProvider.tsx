@@ -541,6 +541,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem(durableKey, 'true').catch(() => undefined);
       const cacheKey = cacheKeys.onboardingStatus(user.id);
       cacheSet(cacheKey, { complete: true }, cacheTTL.MEDIUM).catch(() => undefined);
+      // The profile was loaded at sign-in, before onboarding set the username
+      // (and name): reload it, or Home and the profile keep the old one.
+      getProfile().then(profileUpdated).catch(() => undefined);
     }
   };
 
