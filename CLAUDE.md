@@ -107,6 +107,7 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Anton fills its whole line box: a label right above a big Anton number needs `marginBottom` (~5) or it touches the digits.
 - Review card design with realistic data (6 exercises / 18 sets); the test account's 1–2-set workouts hide layout problems. A temporary `app/zz-*` preview route works — delete it before committing.
 - view-shot's `width`/`height` are **points** (multiplied by the pixel ratio): pass `1080 / PixelRatio.get()` — passing 1080 gave 3240-px, 10 MB files.
+- Never pass `allowsEditing: true` to `launchImageLibraryAsync` on iOS, and never call `requestMediaLibraryPermissionsAsync` before it: editing makes expo-image-picker use the legacy `UIImagePickerController` instead of PHPicker (1–2 s to open, reported 2026-10-20), and the library picker needs no permission. Crop with `expo-image-manipulator` instead (`app/profile.tsx` `selectImage`).
 - The app's toasts render **under** RN `Modal`s (the `Sheet`), so give feedback inside the sheet.
 - Never add Android `READ_MEDIA_*` (Play photo-permission policy): saving needs none on Android 13+; they're in `android.blockedPermissions` and the media-library plugin uses `granularPermissions: []`.
 
