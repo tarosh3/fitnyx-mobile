@@ -25,6 +25,8 @@ export interface UserProfile {
   bio?: string;
   onboarding_complete: boolean;
   subscription_tier: string;
+  /** Last username change after onboarding; one change per 24 hours. */
+  username_changed_at?: string | null;
 }
 
 export async function updateProfile(data: UpdateProfileData): Promise<UserProfile> {

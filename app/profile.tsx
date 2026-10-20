@@ -37,6 +37,7 @@ import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { getProfile, updateProfile } from '@/src/lib/api/users';
+import { usernameLockedLabel, usernameLockedUntil } from '@/src/features/profile/usernameLimit';
 import { checkAndLockUsername, claimUsername } from '@/src/lib/api/username';
 import { countries } from '@/src/lib/countries';
 import { uploadAvatar as uploadAvatarImage } from '@/src/lib/avatarUpload';
@@ -85,6 +86,8 @@ export default function ProfileScreen() {
   const [newAvatarLocalUri, setNewAvatarLocalUri] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>({ state: 'idle' });
+  // Set while the once-a-day username change is used up (the server enforces it too).
+  const [usernameLockUntil, setUsernameLockUntil] = useState<Date | null>(null);
 
   const debouncedUsername = useDebouncedValue(username.trim(), 400);
   const reqIdRef = useRef(0);
@@ -163,6 +166,7 @@ export default function ProfileScreen() {
       const loadedUsername = profile?.username || metadata.username || '';
       setUsername(loadedUsername);
       setOriginalUsername(loadedUsername);
+      setUsernameLockUntil(usernameLockedUntil(profile));
       setFirstName(profile?.first_name || metadata.first_name || '');
       setLastName(profile?.last_name || metadata.last_name || '');
       setBio(profile?.bio || '');
@@ -274,7 +278,10 @@ export default function ProfileScreen() {
         gender: gender || undefined,
         dob: dob ? dob.toISOString() : undefined,
       });
-      if (saved?.id) profileUpdated(saved);
+      if (saved?.id) {
+        profileUpdated(saved);
+        setUsernameLockUntil(usernameLockedUntil(saved));
+      }
 
       await supabase.auth.updateUser({
         data: {
@@ -420,6 +427,7 @@ export default function ProfileScreen() {
               placeholder="username"
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!usernameLockUntil}
               error={
                 usernameStatus.state === 'invalid'
                   ? usernameStatus.error
@@ -428,7 +436,9 @@ export default function ProfileScreen() {
                     : undefined
               }
               helper={
-                usernameStatus.state === 'available'
+                usernameLockUntil
+                  ? usernameLockedLabel(usernameLockUntil)
+                  : usernameStatus.state === 'available'
                   ? '✓ Available'
                   : usernameStatus.state === 'idle' && username
                     ? 'This is your current username'
