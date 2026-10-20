@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Svg, { Circle } from 'react-native-svg';
 
 import { StepScaffold } from '@/src/features/onboarding/steps/StepScaffold';
 import { OnboardingStepProps } from '@/src/features/onboarding/types';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { fmtWeight, limitDecimals } from '@/src/lib/decimal';
+import { kgToLbs, lbsToKg } from '@/src/lib/prefs';
 
 const PRIMARY = '#5FC793';
 const GAUGE_SIZE = 220;
@@ -13,35 +15,43 @@ const STROKE_WIDTH = 12;
 const RADIUS = (GAUGE_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 export function WeightStep({ data, onNext, saving }: OnboardingStepProps) {
   const palette = useThemeColors();
 
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
+  // The weight in kg, to 2 decimals (what the backend stores); the box shows it in `unit`.
   const [weightKg, setWeightKg] = useState(data?.weight_kg || 70);
-  const [weightLbs, setWeightLbs] = useState(Math.round((data?.weight_kg || 70) * 2.205));
+  const [text, setText] = useState(fmtWeight(data?.weight_kg || 70));
   const [error, setError] = useState('');
 
-  const currentWeight = unit === 'kg' ? weightKg : weightLbs;
+  const inUnit = (kg: number, u = unit) => (u === 'kg' ? kg : kgToLbs(kg));
+  const currentWeight = round2(inUnit(weightKg));
 
   const handleUnitChange = (nextUnit: 'kg' | 'lbs') => {
-    if (nextUnit === 'lbs' && unit === 'kg') {
-      setWeightLbs(Math.round(weightKg * 2.205));
-    } else if (nextUnit === 'kg' && unit === 'lbs') {
-      setWeightKg(Math.round(weightLbs / 2.205));
-    }
     setUnit(nextUnit);
+    setText(fmtWeight(inUnit(weightKg, nextUnit)));
+  };
+
+  const handleType = (raw: string) => {
+    setError('');
+    const t = limitDecimals(raw);
+    setText(t);
+    const n = parseFloat(t);
+    if (Number.isFinite(n)) setWeightKg(round2(unit === 'kg' ? n : lbsToKg(n)));
   };
 
   const progress = useMemo(() => {
     if (unit === 'kg') return (weightKg - 30) / (200 - 30);
-    return (weightLbs - 66) / (440 - 66);
-  }, [unit, weightKg, weightLbs]);
+    return (kgToLbs(weightKg) - 66) / (440 - 66);
+  }, [unit, weightKg]);
 
   const strokeDashoffset = CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, progress)));
 
   const handleSubmit = () => {
-    const finalWeightKg = unit === 'kg' ? weightKg : Math.round(weightLbs / 2.205);
-    if (finalWeightKg < 30 || finalWeightKg > 200) {
+    const finalWeightKg = round2(weightKg);
+    if (!text || finalWeightKg < 30 || finalWeightKg > 200) {
       setError('Please enter a valid weight (30-200 kg)');
       return;
     }
@@ -99,8 +109,17 @@ export function WeightStep({ data, onNext, saving }: OnboardingStepProps) {
           />
         </Svg>
         <View style={styles.gaugeCenter}>
-          <Text style={styles.gaugeValue}>{currentWeight}</Text>
-          <Text style={[styles.gaugeUnit, { color: palette.mutedText }]}>{unit}</Text>
+          <TextInput
+            testID="weight-input"
+            value={text}
+            onChangeText={handleType}
+            keyboardType="decimal-pad"
+            selectTextOnFocus
+            maxLength={6}
+            accessibilityLabel={`Weight in ${unit === 'kg' ? 'kilograms' : 'pounds'}`}
+            style={[styles.gaugeValue, { color: palette.text }]}
+          />
+          <Text style={[styles.gaugeUnit, { color: palette.mutedText }]}>{unit} · tap to type</Text>
         </View>
       </View>
 
@@ -120,8 +139,9 @@ export function WeightStep({ data, onNext, saving }: OnboardingStepProps) {
             thumbTintColor={PRIMARY}
             onValueChange={(value) => {
               setError('');
-              if (unit === 'kg') setWeightKg(Math.round(value));
-              else setWeightLbs(Math.round(value));
+              const whole = Math.round(value);
+              setText(String(whole));
+              setWeightKg(round2(unit === 'kg' ? whole : lbsToKg(whole)));
             }}
           />
         </View>
@@ -133,7 +153,7 @@ export function WeightStep({ data, onNext, saving }: OnboardingStepProps) {
       {/* Conversion badge */}
       <View style={styles.conversionBadge}>
         <Text style={[styles.conversionText, { color: palette.mutedText }]}>
-          {unit === 'kg' ? `${Math.round(weightKg * 2.205)} lbs` : `${Math.round(weightLbs / 2.205)} kg`}
+          {unit === 'kg' ? `${fmtWeight(kgToLbs(weightKg))} lbs` : `${fmtWeight(weightKg)} kg`}
         </Text>
       </View>
     </StepScaffold>
@@ -174,10 +194,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gaugeValue: {
-    color: '#FFFFFF',
     fontSize: 56,
     fontWeight: '900',
     letterSpacing: -2,
+    minWidth: 120,
+    padding: 0,
+    textAlign: 'center',
   },
   gaugeUnit: {
     fontSize: 14,

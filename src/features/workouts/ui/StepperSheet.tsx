@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button } from '@/src/features/workouts/ui/Chrome';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
+import { limitDecimals, WEIGHT_DECIMALS } from '@/src/lib/decimal';
 import { haptic } from '@/src/lib/haptics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -18,6 +19,8 @@ export interface StepField {
   max: number;
   /** Shown in the box (e.g. seconds → "0:45"). Typing still edits the raw number. */
   display?: (v: number) => string;
+  /** Most decimals the box accepts when typing (weights: 2, the backend's precision). */
+  decimals?: number;
 }
 
 interface Props {
@@ -76,7 +79,8 @@ export function StepperSheet({ visible, title, subtitle, fields, saveLabel = 'Do
                 <View style={[styles.valueBox, { borderColor: c.border, backgroundColor: c.background }]}>
                   <TextInput
                     value={f.display && texts[f.key] === String(round(v)) ? f.display(v) : texts[f.key] ?? ''}
-                    onChangeText={(t) => {
+                    onChangeText={(raw) => {
+                      const t = f.decimals === undefined ? raw : limitDecimals(raw, f.decimals);
                       setTexts((p) => ({ ...p, [f.key]: t }));
                       const n = parseFloat(t.replace(',', '.'));
                       if (!Number.isNaN(n)) setValues((p) => ({ ...p, [f.key]: Math.min(f.max, Math.max(f.min, n)) }));
@@ -118,8 +122,8 @@ const styles = StyleSheet.create({
 export const stepFieldsFor = {
   sets: (v: number): StepField => ({ key: 'sets', label: 'Sets', value: v, step: 1, min: 1, max: 10 }),
   reps: (v: number): StepField => ({ key: 'reps', label: 'Reps', value: v, step: 1, min: 0, max: 200 }),
-  kg: (v: number, label = 'Weight'): StepField => ({ key: 'kg', label, hint: 'kg', value: v, step: 2.5, min: 0, max: 500 }),
-  addKg: (v: number): StepField => ({ key: 'kg', label: 'Extra weight', hint: '0 = bodyweight', value: v, step: 2.5, min: 0, max: 200 }),
+  kg: (v: number, label = 'Weight'): StepField => ({ key: 'kg', label, hint: 'kg', value: v, step: 2.5, min: 0, max: 500, decimals: WEIGHT_DECIMALS }),
+  addKg: (v: number): StepField => ({ key: 'kg', label: 'Extra weight', hint: '0 = bodyweight', value: v, step: 2.5, min: 0, max: 200, decimals: WEIGHT_DECIMALS }),
   holdSec: (v: number): StepField => ({ key: 'sec', label: 'Hold time', hint: 'seconds', value: v, step: 15, min: 5, max: 900 }),
   minutes: (v: number): StepField => ({ key: 'min', label: 'Time', hint: 'minutes', value: v, step: 1, min: 1, max: 300 }),
   km: (v: number): StepField => ({ key: 'km', label: 'Distance', hint: 'km', value: v, step: 0.1, min: 0, max: 200 }),
