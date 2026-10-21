@@ -64,10 +64,10 @@ export function PlanScreen() {
     try {
       await start();
       setConfirm(false);
-      toast('Your starter program is on — today’s workout is on Train');
+      toast('Your starter program is on — today’s workout is on Train', 'success');
       goTo('/workouts');
     } catch {
-      toast('Couldn’t start the program. Check your connection and try again.');
+      toast('Couldn’t start the program. Check your connection and try again.', 'error');
     }
   };
   // After editing the fitness profile: replace the saved starter with the new preview.
@@ -75,9 +75,9 @@ export function PlanScreen() {
     try {
       await start();
       await plan.refresh();
-      toast('Program rebuilt from your latest answers');
+      toast('Program rebuilt from your latest answers', 'success');
     } catch {
-      toast('Couldn’t rebuild the program. Check your connection and try again.');
+      toast('Couldn’t rebuild the program. Check your connection and try again.', 'error');
     }
   };
   const twoButtons = first || starterActive;

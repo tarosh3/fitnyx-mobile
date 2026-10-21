@@ -47,7 +47,8 @@ export function ArenaHero({ board, saving, onListedChange }: {
         </View>
       ) : null}
 
-      {needsPoints && !(board.scope === 'global' && !board.me.listed) ? (
+      {/* Shown whether or not the user is on Global, so joining doesn't move the switch under their finger. */}
+      {needsPoints ? (
         <Button testID="arena-action" title={action.label} onPress={() => router.push(action.href as never)} style={styles.action} />
       ) : null}
 

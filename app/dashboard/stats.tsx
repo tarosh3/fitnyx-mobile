@@ -15,7 +15,6 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   PanResponder,
   Pressable,
@@ -63,6 +62,8 @@ import {
   useWeightUnit,
 } from '@/src/lib/prefs';
 import { elevation, radii, spacing, type as t } from '@/src/styles/tokens';
+import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 
 type Metric = {
   id: string;
@@ -408,6 +409,10 @@ export default function StatsScreen() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Shown inside the log modal: toasts render under RN Modals.
+  const [formError, setFormError] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const toast = useToast();
   const [latest, setLatest] = useState<Metric | null>(null);
   const [history, setHistory] = useState<Metric[]>([]);
   const [targetWeightKg, setTargetWeightKg] = useState<number | undefined>(undefined);
@@ -524,7 +529,7 @@ export default function StatsScreen() {
         console.error('Failed to load metrics', err);
         // Don't alert if we already have cached data on screen
         if (alertOnFail) {
-          Alert.alert('Error', 'Unable to load body stats.');
+          toast('Couldn’t load your body stats', 'error');
         }
       }
     } finally {
@@ -534,6 +539,7 @@ export default function StatsScreen() {
 
   const handleSave = async () => {
     setSaving(true);
+    setFormError(null);
     try {
       const weightKg = weightUnit === 'kg' ? parseFloat(weight) : lbsToKg(parseFloat(weight));
       let heightInCm: number | undefined;
@@ -547,7 +553,7 @@ export default function StatsScreen() {
       }
 
       if (isNaN(weightKg) && heightInCm == null) {
-        Alert.alert('Missing data', 'Enter weight or height.');
+        setFormError('Enter a weight or a height.');
         setSaving(false);
         return;
       }
@@ -593,7 +599,7 @@ export default function StatsScreen() {
           cacheSet(cacheKeys.bodyMetricsLatest(userId), pending, cacheTTL.LONG).catch(() => undefined);
         }
         closeForm();
-        Alert.alert('Saved offline', "We'll sync this entry when you're back online.");
+        toast('Saved offline — it syncs when you’re back online', 'success');
         return;
       }
 
@@ -601,7 +607,7 @@ export default function StatsScreen() {
       await loadData();
     } catch (err) {
       console.error('Failed to save metric', err);
-      Alert.alert('Error', 'Could not save. Try again.');
+      setFormError('Couldn’t save. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -609,24 +615,22 @@ export default function StatsScreen() {
 
   const handleDelete = (id: string) => {
     if (id.startsWith('offline-')) {
-      Alert.alert('Waiting to sync', 'This entry was saved offline. You can delete it once it has synced.');
+      toast('This entry was saved offline — you can delete it once it syncs');
       return;
     }
-    Alert.alert('Delete entry', 'Remove this measurement permanently?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteMetric(id);
-            await loadData();
-          } catch {
-            Alert.alert('Error', 'Could not delete.');
-          }
-        },
-      },
-    ]);
+    setDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteId;
+    setDeleteId(null);
+    if (!id) return;
+    try {
+      await deleteMetric(id);
+      await loadData();
+    } catch {
+      toast('Couldn’t delete that entry', 'error');
+    }
   };
 
   if (loading) {
@@ -842,7 +846,7 @@ export default function StatsScreen() {
 
         {/* Log entry CTA */}
         <View style={{ paddingHorizontal: spacing.base, paddingTop: spacing.lg }}>
-          <Button title="+ Log new entry" onPress={() => setLogOpen(true)} />
+          <Button title="+ Log new entry" onPress={() => { setFormError(null); setLogOpen(true); }} />
         </View>
 
         <View style={{ height: spacing['2xl'] }} />
@@ -1026,6 +1030,7 @@ export default function StatsScreen() {
               </View>
             </View>
 
+            {formError ? <Text style={[styles.formError, { color: c.destructive }]}>{formError}</Text> : null}
             <Button
               title={saving ? 'Saving…' : 'Save Entry'}
               onPress={handleSave}
@@ -1034,11 +1039,22 @@ export default function StatsScreen() {
           </ScrollView>
         </View>
       </Modal>
+      <ConfirmModal
+        visible={deleteId != null}
+        variant="danger"
+        title="Delete entry?"
+        message="This measurement will be removed permanently."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  formError: { fontFamily: t.weight.semibold, fontSize: 14, textAlign: 'center' },
   scroll: {
     paddingBottom: spacing['3xl'],
     gap: spacing.sm,

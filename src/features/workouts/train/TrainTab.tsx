@@ -41,7 +41,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
     try {
       await startWorkout({ planId, dayId }, { router, setActiveSession });
     } catch {
-      toast('We couldn’t start the workout. Check your connection and try again.');
+      toast('We couldn’t start the workout. Check your connection and try again.', 'error');
     }
   };
   const startRoutine = (r: Routine) => {
@@ -128,7 +128,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
           setCardioOpen(false);
           // Starts an empty workout; the logger opens with the picked machine added.
           startWorkout({}, { router, setActiveSession }, { addExerciseUuid: p[0].uuid })
-            .catch(() => toast('We couldn’t start the workout. Check your connection and try again.'));
+            .catch(() => toast('We couldn’t start the workout. Check your connection and try again.', 'error'));
         }}
       />
     </View>

@@ -29,7 +29,7 @@ export function AiReportCard({ userId, firstName }: { userId?: string; firstName
       await sharePdf(aiReportHtml(report.content, { name: firstName, from: report.period_from.slice(0, 10), to: report.period_to.slice(0, 10), createdAt: report.created_at }),
         reportFileName(`ai-report-${report.created_at.slice(0, 10)}`, 'pdf'));
     } catch {
-      toast('Couldn’t create the PDF. Try again.');
+      toast('Couldn’t create the PDF. Try again.', 'error');
     } finally {
       setBusy(false);
     }

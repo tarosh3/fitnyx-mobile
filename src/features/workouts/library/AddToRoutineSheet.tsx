@@ -35,10 +35,10 @@ export function AddToRoutineSheet({ visible, exercise, onStart, onClose }: { vis
     try {
       const updated = await updateRoutine(r.id, { title: r.title, exercises: [...r.exercises.map(keepTargets), defaultTargets(exercise)] });
       routines.setData(list.map((x) => (x.id === id ? updated : x)));
-      toast(`Added to ${r.title}`);
+      toast(`Added to ${r.title}`, 'success');
       onClose();
     } catch {
-      toast('Couldn’t add it. Check your connection and try again.');
+      toast('Couldn’t add it. Check your connection and try again.', 'error');
     } finally {
       setBusyId(null);
     }

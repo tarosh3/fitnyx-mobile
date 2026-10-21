@@ -72,15 +72,15 @@ export function SummaryScreen() {
   };
 
   const saveRoutine = async () => {
-    if (isOffline) { toast('You’re offline — try again when connected'); return; }
+    if (isOffline) { toast('You’re offline — try again when connected', 'error'); return; }
     setSaving(true);
     try {
       const r = await routineFromSession(sessionId);
       setSavedAs(r.title);
       if (routines.data) routines.setData([r, ...routines.data]);
-      toast(`Saved as “${r.title}”`);
+      toast(`Saved as “${r.title}”`, 'success');
     } catch (e: any) {
-      toast(e?.status === 409 ? 'You have 30 routines. Delete one first.' : 'Couldn’t save the routine');
+      toast(e?.status === 409 ? 'You have 30 routines. Delete one first.' : 'Couldn’t save the routine', 'error');
     } finally {
       setSaving(false);
     }

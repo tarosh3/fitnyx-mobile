@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { uuidV4 } from '@/src/features/roam/recordingStore';
@@ -12,6 +12,7 @@ import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { useGoals } from '@/src/features/goals/data';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 import { useDietDay, useDietPlan } from '../data/useDiet';
 import { fmt, goalsFromPlan, loggedPlanMeals, planLogItem, planMeals, scaleMacros, SLOT_LABELS, sumLogs, withDietGoals } from '../model';
 import { MealGlyph, SectionTitle, VegMark } from '../ui/bits';
@@ -20,6 +21,7 @@ import { MacroPlate } from './MacroPlate';
 
 export function MealDetailScreen() {
   const c = useThemeColors();
+  const toast = useToast();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const bottomSpace = useBottomBarSpace();
@@ -68,12 +70,12 @@ export function MealDetailScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert('Couldn’t save that', (e as Error)?.message || 'Please try again.');
+      toast((e as Error)?.message || 'Couldn’t save that. Please try again.', 'error');
     } finally {
       setSaving(false);
     }
   };
-  const undo = () => log && day.remove(log.client_log_id).then(() => router.back()).catch((e) => Alert.alert('Couldn’t remove that', (e as Error)?.message || 'Please try again.'));
+  const undo = () => log && day.remove(log.client_log_id).then(() => router.back()).catch((e) => toast((e as Error)?.message || 'Couldn’t remove that. Please try again.', 'error'));
 
   const cta = log
     ? (changed ? 'Save changes' : 'Logged')

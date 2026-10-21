@@ -53,7 +53,7 @@ export default function RoutineScreen() {
     try {
       await startWorkout({ planId: routine.id, dayId: routine.day_id }, { router, setActiveSession });
     } catch {
-      toast('We couldn’t start the workout. Check your connection and try again.');
+      toast('We couldn’t start the workout. Check your connection and try again.', 'error');
     } finally {
       setStarting(false);
     }
@@ -66,7 +66,7 @@ export default function RoutineScreen() {
       toast(`Deleted “${routine.title}”`);
       router.back();
     } catch {
-      toast('Couldn’t delete. Check your connection and try again.');
+      toast('Couldn’t delete. Check your connection and try again.', 'error');
     }
   };
 

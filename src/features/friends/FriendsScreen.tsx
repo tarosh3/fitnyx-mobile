@@ -38,11 +38,11 @@ export function FriendsScreen() {
     try {
       const result = await applyFriendChange(kind, user.id);
       const message = changeMessage(kind, result, user.username);
-      if (message) toast(message);
+      if (message) toast(message, 'success');
       refreshAll();
       return result;
     } catch (e) {
-      toast((e as Error).message);
+      toast((e as Error).message, 'error');
       return null;
     }
   }, [toast, refreshAll]);

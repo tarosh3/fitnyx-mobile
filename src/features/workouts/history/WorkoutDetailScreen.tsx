@@ -90,7 +90,7 @@ export function WorkoutDetailScreen() {
       }
       refreshGrit();
     } catch {
-      toast('Couldn’t save the change');
+      toast('Couldn’t save the change', 'error');
     }
   };
 
@@ -104,7 +104,7 @@ export function WorkoutDetailScreen() {
       toast('Set deleted');
       refreshGrit();
     } catch {
-      toast('Couldn’t delete the set');
+      toast('Couldn’t delete the set', 'error');
     }
   };
 
@@ -116,11 +116,11 @@ export function WorkoutDetailScreen() {
       else {
         const r = await routineFromSession(sessionId);
         if (routines.data) routines.setData([r, ...routines.data]);
-        toast(`Saved as routine “${r.title}”`);
+        toast(`Saved as routine “${r.title}”`, 'success');
         router.push(`/workouts/routine/${r.id}`);
       }
     } catch {
-      toast(isOffline ? 'You’re offline — try again when connected' : 'Something went wrong. Try again.');
+      toast(isOffline ? 'You’re offline — try again when connected' : 'Something went wrong. Try again.', 'error');
     } finally {
       setBusy(false);
     }
@@ -135,7 +135,7 @@ export function WorkoutDetailScreen() {
       toast('Workout deleted');
       router.canGoBack() ? router.back() : router.replace('/workouts?tab=history');
     } catch {
-      toast(isOffline ? 'You’re offline — try again when connected' : 'Couldn’t delete it. Try again.');
+      toast(isOffline ? 'You’re offline — try again when connected' : 'Couldn’t delete it. Try again.', 'error');
     } finally {
       setBusy(false);
     }

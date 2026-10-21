@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Search, Utensils, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { uuidV4 } from '@/src/features/roam/recordingStore';
 import { BottomBar, Button, TopBar, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
@@ -10,6 +10,7 @@ import type { DietLogItem, Food, MealSlot, RecentFood } from '@/src/lib/api/diet
 import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 import { saveMealLog } from '../data/dietLogs';
 import { fmt, foodLogItem, itemsTotal, SLOT_LABELS, SLOTS, slotForHour } from '../model';
 import { SectionTitle } from '../ui/bits';
@@ -23,6 +24,7 @@ const keyOf = (f: Food | RecentFood) => `${f.name.toLowerCase()}|${f.portion_lab
 
 export function LogFoodScreen() {
   const c = useThemeColors();
+  const toast = useToast();
   const { fontScale } = useWindowDimensions();
   const router = useRouter();
   const { user } = useAuth();
@@ -57,7 +59,7 @@ export function LogFoodScreen() {
       await saveMealLog({ client_log_id: uuidV4(), local_date: date, slot, source, name: name.slice(0, 120), items: logItems });
       router.back();
     } catch (e) {
-      Alert.alert('Couldn’t save that', (e as Error)?.message || 'Please try again.');
+      toast((e as Error)?.message || 'Couldn’t save that. Please try again.', 'error');
     } finally {
       setSaving(false);
     }

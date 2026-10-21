@@ -3,7 +3,6 @@ import { Brain, ChevronLeft, Save } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import { Screen } from '@/src/components/ui/Screen';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { getAIProfile, updateAIProfile } from '@/src/lib/api/agent';
 import { sanitizeGeneralText } from '@/src/lib/validators';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 
 const MAX_WORDS = 120;
 const MAX_CHARS = 1000; // generous char limit, server enforces word count
@@ -26,6 +26,7 @@ function countWords(text: string): number {
 export default function CoachMemoryScreen() {
   const router = useRouter();
   const palette = useThemeColors();
+  const toast = useToast();
   const [note, setNote] = useState('');
   const [originalNote, setOriginalNote] = useState('');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -56,7 +57,7 @@ export default function CoachMemoryScreen() {
 
   const handleSave = useCallback(async () => {
     if (isOverLimit) {
-      Alert.alert('Too many words', `Please keep your note under ${MAX_WORDS} words.`);
+      toast(`Keep your note under ${MAX_WORDS} words.`, 'error');
       return;
     }
     if (!hasChanges) return;
@@ -68,14 +69,14 @@ export default function CoachMemoryScreen() {
       setOriginalNote(savedNote);
       setNote(savedNote);
       setLastUpdated(profile.manual_memory_updated_at);
-      Alert.alert('Saved', 'Your coach memory has been updated. Filo will reflect this in your next conversation.');
+      toast('Saved — Filo will use it from your next chat', 'success');
     } catch (error: any) {
       const msg = error?.data?.error || 'Failed to save. Please try again.';
-      Alert.alert('Error', msg);
+      toast(msg, 'error');
     } finally {
       setIsSaving(false);
     }
-  }, [note, isOverLimit, hasChanges]);
+  }, [note, isOverLimit, hasChanges, toast]);
 
   const styles = React.useMemo(() => getStyles(palette), [palette]);
 

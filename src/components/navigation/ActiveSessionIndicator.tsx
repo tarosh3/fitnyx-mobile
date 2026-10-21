@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Keyboard, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { ArrowUpRight, Pause, Play } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { useWorkout, useWorkoutTimer } from '@/src/providers/WorkoutProvider';
 import { useSetWorkoutOverlayInset } from '@/src/providers/WorkoutOverlayProvider';
 import { elevation, radii, spacing, type } from '@/src/styles/tokens';
+import { showToast } from '@/src/features/workouts/ui/Toast';
 import { bottomNavClearance, isBottomNavRoute } from './bottomNavLayout';
 
 const WORKOUT_ART = require('../../../assets/images/workouts/strength-equipment.png');
@@ -68,7 +69,8 @@ export function ActiveSessionIndicator() {
       if (running) await pauseActiveSession();
       else await resumeActiveSession();
     } catch {
-      Alert.alert('Couldn’t update the timer', 'Please try again. You can also open your workout to check its status.');
+      // Rendered outside ToastProvider (root overlay), so use the global toast.
+      showToast('Couldn’t update the timer. Open your workout to check it.', 'error');
     } finally {
       actionPending.current = false;
       setBusy(false);

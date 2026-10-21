@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, LogOut } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import { IntensityStep } from '@/src/features/onboarding/steps/IntensityStep';
 import { MotivationStep } from '@/src/features/onboarding/steps/MotivationStep';
 import { ScheduleStep } from '@/src/features/onboarding/steps/ScheduleStep';
 import { resumeStepIndex } from '@/src/features/onboarding/resumeStep';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 
 const PRIMARY = '#5FC793';
 
@@ -73,6 +74,7 @@ function DotProgress({ current, total }: { current: number; total: number }) {
 export function OnboardingFlow() {
   const router = useRouter();
   const palette = useThemeColors();
+  const toast = useToast();
   const insets = useSafeAreaInsets();
   const { signOut, markOnboardingComplete } = useAuth();
 
@@ -160,7 +162,7 @@ export function OnboardingFlow() {
     try {
       await signOut();
     } catch {
-      Alert.alert("Can't sign out", 'Connect to the internet to sign out.');
+      toast('You’re offline. Connect to the internet to sign out.', 'error');
     }
   };
 

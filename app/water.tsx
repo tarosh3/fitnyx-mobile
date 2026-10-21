@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { Check, ChevronLeft, Droplet, Minus, Plus, Settings2, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Modal,
   Pressable,
   StyleSheet,
@@ -29,12 +28,14 @@ import { SectionHeader } from '@/src/components/ui/SectionHeader';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { getMonthTotals, useWaterToday, WATER_LIMITS, ymd } from '@/src/lib/water';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 
 const PRESETS = [200, 300, 500];
 
 export default function WaterScreen() {
   const router = useRouter();
   const c = useThemeColors();
+  const toast = useToast();
   const { day, goalMl, totalMl, add, remove, clearAll, setGoal } = useWaterToday();
 
   const [customOpen, setCustomOpen] = useState(false);
@@ -71,20 +72,11 @@ export default function WaterScreen() {
     );
     const res = await add(ml);
     if (res.status === 'daily-cap') {
-      Alert.alert(
-        'Daily limit reached',
-        `You've reached the ${WATER_LIMITS.MAX_DAILY_ML / 1000} L safety cap for one day.`
-      );
+      toast(`Daily limit reached — ${WATER_LIMITS.MAX_DAILY_ML / 1000} L is the safety cap for a day.`, 'error');
     } else if (res.status === 'entry-limit') {
-      Alert.alert(
-        'Too many entries',
-        `You can log water up to ${WATER_LIMITS.MAX_ENTRIES_PER_DAY} times a day.`
-      );
+      toast(`You can log water up to ${WATER_LIMITS.MAX_ENTRIES_PER_DAY} times a day.`, 'error');
     } else if (res.status === 'clamped') {
-      Alert.alert(
-        'Amount capped',
-        `Logged ${res.addedMl} ml — a single log is capped at ${WATER_LIMITS.MAX_ENTRY_ML} ml and the day at ${WATER_LIMITS.MAX_DAILY_ML / 1000} L.`
-      );
+      toast(`Logged ${res.addedMl} ml — one log is capped at ${WATER_LIMITS.MAX_ENTRY_ML} ml, a day at ${WATER_LIMITS.MAX_DAILY_ML / 1000} L.`);
     }
   };
 

@@ -49,7 +49,7 @@ export function LoggerScreen() {
   const { activeSession, pauseActiveSession, resumeActiveSession, finishActiveSession, abandonActiveSession } = useWorkout();
   const { elapsedTime } = useWorkoutTimer();
   const lg = useWorkoutLogger(sessionId);
-  useNotificationWorkoutAction(sessionId, !lg.loading, () => toast('Couldn’t update the timer. Please try again.'));
+  useNotificationWorkoutAction(sessionId, !lg.loading, () => toast('Couldn’t update the timer. Please try again.', 'error'));
   const routines = useRoutines();
 
   // null = follow the first unfinished exercise; { key: null } = all closed.
@@ -111,13 +111,13 @@ export function LoggerScreen() {
     if (state === 'running') return;
     const first = state === 'ready';
     try { await resumeActiveSession(); }
-    catch { toast('Couldn’t start the timer. Please try again.'); return; }
+    catch { toast('Couldn’t start the timer. Please try again.', 'error'); return; }
     if (announce || first) toast(first ? 'Timer started' : 'Timer resumed');
   };
 
   const pauseTimer = async () => {
     try { await pauseActiveSession(); }
-    catch { toast('Couldn’t pause the timer. Please try again.'); return; }
+    catch { toast('Couldn’t pause the timer. Please try again.', 'error'); return; }
     toast('Paused — tap ▶ to carry on');
   };
 
@@ -139,7 +139,7 @@ export function LoggerScreen() {
       if (res.restSec) void updateWorkoutDetails(sessionId, { restEnd: Date.now() + res.restSec * 1000 });
       if (pendingCount(b) === 1 && open?.key === b.key) setOpen(null);
     } catch {
-      toast('Couldn’t save that set. Try again.');
+      toast('Couldn’t save that set. Try again.', 'error');
     } finally {
       logging.current.delete(rowKey);
     }
@@ -175,11 +175,11 @@ export function LoggerScreen() {
     setBusy(true);
     try {
       if (addExtras && routine) {
-        if (isOffline) toast('Offline — routine not updated');
+        if (isOffline) toast('Offline — routine not updated', 'error');
         else {
           const updated = await updateRoutine(routine.id, routineWithExtras(routine, extraBlocks(blocks, routine))).catch(() => null);
           if (updated && routines.data) routines.setData(routines.data.map((r) => (r.id === updated.id ? updated : r)));
-          if (!updated) toast('Couldn’t update the routine');
+          if (!updated) toast('Couldn’t update the routine', 'error');
         }
       }
       leaving.current = true;
@@ -190,7 +190,7 @@ export function LoggerScreen() {
       router.replace(`/workouts/summary/${sessionId}`);
     } catch {
       leaving.current = false;
-      toast('Couldn’t finish. Try again.');
+      toast('Couldn’t finish. Try again.', 'error');
     } finally {
       setBusy(false);
     }
@@ -207,7 +207,7 @@ export function LoggerScreen() {
       router.dismissTo('/workouts');
     } catch {
       leaving.current = false;
-      toast('Couldn’t discard. Try again.');
+      toast('Couldn’t discard. Try again.', 'error');
     } finally {
       setBusy(false);
     }
@@ -222,7 +222,7 @@ export function LoggerScreen() {
       setOpen(null);
       toast(`Removed ${b.exercise?.title ?? 'exercise'}`);
     } catch {
-      toast('Couldn’t remove it. Try again.');
+      toast('Couldn’t remove it. Try again.', 'error');
     }
   };
 
@@ -298,13 +298,13 @@ export function LoggerScreen() {
             const ed = editor!;
             setEditor(null);
             if (ed.kind === 'pending') lg.setDraft(ed.bi, ed.pi, d);
-            else lg.updateLog(ed.bi, ed.logId, d, rpe).then(() => toast('Set updated')).catch(() => toast('Couldn’t save the change'));
+            else lg.updateLog(ed.bi, ed.logId, d, rpe).then(() => toast('Set updated')).catch(() => toast('Couldn’t save the change', 'error'));
           }}
           onDelete={() => {
             const ed = editor!;
             setEditor(null);
             if (ed.kind === 'pending') lg.removePending(ed.bi);
-            else lg.deleteLog(ed.bi, ed.logId).then(() => toast('Set deleted')).catch(() => toast('Couldn’t delete the set'));
+            else lg.deleteLog(ed.bi, ed.logId).then(() => toast('Set deleted')).catch(() => toast('Couldn’t delete the set', 'error'));
           }} />
       ) : null}
 
