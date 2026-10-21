@@ -30,9 +30,9 @@ const roam = (over: Partial<ActivityDetail> = {}): ActivityDetail => ({
 describe('roamCardData', () => {
   it('a run: distance hero, time, pace, steps, a playful fact and km splits for the receipt', () => {
     const d = roamCardData(roam({ steps: 6123 }));
-    expect(d.kicker).toBe('RUN');
+    expect(d.kicker).toBe('STRIDE');
     expect(d.activityType).toBe('run');
-    expect(d.title).toMatch(/Run$/); // the default name
+    expect(d.title).toMatch(/Stride$/); // the default name
     expect(d.hero).toEqual({ label: 'Distance', value: '5.00', unit: 'km' });
     expect(d.stats).toEqual([
       { label: 'Time', value: '27:48' },

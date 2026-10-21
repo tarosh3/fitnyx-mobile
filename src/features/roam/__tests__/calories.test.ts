@@ -16,5 +16,8 @@ describe('Roam calories', () => {
     expect(roamKcal('walk', 3000, 2250, 80)).toBe(184);
     expect(roamKcal('run', 5000, 1800, null)).toBe(0);
     expect(roamKcal('run', 5000, 0, 70)).toBe(0);
+    // A Stride counts as the type it is saved as.
+    expect(roamKcal('stride', 5000, 1800, 70)).toBe(roamKcal('run', 5000, 1800, 70));
+    expect(roamKcal('stride', 3000, 2250, 80)).toBe(roamKcal('walk', 3000, 2250, 80));
   });
 });

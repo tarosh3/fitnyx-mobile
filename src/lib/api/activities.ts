@@ -71,7 +71,7 @@ export interface CreateActivityInput {
   ended_at: string;
   /** Device-local calendar date of the start (YYYY-MM-DD). */
   local_date: string;
-  /** Optional title; blank = the app's default ("Morning Run"). */
+  /** Optional title; blank = the app's default ("Morning Stride"). */
   name?: string;
   /** [lat, lng, t, accuracy, segment, gpsSpeed, steps] — see RoamPoint. */
   points: RoamPoint[];

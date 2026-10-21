@@ -20,7 +20,7 @@ interface Props {
   elapsedSec: number;
   saving: boolean;
   error: string | null;
-  /** Editable title, prefilled with the default ("Morning Run"). */
+  /** Editable title, prefilled with the default ("Morning Stride"). */
   name: string;
   /** Shown when the field is cleared — what saving it blank will show. */
   defaultName: string;

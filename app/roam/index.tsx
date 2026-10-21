@@ -23,8 +23,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 const TYPES: { label: string; value: ActivityType }[] = [
-  { label: 'Run', value: 'run' },
-  { label: 'Walk', value: 'walk' },
+  { label: 'Stride', value: 'stride' },
   { label: 'Ride', value: 'cycle' },
 ];
 
@@ -34,7 +33,7 @@ export default function RoamScreen() {
   const { user } = useAuth();
   const { data, pending, loading, error, offline } = useRoamActivities(user?.id);
   const recording = useRoamRecording();
-  const [type, setType] = useState<ActivityType>('run');
+  const [type, setType] = useState<ActivityType>('stride');
   const [starting, setStarting] = useState(false);
   const [notice, setNotice] = useState<'denied' | 'blocked' | 'failed' | null>(null);
   const [inProgress, setInProgress] = useState(false);
@@ -73,7 +72,7 @@ export default function RoamScreen() {
 
   return (
     <Screen>
-      <PageHeader title="ROAM" subtitle="RUN · WALK · RIDE" backTo="/" />
+      <PageHeader title="ROAM" subtitle="STRIDE · RIDE" backTo="/" />
 
       <View style={styles.section}>
         {inProgress ? (
