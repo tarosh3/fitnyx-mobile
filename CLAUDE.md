@@ -138,6 +138,11 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Everyone can view Global; only users who switch on "Show me on Global" (`PUT /arena/settings`) are ranked there (`me.rank` null otherwise). Strangers' `name` is null — show `@username`.
 - Entry: Home `ArenaHomeCard` (this week's Grit among friends; hidden until it loads, so an older backend shows nothing). Screen tests must stub `SegmentedControl` (Reanimated doesn't load in jest).
 
+**Notifications (`src/features/notifications/`, route `app/notifications.tsx`)** — 2026-10-22, backend `/notifications`:
+- In-app only: Home header bell (unread badge) → list of friend requests, acceptances and "passed you on <board> this week"; each opens its screen (`notificationTarget`). Bell and list share one cached resource (`cacheKeys.notifications`).
+- Opening the list marks read whenever unread ones appear (cached copy, then the focus refresh) and **reloads after the server confirms** — the focus GET can still be in flight with the old count. Rows that arrived unread stay tinted while open.
+- No remote push yet: `@react-native-firebase/app` is installed but there is no messaging module, no Android `google-services.json`, no APNs entitlement (free Apple accounts can't use push).
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -153,7 +158,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`arena` · `auth` · `dashboard` · `diet` · `friends` · `goals` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
+`arena` · `auth` · `dashboard` · `diet` · `friends` · `goals` · `notifications` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 

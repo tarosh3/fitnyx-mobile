@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArenaHomeCard } from '@/src/features/arena/ui/ArenaHomeCard';
 import { TodayGoalsCard } from '@/src/features/goals/ui/TodayGoalsCard';
+import { NotificationBell } from '@/src/features/notifications/ui/NotificationBell';
 import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -110,6 +111,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
             <Text style={styles.greeting}>{greeting},</Text>
             <Text accessibilityRole="header" style={styles.name} numberOfLines={2}>{userName}.</Text>
           </View>
+          <NotificationBell />
           <Pressable
             testID="home-profile"
             accessibilityRole="button"

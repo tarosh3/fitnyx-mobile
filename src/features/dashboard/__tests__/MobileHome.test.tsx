@@ -62,6 +62,7 @@ jest.mock('expo-linear-gradient', () => ({
 jest.mock('../components/PlanTodayCard', () => ({ PlanTodayCard: () => null }));
 jest.mock('@/src/features/goals/ui/TodayGoalsCard', () => ({ TodayGoalsCard: () => null }));
 jest.mock('@/src/features/arena/ui/ArenaHomeCard', () => ({ ArenaHomeCard: () => null }));
+jest.mock('@/src/features/notifications/ui/NotificationBell', () => ({ NotificationBell: () => null }));
 jest.mock('../components/ActivityHeatmap', () => ({
   ActivityHeatmap: () => require('react').createElement(require('react-native').View, { testID: 'history-heatmap' }),
 }));
