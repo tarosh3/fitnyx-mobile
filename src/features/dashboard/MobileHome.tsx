@@ -87,7 +87,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
   };
 
   const shortcuts = [
-    { title: 'Roam', subtitle: 'Run, walk, ride', icon: Route, route: '/roam', id: 'home-roam' },
+    { title: 'Roam', subtitle: 'Stride or ride', icon: Route, route: '/roam', id: 'home-roam' },
     { title: 'Nutrition', subtitle: 'Your daily fuel', icon: Salad, route: '/diet', id: 'home-nutrition' },
     { title: 'Water', subtitle: 'Stay hydrated', icon: Droplets, route: '/water', id: 'home-water' },
   ] as const;

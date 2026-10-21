@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout';
+import { ArenaPill } from '@/src/features/arena/ui/ArenaPill';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
@@ -85,9 +86,12 @@ export function ProgressScreen() {
       <ScrollView ref={scroll} showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: bottomNavClearance(insets.bottom) + 32 + workoutInset }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.primary} />}>
-        <View>
-          <Text style={[styles.date, { color: c.mutedText }]}>{longDate(new Date())}</Text>
-          <Text style={[styles.h1, { color: c.text }]} accessibilityRole="header">Progress</Text>
+        <View style={styles.head}>
+          <View>
+            <Text style={[styles.date, { color: c.mutedText }]}>{longDate(new Date())}</Text>
+            <Text style={[styles.h1, { color: c.text }]} accessibilityRole="header">Progress</Text>
+          </View>
+          <ArenaPill />
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.segScroll} contentContainerStyle={styles.segs} accessibilityRole="tablist">
@@ -134,6 +138,7 @@ export function ProgressScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: spacing.base, gap: spacing.md },
+  head: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.md },
   date: { fontFamily: type.weight.bold, fontSize: 11, letterSpacing: type.tracking.eyebrow, textTransform: 'uppercase' },
   h1: { fontFamily: type.weight.extrabold, fontSize: 34, letterSpacing: -0.6, marginTop: 4 },
   segScroll: { marginHorizontal: -spacing.base },
