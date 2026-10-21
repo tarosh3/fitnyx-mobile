@@ -45,6 +45,8 @@ export const cacheKeys = {
   friendRequests: (userId: string, direction: 'incoming' | 'outgoing') => `friends:requests:${direction}:${userId}`,
   // Arena leaderboards, per board / scope / period / local date (shown offline as last seen).
   arenaBoard: (userId: string, board: string, scope: string, period: string, date: string) => `arena:${userId}:${board}:${scope}:${period}:${date}`,
+  // In-app notifications (GET /notifications) — the list and the bell's unread badge.
+  notifications: (userId: string) => `notifications:${userId}`,
 } as const;
 
 export const cacheTTL = {
