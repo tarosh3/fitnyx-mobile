@@ -198,5 +198,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing.sm },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   hint: { fontFamily: type.weight.regular, fontSize: 15 },
-  noFlex: { flex: 0 },
+  noFlex: { flexGrow: 0 },
 });

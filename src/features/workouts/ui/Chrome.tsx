@@ -79,6 +79,8 @@ const styles = StyleSheet.create({
   title: { fontFamily: type.weight.bold, fontSize: 18 },
   subtitle: { fontFamily: type.weight.regular, fontSize: 13 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: spacing.md, paddingHorizontal: spacing.base, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.sm + 2 },
-  btn: { minHeight: 56, borderRadius: radii.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, flex: 1 },
+  // Grows to fill a BottomBar row, but keeps its natural size as a basis: `flex: 1`
+  // (basis 0) made a Sheet footer count it as 0 pt tall, so tall content ran under it.
+  btn: { minHeight: 56, borderRadius: radii.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, flexGrow: 1, flexShrink: 1 },
   btnText: { flexShrink: 1, textAlign: 'center', fontFamily: type.weight.bold, fontSize: 17 },
 });

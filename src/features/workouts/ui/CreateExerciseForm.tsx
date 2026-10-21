@@ -124,5 +124,5 @@ const styles = StyleSheet.create({
   hint: { fontFamily: type.weight.regular, fontSize: 14 },
   error: { fontFamily: type.weight.semibold, fontSize: 15 },
   actions: { gap: spacing.sm },
-  noFlex: { flex: 0 },
+  noFlex: { flexGrow: 0 },
 });

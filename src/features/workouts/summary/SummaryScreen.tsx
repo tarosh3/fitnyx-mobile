@@ -191,5 +191,5 @@ const styles = StyleSheet.create({
   exRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 32 },
   reward: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radii.lg },
   rewardText: { fontFamily: type.weight.bold, fontSize: 16 },
-  noFlex: { flex: 0 },
+  noFlex: { flexGrow: 0 },
 });
