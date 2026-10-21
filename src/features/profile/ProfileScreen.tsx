@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout';
 import { Card } from '@/src/components/ui/Card';
+import { FriendsButton } from '@/src/features/friends/ui/FriendsButton';
 import { useFitnessProfile, useProgressSummary } from '@/src/features/progress/data';
 import { badgesFor, effortName, formatClock, formatKg } from '@/src/features/progress/records';
 import { BigNumber, CardTitle, Muted } from '@/src/features/progress/ui/bits';
@@ -65,9 +66,12 @@ export function ProfileScreen() {
         ))}
       </View>
 
-      <Pressable onPress={() => router.push('/profile')} accessibilityRole="button" style={[styles.edit, { backgroundColor: c.card, borderColor: c.border }]}>
-        <Text style={[styles.editText, { color: c.text }]}>Edit profile</Text>
-      </Pressable>
+      <View style={styles.actions}>
+        <Pressable onPress={() => router.push('/profile')} accessibilityRole="button" style={[styles.edit, { backgroundColor: c.card, borderColor: c.border }]}>
+          <Text style={[styles.editText, { color: c.text }]}>Edit profile</Text>
+        </Pressable>
+        <FriendsButton />
+      </View>
 
       {badges.length ? (
         <View style={styles.section}>
@@ -127,7 +131,8 @@ const styles = StyleSheet.create({
   lifetime: { flexDirection: 'row', gap: spacing.sm },
   lifeCard: { flex: 1, alignItems: 'center', paddingHorizontal: 4, paddingVertical: spacing.md, gap: 6 },
   small: { fontSize: 11 },
-  edit: { minHeight: 46, borderRadius: radii.md, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
+  actions: { flexDirection: 'row', gap: spacing.sm },
+  edit: { flex: 1, minHeight: 46, borderRadius: radii.md, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
   editText: { fontFamily: type.weight.bold, fontSize: 14 },
   section: { gap: spacing.md },
   bleed: { marginHorizontal: -spacing.base },
