@@ -16,7 +16,7 @@ import { motion, type } from '@/src/styles/tokens';
 import { BOTTOM_NAV_HEIGHT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
 
 const destinations = [
-  { key: 'home', label: 'Home', icon: Home, href: '/', match: (p: string) => p === '/' || p === '/roam' || p.startsWith('/roam/') },
+  { key: 'home', label: 'Home', icon: Home, href: '/', match: (p: string) => p === '/' || p === '/roam' || p.startsWith('/roam/') || p === '/arena' },
   { key: 'workouts', label: 'Workouts', icon: Dumbbell, href: '/workouts', match: (p: string) => p.startsWith('/workouts') || p.startsWith('/exercises') },
   { key: 'progress', label: 'Progress', icon: ChartNoAxesColumnIncreasing, href: '/dashboard', match: (p: string) => p === '/dashboard' || p.startsWith('/dashboard/') },
   // The profile tab shows the user's photo (or initials) and no label; Settings and Friends live inside it.

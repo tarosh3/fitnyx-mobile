@@ -43,6 +43,8 @@ export const cacheKeys = {
   // Friends list + incoming request count (GET /friends) and pending requests, shown offline.
   friends: (userId: string) => `friends:${userId}`,
   friendRequests: (userId: string, direction: 'incoming' | 'outgoing') => `friends:requests:${direction}:${userId}`,
+  // Arena leaderboards, per board / scope / period / local date (shown offline as last seen).
+  arenaBoard: (userId: string, board: string, scope: string, period: string, date: string) => `arena:${userId}:${board}:${scope}:${period}:${date}`,
 } as const;
 
 export const cacheTTL = {

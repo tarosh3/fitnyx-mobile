@@ -133,6 +133,11 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - `normalizeSearch` mirrors the backend's rule — a query that can't be part of a username is never sent. Changes need a connection (`applyFriendChange` checks `isDefinitelyOffline`); lists hydrate from `cacheKeys.friends` / `friendRequests`.
 - Confirmations inside a `Sheet` stay in that sheet (`FriendMenu`): opening a second Modal while the sheet closes is dropped on iOS.
 
+**Arena (`src/features/arena/`, route `app/arena.tsx`)** — 2026-10-22, backend `/arena` (`migration_arena.sql`):
+- Leaderboards Grit · Stride · Ride × Friends / Global × Today / This week / All time. Always send the user's **local** date (`localDateKey`) — "today" and "this week" are theirs. Stride/Ride scores are metres (`formatScore` shows km).
+- Everyone can view Global; only users who switch on "Show me on Global" (`PUT /arena/settings`) are ranked there (`me.rank` null otherwise). Strangers' `name` is null — show `@username`.
+- Entry: Home `ArenaHomeCard` (this week's Grit among friends; hidden until it loads, so an older backend shows nothing). Screen tests must stub `SegmentedControl` (Reanimated doesn't load in jest).
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -148,7 +153,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `friends` · `goals` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
+`arena` · `auth` · `dashboard` · `diet` · `friends` · `goals` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
