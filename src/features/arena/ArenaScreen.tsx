@@ -1,32 +1,33 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { Button } from '@/src/components/ui/Button';
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
-import { Chip, Empty } from '@/src/features/progress/ui/bits';
+import { Empty } from '@/src/features/progress/ui/bits';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { ArenaBoardKind, ArenaPeriod, ArenaScope } from '@/src/lib/api/arena';
-import { spacing } from '@/src/styles/tokens';
+import { spacing, type } from '@/src/styles/tokens';
 import { useArenaBoard, useArenaOptIn } from './data';
-import { BOARD_LABEL, PERIOD_LABEL } from './model';
+import { BOARD_HINT, BOARD_LABEL, isAlone } from './model';
+import { AloneCard } from './ui/AloneCard';
+import { ArenaHero } from './ui/ArenaHero';
 import { ArenaRowView } from './ui/ArenaRowView';
-import { StandingCard } from './ui/StandingCard';
+import { ToggleGroup } from './ui/ToggleGroup';
 
 const BOARDS: ArenaBoardKind[] = ['grit', 'stride', 'ride'];
-const PERIODS: ArenaPeriod[] = ['today', 'week', 'all'];
+const SCOPES = [{ label: 'Friends', value: 'friends' as const }, { label: 'Global', value: 'global' as const }];
+const PERIODS = [{ label: 'Today', value: 'today' as const }, { label: 'Week', value: 'week' as const }, { label: 'All time', value: 'all' as const }];
 
-/** Arena: Grit · Stride · Ride, among friends or worldwide, today / this week / all time (`?board=`). */
+/** Arena: Grit · Stride · Ride, among friends or worldwide, today / this week / all time (`?board=`, `?scope=`). */
 export function ArenaScreen() {
   const c = useThemeColors();
-  const router = useRouter();
   const toast = useToast();
-  const params = useLocalSearchParams<{ board?: string }>();
+  const params = useLocalSearchParams<{ board?: string; scope?: string }>();
   const [board, setBoard] = useState<ArenaBoardKind>(BOARDS.includes(params.board as ArenaBoardKind) ? (params.board as ArenaBoardKind) : 'grit');
-  const [scope, setScope] = useState<ArenaScope>('friends');
+  const [scope, setScope] = useState<ArenaScope>(params.scope === 'global' ? 'global' : 'friends');
   const [period, setPeriod] = useState<ArenaPeriod>('week');
   const [refreshing, setRefreshing] = useState(false);
   const data = useArenaBoard(board, scope, period);
@@ -49,37 +50,31 @@ export function ArenaScreen() {
     }
   };
 
-  const onlyMe = scope === 'friends' && b != null && b.rows.length <= 1;
+  const alone = b != null && isAlone(b);
 
   return (
     <Screen scroll={false} contentContainerStyle={styles.content}>
-      <PageHeader title="Arena" subtitle={`${BOARD_LABEL[board].toUpperCase()} · ${PERIOD_LABEL[period].toUpperCase()}`} backTo="/" />
+      <PageHeader title="Arena" backTo="/" />
       <SegmentedControl<ArenaBoardKind> value={board} onChange={setBoard} options={BOARDS.map((v) => ({ label: BOARD_LABEL[v], value: v }))} />
-      <View style={styles.chips}>
-        {(['friends', 'global'] as ArenaScope[]).map((s) => (
-          <Chip key={s} testID={`arena-scope-${s}`} label={s === 'friends' ? 'Friends' : 'Global'} active={scope === s} onPress={() => setScope(s)} />
-        ))}
-        <View style={[styles.divider, { backgroundColor: c.border }]} />
-        {PERIODS.map((p) => <Chip key={p} testID={`arena-period-${p}`} label={PERIOD_LABEL[p]} active={period === p} onPress={() => setPeriod(p)} />)}
+      <View style={styles.filters}>
+        <ToggleGroup testID="arena-scope" options={SCOPES} value={scope} onChange={setScope} />
+        <ToggleGroup testID="arena-period" options={PERIODS} value={period} onChange={setPeriod} />
       </View>
+      <Text style={[styles.hint, { color: c.mutedText }]}>{BOARD_HINT[board]}</Text>
 
       {!b ? (
         data.loading ? <ActivityIndicator style={styles.spinner} color={c.accent} /> : <Empty text="The Arena needs a connection the first time." />
       ) : (
         <FlatList
-          data={b.rows}
+          data={alone ? [] : b.rows}
           keyExtractor={(r) => r.user.id}
           renderItem={({ item }) => <ArenaRowView row={item} board={board} />}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.accent} />}
-          ListHeaderComponent={<View style={styles.header}><StandingCard board={b} saving={optIn.saving} onListedChange={setListed} /></View>}
-          ListEmptyComponent={<Empty text={scope === 'global' ? 'No one is ranked here yet — be the first.' : 'Nothing here yet.'} />}
-          ListFooterComponent={onlyMe ? (
-            <View style={styles.footer}>
-              <Empty text="It’s more fun with friends. Add them by username." />
-              <Button testID="arena-add-friends" title="Find friends" variant="secondary" onPress={() => router.push('/friends?tab=find' as never)} />
-            </View>
-          ) : null}
+          ListHeaderComponent={<View style={styles.hero}><ArenaHero board={b} saving={optIn.saving} onListedChange={setListed} /></View>}
+          ListEmptyComponent={alone ? <AloneCard onGlobal={() => setScope('global')} /> : (
+            <Empty text={b.me.listed ? 'No one else is ranked here yet.' : 'No one is ranked here yet. Switch on Show me on Global to be the first.'} />
+          )}
         />
       )}
     </Screen>
@@ -88,10 +83,9 @@ export function ArenaScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 0, gap: spacing.md },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
-  divider: { width: StyleSheet.hairlineWidth, height: 24, marginHorizontal: spacing.xs },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: spacing.sm },
+  hint: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 18 },
   spinner: { marginTop: spacing.xl },
-  header: { marginBottom: spacing.sm },
+  hero: { marginBottom: spacing.md },
   list: { paddingBottom: spacing['2xl'] },
-  footer: { gap: spacing.md, marginTop: spacing.md },
 });

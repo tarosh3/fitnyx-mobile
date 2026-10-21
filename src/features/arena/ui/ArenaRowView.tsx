@@ -1,3 +1,4 @@
+import { Crown } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -7,17 +8,22 @@ import type { ArenaBoardKind, ArenaRow } from '@/src/lib/api/arena';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { formatScore } from '../model';
 
-/** One place on a board: rank, photo, name / @handle, score. The user's own row is tinted. */
+/** One place on a board: rank (a crown for the leader), photo, name / @handle, score. The user's own row is tinted. */
 export function ArenaRowView({ row, board }: { row: ArenaRow; board: ArenaBoardKind }) {
   const c = useThemeColors();
   const { value, unit } = formatScore(board, row.score);
   const title = row.me ? 'You' : row.user.name?.trim() || `@${row.user.username}`;
-  const medal = row.score > 0 && row.rank <= 3 ? ['🥇', '🥈', '🥉'][row.rank - 1] : null;
+  const leader = row.rank === 1 && row.score > 0;
+  const podium = row.rank <= 3 && row.score > 0;
   return (
     <View testID={row.me ? 'arena-me' : undefined} accessible
       accessibilityLabel={`Rank ${row.rank}, ${title}, ${value} ${unit}`}
       style={[styles.row, row.me && { backgroundColor: c.accentSoft }]}>
-      <Text style={[styles.rank, { color: c.mutedText }]}>{medal ?? row.rank}</Text>
+      <View style={styles.rankBox}>
+        {leader ? <Crown size={20} color={c.gold.to} /> : (
+          <Text style={[styles.rank, { color: podium ? c.text : c.mutedText }]}>{row.rank}</Text>
+        )}
+      </View>
       <Avatar uri={row.user.avatar_url || null} name={row.user.name || row.user.username} size={40} />
       <View style={styles.who}>
         <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>{title}</Text>
@@ -32,7 +38,8 @@ export function ArenaRowView({ row, board }: { row: ArenaRow; board: ArenaBoardK
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radii.md },
-  rank: { width: 30, textAlign: 'center', fontFamily: type.weight.bold, fontSize: 15, fontVariant: ['tabular-nums'] },
+  rankBox: { width: 28, alignItems: 'center' },
+  rank: { fontFamily: type.weight.bold, fontSize: 15, fontVariant: ['tabular-nums'] },
   who: { flex: 1, gap: 2 },
   name: { fontFamily: type.weight.semibold, fontSize: 15 },
   handle: { fontFamily: type.weight.regular, fontSize: 13 },

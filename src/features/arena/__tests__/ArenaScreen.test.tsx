@@ -48,14 +48,29 @@ beforeEach(() => {
 
 it('ranks against friends, and lets the user join Global', async () => {
   render(<ArenaScreen />);
-  await waitFor(() => expect(screen.getByTestId('arena-standing')).toHaveTextContent('#2 of 2'));
-  expect(screen.getByText(/180 Grit behind @anya/)).toBeOnTheScreen();
+  await waitFor(() => expect(screen.getByTestId('arena-rank')).toHaveTextContent('#2'));
+  expect(screen.getByTestId('arena-standing')).toHaveTextContent('of 2 with friends');
+  expect(screen.getByText('180 Grit behind @anya')).toBeOnTheScreen();
   expect(mockGetBoard).toHaveBeenCalledWith('grit', 'friends', 'week', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
 
   fireEvent.press(screen.getByTestId('arena-scope-global'));
-  await waitFor(() => expect(screen.getByTestId('arena-standing')).toHaveTextContent('Join Global to get ranked'));
+  await waitFor(() => expect(screen.getByTestId('arena-standing')).toHaveTextContent('Not on Global'));
   expect(screen.getByText('@xan')).toBeOnTheScreen();
 
   fireEvent(screen.getByTestId('arena-optin'), 'valueChange', true);
   await waitFor(() => expect(mockSetPublic).toHaveBeenCalledWith(true));
+});
+
+it('turns an empty friends board into two ways forward, and shows what earns points', async () => {
+  const alone = { ...friendsBoard, rows: [{ rank: 1, user: user('me', 'Me'), score: 0, me: true }], me: { rank: null, score: 0, listed: false } };
+  mockGetBoard.mockImplementation((_b: string, scope: string) => Promise.resolve(scope === 'global' ? globalBoard : alone));
+  render(<ArenaScreen />);
+  expect(await screen.findByTestId('arena-alone')).toBeOnTheScreen();
+  expect(screen.queryByTestId('arena-me')).not.toBeOnTheScreen(); // no lonely "You" row
+  fireEvent.press(screen.getByTestId('arena-action'));
+  expect(mockPush).toHaveBeenCalledWith('/workouts');
+  fireEvent.press(screen.getByTestId('arena-add-friends'));
+  expect(mockPush).toHaveBeenCalledWith('/friends?tab=find');
+  fireEvent.press(screen.getByTestId('arena-see-global'));
+  await waitFor(() => expect(mockGetBoard).toHaveBeenLastCalledWith('grit', 'global', 'week', expect.any(String)));
 });

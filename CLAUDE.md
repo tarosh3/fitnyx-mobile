@@ -136,7 +136,9 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 **Arena (`src/features/arena/`, route `app/arena.tsx`)** — 2026-10-22, backend `/arena` (`migration_arena.sql`):
 - Leaderboards Grit · Stride · Ride × Friends / Global × Today / This week / All time. Always send the user's **local** date (`localDateKey`) — "today" and "this week" are theirs. Stride/Ride scores are metres (`formatScore` shows km).
 - Everyone can view Global; only users who switch on "Show me on Global" (`PUT /arena/settings`) are ranked there (`me.rank` null otherwise). Strangers' `name` is null — show `@username`.
-- Entry: Home `ArenaHomeCard` (this week's Grit among friends; hidden until it loads, so an older backend shows nothing). Screen tests must stub `SegmentedControl` (Reanimated doesn't load in jest).
+- Ways in (all open `/arena`, never another screen): Home `ArenaHomeCard`, the profile's Arena button (next to Friends), the Progress header's `ArenaPill`. Before 2026-10-22 the Home card sent users without friends to Find friends, so they could never reach the Arena or Global — keep every entry pointing at the Arena itself; the Arena's `AloneCard` handles "no friends".
+- Screen hierarchy: board tabs → one filter row (`ToggleGroup` scope + period) → one-line scoring hint → `ArenaHero` (the big rank is the one hero; unranked shows the words as the headline, never a 52pt "—"; a no-score state gets the board's single primary action) → list. "#1 of 1" is never shown: alone → "Just you so far" + `AloneCard` (Find friends is secondary). Lucide `Crown` for #1 — no emoji medals.
+- Screen tests must stub `SegmentedControl` (Reanimated doesn't load in jest).
 
 **Notifications (`src/features/notifications/`, route `app/notifications.tsx`)** — 2026-10-22, backend `/notifications`:
 - In-app only: Home header bell (unread badge) → list of friend requests, acceptances and "passed you on <board> this week"; each opens its screen (`notificationTarget`). Bell and list share one cached resource (`cacheKeys.notifications`).

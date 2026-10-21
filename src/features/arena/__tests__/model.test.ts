@@ -1,5 +1,5 @@
 import type { ArenaBoard, ArenaRow } from '@/src/lib/api/arena';
-import { formatScore, nextUp, standing } from '../model';
+import { formatScore, heroRank, isAlone, nextUp } from '../model';
 
 const row = (username: string, score: number, rank: number, me = false): ArenaRow =>
   ({ rank, score, me, user: { id: username, username, name: null, avatar_url: '' } });
@@ -16,13 +16,14 @@ describe('Arena model', () => {
     expect(formatScore('ride', 42195)).toEqual({ value: '42.2', unit: 'km' });
   });
 
-  it('says where the user stands', () => {
+  it('puts the rank in the hero', () => {
     const rows = [row('anya', 300, 1), row('me', 120, 2, true), row('cy', 0, 3)];
-    expect(standing(board({ rows, me: { rank: 2, score: 120, listed: false } }))).toBe('#2 of 3');
-    expect(standing(board({ scope: 'global', me: { rank: 1234, score: 1, listed: true } }))).toBe('#1,234 worldwide');
-    expect(standing(board({ scope: 'global', me: { rank: null, score: 500, listed: false } }))).toBe('Join Global to get ranked');
-    expect(standing(board({ board: 'stride', period: 'today' }))).toBe('No Stride yet today');
-    expect(standing(board({ period: 'all' }))).toBe('No Grit yet');
+    expect(heroRank(board({ rows, me: { rank: 2, score: 120, listed: false } }))).toEqual({ rank: '#2', label: 'of 3 with friends', ranked: true });
+    expect(heroRank(board({ scope: 'global', me: { rank: 1234, score: 1, listed: true } }))).toEqual({ rank: '#1,234', label: 'worldwide', ranked: true });
+    expect(heroRank(board({ scope: 'global', me: { rank: null, score: 500, listed: false } })).label).toBe('Not on Global');
+    expect(heroRank(board({ board: 'stride', period: 'today' })).label).toBe('No Stride yet today');
+    expect(heroRank(board({ period: 'all' }))).toEqual({ rank: '—', label: 'No Grit yet', ranked: false });
+    expect(heroRank(board({ rows: [row('me', 1310, 1, true)], me: { rank: 1, score: 1310, listed: false } })).label).toBe('Just you so far');
   });
 
   it('shows the gap to the next person up', () => {
@@ -32,5 +33,11 @@ describe('Arena model', () => {
     expect(nextUp([row('me', 300, 1, true), row('bo', 100, 2)], 'grit')).toBe('You’re leading');
     expect(nextUp([row('me', 0, 1, true)], 'grit')).toBeNull();
     expect(nextUp([row('anya', 10, 1)], 'grit')).toBeNull();
+  });
+
+  it('knows when the user has no friends on the board', () => {
+    expect(isAlone(board({ rows: [row('me', 50, 1, true)] }))).toBe(true);
+    expect(isAlone(board({ rows: [row('me', 50, 1, true), row('bo', 0, 2)] }))).toBe(false);
+    expect(isAlone(board({ scope: 'global', rows: [] }))).toBe(false);
   });
 });
