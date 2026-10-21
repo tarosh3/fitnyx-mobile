@@ -61,6 +61,11 @@ export function WorkoutDetailScreen() {
   const evalue: DraftSet | null = editor?.kind === 'log' ? (elog ? logToDraft(elog) : null)
     : editor ? prefill(etype, null, groupLogs.length ? logToDraft(groupLogs[groupLogs.length - 1]) : null, null) : null;
 
+  // The backend rescores a finished workout's Grit on every set change; fetch it again.
+  const refreshGrit = () => {
+    if (!isOffline && s?.status === 'completed') d.reload();
+  };
+
   const saveSet = async (v: DraftSet, rpe: number | null) => {
     const ed = editor;
     setEditor(null);
@@ -83,6 +88,7 @@ export function WorkoutDetailScreen() {
         else d.setLogs((prev) => [...prev, created]);
         toast('Set added');
       }
+      refreshGrit();
     } catch {
       toast('Couldn’t save the change');
     }
@@ -96,6 +102,7 @@ export function WorkoutDetailScreen() {
       await offlineDeleteLog(sessionId, ed.logId);
       d.setLogs((prev) => prev.filter((l) => l.id !== ed.logId));
       toast('Set deleted');
+      refreshGrit();
     } catch {
       toast('Couldn’t delete the set');
     }
@@ -152,6 +159,7 @@ export function WorkoutDetailScreen() {
             {t.distanceM ? <Pill>{`${fmtKm(t.distanceM)} km`}</Pill> : null}
             <Pill>{plural(t.sets, 'set')}</Pill>
             {t.prs ? <Pill tone="gold">{`🏆 ${plural(t.prs, 'new best')}`}</Pill> : null}
+            {s?.grit != null ? <Pill>{`+${s.grit} Grit`}</Pill> : null}
           </View>
           <Text style={[styles.hint, { color: c.mutedText }]}>Tap a set to fix it.</Text>
           {d.groups.map((g) => (

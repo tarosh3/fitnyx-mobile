@@ -11,6 +11,7 @@ import { ShareCardSheet } from '@/src/features/share/ShareCardSheet';
 import { useSessionDetail } from '@/src/features/workouts/history/useSessionDetail';
 import { sessionCardData } from '@/src/features/workouts/history/workoutCard';
 import { describeSet, fmtClock, fmtKm, fmtVolume, plural, workoutXp } from '@/src/features/workouts/model';
+import { GritCard } from '@/src/features/workouts/summary/GritCard';
 import { BottomBar, Button, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
@@ -110,6 +111,8 @@ export function SummaryScreen() {
           <Tile label="New bests" value={String(t.prs)} />
           {s?.kcal ? <Tile label="Calories burned" value={s.kcal.toLocaleString('en-IN')} unit="kcal" /> : null}
         </View>
+
+        <GritCard session={s} />
 
         {prLogs.length ? (
           <View style={[styles.card, { backgroundColor: c.parts.shoulders.bg }]}>

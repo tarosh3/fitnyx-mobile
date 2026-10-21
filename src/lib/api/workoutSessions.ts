@@ -16,7 +16,24 @@ export interface WorkoutSession {
   completed_at?: string;
   /** Estimated calories burned, set when the workout finishes; null without a body weight. */
   kcal?: number | null;
+  /** Grit earned (backend internal/grit, rescored with its week); null = not scored yet. */
+  grit?: number | null;
+  grit_breakdown?: GritBreakdown | null;
   created_at: string;
+}
+
+/** What a workout's Grit was made of (backend grit.Breakdown). */
+export interface GritBreakdown {
+  sets: number;
+  hard_sets: number;
+  prs: number;
+  routine: boolean;
+  streak: boolean;
+  /** Under 10 minutes: nothing counted. */
+  too_short: boolean;
+  /** The 400-a-day cap took some points. */
+  capped: boolean;
+  grit: number;
 }
 
 export interface ExerciseLog {
