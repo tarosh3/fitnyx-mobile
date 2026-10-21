@@ -7,7 +7,8 @@ export type ActivityArt = 'run' | 'walk' | 'cycle' | 'strength' | 'training' | '
 
 /** Choose imagery from activity data, never from a user-editable title. */
 export function activityArt(data: ShareCardData): ActivityArt {
-  if (data.kind === 'roam') return data.activityType ?? 'roam';
+  // Saved Roams are run / walk / cycle, so a stride is only a not-yet-saved one.
+  if (data.kind === 'roam') return data.activityType === 'stride' ? 'run' : data.activityType ?? 'roam';
   return data.hero.unit === 'kg' ? 'strength' : 'training';
 }
 

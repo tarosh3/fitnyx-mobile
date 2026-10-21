@@ -4,7 +4,7 @@ import type { ActivityType } from '@/src/features/roam/geo';
 /** Mirrors the backend's limit (activity_handler.go maxActivityNameLen). */
 export const MAX_ACTIVITY_NAME = 60;
 
-/** "Morning Run", "Lunch Walk", "Evening Ride", "Night Run" — by local start hour. */
+/** "Morning Stride", "Lunch Stride", "Evening Ride" — by local start hour. */
 export function defaultActivityName(type: ActivityType, startedAt: Date | string): string {
   const hour = new Date(startedAt).getHours();
   const part =

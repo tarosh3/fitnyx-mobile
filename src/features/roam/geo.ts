@@ -3,7 +3,11 @@
 // time, XP); this copy only drives the live screen and the pre-save summary.
 // Keep thresholds and rules in sync with the Go file.
 
-export type ActivityType = 'run' | 'walk' | 'cycle';
+/**
+ * `stride` is the app's one on-foot choice; the backend saves it as `run` or
+ * `walk` (resolveType), so saved Roams are run / walk / cycle.
+ */
+export type ActivityType = 'run' | 'walk' | 'cycle' | 'stride';
 
 /**
  * One GPS fix: [lat, lng, secondsSinceStart, accuracyMetres, segment, gpsSpeedMps,
@@ -38,6 +42,15 @@ export const STEP_STILL_SEC = 15;
 export const VEHICLE_WINDOW_MIN_MPS = 3;
 export const MIN_ELIGIBLE_DISTANCE_M = 200;
 export const MIN_ELIGIBLE_MOVING_SEC = 60;
+
+/** A Stride averaging at least this (7.2 km/h, the walk-to-run gait transition) is saved as a run. */
+export const STRIDE_RUN_MIN_MPS = 2;
+
+/** The type a Roam is saved as: a Stride becomes run or walk by its average moving speed over whole moving seconds (backend activity.Resolve). */
+export function resolveType(type: ActivityType, distanceM: number, movingSec: number): Exclude<ActivityType, 'stride'> {
+  if (type !== 'stride') return type;
+  return movingSec > 0 && distanceM / movingSec >= STRIDE_RUN_MIN_MPS ? 'run' : 'walk';
+}
 
 /** Fastest sustainable human speed: 25 km/h on foot, 60 km/h on a bike. */
 export function humanMaxMps(type: ActivityType): number {
@@ -287,7 +300,7 @@ export function computeStats(points: RoamPoint[], type: ActivityType, vehicleWin
   const intervals = buildIntervals(route, humanMaxMps(type));
   const vehicle = vehicleFlags(intervals);
   markVehicleWindows(route, intervals, vehicle, vehicleWindows);
-  const stepless = type === 'run' || type === 'walk' ? steplessIntervals(route, intervals) : null;
+  const stepless = type !== 'cycle' ? steplessIntervals(route, intervals) : null; // on foot
 
   const stats: RoamStats = {
     distanceM: 0,

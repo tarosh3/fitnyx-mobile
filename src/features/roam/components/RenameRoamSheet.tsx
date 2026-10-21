@@ -9,7 +9,7 @@ interface Props {
   visible: boolean;
   /** Current name ('' when the Roam uses its default title). */
   initialName: string;
-  /** What a blank name shows, e.g. "Morning Run". */
+  /** What a blank name shows, e.g. "Morning Stride". */
   defaultName: string;
   saving: boolean;
   error: string | null;

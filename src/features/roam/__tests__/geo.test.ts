@@ -1,5 +1,6 @@
 import {
   computeStats,
+  resolveType,
   decodePolyline,
   formatDistance,
   formatDuration,
@@ -302,6 +303,7 @@ describe('steps + phone vehicle windows (mirrors metrics_test.go)', () => {
     const s = stats(tr, 'walk');
     expect(Math.abs(s.distanceM - (140 + 4 * 15))).toBeLessThan(10);
     expect(s.steps).toBe((n - 1) * 3);
+    expect(stats(tr, 'stride').distanceM).toBe(s.distanceM); // a Stride is on foot: same step rule
     expect(Math.abs(stats(tr, 'cycle').distanceM - 1340)).toBeLessThan(15); // rides ignore steps
   });
 
@@ -325,5 +327,19 @@ describe('steps + phone vehicle windows (mirrors metrics_test.go)', () => {
     expect(s.vehicleRanges).toHaveLength(1);
     const walk = computeStats(new Track().move(1.4, 2, 100).pts, 'walk', [[0, 200]]);
     expect(Math.abs(walk.distanceM - 280)).toBeLessThan(1); // slow movement still counts
+  });
+});
+
+describe('resolveType (mirrors backend activity.Resolve)', () => {
+  it('saves a Stride as a run from 2.0 m/s, else a walk', () => {
+    expect(resolveType('stride', 2000, 1000)).toBe('run');
+    expect(resolveType('stride', 1999, 1000)).toBe('walk');
+    expect(resolveType('stride', 5000, 1500)).toBe('run');
+    expect(resolveType('stride', 1000, 0)).toBe('walk');
+  });
+
+  it('keeps an explicit type', () => {
+    expect(resolveType('walk', 5000, 1500)).toBe('walk');
+    expect(resolveType('cycle', 1000, 1000)).toBe('cycle');
   });
 });
