@@ -135,6 +135,6 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', paddingTop: spacing['3xl'], gap: spacing.sm },
   offlineTitle: { fontFamily: type.weight.extrabold, fontSize: 18 },
   offlineText: { fontFamily: type.weight.regular, fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 300 },
-  retry: { flex: 0, alignSelf: 'stretch', marginTop: spacing.md },
+  retry: { flexGrow: 0, alignSelf: 'stretch', marginTop: spacing.md },
   offlineNote: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 18 },
 });

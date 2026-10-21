@@ -18,6 +18,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -410,7 +411,8 @@ function ReminderEditor({
           </Pressable>
         </View>
 
-        <View style={{ marginTop: spacing.lg, gap: spacing.lg }}>
+        {/* Scrolls when the times + days are taller than the sheet, so Save stays reachable. */}
+        <ScrollView style={styles.sheetBody} contentContainerStyle={styles.sheetContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {/* Type chips */}
           <View>
             <Text style={[styles.fieldLabel, { color: c.mutedText }]}>TYPE</Text>
@@ -610,7 +612,7 @@ function ReminderEditor({
               setError(ok ? null : 'Permission denied. Enable notifications in settings.');
             }}
           />
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -844,6 +846,8 @@ const styles = StyleSheet.create({
     maxHeight: '92%',
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 999, alignSelf: 'center', marginBottom: spacing.md },
+  sheetBody: { flexGrow: 0, flexShrink: 1 },
+  sheetContent: { marginTop: spacing.lg, gap: spacing.lg },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sheetTitle: { fontFamily: t.weight.bold, fontSize: t.size.h3 },
   sheetDone: { fontFamily: t.weight.semibold, fontSize: t.size.body },

@@ -243,8 +243,8 @@ export function LoggerScreen() {
       <View style={[styles.center, { backgroundColor: c.background, padding: spacing.xl, gap: spacing.md }]}>
         <Text style={[styles.h, { color: c.text }]}>Couldn’t open this workout</Text>
         <Text style={[styles.p, { color: c.mutedText, textAlign: 'center' }]}>{lg.error}</Text>
-        <Button title="Try again" onPress={lg.reload} style={{ flex: 0, alignSelf: 'stretch' }} />
-        <Button variant="quiet" title="Back to Workouts" onPress={() => router.dismissTo('/workouts')} style={{ flex: 0 }} />
+        <Button title="Try again" onPress={lg.reload} style={{ flexGrow: 0, alignSelf: 'stretch' }} />
+        <Button variant="quiet" title="Back to Workouts" onPress={() => router.dismissTo('/workouts')} style={{ flexGrow: 0 }} />
       </View>
     );
   }
@@ -355,5 +355,5 @@ const styles = StyleSheet.create({
   readyTitle: { fontFamily: type.weight.bold, fontSize: 17 },
   h: { fontFamily: type.weight.bold, fontSize: 20 },
   p: { fontFamily: type.weight.regular, fontSize: 15, lineHeight: 21 },
-  addBtn: { flex: 0, marginTop: spacing.sm },
+  addBtn: { flexGrow: 0, marginTop: spacing.sm },
 });

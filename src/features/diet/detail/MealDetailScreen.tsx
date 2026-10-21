@@ -137,5 +137,5 @@ const styles = StyleSheet.create({
   title: { fontFamily: type.weight.extrabold, fontSize: 32, lineHeight: 39, letterSpacing: -0.5 },
   muted: { fontFamily: type.weight.regular, fontSize: 14 },
   body: { fontFamily: type.weight.regular, fontSize: 15, lineHeight: 22 },
-  undo: { flex: 0, paddingHorizontal: spacing.xl },
+  undo: { flexGrow: 0, paddingHorizontal: spacing.xl },
 });

@@ -105,14 +105,16 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
 
   if (creating) {
     return (
-      <Sheet visible={visible} title="New exercise" subtitle="Not in the library? Add your own." onClose={onClose} testID="exercise-picker">
+      <Sheet visible={visible} title="New exercise" subtitle="Not in the library? Add your own." onClose={onClose} scroll={false} testID="exercise-picker">
         <CreateExerciseForm initialTitle={query.trim()} onCreated={created} onCancel={() => setCreating(false)} />
       </Sheet>
     );
   }
 
-  return (
-    <Sheet visible={visible} title={title} subtitle={subtitle} onClose={onClose} footer={footer} testID="exercise-picker">
+  // One scrolling list: search, filters and preview are its header, so nothing
+  // ends up under the button when the keyboard leaves little room.
+  const header = (
+    <View style={styles.header}>
       <View style={[styles.search, { backgroundColor: c.surface, borderColor: c.border }]}>
         <Search size={20} color={c.mutedText} />
         <TextInput value={query} onChangeText={setQuery} placeholder="Search by name, muscle or equipment" placeholderTextColor={c.mutedText}
@@ -120,53 +122,55 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
       </View>
       <FinderChips part={part} muscle={muscle} equipment={equipment} onPart={setPart} onMuscle={setMuscle} onEquipment={setEquipment} />
       {preview ? <ExercisePreview key={preview.uuid} exercise={preview} onClose={() => setPreview(null)} /> : null}
-      <View style={[styles.list, { borderColor: c.border }]}>
-        {loading && !items.length ? (
-          <ActivityIndicator style={styles.pad} color={c.primary} />
-        ) : failed && !items.length ? (
-          <Text style={[styles.empty, { color: c.mutedText }]}>Couldn’t load exercises. Check your connection.</Text>
-        ) : !items.length ? (
-          <Text style={[styles.empty, { color: c.mutedText }]}>No match. Try a shorter word, another muscle or Any equipment.</Text>
-        ) : (
-          <FlatList
-            data={items}
-            keyExtractor={(e) => e.uuid}
-            keyboardShouldPersistTaps="handled"
-            ItemSeparatorComponent={() => <View style={[styles.sep, { backgroundColor: c.border }]} />}
-            renderItem={({ item }) => {
-              const isAdded = added.has(item.uuid);
-              const on = picked.some((x) => x.uuid === item.uuid);
-              return (
-                <Pressable disabled={isAdded} onPress={() => toggle(item)} accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on, disabled: isAdded }} accessibilityLabel={`${item.title}${isAdded ? ', already added' : ''}`}
-                  style={[styles.row, on && { backgroundColor: c.accentSoft }, isAdded && { opacity: 0.55 }]}>
-                  <Pressable onPress={() => setPreview(item)} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Watch ${item.title}`} testID={`preview-${item.uuid}`}>
-                    <ExerciseThumb exercise={item} size={56} />
-                  </Pressable>
-                  <View style={styles.grow}>
-                    <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>{item.title}</Text>
-                    <Text style={[styles.meta, { color: c.mutedText }]} numberOfLines={1}>{finderMeta(item)}</Text>
-                  </View>
-                  {isAdded ? (
-                    <Text style={[styles.added, { color: c.accent }]}>Added</Text>
-                  ) : (
-                    <View style={[styles.box, { borderColor: on ? c.primary : c.mutedText, backgroundColor: on ? c.primary : 'transparent' }]}>
-                      {on ? <Check size={18} color={c.primaryText} /> : null}
-                    </View>
-                  )}
-                </Pressable>
-              );
-            }}
-          />
-        )}
-      </View>
-      <Pressable testID="picker-create" onPress={() => setCreating(true)} accessibilityRole="button"
-        style={({ pressed }) => [styles.create, pressed && { opacity: 0.7 }]}>
-        <Plus size={18} color={c.accent} />
-        <Text style={[styles.createText, { color: c.accent }]} numberOfLines={1}>
-          {query.trim() ? `Can’t find it? Create “${query.trim()}”` : 'Can’t find it? Create your own'}
-        </Text>
-      </Pressable>
+    </View>
+  );
+
+  return (
+    <Sheet visible={visible} title={title} subtitle={subtitle} onClose={onClose} footer={footer} scroll={false} testID="exercise-picker">
+      <FlatList
+        style={styles.list}
+        data={items}
+        keyExtractor={(e) => e.uuid}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={header}
+        ListEmptyComponent={loading ? <ActivityIndicator style={styles.pad} color={c.primary} />
+          : <Text style={[styles.empty, { color: c.mutedText }]}>{failed ? 'Couldn’t load exercises. Check your connection.' : 'No match. Try a shorter word, another muscle or Any equipment.'}</Text>}
+        ListFooterComponent={
+          <Pressable testID="picker-create" onPress={() => setCreating(true)} accessibilityRole="button"
+            style={({ pressed }) => [styles.create, pressed && { opacity: 0.7 }]}>
+            <Plus size={18} color={c.accent} />
+            <Text style={[styles.createText, { color: c.accent }]} numberOfLines={1}>
+              {query.trim() ? `Can’t find it? Create “${query.trim()}”` : 'Can’t find it? Create your own'}
+            </Text>
+          </Pressable>
+        }
+        ItemSeparatorComponent={() => <View style={[styles.sep, { backgroundColor: c.border }]} />}
+        renderItem={({ item }) => {
+          const isAdded = added.has(item.uuid);
+          const on = picked.some((x) => x.uuid === item.uuid);
+          return (
+            <Pressable disabled={isAdded} onPress={() => toggle(item)} accessibilityRole="checkbox"
+              accessibilityState={{ checked: on, disabled: isAdded }} accessibilityLabel={`${item.title}${isAdded ? ', already added' : ''}`}
+              style={[styles.row, on && { backgroundColor: c.accentSoft }, isAdded && { opacity: 0.55 }]}>
+              <Pressable onPress={() => setPreview(item)} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Watch ${item.title}`} testID={`preview-${item.uuid}`}>
+                <ExerciseThumb exercise={item} size={56} />
+              </Pressable>
+              <View style={styles.grow}>
+                <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>{item.title}</Text>
+                <Text style={[styles.meta, { color: c.mutedText }]} numberOfLines={1}>{finderMeta(item)}</Text>
+              </View>
+              {isAdded ? (
+                <Text style={[styles.added, { color: c.accent }]}>Added</Text>
+              ) : (
+                <View style={[styles.box, { borderColor: on ? c.primary : c.mutedText, backgroundColor: on ? c.primary : 'transparent' }]}>
+                  {on ? <Check size={18} color={c.primaryText} /> : null}
+                </View>
+              )}
+            </Pressable>
+          );
+        }}
+      />
     </Sheet>
   );
 }
@@ -174,8 +178,10 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
 const styles = StyleSheet.create({
   search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radii.md + 2, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: spacing.md, minHeight: 52 },
   input: { flex: 1, fontFamily: type.weight.regular, fontSize: 16, minHeight: 48 },
-  list: { marginTop: spacing.md, borderWidth: StyleSheet.hairlineWidth, borderRadius: radii.md + 2, maxHeight: 360, minHeight: 120, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: 10, minHeight: 68 },
+  // Content-sized, then shrinks to the space the sheet has left (and scrolls).
+  list: { flexGrow: 0, flexShrink: 1 },
+  header: { paddingBottom: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xs, paddingVertical: 10, minHeight: 68 },
   sep: { height: StyleSheet.hairlineWidth },
   grow: { flex: 1, minWidth: 0 },
   name: { fontFamily: type.weight.bold, fontSize: 16 },

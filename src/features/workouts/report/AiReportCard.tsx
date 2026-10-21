@@ -105,5 +105,5 @@ const styles = StyleSheet.create({
   fill: { height: 10, borderRadius: 5 },
   actions: { gap: spacing.sm },
   pair: { flexDirection: 'row', gap: spacing.sm },
-  noFlex: { flex: 0 },
+  noFlex: { flexGrow: 0 },
 });
