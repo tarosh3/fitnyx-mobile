@@ -54,7 +54,7 @@ export function TrophyCase() {
 
   const lifts: Row[] = (data?.records.lifts ?? []).map((l) => ({ key: l.exercise_uuid, name: l.name, value: formatKg(l.e1rm_kg), unit: 'kg', sub: `${formatKg(l.weight_kg)} kg × ${l.reps}`, date: l.date }));
   const roams: Row[] = [
-    ...(data?.records.efforts ?? []).map((e) => ({ key: `e${e.km}`, name: effortName(e.km), value: formatClock(e.sec), sub: 'Run', date: e.date, href: `/roam/${e.activity_id}` })),
+    ...(data?.records.efforts ?? []).map((e) => ({ key: `e${e.km}`, name: effortName(e.km), value: formatClock(e.sec), sub: 'Stride', date: e.date, href: `/roam/${e.activity_id}` })),
     ...(data?.records.longest_roam ? [{ key: 'longest', name: 'Longest Roam', value: (data.records.longest_roam.value / 1000).toFixed(1), unit: 'km', sub: 'Distance', date: data.records.longest_roam.date, href: `/roam/${data.records.longest_roam.activity_id}` }] : []),
     ...(data?.records.most_climb ? [{ key: 'climb', name: 'Most climbing', value: String(Math.round(data.records.most_climb.value)), unit: 'm', sub: 'Elevation', date: data.records.most_climb.date, href: `/roam/${data.records.most_climb.activity_id}` }] : []),
   ];
