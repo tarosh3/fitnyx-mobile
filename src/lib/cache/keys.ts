@@ -40,6 +40,9 @@ export const cacheKeys = {
   // Daily activity + diet goals (GET /goals); a reached goal's notification, once per day.
   goals: (userId: string) => `goals:${userId}`,
   goalNotified: (userId: string, date: string) => `goals:notified:${userId}:${date}`,
+  // Friends list + incoming request count (GET /friends) and pending requests, shown offline.
+  friends: (userId: string) => `friends:${userId}`,
+  friendRequests: (userId: string, direction: 'incoming' | 'outgoing') => `friends:requests:${direction}:${userId}`,
 } as const;
 
 export const cacheTTL = {

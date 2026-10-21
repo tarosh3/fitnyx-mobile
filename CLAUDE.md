@@ -125,6 +125,12 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Diet goals replace the plan's on the backend inside `fitplan.ComputeTargets` (so `/plan`, Filo and diet generation follow) and on the device via `withDietGoals()` (Diet Today, meal detail, Progress Fuel).
 - A Roam's goal state lives in `roam/goalTracker.ts` (AsyncStorage `fitnyx-roam:goal-tracker`): created on Start with today's totals before the Roam + weight; `syncRoamNotification` calls `checkGoalMilestones`, so halfway/done notifications also fire from the background GPS task, once each.
 
+**Friends (`src/features/friends/`, route `app/friends.tsx`)** — 2026-10-21, backend `/friends` (`migration_friends.sql`):
+- Mutual friends (request → accept), blocks, username prefix search. Entry: the profile's Friends button (count + dot for waiting requests); `/friends?tab=friends|requests|find` keeps the profile tab selected.
+- Everything is keyed by user id — a username change needs no handling here. Names are shown only to friends and to people who sent you a request (`name: null` otherwise); a block by the other user looks like "not found".
+- `normalizeSearch` mirrors the backend's rule — a query that can't be part of a username is never sent. Changes need a connection (`applyFriendChange` checks `isDefinitelyOffline`); lists hydrate from `cacheKeys.friends` / `friendRequests`.
+- Confirmations inside a `Sheet` stay in that sheet (`FriendMenu`): opening a second Modal while the sheet closes is dropped on iOS.
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -140,7 +146,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`auth` · `dashboard` · `diet` · `goals` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
+`auth` · `dashboard` · `diet` · `friends` · `goals` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
