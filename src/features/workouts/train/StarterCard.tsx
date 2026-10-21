@@ -22,9 +22,9 @@ export function StarterCard() {
   const onStart = async () => {
     try {
       await start();
-      toast('Your starter program is on — today’s workout is up top');
+      toast('Your starter program is on — today’s workout is up top', 'success');
     } catch {
-      toast('Couldn’t start the program. Check your connection and try again.');
+      toast('Couldn’t start the program. Check your connection and try again.', 'error');
     }
   };
 

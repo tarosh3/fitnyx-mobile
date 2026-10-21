@@ -32,7 +32,9 @@ export function ArenaScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const data = useArenaBoard(board, scope, period);
   const optIn = useArenaOptIn();
-  const b = data.data;
+  // The switch moves at once; the board's own value takes over after the reload (or snaps back on failure).
+  const [listedNow, setListedNow] = useState<boolean | null>(null);
+  const b = data.data && listedNow != null ? { ...data.data, me: { ...data.data.me, listed: listedNow } } : data.data;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -41,12 +43,15 @@ export function ArenaScreen() {
   };
 
   const setListed = async (value: boolean) => {
+    setListedNow(value);
     try {
       await optIn.save(value);
-      toast(value ? 'You’re on the Global boards' : 'You’re off the Global boards');
+      toast(value ? 'You’re on the Global boards' : 'You’re off the Global boards', 'success');
       await data.refresh();
     } catch (e) {
-      toast((e as Error).message);
+      toast((e as Error).message, 'error');
+    } finally {
+      setListedNow(null);
     }
   };
 

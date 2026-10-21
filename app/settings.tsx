@@ -22,7 +22,6 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Image,
   Linking,
   Modal,
@@ -47,6 +46,7 @@ import { formatHeight, formatWeight, useHeightUnit, useLanguage, useWeightUnit }
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { elevation, radii, spacing, type as t } from '@/src/styles/tokens';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 
 type Language = 'en' | 'hi' | 'hi_en';
 const LANG_LABEL: Record<Language, string> = {
@@ -66,6 +66,8 @@ export default function SettingsScreen() {
   const [langOpen, setLangOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [signOutFailed, setSignOutFailed] = useState(false);
+  const [systemSettingsTitle, setSystemSettingsTitle] = useState<string | null>(null);
+  const toast = useToast();
   const { isOffline, pendingCount, refreshPendingCount } = useOfflineAware();
 
   const [weightUnit, setWeightUnit] = useWeightUnit();
@@ -101,22 +103,16 @@ export default function SettingsScreen() {
     }
   };
 
+  // Asks in the app's own themed dialog (the system Alert is a white Material box on Android).
   function openSystemSettings(title: string) {
-    Alert.alert(
-      title,
-      'To change this, open device settings.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Open Settings',
-          onPress: () => {
-            if (Platform.OS === 'ios') Linking.openURL('app-settings:');
-            else Linking.openSettings();
-          },
-        },
-      ]
-    );
+    setSystemSettingsTitle(title);
   }
+
+  const goToSystemSettings = () => {
+    setSystemSettingsTitle(null);
+    if (Platform.OS === 'ios') Linking.openURL('app-settings:');
+    else Linking.openSettings();
+  };
 
   const handleShare = async () => {
     try {
@@ -133,7 +129,7 @@ export default function SettingsScreen() {
       Platform.OS === 'ios'
         ? 'itms-apps://itunes.apple.com/app/idYOUR_APP_ID?action=write-review'
         : 'market://details?id=com.fitnyx.app';
-    Linking.openURL(url).catch(() => Alert.alert('Could not open store'));
+    Linking.openURL(url).catch(() => toast('Couldn’t open the store', 'error'));
   };
 
   const handleContact = () => {
@@ -447,6 +443,15 @@ export default function SettingsScreen() {
         showCancel={false}
         onConfirm={() => setSignOutFailed(false)}
         onCancel={() => setSignOutFailed(false)}
+      />
+      <ConfirmModal
+        visible={systemSettingsTitle != null}
+        title={systemSettingsTitle ?? ''}
+        message="To change this, open your device settings."
+        confirmLabel="Open settings"
+        cancelLabel="Cancel"
+        onConfirm={goToSystemSettings}
+        onCancel={() => setSystemSettingsTitle(null)}
       />
     </Screen>
   );

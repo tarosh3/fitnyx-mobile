@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Plus, SlidersHorizontal } from 'lucide-react-native';
 import React, { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { useDayActivity, useGoals } from '@/src/features/goals/data';
@@ -12,6 +12,7 @@ import type { DietLog } from '@/src/lib/api/diet';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { spacing, type } from '@/src/styles/tokens';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 import { useDietDay, useDietPlan, useDietSummary } from '../data/useDiet';
 import { dateFromKey, dayStatus, fmt, goalsFromPlan, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
 import { InsightsPanel } from '../insights/InsightsPanel';
@@ -29,6 +30,7 @@ const shortDate = (d: string) => dateFromKey(d).toLocaleDateString('en-GB', { da
 
 export function DietTodayScreen() {
   const c = useThemeColors();
+  const toast = useToast();
   const setupScroll = useRef<ScrollView>(null);
   const router = useRouter();
   const { user } = useAuth();
@@ -59,7 +61,7 @@ export function DietTodayScreen() {
     return { date: d, status: dayStatus(t?.kcal ?? 0, t?.meals ?? 0, goal?.kcal ?? 0) };
   });
 
-  const fail = (e: unknown) => Alert.alert('Couldn’t save that', (e as Error)?.message || 'Please try again.');
+  const fail = (e: unknown) => toast((e as Error)?.message || 'Couldn’t save that. Please try again.', 'error');
   const toggle = (meal: PlanMeal) => {
     const log = logged.get(meal.index);
     if (log) return day.remove(log.client_log_id).catch(fail);

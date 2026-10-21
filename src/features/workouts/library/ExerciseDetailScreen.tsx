@@ -84,7 +84,7 @@ export function ExerciseDetailScreen() {
     try {
       await startWorkout({}, { router, setActiveSession }, { addExerciseUuid: exercise.uuid });
     } catch {
-      toast('We couldn’t start the workout. Try again.');
+      toast('We couldn’t start the workout. Try again.', 'error');
     }
   };
 
@@ -98,7 +98,7 @@ export function ExerciseDetailScreen() {
       toast(`Removed ${exercise.title}`);
       router.back();
     } catch (e) {
-      toast((e as { status?: number; message?: string }).status ? 'Couldn’t remove it. Try again.' : (e as Error).message || 'You’re offline — try again when connected');
+      toast((e as { status?: number; message?: string }).status ? 'Couldn’t remove it. Try again.' : (e as Error).message || 'You’re offline — try again when connected', 'error');
     } finally {
       setBusy(false);
     }

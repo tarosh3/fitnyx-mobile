@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { Alert, Keyboard, type KeyboardEvent, type KeyboardEventName } from 'react-native';
+import { Keyboard, type KeyboardEvent, type KeyboardEventName } from 'react-native';
 
 import type { WorkoutSession } from '@/src/lib/api/workoutSessions';
 
@@ -31,6 +31,8 @@ jest.mock('@/src/providers/AICoachProvider', () => ({ useAICoach: () => ({ isOpe
 jest.mock('@/src/providers/ThemeProvider', () => ({ useTheme: () => ({ theme: 'dark' }) }));
 jest.mock('@/src/hooks/useOfflineAware', () => ({ useOfflineAware: () => ({ isOffline: mockOffline }) }));
 jest.mock('@/src/lib/haptics', () => ({ haptic: { light: () => mockHaptic() } }));
+const mockToast = jest.fn();
+jest.mock('@/src/features/workouts/ui/Toast', () => ({ showToast: (...a: unknown[]) => mockToast(...a) }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 48, bottom: 24, left: 0, right: 0 }),
 }));
@@ -65,7 +67,7 @@ describe('ActiveSessionIndicator', () => {
       keyboardSubscriptions.push(remove);
       return { remove } as unknown as ReturnType<typeof Keyboard.addListener>;
     });
-    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    mockToast.mockReset();
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -132,7 +134,7 @@ describe('ActiveSessionIndicator', () => {
 
     await act(async () => { fireEvent.press(screen.getByTestId('active-session-toggle')); });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Couldn’t update the timer', expect.any(String));
+    expect(mockToast).toHaveBeenCalledWith(expect.stringMatching(/^Couldn’t update the timer/), 'error');
     expect(screen.getByTestId('active-session-toggle')).toBeEnabled();
     await act(async () => { fireEvent.press(screen.getByTestId('active-session-toggle')); });
     expect(mockResume).toHaveBeenCalledTimes(2);

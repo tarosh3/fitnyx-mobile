@@ -50,7 +50,7 @@ export function ReportScreen() {
       if (format === 'pdf') await sharePdf(reportHtml(data, totals, range, { includeProfile: profile }), name);
       else await shareCsv(reportCsv(data), name);
     } catch {
-      toast(`Couldn’t create the ${format.toUpperCase()}. Try again.`);
+      toast(`Couldn’t create the ${format.toUpperCase()}. Try again.`, 'error');
     } finally {
       setBusy(null);
     }

@@ -16,7 +16,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -44,6 +43,7 @@ import {
 import { kgToLbs, lbsToKg, useWeightUnit } from '@/src/lib/prefs';
 import { fmtWeight, limitDecimals } from '@/src/lib/decimal';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
+import { useToast } from '@/src/features/workouts/ui/Toast';
 
 // The onboarding goal ids (GoalStep): the plan, Filo and the diet read these.
 const PRIMARY_GOALS = [
@@ -109,6 +109,7 @@ type Tab = 'goals' | 'preferences' | 'health';
 
 export default function FitnessProfileScreen() {
   const c = useThemeColors();
+  const toast = useToast();
   const { user } = useAuth();
   const { isOnline } = useNetworkStatus();
   // Nothing loaded (offline, no cached copy): the form shows defaults, and
@@ -187,7 +188,7 @@ export default function FitnessProfileScreen() {
 
   const save = async () => {
     if (!isOnline) {
-      Alert.alert("You're offline", 'Connect to the internet to save your fitness profile.');
+      toast('You’re offline. Connect to save your fitness profile.', 'error');
       return;
     }
     if (loadFailed) {
@@ -223,10 +224,10 @@ export default function FitnessProfileScreen() {
       };
 
       await updateFitnessProfile(payload);
-      Alert.alert('Saved', 'Fitness profile updated.');
+      toast('Fitness profile saved', 'success');
     } catch (err: any) {
       console.error('Failed to save fitness profile', err);
-      Alert.alert('Error', err?.message || 'Could not save.');
+      toast(err?.message || 'Couldn’t save. Please try again.', 'error');
     } finally {
       setSaving(false);
     }

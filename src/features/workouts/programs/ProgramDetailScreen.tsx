@@ -63,10 +63,10 @@ export function ProgramDetailScreen() {
       await activateWorkoutPlan(program.id);
       await queryClient.invalidateQueries({ queryKey: retentionMetricsKey(user?.id) });
       setConfirm(false);
-      toast(`${program.title} started — today’s workout is on Train`);
+      toast(`${program.title} started — today’s workout is on Train`, 'success');
       router.dismissTo('/workouts');
     } catch {
-      toast('Couldn’t start the program. Check your connection and try again.');
+      toast('Couldn’t start the program. Check your connection and try again.', 'error');
     } finally {
       setBusy(false);
     }
@@ -79,7 +79,7 @@ export function ProgramDetailScreen() {
     try {
       await startWorkout({ planId: metrics.activePlan.id, dayId: metrics.currentDay.id }, { router, setActiveSession });
     } catch {
-      toast('We couldn’t start the workout. Try again.');
+      toast('We couldn’t start the workout. Try again.', 'error');
     } finally {
       setBusy(false);
     }

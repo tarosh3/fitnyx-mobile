@@ -55,7 +55,7 @@ export default function RoutineEditor() {
           target_weight_kg: e.target_weight_kg, target_duration_sec: e.target_duration_sec, target_distance_m: e.target_distance_m, rest_seconds: e.rest_seconds,
         })));
       })
-      .catch(() => toast('Couldn’t load this routine. Check your connection.'))
+      .catch(() => toast('Couldn’t load this routine. Check your connection.', 'error'))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -78,20 +78,20 @@ export default function RoutineEditor() {
 
   const save = async () => {
     const name = title.trim();
-    if (!name) return toast('Give your routine a name');
-    if (!items.length) return toast('Add at least one exercise');
-    if (isOffline) return toast('You’re offline. Connect to save your routine.');
+    if (!name) return toast('Give your routine a name', 'error');
+    if (!items.length) return toast('Add at least one exercise', 'error');
+    if (isOffline) return toast('You’re offline. Connect to save your routine.', 'error');
     setSaving(true);
     try {
       const input = { title: name, exercises: items.map(({ exercise: _e, ...rest }) => rest) };
       const saved = id ? await updateRoutine(id, input) : await createRoutine(input);
       const others = (routines.data ?? []).filter((r) => r.id !== saved.id);
       routines.setData([saved, ...others]);
-      toast(`Saved “${saved.title}”`);
+      toast(`Saved “${saved.title}”`, 'success');
       if (id) router.back();
       else router.replace(`/workouts/routine/${saved.id}`);
     } catch (e: any) {
-      toast(e?.data?.error || e?.message || 'Couldn’t save. Try again.');
+      toast(e?.data?.error || e?.message || 'Couldn’t save. Try again.', 'error');
     } finally {
       setSaving(false);
     }

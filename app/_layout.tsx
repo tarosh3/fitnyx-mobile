@@ -45,7 +45,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { BlurTargetView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
-import { AppState, BackHandler, LogBox, Pressable, Text, ToastAndroid, View, StyleSheet } from 'react-native';
+import { AppState, BackHandler, LogBox, Pressable, Text, View, StyleSheet } from 'react-native';
 
 LogBox.ignoreLogs([
   'AuthApiError: Invalid Refresh Token',
@@ -78,7 +78,7 @@ import { QueryProvider } from '@/src/providers/QueryProvider';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { WorkoutProvider } from '@/src/providers/WorkoutProvider';
 import { AnimatedSplash } from '@/src/screens/SplashScreen';
-import { ToastProvider } from '@/src/features/workouts/ui/Toast';
+import { showToast, ToastProvider } from '@/src/features/workouts/ui/Toast';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -181,7 +181,7 @@ function RootLayout() {
 
       if (currentCount === 0) {
         currentCount = 1;
-        ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+        showToast('Press back again to exit');
         return true; // prevent default behavior
       } else if (currentCount === 1) {
         BackHandler.exitApp();
