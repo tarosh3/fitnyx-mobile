@@ -1,9 +1,9 @@
 import type { User } from '@supabase/supabase-js';
 import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout';
 import { useRouter } from 'expo-router';
-import { ArrowDown, ArrowRight, ChevronDown, Droplets, Flame, Route, Salad, Sparkles } from 'lucide-react-native';
+import { ArrowDown, ArrowRight, ChevronDown, Flame } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArenaHomeCard } from '@/src/features/arena/ui/ArenaHomeCard';
@@ -19,6 +19,8 @@ import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useWorkoutOverlayInset } from '@/src/providers/WorkoutOverlayProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
+import { FiloMark } from '@/src/components/ai/FiloMark';
+import { HomeShortcuts } from './components/HomeShortcuts';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
 import { HomeLevelProgress, HomeWeekSummary } from './components/HomeProgress';
@@ -39,7 +41,6 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
   const { openCenteredChat } = useAICoach();
   const palette = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { width, fontScale } = useWindowDimensions();
   const metrics = useRetentionMetrics(user.id);
   const activity = useActivityData(metrics.sessions);
   const recentTraining = getRecentTraining(metrics.sessions);
@@ -49,7 +50,6 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const styles = useMemo(() => getStyles(palette), [palette]);
-  const compact = width < 360 || fontScale > 1.2;
   const userName = userProfile?.first_name || userProfile?.username || user.user_metadata?.first_name || 'Athlete';
   const today = new Date();
   const hour = today.getHours();
@@ -86,13 +86,37 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
     try { await metrics.refresh(); } finally { setRefreshing(false); }
   };
 
-  const shortcuts = [
-    { title: 'Roam', subtitle: 'Stride or ride', icon: Route, route: '/roam', id: 'home-roam' },
-    { title: 'Nutrition', subtitle: 'Your daily fuel', icon: Salad, route: '/diet', id: 'home-nutrition' },
-    { title: 'Water', subtitle: 'Stay hydrated', icon: Droplets, route: '/water', id: 'home-water' },
-  ] as const;
+  const workoutSection = (
+    <View>
+      {metrics.loading && !metrics.activeSession ? (
+        <View style={styles.stateCard}>
+          <ActivityIndicator color={palette.primary} />
+          <Text style={styles.stateTitle}>Getting your day ready</Text>
+          <Text style={styles.secondaryText}>Your workout and recent progress will appear here.</Text>
+        </View>
+      ) : metrics.error && !metrics.activeSession ? (
+        <View style={styles.stateCard}>
+          <Text style={styles.stateTitle}>Your progress is taking a moment</Text>
+          <Text style={styles.secondaryText}>We couldn’t load your latest activity. Try again when you’re connected.</Text>
+          <Pressable testID="home-retry" accessibilityRole="button" onPress={refresh} style={styles.retryButton}>
+            <Text style={styles.actionText}>Try again</Text><ArrowRight size={18} color={styles.accent.color} />
+          </Pressable>
+        </View>
+      ) : (
+        <ActiveMissionCard
+          activePlan={metrics.activePlan}
+          activeSession={metrics.activeSession}
+          currentDay={metrics.currentDay}
+          nextExercisesCount={metrics.nextExercisesCount}
+          currentDayIndex={metrics.currentDayIndex}
+          totalDays={metrics.totalDays}
+        />
+      )}
+    </View>
+  );
 
   return (
+    <View style={styles.screen}>
     <ScrollView
       testID="home-scroll"
       style={styles.screen}
@@ -109,7 +133,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
           <View style={styles.greetingBlock}>
             <Text style={styles.date}>{dateLabel}</Text>
             <Text style={styles.greeting}>{greeting},</Text>
-            <Text accessibilityRole="header" style={styles.name} numberOfLines={2}>{userName}.</Text>
+            <Text accessibilityRole="header" style={styles.name} numberOfLines={2}>{userName}</Text>
           </View>
           <NotificationBell />
           <Pressable
@@ -128,89 +152,27 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         </View>
 
         <View style={styles.todayRow}>
-          <Text style={styles.sectionTitle}>Your focus today</Text>
-          {!metrics.loading && !metrics.error && (
-            <View style={styles.streak} accessibilityLabel={`${metrics.streakDays} day workout streak`}>
-              <Flame size={15} color={styles.accent.color} />
-              <Text style={styles.streakText}>{metrics.streakDays > 0 ? `${metrics.streakDays}-day streak` : 'A fresh start'}</Text>
-            </View>
-          )}
+          <Text style={styles.sectionTitle}>Move. Eat. Feel good.</Text>
         </View>
 
-        {metrics.loading ? (
-          <View style={styles.stateCard}>
-            <ActivityIndicator color={palette.primary} />
-            <Text style={styles.stateTitle}>Getting your day ready</Text>
-            <Text style={styles.secondaryText}>Your workout and recent progress will appear here.</Text>
-          </View>
-        ) : metrics.error ? (
-          <View style={styles.stateCard}>
-            <Text style={styles.stateTitle}>Your progress is taking a moment</Text>
-            <Text style={styles.secondaryText}>We couldn’t load your latest activity. Try again when you’re connected.</Text>
-            <Pressable testID="home-retry" accessibilityRole="button" onPress={refresh} style={styles.retryButton}>
-              <Text style={styles.actionText}>Try again</Text><ArrowRight size={18} color={styles.accent.color} />
-            </Pressable>
-          </View>
-        ) : (
-          <ActiveMissionCard
-            activePlan={metrics.activePlan}
-            activeSession={metrics.activeSession}
-            currentDay={metrics.currentDay}
-            nextExercisesCount={metrics.nextExercisesCount}
-            currentDayIndex={metrics.currentDayIndex}
-            totalDays={metrics.totalDays}
-          />
-        )}
+        {metrics.activeSession && <View style={styles.resumeSection}>{workoutSection}</View>}
+        <HomeShortcuts><PlanTodayCard /></HomeShortcuts>
 
-        <PlanTodayCard />
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeading}>
-            <Text style={styles.sectionTitle}>Keep the day moving</Text>
+        <View testID="home-today-section" style={styles.dailySection}>
+          <View style={styles.chapterHeading}>
+            <Text style={styles.chapterEyebrow}>YOUR DAILY RHYTHM</Text>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>A little, every day.</Text>
           </View>
-          <View style={[styles.shortcuts, compact && styles.shortcutsCompact]}>
-            {shortcuts.map(({ title, subtitle, icon: Icon, route, id }) => (
-              <Pressable
-                key={id}
-                testID={id}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${title}: ${subtitle}`}
-                onPress={() => router.push(route)}
-                style={({ pressed }) => [styles.shortcut, compact && styles.shortcutCompact, pressed && styles.pressed]}
-              >
-                <Icon size={23} strokeWidth={1.7} color={styles.accent.color} />
-                <View style={styles.shortcutCopy}>
-                  <Text style={styles.shortcutTitle}>{title}</Text>
-                  <Text style={styles.shortcutSubtitle}>{subtitle}</Text>
-                </View>
-                {compact && <ArrowRight size={18} color={palette.mutedText} />}
-              </Pressable>
-            ))}
-          </View>
+          {!metrics.activeSession && workoutSection}
           <TodayGoalsCard />
-          <ArenaHomeCard />
         </View>
 
-        {!metrics.loading && !metrics.error && (
-          <View style={styles.section}>
-            <HomeWeekSummary
-              activityDays={activity.days}
-              weeklyWorkouts={recentTraining.workouts}
-              weeklyVolume={recentTraining.volume}
-              weeklyDuration={recentTraining.durationMinutes}
-              weeklyCalories={recentTraining.calories}
-              onViewActivity={() => router.push('/dashboard')}
-            />
-          </View>
-        )}
-
-        <View style={[styles.section, styles.coachCard]}>
+        <View testID="home-coach-section" style={styles.coachSection}>
           <View style={styles.coachHeader}>
             <View style={styles.coachTitleRow}>
-              <Sparkles size={19} strokeWidth={1.7} color={styles.accent.color} />
-              <Text style={styles.coachEyebrow}>FROM YOUR COACH</Text>
+              <FiloMark size={28} />
+              <View style={styles.coachIdentity}><Text style={styles.coachName}>A word from Filo</Text><Text style={styles.coachEyebrow}>A MOMENT TO RESET</Text></View>
             </View>
-            <Text style={styles.coachName}>Filo</Text>
           </View>
           <Pressable
             testID="home-insight"
@@ -222,7 +184,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
             style={styles.insightButton}
           >
             <Text style={styles.insight} numberOfLines={insightOpen ? undefined : 3}>{insight || FALLBACK_INSIGHT}</Text>
-            <ChevronDown size={16} color={palette.mutedText} style={insightOpen ? styles.chevronOpen : undefined} />
+            <View style={styles.readMore}><Text style={styles.readMoreText}>{insightOpen ? 'Read less' : 'Read more'}</Text><ChevronDown size={14} color={palette.mutedText} style={insightOpen ? styles.chevronOpen : undefined} /></View>
           </Pressable>
           <Pressable testID="home-coach" accessibilityRole="button" accessibilityLabel="Talk to Filo, your AI coach" onPress={openCenteredChat} style={({ pressed }) => [styles.coachAction, pressed && styles.pressed]}>
             <Text style={styles.actionText}>Talk to Filo</Text><ArrowRight size={18} color={styles.accent.color} />
@@ -230,9 +192,29 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         </View>
 
         {!metrics.loading && !metrics.error && (
+          <View testID="home-momentum-section" style={styles.momentumSection}>
+            <Text style={styles.chapterEyebrow}>THE BIGGER PICTURE</Text>
+            <HomeWeekSummary
+              activityDays={activity.days}
+              weeklyWorkouts={recentTraining.workouts}
+              weeklyVolume={recentTraining.volume}
+              weeklyDuration={recentTraining.durationMinutes}
+              weeklyCalories={recentTraining.calories}
+              onViewActivity={() => router.push('/dashboard')}
+            />
+          </View>
+        )}
+
+        {!metrics.loading && !metrics.error && (
           <>
             <View style={styles.section}>
-              <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Small steps. Real progress.</Text></View>
+              <View style={styles.todayRow}>
+                <Text style={styles.consistencyLabel}>Keep building</Text>
+                <View accessible style={styles.streak} accessibilityLabel={`${metrics.streakDays} day workout streak`}>
+                  <Flame size={15} color={styles.accent.color} />
+                  <Text style={styles.streakText}>{metrics.streakDays > 0 ? `${metrics.streakDays}-day workout streak` : 'A fresh start'}</Text>
+                </View>
+              </View>
               <HomeLevelProgress level={metrics.level} xp={metrics.xp} nextLevelXp={metrics.nextLevelXp} progressPercent={metrics.levelProgress} />
             </View>
             <Pressable
@@ -257,8 +239,11 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
             )}
           </>
         )}
+        <ArenaHomeCard />
       </View>
     </ScrollView>
+    <View pointerEvents="none" accessible={false} style={[styles.statusBarCover, { height: insets.top }]} />
+    </View>
   );
 }
 
@@ -266,40 +251,42 @@ const getStyles = (palette: ReturnType<typeof useThemeColors>) => {
   const accent = palette.accent;
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: palette.background },
+    statusBarCover: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: palette.background },
     scrollContent: { flexGrow: 1 },
     content: { width: '100%', maxWidth: 600, alignSelf: 'center' },
     accent: { color: accent },
-    header: { flexDirection: 'row', alignItems: 'center', gap: spacing.base, marginBottom: spacing['2xl'] },
+    header: { flexDirection: 'row', alignItems: 'center', gap: spacing.base, marginBottom: spacing.xl },
     greetingBlock: { flex: 1 },
-    date: { fontFamily: type.weight.medium, fontSize: 12, lineHeight: 18, color: palette.mutedText, marginBottom: spacing.md },
-    greeting: { fontFamily: type.weight.regular, fontSize: 17, lineHeight: 25, color: palette.mutedText },
-    name: { fontFamily: type.weight.bold, fontSize: 32, lineHeight: 40, letterSpacing: -1, color: palette.text },
-    avatar: { width: 54, height: 54, borderRadius: radii.pill, overflow: 'hidden', backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center', borderColor: palette.border, borderWidth: 1 },
+    date: { fontFamily: type.weight.medium, fontSize: 10, lineHeight: 16, letterSpacing: 0.6, color: palette.mutedText, marginBottom: spacing.xs },
+    greeting: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18, color: palette.mutedText },
+    name: { fontFamily: type.weight.bold, fontSize: 24, lineHeight: 30, letterSpacing: -0.8, color: palette.text },
+    avatar: { width: 44, height: 44, borderRadius: radii.pill, overflow: 'hidden', backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center', borderColor: palette.border, borderWidth: 1 },
     avatarImage: { width: '100%', height: '100%' },
     avatarInitial: { color: accent, fontFamily: type.weight.bold, fontSize: 23 },
     todayRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md },
-    sectionTitle: { fontFamily: type.weight.semibold, fontSize: 17, lineHeight: 25, letterSpacing: -0.3, color: palette.text },
+    sectionTitle: { fontFamily: type.weight.semibold, fontSize: 21, lineHeight: 28, letterSpacing: -0.7, color: palette.text },
     streak: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
     streakText: { fontFamily: type.weight.medium, fontSize: 11, lineHeight: 18, color: accent },
-    section: { marginTop: spacing['2xl'] },
-    sectionHeading: { marginBottom: spacing.md },
-    shortcuts: { flexDirection: 'row', gap: spacing.sm },
-    shortcutsCompact: { flexDirection: 'column' },
-    shortcut: { flex: 1, backgroundColor: palette.surface, borderColor: palette.border, borderWidth: 1, borderRadius: radii.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.base, minHeight: 116, gap: spacing.md },
-    shortcutCompact: { flexDirection: 'row', alignItems: 'center', minHeight: 76, gap: spacing.base, paddingHorizontal: spacing.base },
-    shortcutCopy: { flex: 1, gap: spacing.xs },
-    shortcutTitle: { fontFamily: type.weight.semibold, fontSize: 13, lineHeight: 19, color: palette.text },
-    shortcutSubtitle: { fontFamily: type.weight.regular, fontSize: 10, lineHeight: 16, color: palette.mutedText },
+    resumeSection: { marginBottom: spacing.base },
+    dailySection: { marginTop: spacing['2xl'] },
+    chapterHeading: { gap: spacing.sm, marginBottom: spacing.xs },
+    chapterEyebrow: { color: palette.mutedText, fontFamily: type.weight.semibold, fontSize: 9, lineHeight: 15, letterSpacing: 1.7 },
+    momentumSection: { marginTop: spacing['3xl'], gap: spacing.md },
+    consistencyLabel: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: 12, lineHeight: 18 },
+    section: { marginTop: spacing.xl },
     pressed: { opacity: 0.75 },
-    coachCard: { backgroundColor: palette.accentSoft, borderRadius: radii.xl, padding: spacing.lg },
+    coachSection: { marginTop: spacing['2xl'], paddingLeft: spacing.lg, borderLeftWidth: 2, borderLeftColor: palette.accent },
     coachHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
     coachTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
-    coachEyebrow: { color: accent, fontFamily: type.weight.semibold, fontSize: 10, lineHeight: 16, letterSpacing: 1.2 },
-    coachName: { fontFamily: type.weight.semibold, fontSize: 14, color: palette.text },
+    coachIdentity: { flex: 1, gap: 3 },
+    coachEyebrow: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: 9, lineHeight: 15, letterSpacing: 1 },
+    coachName: { fontFamily: type.weight.semibold, fontSize: 13, color: palette.text },
     insightButton: { paddingTop: spacing.base, paddingBottom: spacing.sm, gap: spacing.sm, alignItems: 'flex-start', minHeight: 48 },
-    insight: { fontFamily: type.weight.medium, fontSize: 16, lineHeight: 25, color: palette.text },
-    coachAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48, alignSelf: 'flex-start' },
+    insight: { fontFamily: type.weight.medium, fontSize: 18, lineHeight: 28, letterSpacing: -0.3, color: palette.text },
+    coachAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, minHeight: 44, alignSelf: 'flex-start' },
     actionText: { fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 22, color: accent },
+    readMore: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 32 },
+    readMoreText: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: 11 },
     chevronOpen: { transform: [{ rotate: '180deg' }] },
     historyButton: { marginTop: spacing.lg, paddingVertical: spacing.base, flexDirection: 'row', alignItems: 'center', gap: spacing.base, borderTopWidth: 1, borderTopColor: palette.border },
     historyCopy: { flex: 1, gap: spacing.xs },
@@ -307,8 +294,8 @@ const getStyles = (palette: ReturnType<typeof useThemeColors>) => {
     history: { paddingTop: spacing.base },
     historyNote: { fontFamily: type.weight.regular, fontSize: 11, color: palette.mutedText, lineHeight: 18 },
     secondaryText: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 21, color: palette.mutedText },
-    stateCard: { minHeight: 230, borderRadius: radii['2xl'], backgroundColor: palette.surface, padding: spacing.xl, justifyContent: 'center', gap: spacing.md },
-    stateTitle: { fontFamily: type.weight.semibold, fontSize: 20, lineHeight: 28, color: palette.text },
+    stateCard: { borderRadius: radii.lg, backgroundColor: palette.surface, padding: spacing.base, gap: spacing.sm },
+    stateTitle: { fontFamily: type.weight.semibold, fontSize: 16, lineHeight: 22, color: palette.text },
     retryButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
   });
 };

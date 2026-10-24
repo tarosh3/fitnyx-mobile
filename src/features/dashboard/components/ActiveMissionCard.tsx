@@ -1,13 +1,13 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowRight, Play } from 'lucide-react-native';
+import { ArrowUpRight, Dumbbell, Play } from 'lucide-react-native';
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { DashboardPlan, DashboardPlanDay } from '@/src/lib/api/dashboard';
 import type { WorkoutSession } from '@/src/lib/api/workoutSessions';
 import { radii, spacing, type } from '@/src/styles/tokens';
-import { colors } from '@/src/theme/colors';
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { HomePressable } from './HomePressable';
 
 interface ActiveMissionCardProps {
   activePlan: DashboardPlan | null;
@@ -27,6 +27,7 @@ export function ActiveMissionCard({
   totalDays,
 }: ActiveMissionCardProps) {
   const router = useRouter();
+  const c = useThemeColors();
   const hasSession = Boolean(activeSession?.id);
   const hasPlan = Boolean(activePlan?.id);
   const hasWorkout = hasSession || hasPlan;
@@ -38,7 +39,7 @@ export function ActiveMissionCard({
   const displayedDay = hasPlan && dayMatchesSession ? currentDay : null;
   const title = hasWorkout
     ? displayedDay?.day_name?.trim() || displayedPlan?.title?.trim() || 'Your workout'
-    : 'Your plan\nis ready.';
+    : 'Your plan is ready.';
   const planTitle = displayedPlan?.title?.trim();
   // A missing day is normalized to nextExercisesCount=0 by the metrics hook;
   // don't display that placeholder as a known empty workout.
@@ -68,107 +69,40 @@ export function ActiveMissionCard({
   };
 
   return (
-    <Pressable
+    <HomePressable
       testID="home-workout-card"
       accessibilityRole="button"
       accessibilityLabel={`${action}. ${title.replace(/\n/g, ' ')}${metadata ? `. ${metadata}` : ''}`}
       accessibilityHint={hasSession ? 'Opens your current workout session.' : hasPlan ? 'Opens the plan so you can review your workout.' : 'Opens the plan built from your answers.'}
       onPress={handlePress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={[styles.card, { backgroundColor: hasSession ? c.accentSoft : 'transparent', borderColor: c.border }, hasSession && styles.activeCard]}
     >
-      <Image
-        source={require('../../../../assets/images/home-workout-hero.jpg')}
-        style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]}
-        resizeMode="cover"
-        accessible={false}
-        importantForAccessibility="no"
-      />
-      <LinearGradient
-        colors={['rgba(7, 11, 9, 0.68)', 'rgba(7, 11, 9, 0.28)', 'rgba(7, 11, 9, 0.88)']}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
-      />
-      <View style={styles.content}>
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>{hasSession ? 'SESSION IN PROGRESS' : 'UP NEXT'}</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        </View>
+      <View style={[styles.icon, { backgroundColor: c.accentSoft }]}>
+        {hasSession ? <Play size={18} color={c.accent} fill={c.accent} /> : <Dumbbell size={22} strokeWidth={1.7} color={c.accent} />}
+      </View>
+      <View style={styles.copy}>
+        <Text style={[styles.eyebrow, { color: hasSession ? c.accent : c.mutedText }]}>{hasSession ? 'SESSION IN PROGRESS' : 'UP NEXT'}</Text>
+        <Text style={[styles.title, { color: c.text }]}>{title}</Text>
+        <Text style={[styles.subtitle, { color: c.mutedText }]}>{subtitle}</Text>
         <View style={styles.footer}>
-          {metadata ? <Text style={styles.metadata}>{metadata}</Text> : null}
-          <View style={styles.action}>
-            {hasSession ? <Play size={17} color={colors.dark.primaryText} fill={colors.dark.primaryText} /> : null}
-            <Text style={styles.actionText}>{action}</Text>
-            {!hasSession ? <ArrowRight size={19} color={colors.dark.primaryText} /> : null}
-          </View>
+          {metadata ? <Text style={[styles.metadata, { color: c.mutedText }]}>{metadata}</Text> : null}
+          <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>{action}</Text><ArrowUpRight size={16} color={c.accent} /></View>
         </View>
       </View>
-    </Pressable>
+    </HomePressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    minHeight: 280,
-    backgroundColor: colors.dark.surface,
-    borderRadius: radii['2xl'],
-    overflow: 'hidden',
-  },
-  pressed: { opacity: 0.88 },
-  content: {
-    flex: 1,
-    justifyContent: 'space-between',
-    padding: spacing.xl,
-    gap: spacing.xl,
-  },
-  heading: { gap: spacing.sm },
-  eyebrow: {
-    fontFamily: type.weight.semibold,
-    fontSize: type.size.xs,
-    lineHeight: 18,
-    letterSpacing: type.tracking.eyebrow,
-    color: colors.dark.primary,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    fontFamily: type.weight.bold,
-    fontSize: type.size.h1,
-    lineHeight: 39,
-    letterSpacing: -0.8,
-    color: colors.dark.text,
-  },
-  subtitle: {
-    fontFamily: type.weight.regular,
-    fontSize: type.size.sm,
-    lineHeight: 21,
-    color: '#DEDFDE',
-  },
-  footer: { gap: spacing.base },
-  metadata: {
-    fontFamily: type.weight.medium,
-    fontSize: type.size.xs,
-    lineHeight: 19,
-    color: '#DEDFDE',
-  },
-  action: {
-    minHeight: 52,
-    borderRadius: radii.md,
-    backgroundColor: colors.dark.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.base,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  actionText: {
-    fontFamily: type.weight.bold,
-    fontSize: type.size.sm,
-    lineHeight: 22,
-    color: colors.dark.primaryText,
-    flexShrink: 1,
-  },
+  card: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: spacing.lg },
+  activeCard: { borderRadius: radii.lg, borderBottomWidth: 0, padding: spacing.base },
+  icon: { width: 36, height: 36, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
+  copy: { flex: 1, minWidth: 0, gap: 4 },
+  eyebrow: { fontFamily: type.weight.semibold, fontSize: 9, lineHeight: 13, letterSpacing: 1.1 },
+  title: { fontFamily: type.weight.semibold, fontSize: 16, lineHeight: 21, letterSpacing: -0.3 },
+  subtitle: { fontFamily: type.weight.regular, fontSize: 11, lineHeight: 16 },
+  footer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm, marginTop: 3 },
+  metadata: { fontFamily: type.weight.medium, fontSize: 10, lineHeight: 16 },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  actionText: { fontFamily: type.weight.semibold, fontSize: 11, lineHeight: 18, flexShrink: 1 },
 });

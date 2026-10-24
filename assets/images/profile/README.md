@@ -1,0 +1,22 @@
+# Profile artwork
+
+Generated using the built-in OpenAI image generation tool. Transparent PNGs, optimized to 256px emblems and a 384px training illustration for mobile display. Original high-resolution generations remain in the local Codex generated-images directory.
+
+Palette: satin silver, graphite, muted sage. The artwork is decorative; live labels and accessibility descriptions carry all milestone information. Strength, movement, and consistency each share one emblem across their associated milestones.
+
++## strength.png
+
+Create a single premium 3D collectible fitness app achievement icon as an isolated transparent PNG. Large readable silhouette, centered square composition, object occupies 82% of canvas with safe transparent padding. A polished sculptural medallion, softly rounded bevels, satin platinum silver and graphite metal, a small muted sage-green enamel accent. Contemporary luxury sports industrial design, beautifully art-directed product render, soft studio lighting from upper left, realistic ambient occlusion only on the object, restrained reflections, no glow, no floor, no backdrop, no drop shadow beyond the object. Nearly front-facing with very subtle three-quarter depth. Must read clearly at 64 pixels. NO text, letters, numbers, watermarks, extra objects, ribbons or tiny ornamental detail. The medallion is a rounded hexagonal silver shield holding one bold miniature graphite dumbbell across its center, with small sage enamel inset on the weight plates. Express strength and earned progress.
+
+## movement.png
+
+Create a single premium 3D collectible fitness app achievement icon as an isolated transparent PNG. Large readable silhouette, centered square composition, object occupies 82% of canvas with safe transparent padding. A polished sculptural medallion, softly rounded bevels, satin platinum silver and graphite metal, a small muted sage-green enamel accent. Contemporary luxury sports industrial design, beautifully art-directed product render, soft studio lighting from upper left, realistic ambient occlusion only on the object, restrained reflections, no glow, no floor, no backdrop, no drop shadow beyond the object. Nearly front-facing with very subtle three-quarter depth. Must read clearly at 64 pixels. NO text, letters, numbers, watermarks, extra objects, ribbons or tiny ornamental detail. The medallion is a rounded hexagonal silver shield holding one bold stylized running shoe with a small swept-back wing. The shoe is graphite and silver, with a sage-green sole accent. Express movement and distance.
+
+## consistency.png
+
+Create a single premium 3D collectible fitness app achievement icon as an isolated transparent PNG. Large readable silhouette, centered square composition, object occupies 82% of canvas with safe transparent padding. A polished sculptural medallion, softly rounded bevels, satin platinum silver and graphite metal, a small muted sage-green enamel accent. Contemporary luxury sports industrial design, beautifully art-directed product render, soft studio lighting from upper left, realistic ambient occlusion only on the object, restrained reflections, no glow, no floor, no backdrop, no drop shadow beyond the object. Nearly front-facing with very subtle three-quarter depth. Must read clearly at 64 pixels. NO text, letters, numbers, watermarks, extra objects, ribbons or tiny ornamental detail. The medallion is a rounded hexagonal silver shield holding one bold sculptural flame. The flame has a silver outer contour and muted sage enamel center, graphite inset behind. Express a consistent training streak.
+
+## training.png
+
+Create one premium 3D fitness product illustration on a fully transparent background, horizontal 4:3 composition with safe transparent padding. A beautifully sculpted compact adjustable dumbbell angled diagonally upward, beside a slim upright circular target with three concentric rings and a tiny sage center, both forming one balanced compact arrangement. Satin silver metal, graphite charcoal weight plates, very small muted sage green enamel details. Tactile luxury sports industrial design, smooth bevels, soft studio lighting from upper left, very clear bold silhouettes, restrained realistic reflections, no glow, no text, no letters, no numbers, no floor or backdrop. No additional objects or ornamental detail. Must be beautiful and readable as a small 110px mobile app spot illustration, visible on either charcoal or off-white UI. Objects fill 85% of canvas.
+

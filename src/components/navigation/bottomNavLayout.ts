@@ -1,5 +1,5 @@
 /** Shared geometry for the dock, scroll clearance and active-session player. */
-export const BOTTOM_NAV_HEIGHT = 72;
+export const BOTTOM_NAV_HEIGHT = 58;
 export const BOTTOM_NAV_LIFT = 0;
 export const bottomNavGap = (bottomInset: number) => Math.max(bottomInset, 12);
 export const bottomNavClearance = (bottomInset: number) => BOTTOM_NAV_HEIGHT + BOTTOM_NAV_LIFT + bottomNavGap(bottomInset);

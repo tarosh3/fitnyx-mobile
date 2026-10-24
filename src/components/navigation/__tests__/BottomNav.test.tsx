@@ -131,13 +131,19 @@ describe('BottomNav navigation and visibility', () => {
     expect(mockReplace).toHaveBeenCalledWith(destination);
   });
 
-  it('shows the profile tab as initials without a label', () => {
+  it('gives Profile the same labeled custom-icon treatment as the other tabs', () => {
     const screen = render(<BottomNav />);
 
     expect(screen.getByTestId('nav-profile')).toHaveProp('accessibilityLabel', 'Profile');
-    expect(screen.getAllByText('TM', { includeHiddenElements: true }).length).toBeGreaterThan(0);
-    expect(screen.queryByText('Profile', { includeHiddenElements: true })).toBeNull();
+    expect(screen.queryByText('TM', { includeHiddenElements: true })).toBeNull();
+    expect(screen.getByText('Profile', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.queryByText('Settings', { includeHiddenElements: true })).toBeNull();
+  });
+
+  it('keeps the accessibility order aligned with the five visible slots', () => {
+    const screen = render(<BottomNav />);
+    expect(screen.getAllByTestId(/^nav-(home|workouts|coach|progress|profile)$/).map((item) => item.props.testID))
+      .toEqual(['nav-home', 'nav-workouts', 'nav-coach', 'nav-progress', 'nav-profile']);
   });
 
   it('opens Coach without navigating or sending a message', () => {

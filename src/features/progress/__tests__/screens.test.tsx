@@ -149,8 +149,8 @@ describe('Profile tab', () => {
     expect(screen.getByText('Tarosh Mathuria')).toBeTruthy();
     expect(screen.getByText('@tarosh3')).toBeTruthy();
     expect(screen.getByText('TM')).toBeTruthy();
-    expect(screen.getByText('LV 3')).toBeTruthy();
-    expect(await screen.findByText('Trophy case')).toBeTruthy();
+    expect(screen.getByText(/Level 3/)).toBeTruthy();
+    expect(await screen.findByText('Milestones')).toBeTruthy();
     expect(screen.getByText('32')).toBeTruthy();
     expect(screen.getByText('Personal bests')).toBeTruthy();
     expect(await screen.findByText('Build muscle')).toBeTruthy();

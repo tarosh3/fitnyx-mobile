@@ -21,7 +21,7 @@ beforeEach(() => jest.clearAllMocks());
 describe('ActiveMissionCard', () => {
   it('points a new user to the plan built from their answers, without inventing workout metrics', () => {
     render(<ActiveMissionCard activePlan={null} activeSession={null} currentDay={null} nextExercisesCount={0} currentDayIndex={1} totalDays={0} />);
-    expect(screen.getByText('Your plan\nis ready.')).toBeTruthy();
+    expect(screen.getByText('Your plan is ready.')).toBeTruthy();
     expect(screen.getByText('See your plan')).toBeTruthy();
     expect(screen.queryByText(/exercises/)).toBeNull();
     fireEvent.press(screen.getByTestId('home-workout-card'));
@@ -116,3 +116,15 @@ describe('ActiveMissionCard', () => {
     expect(mockPush).toHaveBeenCalledWith('/workouts/programs/plan-1');
   });
 });
+
+// Navigation/data tests don't require the native worklet runtime.
+jest.mock('react-native-reanimated', () => ({
+  __esModule: true,
+  default: { createAnimatedComponent: (component: unknown) => component },
+  ReduceMotion: { System: 'system' },
+  useSharedValue: (value: number) => ({ value }),
+  useAnimatedStyle: (style: () => unknown) => style(),
+  withTiming: (value: number) => value,
+}));
+
+jest.mock('@/src/hooks/useThemeColors', () => ({ useThemeColors: () => require('@/src/theme/colors').colors.dark }));
