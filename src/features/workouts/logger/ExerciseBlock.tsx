@@ -1,6 +1,7 @@
 import { Check, ChevronDown, MoreHorizontal, Plus } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { GestureDetector, type GestureType } from 'react-native-gesture-handler';
 
 import { type Block, blockDone, pendingRows } from '@/src/features/workouts/logger/rows';
 import { lastText, SetHeader, SetRow } from '@/src/features/workouts/logger/SetRow';
@@ -28,10 +29,12 @@ interface Props {
   onEditLog: (logId: string) => void;
   onHoldTimer: (pi: number) => void;
   onAddSet: () => void;
+  /** Hold-and-drag on the header to reorder (from `DragItem`). */
+  dragGesture?: GestureType;
 }
 
 /** One exercise in the live workout: collapsed to a line, or its set rows. */
-export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenExercise, onMenu, onEditPending, onCheckPending, onEditLog, onHoldTimer, onAddSet }: Props) {
+export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenExercise, onMenu, onEditPending, onCheckPending, onEditLog, onHoldTimer, onAddSet, dragGesture }: Props) {
   const c = useThemeColors();
   const t = trackingOf(b.exercise);
   const name = b.exercise?.title ?? 'Exercise';
@@ -44,33 +47,37 @@ export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenEx
   ].filter(Boolean).join(' · ');
   const summary = done ? `${plural(b.logs.length, 'set')} done` : b.planned ? describeTarget(t, b.planned) : `${b.logs.length} of ${plural(total, 'set')}`;
 
+  const head = (
+    <View style={styles.head}>
+      <Pressable onPress={onOpenExercise} accessibilityRole="button" accessibilityLabel={`How to do ${name}`} hitSlop={4}>
+        <ExerciseThumb exercise={b.exercise} size={56} />
+        {done ? (
+          <View style={[styles.doneBadge, { backgroundColor: c.primary, borderColor: c.card }]}>
+            <Check size={14} color={c.primaryText} strokeWidth={3} />
+          </View>
+        ) : null}
+      </Pressable>
+      <Pressable onPress={onToggle} style={styles.titles} accessibilityRole="button" accessibilityState={{ expanded }}
+        accessibilityLabel={`${name}. ${summary}. ${expanded ? 'Collapse' : 'Show sets'}`}>
+        <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>{name}</Text>
+        <Text style={[styles.meta, { color: done ? c.accent : c.mutedText }]} numberOfLines={1}>{expanded && meta ? meta : summary}</Text>
+      </Pressable>
+      {expanded ? (
+        <Pressable onPress={onMenu} accessibilityRole="button" accessibilityLabel={`More for ${name}: how to, swap, move, remove`}
+          style={({ pressed }) => [styles.icon, { backgroundColor: c.surface }, pressed && { opacity: 0.7 }]}>
+          <MoreHorizontal size={22} color={c.text} />
+        </Pressable>
+      ) : (
+        <Pressable onPress={onToggle} accessibilityElementsHidden importantForAccessibility="no" style={styles.icon}>
+          <ChevronDown size={22} color={c.mutedText} />
+        </Pressable>
+      )}
+    </View>
+  );
+
   return (
     <View testID={`block-${bi}`} style={[styles.card, { backgroundColor: c.card, borderColor: expanded ? c.accent : c.border }, expanded && styles.cardOpen]}>
-      <View style={styles.head}>
-        <Pressable onPress={onOpenExercise} accessibilityRole="button" accessibilityLabel={`How to do ${name}`} hitSlop={4}>
-          <ExerciseThumb exercise={b.exercise} size={56} />
-          {done ? (
-            <View style={[styles.doneBadge, { backgroundColor: c.primary, borderColor: c.card }]}>
-              <Check size={14} color={c.primaryText} strokeWidth={3} />
-            </View>
-          ) : null}
-        </Pressable>
-        <Pressable onPress={onToggle} style={styles.titles} accessibilityRole="button" accessibilityState={{ expanded }}
-          accessibilityLabel={`${name}. ${summary}. ${expanded ? 'Collapse' : 'Show sets'}`}>
-          <Text style={[styles.name, { color: c.text }]} numberOfLines={2}>{name}</Text>
-          <Text style={[styles.meta, { color: done ? c.accent : c.mutedText }]} numberOfLines={1}>{expanded && meta ? meta : summary}</Text>
-        </Pressable>
-        {expanded ? (
-          <Pressable onPress={onMenu} accessibilityRole="button" accessibilityLabel={`More for ${name}: how to, swap, move, remove`}
-            style={({ pressed }) => [styles.icon, { backgroundColor: c.surface }, pressed && { opacity: 0.7 }]}>
-            <MoreHorizontal size={22} color={c.text} />
-          </Pressable>
-        ) : (
-          <Pressable onPress={onToggle} accessibilityElementsHidden importantForAccessibility="no" style={styles.icon}>
-            <ChevronDown size={22} color={c.mutedText} />
-          </Pressable>
-        )}
-      </View>
+      {dragGesture ? <GestureDetector gesture={dragGesture}>{head}</GestureDetector> : head}
 
       {expanded ? (
         <View style={styles.sets}>

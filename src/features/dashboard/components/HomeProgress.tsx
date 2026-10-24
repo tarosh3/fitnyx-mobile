@@ -57,7 +57,7 @@ export function HomeWeekSummary({
   ];
 
   return (
-    <View testID="home-week-summary" style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+    <View testID="home-week-summary" style={[styles.card, { borderColor: palette.border }]}>
       <View style={[styles.header, largeText && styles.headerStacked]}>
         <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>Last 7 days</Text>
         <Pressable
@@ -96,7 +96,7 @@ export function HomeWeekSummary({
                 {
                   width: circleSize,
                   height: circleSize,
-                  backgroundColor: completed ? palette.primary : palette.card,
+                  backgroundColor: completed ? palette.primary : palette.surface,
                   borderColor: isToday ? accent : 'transparent',
                   borderWidth: isToday ? 1.5 : 0,
                 },
@@ -142,7 +142,7 @@ export function HomeLevelProgress({ level, xp, nextLevelXp, progressPercent }: H
   const remaining = Math.max(0, nextLevelXp - xp);
 
   return (
-    <View testID="home-level-progress" style={[styles.levelCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+    <View testID="home-level-progress" style={[styles.levelCard, { borderColor: palette.border }]}>
       <View style={[styles.levelRow, largeText && styles.levelRowStacked]}>
         <View style={[styles.levelBadge, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <Text style={[styles.levelBadgeText, { color: accent }]}>Level {level}</Text>
@@ -153,6 +153,7 @@ export function HomeLevelProgress({ level, xp, nextLevelXp, progressPercent }: H
             <Text style={[styles.remainingText, { color: palette.mutedText }]}>{formatCount(remaining)} XP to level {level + 1}</Text>
           </View>
           <View
+            accessible
             accessibilityRole="progressbar"
             accessibilityLabel={`Progress to level ${level + 1}`}
             accessibilityValue={{ min: 0, max: 100, now: Math.round(progress), text: `${formatCount(remaining)} XP remaining` }}
@@ -167,10 +168,10 @@ export function HomeLevelProgress({ level, xp, nextLevelXp, progressPercent }: H
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radii.xl, borderWidth: 1, padding: spacing.base },
+  card: { borderBottomWidth: 1, paddingBottom: spacing.lg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: -spacing.sm },
   headerStacked: { alignItems: 'flex-start', flexDirection: 'column', marginTop: 0 },
-  title: { fontFamily: type.weight.semibold, fontSize: 18, lineHeight: 25, flexShrink: 1 },
+  title: { fontFamily: type.weight.semibold, fontSize: 21, lineHeight: 28, letterSpacing: -0.6, flexShrink: 1 },
   statsButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingLeft: spacing.sm },
   statsButtonText: { fontFamily: type.weight.semibold, fontSize: type.size.xs, lineHeight: 18 },
   pressed: { opacity: 0.7 },
@@ -184,11 +185,11 @@ const styles = StyleSheet.create({
   metricsStacked: { flexDirection: 'column', gap: spacing.md },
   metric: { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: spacing.xs },
   metricRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
-  metricValue: { fontFamily: type.weight.semibold, fontSize: 22, lineHeight: 28 },
+  metricValue: { fontFamily: type.weight.semibold, fontSize: 30, lineHeight: 38, letterSpacing: -1 },
   metricValueCompact: { fontSize: 20, lineHeight: 26 },
   metricLabel: { fontFamily: type.weight.regular, fontSize: type.size.xs, lineHeight: 18 },
   volume: { fontFamily: type.weight.regular, fontSize: type.size.xs, lineHeight: 18, textAlign: 'center', marginTop: spacing.md },
-  levelCard: { borderRadius: radii.lg, borderWidth: 1, padding: spacing.base },
+  levelCard: { paddingVertical: spacing.sm },
   levelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   levelRowStacked: { flexDirection: 'column', alignItems: 'stretch' },
   levelBadge: { paddingHorizontal: spacing.md, minHeight: 38, paddingVertical: spacing.sm, borderRadius: radii.md, borderWidth: 1, justifyContent: 'center', alignSelf: 'flex-start' },

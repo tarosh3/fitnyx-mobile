@@ -25,39 +25,43 @@ export function ArenaHomeCard() {
   return (
     <Pressable testID="home-arena" onPress={() => router.push('/arena' as never)}
       accessibilityRole="button" accessibilityLabel={`Arena. ${title}. ${line}`}
-      style={({ pressed }) => [styles.card, { backgroundColor: c.card, borderColor: c.border }, pressed && styles.pressed]}>
-      <View style={styles.head}>
-        <Trophy size={18} color={c.accent} />
-        <Text style={[styles.eyebrow, { color: c.accent }]}>ARENA · THIS WEEK</Text>
-      </View>
-      <View style={styles.body}>
-        <View style={styles.copy}>
-          <Text style={[styles.title, { color: c.text }]}>{title}</Text>
-          <Text style={[styles.sub, { color: c.mutedText }]}>{line}</Text>
+      style={({ pressed }) => [styles.card, { backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
+      <View style={[styles.emblem, { borderColor: c.accent }]}><Trophy size={28} strokeWidth={1.3} color={c.accent} /></View>
+      <View style={styles.content}>
+        <View style={styles.head}>
+          <Text style={[styles.eyebrow, { color: c.accent }]}>ARENA · THIS WEEK</Text>
         </View>
-        {!alone ? (
-          <View style={styles.faces}>
-            {data.rows.slice(0, 3).map((r, i) => (
-              <Avatar key={r.user.id} uri={r.user.avatar_url || null} name={r.user.name || r.user.username} size={30}
-                style={[styles.face, { borderColor: c.card, marginLeft: i ? -10 : 0 }]} />
-            ))}
+        <View style={styles.body}>
+          <View style={styles.copy}>
+            <Text style={[styles.title, { color: c.text }]}>{title}</Text>
+            <Text style={[styles.sub, { color: c.mutedText }]}>{line}</Text>
           </View>
-        ) : null}
-        <ArrowRight size={18} color={c.mutedText} />
+          {!alone ? (
+            <View style={styles.faces}>
+              {data.rows.slice(0, 3).map((r, i) => (
+                <Avatar key={r.user.id} uri={r.user.avatar_url || null} name={r.user.name || r.user.username} size={24}
+                  style={[styles.face, { borderColor: c.accentSoft, marginLeft: i ? -10 : 0 }]} />
+              ))}
+            </View>
+          ) : null}
+          <ArrowRight size={18} color={c.mutedText} />
+        </View>
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: spacing.md, borderRadius: radii.lg, borderWidth: StyleSheet.hairlineWidth, padding: spacing.base, gap: spacing.sm },
+  card: { marginTop: spacing['2xl'], borderRadius: radii.lg, padding: spacing.lg, gap: spacing.base, flexDirection: 'row', alignItems: 'center' },
+  content: { flex: 1, gap: spacing.sm },
+  emblem: { width: 48, height: 64, borderWidth: 1, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.85 },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  eyebrow: { fontFamily: type.weight.bold, fontSize: 12, letterSpacing: 1.2 },
-  body: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  copy: { flex: 1, gap: 2 },
-  title: { fontFamily: type.weight.extrabold, fontSize: 18 },
-  sub: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 18 },
+  eyebrow: { fontFamily: type.weight.bold, fontSize: 9, letterSpacing: 1.2 },
+  body: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  copy: { width: '100%', gap: spacing.xs },
+  title: { fontFamily: type.weight.semibold, fontSize: 17 },
+  sub: { fontFamily: type.weight.regular, fontSize: 11, lineHeight: 17 },
   faces: { flexDirection: 'row' },
   face: { borderWidth: 2 },
 });

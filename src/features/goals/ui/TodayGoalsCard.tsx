@@ -8,7 +8,7 @@ import { activityGoals, goalValue } from '@/src/features/goals/model';
 import { ActivityGoalsSheet } from '@/src/features/goals/ui/ActivityGoalsSheet';
 import { GoalRingsRow } from '@/src/features/goals/ui/GoalRings';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { radii, spacing, type } from '@/src/styles/tokens';
+import { spacing, type } from '@/src/styles/tokens';
 
 /** Home: today's distance / calories / steps against the daily goals. */
 export function TodayGoalsCard() {
@@ -23,7 +23,7 @@ export function TodayGoalsCard() {
   const done = list.filter((g) => goalValue(g.kind, day) >= g.target).length;
 
   return (
-    <View testID="home-goals-card" style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+    <View testID="home-goals-card" style={styles.card}>
       <View style={styles.head}>
         <Text style={[styles.eyebrow, { color: c.accent }]}>TODAY’S GOALS</Text>
         {list.length ? (
@@ -53,7 +53,7 @@ export function TodayGoalsCard() {
           <View style={[styles.emptyIcon, { backgroundColor: c.accentSoft }]}><Target size={22} color={c.accent} /></View>
           <View style={styles.emptyCopy}>
             <Text style={[styles.title, { color: c.text }]}>Set a daily goal</Text>
-            <Text style={[styles.body, { color: c.mutedText }]}>Distance, calories burned or steps, tracked live on every Roam.</Text>
+            <Text style={[styles.body, { color: c.mutedText }]}>Track distance, calories or steps on every Roam.</Text>
           </View>
           <ArrowRight size={18} color={c.mutedText} />
         </Pressable>
@@ -65,13 +65,13 @@ export function TodayGoalsCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radii.xl, borderWidth: 1, padding: spacing.base, gap: spacing.md, marginTop: spacing.md },
+  card: { paddingVertical: spacing.lg, gap: spacing.md },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 },
-  eyebrow: { fontFamily: type.weight.semibold, fontSize: type.size.xs, letterSpacing: type.tracking.eyebrow },
-  edit: { minWidth: 32, minHeight: 32, alignItems: 'flex-end', justifyContent: 'center' },
-  title: { fontFamily: type.weight.bold, fontSize: 18 },
-  body: { fontFamily: type.weight.regular, fontSize: 14, lineHeight: 20 },
-  link: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 40 },
+  eyebrow: { fontFamily: type.weight.semibold, fontSize: 10, letterSpacing: type.tracking.eyebrow },
+  edit: { minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },
+  title: { fontFamily: type.weight.semibold, fontSize: 17 },
+  body: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18 },
+  link: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 6, minHeight: 44 },
   linkText: { fontFamily: type.weight.semibold, fontSize: 15 },
   pressed: { opacity: 0.8 },
   empty: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

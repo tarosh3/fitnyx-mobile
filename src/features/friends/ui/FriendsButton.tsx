@@ -8,7 +8,7 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 import { useFriends } from '../data';
 
 /** The profile's way into Friends: friend count, plus a dot when requests wait. */
-export function FriendsButton() {
+export function FriendsButton({ compact = false }: { compact?: boolean }) {
   const c = useThemeColors();
   const router = useRouter();
   const { data } = useFriends();
@@ -20,7 +20,7 @@ export function FriendsButton() {
       accessibilityRole="button" accessibilityLabel={waiting ? `${label}, ${waiting} new requests` : label}
       style={[styles.button, { backgroundColor: c.card, borderColor: c.border }]}>
       <Users size={17} color={c.text} strokeWidth={2} />
-      <Text style={[styles.text, { color: c.text }]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.text, { color: c.text }, compact && { fontSize: 13 }]} numberOfLines={1}>{compact ? 'Friends' : label}</Text>
       {waiting ? (
         <View style={[styles.badge, { backgroundColor: c.primary }]}>
           <Text style={[styles.badgeText, { color: c.primaryText }]}>{waiting > 99 ? '99+' : waiting}</Text>

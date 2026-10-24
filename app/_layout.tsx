@@ -40,7 +40,7 @@ import {
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
 import { useFonts } from 'expo-font';
-import { Stack, usePathname, useRouter } from 'expo-router';
+import { Stack, router as appRouter, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { BlurTargetView } from 'expo-blur';
@@ -57,6 +57,7 @@ LogBox.ignoreLogs([
   'AuthRetryableFetchError',
 ]);
 
+import { guardNavigation } from '@/src/lib/navigationGuard';
 import { rescheduleAll as rescheduleAllReminders } from '@/src/lib/reminders';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -64,6 +65,9 @@ import { enableScreens } from 'react-native-screens';
 
 // Set native screen background to black to prevent white flash during transitions
 enableScreens(true);
+
+// Drops a repeated push/back from a double tap, for every screen at once.
+guardNavigation(appRouter);
 
 import * as SystemUI from 'expo-system-ui';
 

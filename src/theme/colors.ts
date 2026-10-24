@@ -27,11 +27,9 @@ export const colors = {
     /** Green-tinted surface, e.g. the coach card. */
     accentSoft: '#14231C',
     nav: {
-      glass: 'rgba(19,27,23,0.82)', edge: 'rgba(205,242,220,0.19)',
-      highlight: 'rgba(224,255,236,0.34)', shadow: '#000000',
-      selectedFrom: '#BEF4D8', selectedTo: '#63CC98', selectedInk: '#103724', selectedEdge: '#D6FAE6',
-      inactive: '#BFC9C3', coachFrom: '#2C4538', coachTo: '#14251C',
-      coachInk: '#C4F5DA', coachLens: '#253E30', coachEdge: '#4B6B58',
+      surface: '#1B1B1B', edge: '#303030', shadow: '#000000',
+      inactive: '#A1A1AA', iconFill: '#292929', active: '#5FC793', activeFill: '#20382B',
+      coachInk: '#E4E4E7', coachFill: '#353535', coachLens: '#282828',
     },
     /** Route colour by speed, slow → fast (Roam replay). */
     routeRamp: ['#4F7CFF', '#22C3D6', '#5fc793', '#F2C94C', '#FF7A45'],
@@ -85,11 +83,9 @@ export const colors = {
     accent: '#23734A',
     accentSoft: '#E5F2EA',
     nav: {
-      glass: 'rgba(255,255,255,0.86)', edge: 'rgba(17,50,32,0.14)',
-      highlight: 'rgba(255,255,255,0.95)', shadow: '#163B27',
-      selectedFrom: '#CBF4DE', selectedTo: '#88D7AD', selectedInk: '#103724', selectedEdge: '#B4E8CA',
-      inactive: '#54645A', coachFrom: '#294B38', coachTo: '#122B1D',
-      coachInk: '#DBFBE8', coachLens: '#2F5140', coachEdge: '#557964',
+      surface: '#FFFFFF', edge: '#E4E4E7', shadow: '#000000',
+      inactive: '#62626B', iconFill: '#F1F1F3', active: '#23734A', activeFill: '#E5F2EA',
+      coachInk: '#27272A', coachFill: '#E4E4E7', coachLens: '#F1F1F3',
     },
     routeRamp: ['#2F5BEA', '#0E9FB5', '#2E9E68', '#E0A800', '#F0582A'],
     destructive: '#DC2626',

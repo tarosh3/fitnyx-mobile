@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type DraftSet, draftToLog, trackingOf } from '@/src/features/workouts/model';
 import { type Block, defaultSetsFor, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
+import { moveItem } from '@/src/features/workouts/ui/dragOrder';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
 import { getDayExercises, type WorkoutDayExercise } from '@/src/lib/api/workoutPlans';
@@ -171,13 +172,7 @@ export function useWorkoutLogger(sessionId: string) {
     })]);
 
   const removeBlock = (bi: number) => setBlocks((prev) => prev.filter((_, i) => i !== bi));
-  const moveBlock = (bi: number, d: number) => setBlocks((prev) => {
-    const j = bi + d;
-    if (j < 0 || j >= prev.length) return prev;
-    const next = [...prev];
-    [next[bi], next[j]] = [next[j], next[bi]];
-    return next;
-  });
+  const moveBlock = (from: number, to: number) => setBlocks((prev) => moveItem(prev, from, to));
   const swapBlock = (bi: number, e: Exercise) => {
     patch(bi, (b) => ({ ...newBlock(e.uuid, null, e, [], bi), key: `${e.uuid}-swap-${b.key}` }));
     enrich(e.uuid);

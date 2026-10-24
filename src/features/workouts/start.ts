@@ -18,16 +18,25 @@ export function isReady(s: Pick<WorkoutSession, 'status' | 'total_duration_sec'>
   return !!s && s.status === 'paused' && (s.total_duration_sec ?? 0) === 0;
 }
 
+type StartDeps = { router: Router; setActiveSession: (s: WorkoutSession | null) => void };
+/** Exercise to add as soon as the logger opens (Quick start → Cardio). */
+type StartOpts = { addExerciseUuid?: string };
+
+let starting: Promise<void> | null = null;
+
 /**
  * Creates the session in the "ready" state and opens the logger. If another
  * workout is already open, opens that one instead (the server allows one).
+ * A call made while a start is still running joins it: a double tap on a
+ * start button created two sessions (offline: two queued ones) and opened two
+ * loggers.
  */
-export async function startWorkout(
-  target: StartTarget,
-  deps: { router: Router; setActiveSession: (s: WorkoutSession | null) => void },
-  /** Exercise to add as soon as the logger opens (Quick start → Cardio). */
-  opts: { addExerciseUuid?: string } = {},
-): Promise<void> {
+export function startWorkout(target: StartTarget, deps: StartDeps, opts: StartOpts = {}): Promise<void> {
+  starting ??= start(target, deps, opts).finally(() => { starting = null; });
+  return starting;
+}
+
+async function start(target: StartTarget, deps: StartDeps, opts: StartOpts): Promise<void> {
   const open = (id: string) =>
     deps.router.push(opts.addExerciseUuid ? `/workouts/session/${id}?add=${opts.addExerciseUuid}` : `/workouts/session/${id}`);
   let session: WorkoutSession;

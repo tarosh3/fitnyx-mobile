@@ -2,7 +2,8 @@ import { useWorkoutDetails, updateWorkoutDetails, loadWorkoutDetails } from '@/s
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Plus, Timer } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRoutines } from '@/src/features/workouts/hooks';
@@ -21,6 +22,7 @@ import { useNotificationWorkoutAction } from '@/src/features/workouts/logger/use
 import { type DraftSet, describeSet, logToDraft, trackingOf } from '@/src/features/workouts/model';
 import { isReady } from '@/src/features/workouts/start';
 import { Button } from '@/src/features/workouts/ui/Chrome';
+import { DragItem, useDragList } from '@/src/features/workouts/ui/DragList';
 import { ExercisePicker } from '@/src/features/workouts/ui/ExercisePicker';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
 import { useToast } from '@/src/features/workouts/ui/Toast';
@@ -66,7 +68,6 @@ export function LoggerScreen() {
   const [busy, setBusy] = useState(false);
   const logging = useRef(new Set<string>());
   const leaving = useRef(false);
-  const scroll = useRef<ScrollView>(null);
   const positions = useRef<Record<number, number>>({});
 
   const live = activeSession && lg.session && activeSession.id === lg.session.id ? activeSession : lg.session;
@@ -146,6 +147,8 @@ export function LoggerScreen() {
   };
 
   const hold = useHoldTimer((bi, pi) => { checkPending(bi, pi); });
+  // Hold a card's header and drag it. Off while a hold timer runs: it points at its block by index.
+  const drag = useDragList({ count: blocks.length, gap: spacing.md, enabled: blocks.length > 1 && !hold.hold, onMove: lg.moveBlock });
 
   const toggleHold = (bi: number, pi: number) => {
     const row = pendingRows(blocks[bi])[pi];
@@ -162,7 +165,7 @@ export function LoggerScreen() {
   const jump = (i: number) => {
     setOpen({ key: blocks[i]?.key ?? null });
     const y = positions.current[i];
-    if (y != null) scroll.current?.scrollTo({ y: Math.max(0, y - spacing.sm), animated: true });
+    if (y != null) drag.scrollRef.current?.scrollTo({ y: Math.max(0, y - spacing.sm), animated: true });
   };
 
   const leave = () => {
@@ -255,7 +258,7 @@ export function LoggerScreen() {
         segments={blocks.map((b, i) => (blockDone(b) ? 'done' : i === expandedIdx ? 'current' : 'todo'))}
         onBack={leave} onStart={() => startTimer(true)} onPause={pauseTimer} onFinish={() => setFinishOpen(true)} onJump={jump} />
 
-      <ScrollView ref={scroll} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + (restEnd ? 200 : spacing['2xl']) }]}>
+      <Animated.ScrollView {...drag.scrollProps} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + (restEnd ? 200 : spacing['2xl']) }]}>
         {state === 'ready' ? (
           <View style={[styles.ready, { backgroundColor: c.accentSoft }]}>
             <Timer size={24} color={c.accent} />
@@ -269,8 +272,8 @@ export function LoggerScreen() {
         ) : null}
 
         {blocks.map((b, bi) => (
-          <View key={b.key} onLayout={(e) => { positions.current[bi] = e.nativeEvent.layout.y; }}>
-            <ExerciseBlock block={b} bi={bi} expanded={bi === expandedIdx} hold={hold.hold}
+          <DragItem key={b.key} drag={drag} index={bi} onLayout={(e) => { positions.current[bi] = e.nativeEvent.layout.y; }}>
+            {(gesture) => <ExerciseBlock block={b} bi={bi} expanded={bi === expandedIdx} hold={hold.hold} dragGesture={gesture}
               onToggle={() => setOpen({ key: bi === expandedIdx ? null : b.key })}
               onOpenExercise={() => router.push(`/workouts/exercise/${b.uuid}`)}
               onMenu={() => setMenuBi(bi)}
@@ -278,13 +281,13 @@ export function LoggerScreen() {
               onCheckPending={(pi) => checkPending(bi, pi)}
               onEditLog={(logId) => setEditor({ bi, kind: 'log', logId })}
               onHoldTimer={(pi) => toggleHold(bi, pi)}
-              onAddSet={() => { lg.addSet(bi); haptic.light(); }} />
-          </View>
+              onAddSet={() => { lg.addSet(bi); haptic.light(); }} />}
+          </DragItem>
         ))}
 
         <Button testID="add-exercise" variant={blocks.length ? 'secondary' : 'primary'} title={blocks.length ? 'Add exercise' : 'Add exercises'}
           icon={<Plus size={20} color={blocks.length ? c.text : c.primaryText} />} onPress={() => setPicker({ swapBi: null })} style={styles.addBtn} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {restEnd ? <RestBar endTimestamp={restEnd} seconds={Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))} onAdjust={(end) => { void updateWorkoutDetails(sessionId, { restEnd: end }); }} onDone={() => { void updateWorkoutDetails(sessionId, { restEnd: undefined }); }}
         next={nextUp(blocks, (b, d) => describeSet(trackingOf(b.exercise), asLog(d)))} /> : null}
@@ -313,7 +316,7 @@ export function LoggerScreen() {
         onClose={() => setMenuBi(null)}
         onHowTo={() => { setMenuBi(null); if (mb) router.push(`/workouts/exercise/${mb.uuid}`); }}
         onSwap={() => { setMenuBi(null); setPicker({ swapBi: menuBi }); }}
-        onMove={(d) => { if (menuBi != null) { lg.moveBlock(menuBi, d); setOpen({ key: mb?.key ?? null }); setMenuBi(null); } }}
+        onMove={(d) => { if (menuBi != null) { lg.moveBlock(menuBi, menuBi + d); setOpen({ key: mb?.key ?? null }); setMenuBi(null); } }}
         onRemove={() => { const bi = menuBi; setMenuBi(null); if (bi == null) return; if (blocks[bi]?.logs.length) setRemoveBi(bi); else removeBlock(bi); }} />
 
       <Sheet visible={!!rb} title={`Remove ${rb?.exercise?.title ?? 'exercise'}?`} onClose={() => setRemoveBi(null)}

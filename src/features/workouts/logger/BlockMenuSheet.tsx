@@ -38,7 +38,7 @@ export function BlockMenuSheet({ visible, name, setsLogged, canMoveUp, canMoveDo
       <View style={styles.list}>
         {item(PlayCircle, 'How to do it', 'Video and steps', onHowTo)}
         {item(Repeat, 'Swap exercise', setsLogged ? 'Only before you log a set' : 'Pick a different one', onSwap, { disabled: setsLogged > 0 })}
-        {item(ArrowUp, 'Move up', null, () => onMove(-1), { disabled: !canMoveUp })}
+        {item(ArrowUp, 'Move up', 'Or hold the exercise and drag it', () => onMove(-1), { disabled: !canMoveUp })}
         {item(ArrowDown, 'Move down', null, () => onMove(1), { disabled: !canMoveDown })}
         {item(Trash2, 'Remove from workout', setsLogged ? `Also deletes ${setsLogged} logged set${setsLogged === 1 ? '' : 's'}` : null, onRemove, { danger: true })}
       </View>
