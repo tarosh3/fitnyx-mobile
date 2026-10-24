@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight, Flame } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
@@ -35,6 +35,9 @@ export default function RoamScreen() {
   const recording = useRoamRecording();
   const [type, setType] = useState<ActivityType>('stride');
   const [starting, setStarting] = useState(false);
+  // `starting` disables the button only after a render; a double tap got in
+  // first and started two recordings.
+  const startingRef = useRef(false);
   const [notice, setNotice] = useState<'denied' | 'blocked' | 'failed' | null>(null);
   const [inProgress, setInProgress] = useState(false);
   const goals = useGoals();
@@ -48,6 +51,8 @@ export default function RoamScreen() {
   );
 
   const onStart = async () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
     setStarting(true);
     try {
       const result = await recording.start(type);
@@ -66,6 +71,7 @@ export default function RoamScreen() {
     } catch {
       setNotice('failed');
     } finally {
+      startingRef.current = false;
       setStarting(false);
     }
   };
