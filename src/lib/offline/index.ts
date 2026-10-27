@@ -45,4 +45,4 @@ export { processOfflineQueue } from './syncEngine';
 export type { SyncResult } from './syncEngine';
 
 export { getCachedExercise, cacheExercise, fetchExerciseWithCache, cacheExercisesForDay } from './exerciseCache';
-export { getCachedVideoUri, cacheVideo, cacheWorkoutVideos, clearVideoCache } from './videoCache';
+export { getCachedVideoUri, cacheVideo, cacheWorkoutVideos, clearVideoCache, useVideoSource } from './videoCache';

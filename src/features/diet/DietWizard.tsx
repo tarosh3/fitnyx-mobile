@@ -10,6 +10,8 @@ import { sanitizeGeneralText, MAX_SHORT_TEXT, MAX_MEDIUM_TEXT, MAX_LONG_TEXT } f
 interface DietWizardProps {
   onComplete: (preferences: any) => void;
   isLoading: boolean;
+  /** Plan generation needs the AI; offline, the final step can't submit. */
+  offline?: boolean;
   onStepChange?: () => void;
   /** Starting answers from the plan (onboarding goal, activity, diet type). */
   initial?: { goal?: string; activity_level?: string; diet_type?: string };
@@ -19,7 +21,7 @@ const STEPS = ['Your goals', 'Your routine', 'Your preferences'];
 const TITLES = ['A plan that fits your life.', 'Make it work for your day.', 'The details make it yours.'];
 const DESCRIPTIONS = ['Start with your goal and the food you enjoy.', 'Tell us how you move and when you like to eat.', 'Add allergies, dislikes and anything else to consider.'];
 
-export function DietWizard({ onComplete, isLoading, onStepChange, initial }: DietWizardProps) {
+export function DietWizard({ onComplete, isLoading, offline, onStepChange, initial }: DietWizardProps) {
   const palette = useThemeColors();
   const { fontScale } = useWindowDimensions();
   const styles = React.useMemo(() => getStyles(palette), [palette]);
@@ -221,24 +223,33 @@ export function DietWizard({ onComplete, isLoading, onStepChange, initial }: Die
             <Text style={styles.backBtnText}>Back</Text>
           </Pressable>
         )}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ disabled: isLoading, busy: isLoading }}
-          onPress={next}
-          disabled={isLoading}
-          style={({ pressed }) => [styles.nextBtn, pressed && { opacity: 0.9, scale: 0.99 }]}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color={palette.primaryText} />
-          ) : (
-            <>
-              <Text style={styles.nextBtnText}>
-                {currentStep === STEPS.length - 1 ? 'Create my plan' : 'Continue'}
-              </Text>
-              <ChevronRight color={palette.primaryText} size={18} strokeWidth={3} />
-            </>
-          )}
-        </Pressable>
+        {(() => {
+          // The last step submits to the AI, so it can't run offline — disable
+          // it and say why rather than letting the tap fail with an error.
+          const lastStep = currentStep === STEPS.length - 1;
+          const blockedOffline = lastStep && !!offline;
+          const isDisabled = isLoading || blockedOffline;
+          return (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isDisabled, busy: isLoading }}
+              onPress={next}
+              disabled={isDisabled}
+              style={({ pressed }) => [styles.nextBtn, isDisabled && { opacity: 0.6 }, pressed && { opacity: 0.9, scale: 0.99 }]}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color={palette.primaryText} />
+              ) : (
+                <>
+                  <Text style={styles.nextBtnText}>
+                    {blockedOffline ? 'Offline — connect to create' : lastStep ? 'Create my plan' : 'Continue'}
+                  </Text>
+                  {!blockedOffline ? <ChevronRight color={palette.primaryText} size={18} strokeWidth={3} /> : null}
+                </>
+              )}
+            </Pressable>
+          );
+        })()}
       </View>
     </View>
   );

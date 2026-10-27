@@ -14,9 +14,11 @@ import { exerciseImage, ExerciseThumb } from '@/src/features/workouts/ui/Exercis
 import { PartChip, Pill } from '@/src/features/workouts/ui/bits';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
 import { useToast } from '@/src/features/workouts/ui/Toast';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { removeCustomExercise } from '@/src/lib/offline/customExercises';
 import { fetchExerciseWithCache } from '@/src/lib/offline/exerciseCache';
+import { useVideoSource } from '@/src/lib/offline/videoCache';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 import type { Exercise, RelatedExercise } from '@/src/types/exercise';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -27,10 +29,13 @@ const TABS: { key: Tab; label: string }[] = [{ key: 'how', label: 'How to' }, { 
 function Video({ exercise }: { exercise: Exercise }) {
   const c = useThemeColors();
   const view = useRef<VideoView>(null);
+  const { isOnline } = useNetworkStatus();
   const url = exercise.video_url || (exercise.media_url?.toLowerCase().endsWith('.mp4') ? exercise.media_url : null);
-  const player = useVideoPlayer(url || null, (p) => { p.loop = true; p.muted = true; p.play(); });
+  // Offline, play the pre-cached file; with no cache, fall back to the image.
+  const source = useVideoSource(url, isOnline);
+  const player = useVideoPlayer(source, (p) => { p.loop = true; p.muted = true; p.play(); });
   const img = exerciseImage(exercise, 480);
-  if (!url) {
+  if (!source) {
     return img ? <Image source={{ uri: img }} style={[styles.media, { backgroundColor: c.surface }]} resizeMode="cover" accessibilityIgnoresInvertColors />
       : <View style={[styles.media, styles.center, { backgroundColor: c.parts[partOf(exercise)].bg }]}><ExerciseThumb exercise={exercise} size={96} /></View>;
   }

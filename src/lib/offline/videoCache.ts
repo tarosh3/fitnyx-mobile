@@ -1,4 +1,5 @@
 import { Paths, File, Directory } from 'expo-file-system';
+import { useEffect, useState } from 'react';
 
 const VIDEO_DIR_NAME = 'workout-videos';
 
@@ -69,6 +70,27 @@ export async function cacheWorkoutVideos(videoUrls: string[]): Promise<void> {
 
   ensureDir();
   await Promise.all(urls.map((url) => cacheVideo(url)));
+}
+
+/**
+ * The best video source for a player: online, the remote URL (works, and the
+ * file is cached in the background for later); offline, the locally cached file
+ * if the workout pre-cached it (`cacheWorkoutVideos`), else null so the caller
+ * falls back to the still image. Without this, the players always pointed at the
+ * remote URL and showed nothing offline even though the file was on disk.
+ */
+export function useVideoSource(remoteUrl: string | null, isOnline: boolean): string | null {
+  const [source, setSource] = useState<string | null>(remoteUrl && isOnline ? remoteUrl : null);
+  useEffect(() => {
+    let live = true;
+    if (!remoteUrl) { setSource(null); return; }
+    if (isOnline) { setSource(remoteUrl); return; }
+    getCachedVideoUri(remoteUrl)
+      .then((cached) => { if (live) setSource(cached); })
+      .catch(() => { if (live) setSource(null); });
+    return () => { live = false; };
+  }, [remoteUrl, isOnline]);
+  return source;
 }
 
 export async function clearVideoCache(): Promise<void> {

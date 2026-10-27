@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout';
 import { ArenaPill } from '@/src/features/arena/ui/ArenaPill';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
@@ -42,6 +43,7 @@ export function ProgressScreen() {
   const workoutInset = useWorkoutOverlayInset();
   const scroll = useRef<ScrollView>(null);
   const { user } = useAuth();
+  const { isOnline } = useNetworkStatus();
   const userId = user?.id;
   const today = localDateKey(new Date());
   const [segment, setSegment] = useState<Segment>('overview');
@@ -111,11 +113,15 @@ export function ProgressScreen() {
           <Text style={[styles.rangeTitle, { color: c.text }]} numberOfLines={1}>{rangeTitle(choice, range)}</Text>
           {segment !== 'body' ? <GranSwitch value={gran} span={span} onChange={setGran} /> : null}
         </View>
-        {daily.failed ? <Muted>Couldn't load your progress. Pull down to try again.</Muted> : null}
+        {/* Offline with nothing cached for this range reads as a connectivity
+            state, not "no progress" — don't imply the user has no data. */}
+        {daily.failed ? (
+          <Muted>{isOnline ? "Couldn't load your progress. Pull down to try again." : "You're offline. Your progress will show once you're back online."}</Muted>
+        ) : null}
 
         {/* Totals from no data would read as real zeros ("0h 00m"), so wait for the first load. */}
         {!daily.data && ['overview', 'strength', 'roam'].includes(segment) ? (
-          <Empty testID="progress-loading" text={daily.failed ? 'Nothing to show yet' : 'Loading your progress…'} />
+          <Empty testID="progress-loading" text={daily.failed ? (isOnline ? 'Nothing to show yet' : 'Offline') : 'Loading your progress…'} />
         ) : null}
 
         {daily.data && segment === 'overview' ? (

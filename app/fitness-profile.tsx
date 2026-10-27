@@ -580,10 +580,10 @@ export default function FitnessProfileScreen() {
 
         <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border, paddingBottom: insets.bottom + spacing.md }]}>
           <Button
-            title={saving ? 'Saving…' : 'Save'}
+            title={saving ? 'Saving…' : !isOnline ? "Offline — can't save" : 'Save'}
             onPress={save}
             loading={saving}
-            disabled={saving}
+            disabled={saving || !isOnline}
           />
         </View>
       </KeyboardAvoidingView>
