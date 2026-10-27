@@ -8,6 +8,7 @@ const KEYS = {
   weightUnit: 'fitnyx:unit:weight',
   heightUnit: 'fitnyx:unit:height',
   language: 'fitnyx:language',
+  videoDownloads: 'fitnyx:downloads:videos',
 } as const;
 
 export type WeightUnit = 'kg' | 'lbs';
@@ -45,6 +46,16 @@ export async function getLanguage(): Promise<Language> {
 
 export async function setLanguage(lang: Language): Promise<void> {
   await AsyncStorage.setItem(KEYS.language, lang);
+}
+
+/** Whether to auto-download workout videos for offline use (Wi-Fi only). Default on. */
+export async function getVideoDownloads(): Promise<boolean> {
+  const v = await AsyncStorage.getItem(KEYS.videoDownloads);
+  return v == null ? true : v === '1';
+}
+
+export async function setVideoDownloads(on: boolean): Promise<void> {
+  await AsyncStorage.setItem(KEYS.videoDownloads, on ? '1' : '0');
 }
 
 // ----- hooks -----
@@ -92,6 +103,21 @@ export function useLanguage() {
   }, []);
 
   return [lang, update] as const;
+}
+
+export function useVideoDownloads() {
+  const [on, setOnState] = useState(true);
+
+  useEffect(() => {
+    getVideoDownloads().then(setOnState);
+  }, []);
+
+  const update = useCallback(async (next: boolean) => {
+    setOnState(next);
+    await setVideoDownloads(next);
+  }, []);
+
+  return [on, update] as const;
 }
 
 // ----- conversion helpers -----
