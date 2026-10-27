@@ -58,11 +58,38 @@ jest.mock('@/src/lib/supabase', () => ({
   getStoredSession: jest.fn(() => Promise.resolve(null)),
 }));
 
-// Mock react-native-reanimated
+// Mock react-native-reanimated. The bundled 'react-native-reanimated/mock' ships
+// as ESM and fails to load under jest-expo, so provide a minimal inline mock
+// covering the hooks/helpers the app uses (enough for Skeleton, animations, etc.).
 jest.mock('react-native-reanimated', () => {
-  const Reanimated = require('react-native-reanimated/mock');
-  Reanimated.default.call = () => {};
-  return Reanimated;
+  const { View, Text, ScrollView, Image } = require('react-native');
+  const noopStyle = () => ({});
+  const makeShared = (value) => ({ value });
+  return {
+    __esModule: true,
+    default: { View, Text, ScrollView, Image, createAnimatedComponent: (c) => c, call: () => {} },
+    View,
+    Text,
+    ScrollView,
+    Image,
+    createAnimatedComponent: (c) => c,
+    useSharedValue: (v) => makeShared(v),
+    useAnimatedStyle: noopStyle,
+    useDerivedValue: (fn) => makeShared(typeof fn === 'function' ? fn() : fn),
+    useAnimatedScrollHandler: () => () => {},
+    useReducedMotion: () => false,
+    withTiming: (v) => v,
+    withRepeat: (v) => v,
+    withSpring: (v) => v,
+    withDelay: (_d, v) => v,
+    withSequence: (...v) => v[v.length - 1],
+    cancelAnimation: () => {},
+    runOnJS: (fn) => fn,
+    runOnUI: (fn) => fn,
+    interpolate: () => 0,
+    Easing: new Proxy({}, { get: () => () => 0 }),
+    Extrapolation: { CLAMP: 'clamp' },
+  };
 });
 
 // Mock lucide-react-native icons

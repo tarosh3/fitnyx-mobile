@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Plus, SlidersHorizontal } from 'lucide-react-native';
 import React, { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { useDayActivity, useGoals } from '@/src/features/goals/data';
@@ -11,7 +11,8 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { DietLog } from '@/src/lib/api/diet';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { spacing, type } from '@/src/styles/tokens';
+import { radii, spacing, type } from '@/src/styles/tokens';
+import { Skeleton } from '@/src/components/ui/Skeleton';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 import { useDietDay, useDietPlan, useDietSummary } from '../data/useDiet';
 import { dateFromKey, dayStatus, fmt, goalsFromPlan, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
@@ -85,7 +86,16 @@ export function DietTodayScreen() {
       <KeyboardAvoidingView behavior="padding" style={[styles.fill, { backgroundColor: c.background }]}>
         {header}
         <ScrollView ref={setupScroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {state === 'loading' ? <ActivityIndicator color={c.primary} style={styles.loader} />
+          {state === 'loading' ? (
+            // Mirror the Daily Fuel card + macro row + meal cards so the page
+            // doesn't flash a bare spinner, then jump when data lands.
+            <View style={styles.skeleton}>
+              <Skeleton height={200} radius={radii.xl} />
+              <Skeleton width="55%" height={22} radius={radii.sm} />
+              <Skeleton height={96} radius={radii.lg} />
+              <Skeleton height={96} radius={radii.lg} />
+            </View>
+          )
             : state === 'offline' ? (
               <View style={styles.centered}>
                 <Text style={[styles.offlineTitle, { color: c.text }]}>You’re offline</Text>
@@ -134,6 +144,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { paddingHorizontal: spacing.base + 4, paddingTop: spacing.sm, gap: spacing.base },
   loader: { marginTop: spacing['3xl'] },
+  skeleton: { gap: spacing.base, marginTop: spacing.sm },
   centered: { alignItems: 'center', paddingTop: spacing['3xl'], gap: spacing.sm },
   offlineTitle: { fontFamily: type.weight.extrabold, fontSize: 18 },
   offlineText: { fontFamily: type.weight.regular, fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 300 },

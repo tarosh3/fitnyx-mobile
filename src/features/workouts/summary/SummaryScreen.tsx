@@ -2,11 +2,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Flame, Medal, Share2, Trophy, TrendingDown, TrendingUp, Zap } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRoutines, useWorkoutHistory } from '@/src/features/workouts/hooks';
 import type { ShareCardData } from '@/src/features/share/cardData';
+import { Skeleton } from '@/src/components/ui/Skeleton';
 import { ShareCardSheet } from '@/src/features/share/ShareCardSheet';
 import { useSessionDetail } from '@/src/features/workouts/history/useSessionDetail';
 import { sessionCardData } from '@/src/features/workouts/history/workoutCard';
@@ -86,7 +87,22 @@ export function SummaryScreen() {
     }
   };
 
-  if (d.loading && !s) return <View style={[styles.center, { backgroundColor: c.background }]}><ActivityIndicator color={c.primary} size="large" /></View>;
+  // A skeleton that mirrors the hero + stat grid, so saving the session and
+  // loading its totals doesn't flash a bare full-screen spinner.
+  if (d.loading && !s) return (
+    <View style={[styles.flex, { backgroundColor: c.background }]}>
+      <View style={[styles.content, { paddingTop: insets.top + spacing.base }]}>
+        <Skeleton height={240} radius={28} />
+        <View style={styles.grid}>
+          <Skeleton width="48%" height={84} radius={radii.lg} />
+          <Skeleton width="48%" height={84} radius={radii.lg} />
+          <Skeleton width="48%" height={84} radius={radii.lg} />
+          <Skeleton width="48%" height={84} radius={radii.lg} />
+        </View>
+        <Skeleton height={120} radius={radii.lg} />
+      </View>
+    </View>
+  );
 
   return (
     <View style={[styles.flex, { backgroundColor: c.background }]}>
