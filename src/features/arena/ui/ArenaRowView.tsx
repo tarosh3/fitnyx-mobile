@@ -15,13 +15,16 @@ export function ArenaRowView({ row, board }: { row: ArenaRow; board: ArenaBoardK
   const title = row.me ? 'You' : row.user.name?.trim() || `@${row.user.username}`;
   const leader = row.rank === 1 && row.score > 0;
   const podium = row.rank <= 3 && row.score > 0;
+  // Rank 0 = no score yet: unranked, shown as a dash (never "#0"), matching the
+  // hero's "No <board> yet" so a friend with nothing isn't listed as "#1".
+  const ranked = row.rank > 0 && row.score > 0;
   return (
     <View testID={row.me ? 'arena-me' : undefined} accessible
-      accessibilityLabel={`Rank ${row.rank}, ${title}, ${value} ${unit}`}
+      accessibilityLabel={`${ranked ? `Rank ${row.rank}, ` : 'Unranked, '}${title}, ${value} ${unit}`}
       style={[styles.row, row.me && { backgroundColor: c.accentSoft }]}>
       <View style={styles.rankBox}>
         {leader ? <Crown size={20} color={c.gold.to} /> : (
-          <Text style={[styles.rank, { color: podium ? c.text : c.mutedText }]}>{row.rank}</Text>
+          <Text style={[styles.rank, { color: podium ? c.text : c.mutedText }]}>{ranked ? row.rank : '—'}</Text>
         )}
       </View>
       <Avatar uri={row.user.avatar_url || null} name={row.user.name || row.user.username} size={40} />
