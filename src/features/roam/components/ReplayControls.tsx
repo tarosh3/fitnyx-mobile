@@ -2,6 +2,7 @@ import Slider from '@react-native-community/slider';
 import { LocateFixed, Pause, Play, RotateCcw } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import type { ReplayPlayer } from '@/src/features/roam/useReplayPlayer';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -99,6 +100,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipText: { fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  chipText: { fontSize: 14, fontFamily: type.weight.extrabold, fontVariant: ['tabular-nums'] },
   pressed: { opacity: 0.75 },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { Button } from '@/src/components/ui/Button';
 import { MAX_ACTIVITY_NAME } from '@/src/features/roam/activityName';
@@ -70,8 +71,8 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 12,
   },
-  title: { fontSize: 18, fontWeight: '800' },
-  input: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 17, fontWeight: '600' },
+  title: { fontSize: 18, fontFamily: type.weight.extrabold },
+  input: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 17, fontFamily: type.weight.semibold },
   hint: { fontSize: 12 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 4 },
   action: { flex: 1 },

@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { FeatureCollection, Point } from 'geojson';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { ElevationProfile } from '@/src/features/roam/components/ElevationProfile';
 import { ReplayControls } from '@/src/features/roam/components/ReplayControls';
@@ -155,11 +156,11 @@ const styles = StyleSheet.create({
   },
   hudItem: { flex: 1, alignItems: 'center' },
   hudValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  hudValue: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  hudLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 },
+  hudValue: { fontSize: 16, fontFamily: type.weight.extrabold, fontVariant: ['tabular-nums'] },
+  hudLabel: { fontSize: 10, fontFamily: type.weight.bold, letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
   legendBar: { flex: 1, height: 6, borderRadius: 3 },
-  legendText: { fontSize: 11, fontWeight: '600' },
+  legendText: { fontSize: 11, fontFamily: type.weight.semibold },
   note: { fontSize: 11, textAlign: 'center' },
 });

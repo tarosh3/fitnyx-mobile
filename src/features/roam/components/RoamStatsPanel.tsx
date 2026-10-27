@@ -1,6 +1,7 @@
 import { Car, CirclePause, Info, Timer, type LucideIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { StatTile } from '@/src/features/roam/components/StatTile';
 import { formatDistance, formatDurationHuman, formatSpeed } from '@/src/features/roam/geo';
@@ -127,7 +128,7 @@ function Explain({ term, text }: { term: string; text: string }) {
   const palette = useThemeColors();
   return (
     <Text style={[styles.explainText, { color: palette.mutedText }]}>
-      <Text style={{ color: palette.text, fontWeight: '700' }}>{term}:</Text> {text}
+      <Text style={{ color: palette.text, fontFamily: type.weight.bold }}>{term}:</Text> {text}
     </Text>
   );
 }
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   },
   metas: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { fontSize: 12.5, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  metaText: { fontSize: 12.5, fontFamily: type.weight.semibold, fontVariant: ['tabular-nums'] },
   infoBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   explainer: { borderRadius: 12, padding: 12, gap: 6, marginHorizontal: 8, marginTop: 8, marginBottom: 6 },
   explainText: { fontSize: 12.5, lineHeight: 18 },

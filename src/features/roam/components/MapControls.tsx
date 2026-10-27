@@ -1,6 +1,7 @@
 import { Minus, Mountain, Navigation, Plus } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tiltText: { fontSize: 13, fontWeight: '800' },
+  tiltText: { fontSize: 13, fontFamily: type.weight.extrabold },
   // Clears MapLibre's attribution button in the bottom-right corner.
   bottomRight: { position: 'absolute', right: 12, bottom: 52, gap: 10 },
   zoom: { width: 40, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },

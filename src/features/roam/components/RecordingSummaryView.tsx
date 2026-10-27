@@ -1,6 +1,7 @@
 import { Pencil } from 'lucide-react-native';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { Button } from '@/src/components/ui/Button';
 import { MAX_ACTIVITY_NAME } from '@/src/features/roam/activityName';
@@ -126,9 +127,9 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', gap: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   discard: { flex: 1 },
   save: { flex: 2 },
-  eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
+  eyebrow: { fontSize: 12, fontFamily: type.weight.extrabold, letterSpacing: 1.5 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth },
-  name: { flex: 1, fontSize: 26, fontWeight: '800', letterSpacing: -0.4, paddingVertical: 8 },
+  name: { flex: 1, fontSize: 26, fontFamily: type.weight.extrabold, letterSpacing: -0.4, paddingVertical: 8 },
   map: { height: 260 },
   note: { fontSize: 12, textAlign: 'center' },
 });

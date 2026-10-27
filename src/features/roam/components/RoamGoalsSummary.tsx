@@ -1,6 +1,7 @@
 import { PartyPopper } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { addActivity, GOAL_META, goalValue, type DayActivity } from '@/src/features/goals/model';
 import { GoalRingsRow } from '@/src/features/goals/ui/GoalRings';
@@ -34,6 +35,6 @@ export function RoamGoalsSummary({ tracker, roam }: { tracker: GoalTracker; roam
 const styles = StyleSheet.create({
   card: { borderRadius: 18, borderWidth: 1, padding: 14, gap: 12 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  title: { fontSize: 16, fontWeight: '800' },
-  label: { textAlign: 'center', fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  title: { fontSize: 16, fontFamily: type.weight.extrabold },
+  label: { textAlign: 'center', fontSize: 11, fontFamily: type.weight.extrabold, letterSpacing: 1.2 },
 });

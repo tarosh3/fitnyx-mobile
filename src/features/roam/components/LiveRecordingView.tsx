@@ -1,6 +1,7 @@
 import { Pause, Play, Square } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { addActivity } from '@/src/features/goals/model';
 import { GoalRingsRow } from '@/src/features/goals/ui/GoalRings';
@@ -99,10 +100,10 @@ const NO_ROUTE: [number, number][] = []; // stable, so the memoized map doesn't 
 const styles = StyleSheet.create({
   wrap: { flex: 1, gap: 12 },
   map: { flex: 1, minHeight: 220 },
-  paused: { textAlign: 'center', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  paused: { textAlign: 'center', fontSize: 12, fontFamily: type.weight.extrabold, letterSpacing: 1 },
   panel: { borderRadius: 18, borderWidth: 1, paddingVertical: 8 },
   goals: { borderRadius: 18, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 8, gap: 8 },
-  goalsLabel: { textAlign: 'center', fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  goalsLabel: { textAlign: 'center', fontSize: 11, fontFamily: type.weight.extrabold, letterSpacing: 1.2 },
   row: { flexDirection: 'row' },
   controls: { flexDirection: 'row', gap: 12 },
   control: {
@@ -115,5 +116,5 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
   },
-  controlText: { fontSize: 14, fontWeight: '900', letterSpacing: 1.2 },
+  controlText: { fontSize: 14, fontFamily: type.weight.extrabold, letterSpacing: 1.2 },
 });

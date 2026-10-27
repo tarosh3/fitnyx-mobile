@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
@@ -27,10 +28,10 @@ function splitValue(value: string): { text: string; unit: boolean }[] {
 export function UnitText({ value, color, size = 14 }: { value: string; color: string; size?: number }) {
   const palette = useThemeColors();
   return (
-    <Text style={{ color, fontSize: size, fontWeight: '800', fontVariant: ['tabular-nums'] }} numberOfLines={1}>
+    <Text style={{ color, fontSize: size, fontFamily: type.weight.extrabold, fontVariant: ['tabular-nums'] }} numberOfLines={1}>
       {splitValue(value).map((p, i) =>
         p.unit ? (
-          <Text key={i} style={{ color: palette.mutedText, fontSize: Math.round(size * 0.72), fontWeight: '600' }}>
+          <Text key={i} style={{ color: palette.mutedText, fontSize: Math.round(size * 0.72), fontFamily: type.weight.semibold }}>
             {p.text}
           </Text>
         ) : (
@@ -68,9 +69,9 @@ export function StatTile({ label, value, big = false, accent = false }: Props) {
 const styles = StyleSheet.create({
   tile: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   stacked: { flex: 0 },
-  value: { fontSize: 24, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -0.3 },
-  unit: { fontSize: 14, fontWeight: '600', letterSpacing: 0 },
-  big: { fontSize: 52, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -1 },
-  bigUnit: { fontSize: 22, fontWeight: '700', letterSpacing: 0 },
-  label: { fontSize: 10.5, fontWeight: '700', letterSpacing: 1.2, marginTop: 4, textTransform: 'uppercase' },
+  value: { fontSize: 24, fontFamily: type.weight.extrabold, fontVariant: ['tabular-nums'], letterSpacing: -0.3 },
+  unit: { fontSize: 14, fontFamily: type.weight.semibold, letterSpacing: 0 },
+  big: { fontSize: 52, fontFamily: type.weight.extrabold, fontVariant: ['tabular-nums'], letterSpacing: -1 },
+  bigUnit: { fontSize: 22, fontFamily: type.weight.bold, letterSpacing: 0 },
+  label: { fontSize: 10.5, fontFamily: type.weight.bold, letterSpacing: 1.2, marginTop: 4, textTransform: 'uppercase' },
 });

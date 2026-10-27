@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 import Svg, { Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { elevationProfile, profilePath } from '@/src/features/roam/elevationProfile';
@@ -58,7 +59,7 @@ export function ElevationProfile({ route, elevations, gainM, progress }: Props) 
 const styles = StyleSheet.create({
   card: { borderRadius: 16, borderWidth: 1, padding: 12, gap: 8 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  title: { fontSize: 14, fontWeight: '800' },
-  meta: { fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  title: { fontSize: 14, fontFamily: type.weight.extrabold },
+  meta: { fontSize: 12, fontFamily: type.weight.semibold, fontVariant: ['tabular-nums'] },
   credit: { fontSize: 9.5 },
 });
