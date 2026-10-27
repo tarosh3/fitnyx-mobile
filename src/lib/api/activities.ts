@@ -25,6 +25,9 @@ export interface ActivitySummary {
   steps?: number | null;
   /** Estimated calories burned; null without a body weight. Absent from older backends. */
   kcal?: number | null;
+  /** Average / peak heart rate (bpm) from the health store; null when none. Absent from older backends. */
+  avg_hr?: number | null;
+  max_hr?: number | null;
   /** Total climb from open terrain data; null when unknown. Absent from older backends. */
   elevation_gain_m?: number | null;
 }
@@ -77,6 +80,9 @@ export interface CreateActivityInput {
   points: RoamPoint[];
   /** Periods the phone's motion sensors reported as in a vehicle. */
   vehicle_windows?: VehicleWindow[];
+  /** Heart rate (bpm) from the health store for the activity window; implausible values dropped server-side. */
+  avg_hr?: number;
+  max_hr?: number;
 }
 
 export async function createActivity(input: CreateActivityInput): Promise<ActivityDetail> {

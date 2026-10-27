@@ -17,6 +17,8 @@ export function ActivityStats({ activity }: { activity: ActivitySummary }) {
       steps={activity.steps}
       kcal={activity.kcal}
       elevationGainM={activity.elevation_gain_m}
+      avgHR={activity.avg_hr}
+      maxHR={activity.max_hr}
     />
   );
 }

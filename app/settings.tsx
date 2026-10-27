@@ -44,8 +44,9 @@ import { SettingGroup } from '@/src/components/ui/SettingGroup';
 import { SettingRow } from '@/src/components/ui/SettingRow';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { formatHeight, formatWeight, useHeightUnit, useLanguage, useVideoDownloads, useWeightUnit } from '@/src/lib/prefs';
+import { formatHeight, formatWeight, useHealthSync, useHeightUnit, useLanguage, useVideoDownloads, useWeightUnit } from '@/src/lib/prefs';
 import { clearVideoCache, prefetchWorkoutMedia, videoCacheBytes } from '@/src/lib/offline';
+import { healthBackend } from '@/src/lib/health';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { elevation, radii, spacing, type as t } from '@/src/styles/tokens';
@@ -97,6 +98,26 @@ export default function SettingsScreen() {
     await clearVideoCache();
     refreshCacheSize();
     toast('Offline videos cleared');
+  };
+
+  const [healthSync, setHealthSyncPref] = useHealthSync();
+  const [healthAvailable, setHealthAvailable] = useState(false);
+  useEffect(() => {
+    healthBackend.isAvailable().then(setHealthAvailable).catch(() => undefined);
+  }, []);
+
+  const handleToggleHealth = async (value: boolean) => {
+    if (!value) {
+      await setHealthSyncPref(false);
+      return;
+    }
+    const granted = await healthBackend.requestPermissions();
+    if (!granted) {
+      toast(`Allow FitNyx in ${healthBackend.platformLabel || 'Health'} to sync`, 'error');
+      return;
+    }
+    await setHealthSyncPref(true);
+    toast(`Workouts now sync to ${healthBackend.platformLabel}`, 'success');
   };
 
   const checkPermission = useCallback(async () => {
@@ -319,6 +340,22 @@ export default function SettingsScreen() {
           showChevron={cacheBytes > 0}
         />
       </SettingGroup>
+
+      {/* HEALTH */}
+      {healthAvailable ? (
+        <>
+          <SectionHeader eyebrow="Health" />
+          <SettingGroup>
+            <SettingRow
+              icon={<Activity size={20} color={c.primary} strokeWidth={1.8} />}
+              label={`Sync to ${healthBackend.platformLabel}`}
+              description="Save your Roams, workouts and weight to the health app"
+              switchValue={healthSync}
+              onSwitchChange={handleToggleHealth}
+            />
+          </SettingGroup>
+        </>
+      ) : null}
 
       {/* SUPPORT */}
       <SectionHeader eyebrow="Support" />

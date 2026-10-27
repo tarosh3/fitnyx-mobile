@@ -24,6 +24,9 @@ export interface RoamStatsPanelProps {
   kcal?: number | null;
   /** Climb from terrain data; null/omitted when unknown. */
   elevationGainM?: number | null;
+  /** Average / peak heart rate (bpm) from the health store; null/omitted without it. */
+  avgHR?: number | null;
+  maxHR?: number | null;
 }
 
 /**
@@ -109,6 +112,8 @@ function extraTiles(p: RoamStatsPanelProps): { label: string; value: string }[][
     if (p.movingSec >= 60) tiles.push({ label: 'Cadence', value: `${Math.round(p.steps / (p.movingSec / 60))} spm` });
   }
   if (p.elevationGainM != null) tiles.push({ label: 'Elevation gain', value: `${Math.round(p.elevationGainM)} m` });
+  if (p.avgHR) tiles.push({ label: 'Avg HR', value: `${p.avgHR} bpm` });
+  if (p.maxHR) tiles.push({ label: 'Max HR', value: `${p.maxHR} bpm` });
   const rows: { label: string; value: string }[][] = [];
   for (let i = 0; i < tiles.length; i += 2) rows.push(tiles.slice(i, i + 2));
   return rows;

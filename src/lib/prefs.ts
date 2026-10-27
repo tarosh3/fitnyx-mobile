@@ -9,6 +9,7 @@ const KEYS = {
   heightUnit: 'fitnyx:unit:height',
   language: 'fitnyx:language',
   videoDownloads: 'fitnyx:downloads:videos',
+  healthSync: 'fitnyx:health:sync',
 } as const;
 
 export type WeightUnit = 'kg' | 'lbs';
@@ -56,6 +57,15 @@ export async function getVideoDownloads(): Promise<boolean> {
 
 export async function setVideoDownloads(on: boolean): Promise<void> {
   await AsyncStorage.setItem(KEYS.videoDownloads, on ? '1' : '0');
+}
+
+/** Whether to mirror workouts/Roams/weight to Apple Health / Health Connect. Default off (opt-in, needs permission). */
+export async function getHealthSync(): Promise<boolean> {
+  return (await AsyncStorage.getItem(KEYS.healthSync)) === '1';
+}
+
+export async function setHealthSync(on: boolean): Promise<void> {
+  await AsyncStorage.setItem(KEYS.healthSync, on ? '1' : '0');
 }
 
 // ----- hooks -----
@@ -115,6 +125,21 @@ export function useVideoDownloads() {
   const update = useCallback(async (next: boolean) => {
     setOnState(next);
     await setVideoDownloads(next);
+  }, []);
+
+  return [on, update] as const;
+}
+
+export function useHealthSync() {
+  const [on, setOnState] = useState(false);
+
+  useEffect(() => {
+    getHealthSync().then(setOnState);
+  }, []);
+
+  const update = useCallback(async (next: boolean) => {
+    setOnState(next);
+    await setHealthSync(next);
   }, []);
 
   return [on, update] as const;
