@@ -1,6 +1,7 @@
 import { Car } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
@@ -17,5 +18,5 @@ export function VehicleBanner({ message }: { message: string }) {
 
 const styles = StyleSheet.create({
   banner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, padding: 12 },
-  text: { flex: 1, fontSize: 13, fontWeight: '600' },
+  text: { flex: 1, fontSize: 13, fontFamily: type.weight.semibold },
 });

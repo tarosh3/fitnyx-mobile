@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { StatTile } from '@/src/features/roam/components/StatTile';
 import { formatDistance, formatDurationHuman } from '@/src/features/roam/geo';
@@ -23,6 +24,6 @@ export function WeekSummary({ week }: { week: ActivityWeek }) {
 
 const styles = StyleSheet.create({
   card: { borderRadius: 18, borderWidth: 1, padding: 12 },
-  title: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2, marginLeft: 4 },
+  title: { fontSize: 12, fontFamily: type.weight.extrabold, letterSpacing: 1.2, marginLeft: 4 },
   row: { flexDirection: 'row' },
 });

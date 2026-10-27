@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { activityTitle } from '@/src/features/roam/activityName';
 import { ActivityTypeIcon } from '@/src/features/roam/components/ActivityTypeIcon';
@@ -67,7 +68,7 @@ function dayLabel(d: Date): string {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
   icon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 15, fontWeight: '800' },
+  title: { fontSize: 15, fontFamily: type.weight.extrabold },
   sub: { fontSize: 12, marginTop: 2 },
-  flag: { fontSize: 11, fontWeight: '700', marginTop: 4 },
+  flag: { fontSize: 11, fontFamily: type.weight.bold, marginTop: 4 },
 });

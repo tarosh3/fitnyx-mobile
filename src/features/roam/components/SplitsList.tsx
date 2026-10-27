@@ -1,6 +1,7 @@
 import { Zap } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { type } from '@/src/styles/tokens';
 
 import { UnitText } from '@/src/features/roam/components/StatTile';
 import { formatSpeed } from '@/src/features/roam/geo';
@@ -72,9 +73,9 @@ export function SplitsList({ splits, distanceM, movingSec }: Props) {
 
 const styles = StyleSheet.create({
   list: { gap: 10 },
-  title: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2, marginBottom: 4 },
+  title: { fontSize: 12, fontFamily: type.weight.extrabold, letterSpacing: 1.2, marginBottom: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  km: { width: 58, fontSize: 12, fontWeight: '700' },
+  km: { width: 58, fontSize: 12, fontFamily: type.weight.bold },
   track: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
   bar: { height: 6, borderRadius: 3 },
   pace: { width: 92, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
