@@ -16,6 +16,7 @@ import { clearAllOfflineData } from '@/src/lib/offline/offlineStore';
 import { clearAllReminders } from '@/src/lib/reminders';
 import { clearAllWaterData } from '@/src/lib/water';
 import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
+import { syncCatalog } from '@/src/lib/offline/catalogCache';
 import { isDefinitelyOffline } from '@/src/lib/network';
 import { getStoredSession, getStoredUser, supabase } from '@/src/lib/supabase';
 
@@ -500,6 +501,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     syncOffline();
   }, [isOnline, user]);
+
+  // Warm the offline exercise catalog once per launch, so local/offline search
+  // and browse work even if the user never opens the Exercises tab online.
+  const catalogSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!user) { catalogSyncedRef.current = false; return; }
+    if (!isOnline || !onboardingComplete || catalogSyncedRef.current) return;
+    catalogSyncedRef.current = true;
+    syncCatalog().catch(() => undefined);
+  }, [isOnline, user, onboardingComplete]);
 
   const signOut = async () => {
     // Signing out deletes the offline queue: send what's still waiting first.
