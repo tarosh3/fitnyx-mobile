@@ -1,6 +1,7 @@
 import { idbGet, idbGetStale, idbSet } from '@/src/lib/cache/indexeddb';
 import { cacheTTL } from '@/src/lib/cache/keys';
 import { fetchExerciseByUUID } from '@/src/lib/api/exercises';
+import { getCatalog } from '@/src/lib/offline/catalogCache';
 import { Exercise } from '@/src/types/exercise';
 
 function exerciseCacheKey(uuid: string): string {
@@ -24,8 +25,14 @@ export async function fetchExerciseWithCache(uuid: string): Promise<Exercise | n
     await cacheExercise(uuid, exercise);
     return exercise;
   } catch {
-    // Offline: an older copy beats a nameless exercise in the session screen.
-    return idbGetStale<Exercise>(exerciseCacheKey(uuid));
+    // Offline: an older per-exercise copy beats a nameless screen; failing
+    // that, the cached catalog's summary row (name, body part, equipment,
+    // muscles — no how-to/video, which the detail screen degrades to a still
+    // image and "no steps yet"). Better than a flat "couldn't load".
+    const stale = await idbGetStale<Exercise>(exerciseCacheKey(uuid));
+    if (stale) return stale;
+    const catalog = await getCatalog().catch(() => null);
+    return catalog?.find((e) => e.uuid === uuid) ?? null;
   }
 }
 
