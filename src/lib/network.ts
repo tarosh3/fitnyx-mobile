@@ -13,3 +13,16 @@ export async function isDefinitelyOffline(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * True only on an unmetered Wi-Fi connection — used to gate background media
+ * downloads so they never run on cellular. Unknown/other types count as false.
+ */
+export async function isOnWifi(): Promise<boolean> {
+  try {
+    const state = await NetInfo.fetch();
+    return state.type === 'wifi' && state.isConnected === true;
+  } catch {
+    return false;
+  }
+}

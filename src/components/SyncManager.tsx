@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { getOfflineQueue, onOfflineQueueAdd } from '@/src/lib/cache/indexeddb';
 import { onOfflineSync, processOfflineQueue } from '@/src/lib/offline/syncEngine';
+import { prefetchWorkoutMedia } from '@/src/lib/offline/mediaPrefetch';
 
 // While online with work still queued (server error, rate limit, a set waiting
 // on its session), retry on a backoff instead of waiting for the next reconnect.
@@ -74,6 +75,13 @@ export function SyncManager() {
   }, [isOnline]);
 
   useEffect(() => onOfflineSync(() => queryClient.invalidateQueries()), [queryClient]);
+
+  // When online, warm the offline video cache for saved routines (Wi-Fi only,
+  // respects the Downloads setting, single-flight and capped internally).
+  useEffect(() => {
+    if (!isOnline) return;
+    prefetchWorkoutMedia().catch(() => undefined);
+  }, [isOnline]);
 
   return null;
 }

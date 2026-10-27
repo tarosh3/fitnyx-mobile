@@ -7,8 +7,11 @@ function sanitizeFilename(url: string): string {
   return url.replace(/[^a-zA-Z0-9.-]/g, '_').slice(-100);
 }
 
+// Downloads live in the document directory, not the cache directory, so the OS
+// doesn't purge them under storage pressure — the point of a download is that
+// it's there offline later.
 function getVideoDir(): Directory {
-  return new Directory(Paths.cache, VIDEO_DIR_NAME);
+  return new Directory(Paths.document, VIDEO_DIR_NAME);
 }
 
 function ensureDir(): void {
@@ -32,35 +35,47 @@ export async function getCachedVideoUri(remoteUrl: string): Promise<string | nul
 }
 
 export async function cacheVideo(remoteUrl: string): Promise<string | null> {
+  const filename = sanitizeFilename(remoteUrl);
   try {
     ensureDir();
-    const filename = sanitizeFilename(remoteUrl);
     const file = new File(getVideoDir(), filename);
-
     if (file.exists) return file.uri;
 
-    // Download to a temp name first, then move to final destination to avoid conflicts
-    const tempName = `_tmp_${Date.now()}_${filename}`;
-    const tempFile = new File(getVideoDir(), tempName);
+    const downloaded = await File.downloadFileAsync(remoteUrl, getVideoDir());
+    if (downloaded.uri === file.uri) return file.uri;
 
+    // Downloaded under the server-assigned name — rename it to our sanitized key
+    // so getCachedVideoUri(url) can find it again. Without this the file was
+    // cached but never retrievable, and playback still fell back to the image.
     try {
-      const downloaded = await File.downloadFileAsync(remoteUrl, getVideoDir());
-      // If downloaded file has a different name, move it to our sanitized name
-      if (downloaded.uri !== file.uri) {
-        // The file was downloaded with server-assigned name; just use it
-        return downloaded.uri;
-      }
-      return file.uri;
-    } catch (downloadError: any) {
-      // If destination already exists, the file was cached by a concurrent call
-      if (downloadError?.message?.includes('Destination already exists')) {
-        return file.exists ? file.uri : null;
-      }
-      throw downloadError;
+      downloaded.move(file);
+      return file.exists ? file.uri : downloaded.uri;
+    } catch {
+      return downloaded.exists ? downloaded.uri : null;
     }
   } catch (error) {
+    // A concurrent call already cached it.
+    if ((error as { message?: string })?.message?.includes('Destination already exists')) {
+      const file = new File(getVideoDir(), filename);
+      return file.exists ? file.uri : null;
+    }
     console.warn('Failed to cache video:', error);
     return null;
+  }
+}
+
+/** Total bytes of all downloaded videos on disk. */
+export async function videoCacheBytes(): Promise<number> {
+  try {
+    const dir = getVideoDir();
+    if (!dir.exists) return 0;
+    let total = 0;
+    for (const entry of dir.list()) {
+      if (entry instanceof File) total += entry.size ?? 0;
+    }
+    return total;
+  } catch {
+    return 0;
   }
 }
 

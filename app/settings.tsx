@@ -6,6 +6,7 @@ import {
   Bell,
   Brain,
   ChevronLeft,
+  Download,
   Droplet,
   FileText,
   Globe,
@@ -17,6 +18,7 @@ import {
   Share2,
   Shield,
   Star,
+  Trash2,
   User,
   UserCog,
 } from 'lucide-react-native';
@@ -42,7 +44,8 @@ import { SettingGroup } from '@/src/components/ui/SettingGroup';
 import { SettingRow } from '@/src/components/ui/SettingRow';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { formatHeight, formatWeight, useHeightUnit, useLanguage, useWeightUnit } from '@/src/lib/prefs';
+import { formatHeight, formatWeight, useHeightUnit, useLanguage, useVideoDownloads, useWeightUnit } from '@/src/lib/prefs';
+import { clearVideoCache, prefetchWorkoutMedia, videoCacheBytes } from '@/src/lib/offline';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { elevation, radii, spacing, type as t } from '@/src/styles/tokens';
@@ -73,6 +76,28 @@ export default function SettingsScreen() {
   const [weightUnit, setWeightUnit] = useWeightUnit();
   const [heightUnit, setHeightUnit] = useHeightUnit();
   const [language, setLanguage] = useLanguage();
+  const [videoDownloads, setVideoDownloads] = useVideoDownloads();
+  const [cacheBytes, setCacheBytes] = useState(0);
+  const [clearOpen, setClearOpen] = useState(false);
+
+  const refreshCacheSize = useCallback(() => {
+    videoCacheBytes().then(setCacheBytes).catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    refreshCacheSize();
+  }, [refreshCacheSize]);
+
+  const handleToggleDownloads = async (value: boolean) => {
+    await setVideoDownloads(value);
+    if (value) prefetchWorkoutMedia().then(refreshCacheSize).catch(() => undefined);
+  };
+
+  const handleClearDownloads = async () => {
+    setClearOpen(false);
+    await clearVideoCache();
+    refreshCacheSize();
+    toast('Offline videos cleared');
+  };
 
   const checkPermission = useCallback(async () => {
     try {
@@ -275,6 +300,26 @@ export default function SettingsScreen() {
         />
       </SettingGroup>
 
+      {/* DOWNLOADS */}
+      <SectionHeader eyebrow="Downloads" />
+      <SettingGroup>
+        <SettingRow
+          icon={<Download size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Download on Wi-Fi"
+          description="Save workout videos for offline use"
+          switchValue={videoDownloads}
+          onSwitchChange={handleToggleDownloads}
+        />
+        <SettingRow
+          icon={<Trash2 size={20} color={c.primary} strokeWidth={1.8} />}
+          label="Offline videos"
+          value={cacheBytes > 0 ? `${(cacheBytes / (1024 * 1024)).toFixed(0)} MB` : 'None'}
+          description="Clear downloaded videos"
+          onPress={cacheBytes > 0 ? () => setClearOpen(true) : undefined}
+          showChevron={cacheBytes > 0}
+        />
+      </SettingGroup>
+
       {/* SUPPORT */}
       <SectionHeader eyebrow="Support" />
       <SettingGroup>
@@ -443,6 +488,16 @@ export default function SettingsScreen() {
         showCancel={false}
         onConfirm={() => setSignOutFailed(false)}
         onCancel={() => setSignOutFailed(false)}
+      />
+      <ConfirmModal
+        visible={clearOpen}
+        variant="danger"
+        title="Clear offline videos?"
+        message="Downloaded workout videos will be removed from this device. They'll download again on Wi-Fi if downloads stay on."
+        confirmLabel="Clear"
+        cancelLabel="Keep"
+        onCancel={() => setClearOpen(false)}
+        onConfirm={handleClearDownloads}
       />
       <ConfirmModal
         visible={systemSettingsTitle != null}
