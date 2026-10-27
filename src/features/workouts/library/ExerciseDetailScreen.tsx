@@ -29,6 +29,7 @@ const TABS: { key: Tab; label: string }[] = [{ key: 'how', label: 'How to' }, { 
 function Video({ exercise }: { exercise: Exercise }) {
   const c = useThemeColors();
   const view = useRef<VideoView>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   const { isOnline } = useNetworkStatus();
   const url = exercise.video_url || (exercise.media_url?.toLowerCase().endsWith('.mp4') ? exercise.media_url : null);
   // Offline, play the pre-cached file; with no cache, fall back to the image.
@@ -41,7 +42,19 @@ function Video({ exercise }: { exercise: Exercise }) {
   }
   return (
     <Pressable onPress={() => view.current?.enterFullscreen().catch(() => undefined)} accessibilityRole="button" accessibilityLabel={`Play ${exercise.title} video full screen`}>
-      <VideoView ref={view} player={player} style={[styles.media, { backgroundColor: c.surface }]} contentFit="cover" nativeControls={false} fullscreenOptions={{ enable: true }} />
+      {/* Inline is a clean muted loop (no controls); in fullscreen, show the
+          native controls so there's a Done button to exit — otherwise the
+          user is stuck on a controls-less fullscreen video. */}
+      <VideoView
+        ref={view}
+        player={player}
+        style={[styles.media, { backgroundColor: c.surface }]}
+        contentFit="cover"
+        nativeControls={fullscreen}
+        fullscreenOptions={{ enable: true }}
+        onFullscreenEnter={() => setFullscreen(true)}
+        onFullscreenExit={() => setFullscreen(false)}
+      />
       <View style={[styles.full, { backgroundColor: c.card }]}><Maximize2 size={18} color={c.text} /></View>
     </Pressable>
   );
