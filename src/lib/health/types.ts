@@ -29,4 +29,14 @@ export interface HealthBackend {
   saveWorkout(workout: HealthWorkout): Promise<void>;
   /** Write a body-weight sample (kilograms). */
   saveWeightKg(kg: number, when: Date): Promise<void>;
+  /** Total steps today (device-local midnight → now); null if unavailable. */
+  readTodaySteps(): Promise<number | null>;
+  /** Active energy burned today in kcal; null if unavailable. */
+  readTodayActiveEnergyKcal(): Promise<number | null>;
+}
+
+/** Today's totals read from the health store; a field is null when unknown. */
+export interface HealthToday {
+  steps: number | null;
+  activeKcal: number | null;
 }

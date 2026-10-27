@@ -24,6 +24,12 @@ interface HealthKit {
     end: Date,
     totals?: { distance?: number; energyBurned?: number },
   ): Promise<unknown>;
+  queryStatisticsForQuantity(
+    identifier: string,
+    statistics: string[],
+    options?: { from?: Date; to?: Date; unit?: string },
+  ): Promise<{ sumQuantity?: { quantity: number } }>;
+  StatisticsOptions?: Record<string, string>;
 }
 
 // HKAuthorizationStatus.sharingAuthorized (stable Apple enum).
@@ -35,7 +41,32 @@ const ACTIVE_ENERGY = 'HKQuantityTypeIdentifierActiveEnergyBurned';
 const DIST_WALK_RUN = 'HKQuantityTypeIdentifierDistanceWalkingRunning';
 const DIST_CYCLE = 'HKQuantityTypeIdentifierDistanceCycling';
 
+const STEP_COUNT = 'HKQuantityTypeIdentifierStepCount';
+
 const SHARE_TYPES = [WORKOUT_TYPE, ACTIVE_ENERGY, DIST_WALK_RUN, DIST_CYCLE, BODY_MASS];
+const READ_TYPES = [STEP_COUNT, ACTIVE_ENERGY];
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+async function sumToday(identifier: string, unit: string): Promise<number | null> {
+  try {
+    const mod = hk();
+    const cumulativeSum = mod.StatisticsOptions?.cumulativeSum ?? 'cumulativeSum';
+    const res = await mod.queryStatisticsForQuantity(identifier, [cumulativeSum], {
+      from: startOfToday(),
+      to: new Date(),
+      unit,
+    });
+    const value = res?.sumQuantity?.quantity;
+    return typeof value === 'number' ? value : null;
+  } catch {
+    return null;
+  }
+}
 
 const ACTIVITY_TYPE: Record<HealthWorkoutKind, string> = {
   running: 'Running',
@@ -62,7 +93,7 @@ export const healthBackend: HealthBackend = {
 
   async requestPermissions() {
     try {
-      return await hk().requestAuthorization({ toShare: SHARE_TYPES, toRead: [] });
+      return await hk().requestAuthorization({ toShare: SHARE_TYPES, toRead: READ_TYPES });
     } catch {
       return false;
     }
@@ -86,5 +117,13 @@ export const healthBackend: HealthBackend = {
 
   async saveWeightKg(kg: number, when: Date) {
     await hk().saveQuantitySample(BODY_MASS, 'kg', kg, when, when);
+  },
+
+  async readTodaySteps() {
+    return sumToday(STEP_COUNT, 'count');
+  },
+
+  async readTodayActiveEnergyKcal() {
+    return sumToday(ACTIVE_ENERGY, 'kcal');
   },
 };

@@ -1,5 +1,6 @@
 import type { Goals, GoalsUpdate } from '@/src/lib/api/goals';
 import type { ProgressDay } from '@/src/lib/api/progress';
+import type { HealthToday } from '@/src/lib/health';
 
 export type GoalKind = 'distance' | 'burn' | 'steps';
 
@@ -11,6 +12,20 @@ export interface DayActivity {
 }
 
 export const NO_ACTIVITY: DayActivity = { distanceM: 0, kcal: 0, steps: 0 };
+
+/**
+ * Folds today's health-store totals (all-day steps / active energy from the
+ * phone or watch) into the server day. Takes the larger of the two per metric,
+ * so the goal never shows less than what the app already counted and the two
+ * sources are never summed (no double-counting). Distance stays app-only.
+ */
+export function withHealthToday(day: DayActivity, health: HealthToday): DayActivity {
+  return {
+    distanceM: day.distanceM,
+    steps: health.steps != null ? Math.max(day.steps, health.steps) : day.steps,
+    kcal: health.activeKcal != null ? Math.max(day.kcal, health.activeKcal) : day.kcal,
+  };
+}
 
 interface GoalMeta {
   field: keyof GoalsUpdate;

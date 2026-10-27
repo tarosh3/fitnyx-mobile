@@ -10,6 +10,9 @@ const WRITE_PERMISSIONS = [
   'android.permission.health.WRITE_TOTAL_CALORIES_BURNED',
   'android.permission.health.WRITE_STEPS',
   'android.permission.health.WRITE_WEIGHT',
+  // Read, for mirroring today's all-day steps / active energy into the goals.
+  'android.permission.health.READ_STEPS',
+  'android.permission.health.READ_ACTIVE_CALORIES_BURNED',
 ];
 
 const withHealthConnectPermissions = (config) =>

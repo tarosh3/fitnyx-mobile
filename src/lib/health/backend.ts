@@ -20,4 +20,10 @@ export const healthBackend: HealthBackend = {
   async saveWeightKg() {
     /* no-op */
   },
+  async readTodaySteps() {
+    return null;
+  },
+  async readTodayActiveEnergyKcal() {
+    return null;
+  },
 };

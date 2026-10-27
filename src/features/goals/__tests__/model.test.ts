@@ -1,4 +1,4 @@
-import { activityFromProgress, activityGoals, formatGoal, goalFraction, newMilestones, reachedMilestones } from '../model';
+import { activityFromProgress, activityGoals, formatGoal, goalFraction, newMilestones, reachedMilestones, withHealthToday } from '../model';
 
 const goals = { daily_distance_m: 5000, daily_burn_kcal: null, daily_steps: 6000, diet_kcal: 2000, diet_protein_g: null, weight_kg: 70 };
 
@@ -39,5 +39,18 @@ describe('goals model', () => {
     expect(formatGoal('burn', 312.4)).toBe('312 kcal');
     expect(formatGoal('steps', 6000)).toBe('6,000 steps');
     expect(formatGoal('steps', 6000, false)).toBe('6,000');
+  });
+
+  describe('withHealthToday', () => {
+    const day = { distanceM: 3000, kcal: 200, steps: 1500 };
+
+    it('takes the larger per metric, never summing, and leaves distance alone', () => {
+      expect(withHealthToday(day, { steps: 8000, activeKcal: 450 })).toEqual({ distanceM: 3000, kcal: 450, steps: 8000 });
+    });
+
+    it('keeps the server value when health is lower or null', () => {
+      expect(withHealthToday(day, { steps: 100, activeKcal: null })).toEqual({ distanceM: 3000, kcal: 200, steps: 1500 });
+      expect(withHealthToday(day, { steps: null, activeKcal: null })).toEqual(day);
+    });
   });
 });

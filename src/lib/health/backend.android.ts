@@ -6,12 +6,15 @@ import type { HealthBackend, HealthWorkout, HealthWorkoutKind } from './types';
 type Perm = { accessType: 'read' | 'write'; recordType: string };
 
 // Minimal facade over react-native-health-connect; call shapes follow its docs.
+type TimeRange = { operator: 'between'; startTime: string; endTime: string };
+
 interface HealthConnect {
   initialize(): Promise<boolean>;
   getSdkStatus?(): Promise<number>;
   requestPermission(perms: Perm[]): Promise<Perm[]>;
   getGrantedPermissions(): Promise<Perm[]>;
   insertRecords(records: unknown[]): Promise<string[]>;
+  aggregateRecord(request: { recordType: string; timeRangeFilter: TimeRange }): Promise<Record<string, unknown>>;
 }
 
 // Health Connect ExerciseType constants (stable).
@@ -24,7 +27,17 @@ const EXERCISE_TYPE: Record<HealthWorkoutKind, number> = {
 };
 
 const WRITE_RECORDS = ['ExerciseSession', 'Distance', 'TotalCaloriesBurned', 'Steps', 'Weight'];
-const WRITE_PERMS: Perm[] = WRITE_RECORDS.map((recordType) => ({ accessType: 'write', recordType }));
+const READ_RECORDS = ['Steps', 'ActiveCaloriesBurned'];
+const PERMS: Perm[] = [
+  ...WRITE_RECORDS.map((recordType): Perm => ({ accessType: 'write', recordType })),
+  ...READ_RECORDS.map((recordType): Perm => ({ accessType: 'read', recordType })),
+];
+
+function todayRange(): TimeRange {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return { operator: 'between', startTime: start.toISOString(), endTime: new Date().toISOString() };
+}
 
 function hc(): HealthConnect {
   return require('react-native-health-connect') as unknown as HealthConnect;
@@ -48,7 +61,7 @@ export const healthBackend: HealthBackend = {
   async requestPermissions() {
     if (!(await ready())) return false;
     try {
-      const granted = await hc().requestPermission(WRITE_PERMS);
+      const granted = await hc().requestPermission(PERMS);
       return granted.some((p) => p.recordType === 'ExerciseSession' && p.accessType === 'write');
     } catch {
       return false;
@@ -86,5 +99,27 @@ export const healthBackend: HealthBackend = {
     await hc().insertRecords([
       { recordType: 'Weight', time: when.toISOString(), weight: { value: kg, unit: 'kilograms' } },
     ]);
+  },
+
+  async readTodaySteps() {
+    if (!(await ready())) return null;
+    try {
+      const res = await hc().aggregateRecord({ recordType: 'Steps', timeRangeFilter: todayRange() });
+      const count = (res as { COUNT_TOTAL?: number }).COUNT_TOTAL;
+      return typeof count === 'number' ? count : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async readTodayActiveEnergyKcal() {
+    if (!(await ready())) return null;
+    try {
+      const res = await hc().aggregateRecord({ recordType: 'ActiveCaloriesBurned', timeRangeFilter: todayRange() });
+      const energy = (res as { ACTIVE_CALORIES_TOTAL?: { inKilocalories?: number } }).ACTIVE_CALORIES_TOTAL;
+      return typeof energy?.inKilocalories === 'number' ? energy.inKilocalories : null;
+    } catch {
+      return null;
+    }
   },
 };
