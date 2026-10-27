@@ -3,6 +3,7 @@ import { createActivity, type ActivityDetail, type CreateActivityInput } from '@
 import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { addToOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { isTransientStatus } from '@/src/lib/offline/syncEngine';
+import { syncRoamToHealth } from '@/src/lib/health';
 import type { RoamPoint, VehicleWindow } from '@/src/features/roam/geo';
 import type { RecordingMeta } from '@/src/features/roam/recordingStore';
 
@@ -56,7 +57,9 @@ export async function saveRoam(
   const input = buildActivityInput(meta, points, Date.now(), name, vehicleWindows);
   if (!input) return { status: 'too-short' };
   try {
-    return { status: 'saved', activity: await createActivity(input) };
+    const activity = await createActivity(input);
+    syncRoamToHealth(activity).catch(() => undefined); // best-effort mirror to Apple Health / Health Connect
+    return { status: 'saved', activity };
   } catch (error) {
     if (isAuthError(error)) throw error;
     const status = (error as { status?: number }).status;

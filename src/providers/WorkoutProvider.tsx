@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { isAuthError } from '@/src/lib/api';
+import { syncWorkoutToHealth } from '@/src/lib/health';
 import {
   getActiveSession,
   ActiveSessionResponse,
@@ -290,8 +291,17 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
 
   const finishActiveSessionInternal = async () => {
     if (!activeSession) return;
+    const finished = activeSession;
     try {
-      await offlineFinishSession(activeSession.id);
+      await offlineFinishSession(finished.id);
+      // Mirror to Apple Health / Health Connect (best-effort; no-op unless the
+      // user enabled it). Duration is the elapsed time, not the possibly-stale
+      // stored value; kcal may be null until the backend scores it.
+      syncWorkoutToHealth({
+        started_at: finished.started_at,
+        total_duration_sec: elapsedForSession(finished),
+        kcal: finished.kcal,
+      }).catch(() => undefined);
       setActiveSession(null);
       await WorkoutNotification.dismiss();
     } catch (error) {

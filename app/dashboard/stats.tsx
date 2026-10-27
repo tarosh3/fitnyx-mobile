@@ -51,6 +51,7 @@ import {
 import { getFitnessProfile } from '@/src/lib/api/onboarding';
 import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { addToOfflineQueue } from '@/src/lib/cache/indexeddb';
+import { syncWeightToHealth } from '@/src/lib/health';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { fmtWeight, limitDecimals } from '@/src/lib/decimal';
 import {
@@ -580,6 +581,7 @@ export default function StatsScreen() {
 
       try {
         await saveMetric(input);
+        if (input.weight_kg) syncWeightToHealth(input.weight_kg).catch(() => undefined);
       } catch (err) {
         if ((err as { status?: number })?.status) throw err;
         // Offline: queue it (SyncManager sends it on reconnect) and show it now.
@@ -598,6 +600,7 @@ export default function StatsScreen() {
         if (userId) {
           cacheSet(cacheKeys.bodyMetricsLatest(userId), pending, cacheTTL.LONG).catch(() => undefined);
         }
+        if (input.weight_kg) syncWeightToHealth(input.weight_kg).catch(() => undefined);
         closeForm();
         toast('Saved offline — it syncs when you’re back online', 'success');
         return;

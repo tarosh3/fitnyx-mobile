@@ -127,7 +127,16 @@
           "isAccessMediaLocationEnabled": false,
           "granularPermissions": []
         }
-      ]
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "FitNyx reads your health data so your workouts, runs and weight stay in sync.",
+          "NSHealthUpdateUsageDescription": "FitNyx saves your Roams, workouts and weight to Apple Health so they appear across your apps and watch."
+        }
+      ],
+      "react-native-health-connect",
+      "./plugins/withHealthConnectPermissions"
     ],
     "experiments": {
       "typedRoutes": true
