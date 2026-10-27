@@ -137,7 +137,12 @@ export function LoggerScreen() {
         haptic.success();
         setPr({ title: b.exercise?.title ?? 'Exercise', detail: describeSet(trackingOf(b.exercise), res.log) });
       }
-      if (res.restSec) void updateWorkoutDetails(sessionId, { restEnd: Date.now() + res.restSec * 1000 });
+      // Only start a rest when a set still remains to rest before. `blocks`
+      // here predates this set being logged, so it still counts the row we just
+      // sent — a remaining count of 1 means this was the final set, and a rest
+      // bar ("Rest" with no "Next:") would linger after the workout is done.
+      const remainingPending = blocks.reduce((n, blk) => n + pendingRows(blk).length, 0);
+      if (res.restSec && remainingPending > 1) void updateWorkoutDetails(sessionId, { restEnd: Date.now() + res.restSec * 1000 });
       if (pendingCount(b) === 1 && open?.key === b.key) setOpen(null);
     } catch {
       toast('Couldn’t save that set. Try again.', 'error');
@@ -289,8 +294,16 @@ export function LoggerScreen() {
           icon={<Plus size={20} color={blocks.length ? c.text : c.primaryText} />} onPress={() => setPicker({ swapBi: null })} style={styles.addBtn} />
       </Animated.ScrollView>
 
-      {restEnd ? <RestBar endTimestamp={restEnd} seconds={Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))} onAdjust={(end) => { void updateWorkoutDetails(sessionId, { restEnd: end }); }} onDone={() => { void updateWorkoutDetails(sessionId, { restEnd: undefined }); }}
-        next={nextUp(blocks, (b, d) => describeSet(trackingOf(b.exercise), asLog(d)))} /> : null}
+      {(() => {
+        // Show the rest bar only while a set still remains to rest before — a
+        // restEnd left over after the final set (or restored from storage) has
+        // no "Next:" and must not linger once the workout is done.
+        const restNext = restEnd ? nextUp(blocks, (b, d) => describeSet(trackingOf(b.exercise), asLog(d))) : null;
+        return restEnd && restNext ? (
+          <RestBar endTimestamp={restEnd} seconds={Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))} onAdjust={(end) => { void updateWorkoutDetails(sessionId, { restEnd: end }); }} onDone={() => { void updateWorkoutDetails(sessionId, { restEnd: undefined }); }}
+            next={restNext} />
+        ) : null;
+      })()}
 
       {eb && evalue ? (
         <SetEditorSheet visible t={et} value={evalue} logged={editor?.kind === 'log'} rpe={elog?.rpe ?? null}

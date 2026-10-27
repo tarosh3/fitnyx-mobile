@@ -78,7 +78,7 @@ export function DietSetup({ userId, onCreated, onStepChange }: { userId: string;
           </Text>
         </View>
       ) : null}
-      <DietWizard onComplete={generate} isLoading={generating} onStepChange={onStepChange} initial={dietWizardDefaults(plan)} />
+      <DietWizard onComplete={generate} isLoading={generating} offline={!isOnline} onStepChange={onStepChange} initial={dietWizardDefaults(plan)} />
     </View>
   );
 }

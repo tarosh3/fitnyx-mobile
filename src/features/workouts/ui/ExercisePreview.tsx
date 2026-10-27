@@ -5,19 +5,24 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { finderMeta } from '@/src/features/workouts/finder';
 import { exerciseImage } from '@/src/features/workouts/ui/ExerciseThumb';
+import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { useVideoSource } from '@/src/lib/offline/videoCache';
 import type { Exercise } from '@/src/types/exercise';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
 /** The exercise's video, looping and muted, so the user can match it to what they did. */
 export function ExercisePreview({ exercise, onClose }: { exercise: Exercise; onClose: () => void }) {
   const c = useThemeColors();
+  const { isOnline } = useNetworkStatus();
   const url = exercise.video_url?.trim() || null;
-  const player = useVideoPlayer(url, (p) => { p.loop = true; p.muted = true; p.play(); });
+  // Offline, play the pre-cached file; with no cache, fall through to the still.
+  const source = useVideoSource(url, isOnline);
+  const player = useVideoPlayer(source, (p) => { p.loop = true; p.muted = true; p.play(); });
   const still = exerciseImage(exercise, 480);
   return (
     <View testID="exercise-preview" style={[styles.wrap, { backgroundColor: c.card, borderColor: c.border }]}>
-      {url ? (
+      {source ? (
         <VideoView player={player} style={[styles.media, { backgroundColor: c.surface }]} contentFit="cover" nativeControls={false} />
       ) : still ? (
         <Image source={{ uri: still }} style={[styles.media, { backgroundColor: c.surface }]} resizeMode="cover" />

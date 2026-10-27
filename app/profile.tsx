@@ -577,10 +577,10 @@ export default function ProfileScreen() {
         {/* Sticky Save */}
         <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border, paddingBottom: insets.bottom + spacing.md }]}>
           <Button
-            title={saving ? 'Saving…' : 'Save Profile'}
+            title={saving ? 'Saving…' : !isOnline ? "Offline — can't save" : 'Save Profile'}
             onPress={save}
             loading={saving}
-            disabled={saving || usernameStatus.state === 'checking'}
+            disabled={saving || usernameStatus.state === 'checking' || !isOnline}
           />
         </View>
       </KeyboardAvoidingView>

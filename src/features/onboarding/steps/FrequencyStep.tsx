@@ -9,7 +9,7 @@ const FREQUENCIES = [
   { id: '2_3_days', label: '2–3 days a week', description: 'Light routine' },
   { id: '3_4_days', label: '3–4 days a week', description: 'Balanced approach' },
   { id: '5_6_days', label: '5–6 days a week', description: 'Committed schedule' },
-  { id: 'everyday', label: 'Everyday', description: "I'm serious 😤" },
+  { id: 'everyday', label: 'Every day', description: 'All in' },
 ];
 
 export function FrequencyStep({ data, onNext, saving }: OnboardingStepProps) {
