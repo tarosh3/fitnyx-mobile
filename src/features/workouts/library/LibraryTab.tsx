@@ -1,15 +1,17 @@
 import { useRouter } from 'expo-router';
 import { ChevronRight, Search } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { type Part, PARTS, partLabel, partOf } from '@/src/features/workouts/model';
+import { searchExercises } from '@/src/features/workouts/search';
 import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
 import { WorkoutGlyph } from '@/src/features/workouts/ui/WorkoutGlyph';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useWorkoutOverlayInset } from '@/src/providers/WorkoutOverlayProvider';
 import { fetchExercises } from '@/src/lib/api/exercises';
 import { cacheGet, cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { getCatalog, syncCatalog } from '@/src/lib/offline/catalogCache';
 import type { Exercise } from '@/src/types/exercise';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
@@ -47,8 +49,29 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [catalog, setCatalog] = useState<Exercise[] | null>(null);
   const req = useRef(0);
   const prefetched = useRef(false);
+
+  // Load the whole catalog once, then search/browse it on the device — instant
+  // and fully offline. Seed from cache, then refresh in the background.
+  useEffect(() => {
+    let live = true;
+    getCatalog().then((c) => { if (live && c?.length) setCatalog(c); }).catch(() => undefined);
+    syncCatalog().then((c) => { if (live && c?.length) setCatalog(c); }).catch(() => undefined);
+    return () => { live = false; };
+  }, []);
+
+  // Catalog-driven results: filter by the active chip, then fuzzy-rank by query.
+  // null until the catalog is available (first launch) — then the network path
+  // below fills in.
+  const local = useMemo(() => {
+    if (!catalog) return null;
+    const base = part == null ? catalog
+      : part === 'mine' ? catalog.filter((e) => !!e.owner_id)
+        : catalog.filter((e) => partOf(e) === part);
+    return searchExercises(base, query.trim());
+  }, [catalog, part, query]);
 
   const load = async (nextPage: number) => {
     const id = ++req.current;
@@ -82,9 +105,14 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
   };
 
   useEffect(() => {
+    if (catalog) return; // catalog-driven: no per-query network fetch
     const t = setTimeout(() => load(1), query ? 250 : 0);
     return () => clearTimeout(t);
-  }, [query, part]);
+  }, [query, part, catalog]);
+
+  // Catalog-driven when available, else the network/cache list (cold start).
+  const displayed = local ?? items;
+  const displayTotal = local ? local.length : total;
 
   const top = (
     <View>
@@ -107,31 +135,33 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
           );
         })}
       </ScrollView>
-      {items.length ? <Text style={[styles.count, { color: c.mutedText }]}>{total.toLocaleString('en-US')} exercises</Text> : null}
+      {displayed.length ? <Text style={[styles.count, { color: c.mutedText }]}>{displayTotal.toLocaleString('en-US')} exercises</Text> : null}
     </View>
   );
 
   return (
     <FlatList
-      data={items}
+      data={displayed}
       keyExtractor={(e) => e.uuid}
       ListHeaderComponent={top}
       keyboardShouldPersistTaps="handled"
-      onEndReached={() => { if (!loading && items.length < total) load(page + 1); }}
+      // Pagination only matters for the network cold-start path; the catalog is
+      // already complete on the device.
+      onEndReached={() => { if (!catalog && !loading && items.length < total) load(page + 1); }}
       onEndReachedThreshold={0.5}
-      ListEmptyComponent={loading ? <ActivityIndicator style={{ marginTop: spacing['2xl'] }} color={c.primary} /> : (
+      ListEmptyComponent={(!catalog && loading) ? <ActivityIndicator style={{ marginTop: spacing['2xl'] }} color={c.primary} /> : (
         <Text style={[styles.empty, { color: c.mutedText }]}>
-          {failed ? 'Couldn’t load exercises. Check your connection.'
+          {(!catalog && failed) ? 'Couldn’t load exercises. Check your connection.'
             : part === 'mine' ? 'No exercises of your own yet. Add one from “Add exercise” in a workout or routine.'
               : 'No exercises match. Try a shorter word or another body part.'}
         </Text>
       )}
-      ListFooterComponent={loading && items.length ? <ActivityIndicator style={{ margin: spacing.lg }} color={c.primary} /> : null}
+      ListFooterComponent={(!catalog && loading && items.length) ? <ActivityIndicator style={{ margin: spacing.lg }} color={c.primary} /> : null}
       renderItem={({ item, index }) => (
         <Pressable onPress={() => router.push(`/workouts/exercise/${item.uuid}`)} accessibilityRole="button"
           accessibilityLabel={`${item.title}, ${partLabel(partOf(item))}. Open`}
           style={({ pressed }) => [styles.row, { backgroundColor: c.card, borderColor: c.border },
-            index === 0 && styles.first, index === items.length - 1 && styles.last, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth },
+            index === 0 && styles.first, index === displayed.length - 1 && styles.last, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth },
             pressed && { opacity: 0.7 }]}>
           <ExerciseThumb exercise={item} />
           <View style={styles.grow}>

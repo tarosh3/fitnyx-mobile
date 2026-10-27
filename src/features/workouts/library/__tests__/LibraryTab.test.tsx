@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import { LibraryTab } from '@/src/features/workouts/library/LibraryTab';
-import { fetchExercises } from '@/src/lib/api/exercises';
+import { getCatalog, syncCatalog } from '@/src/lib/offline/catalogCache';
 import { cacheClear } from '@/src/lib/cache';
 
 jest.mock('@/src/hooks/useThemeColors', () => ({
@@ -10,46 +10,59 @@ jest.mock('@/src/hooks/useThemeColors', () => ({
 }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 jest.mock('@/src/lib/api/exercises', () => ({ fetchExercises: jest.fn() }));
+jest.mock('@/src/lib/offline/catalogCache', () => ({ getCatalog: jest.fn(), syncCatalog: jest.fn() }));
 
-const mockFetch = fetchExercises as jest.MockedFunction<typeof fetchExercises>;
-
-const row = (uuid: string, title: string) => ({
-  uuid, title, primary_muscles: [{ name: 'Chest', image: '', description: '' }], equipment: [], tracking_type: 'weight_reps',
+const ex = (title: string, muscle: string, equipment: string[] = []) => ({
+  uuid: title.toLowerCase().replace(/\s+/g, '-'),
+  title,
+  primary_muscles: [{ name: muscle, image: '', description: '' }],
+  secondary_muscles: [],
+  equipment: equipment.map((name) => ({ name, description: '' })),
+  tracking_type: 'weight_reps',
 });
 
-describe('exercise library', () => {
+const CATALOG = [
+  ex('Barbell Bench Press', 'Lower Chest', ['Barbell']),
+  ex('Barbell Back Squat', 'Quads', ['Barbell']),
+  ex('Lat Pulldown', 'Lats', ['Machine']),
+];
+
+const mockGet = getCatalog as jest.MockedFunction<typeof getCatalog>;
+const mockSync = syncCatalog as jest.MockedFunction<typeof syncCatalog>;
+
+describe('exercise library (catalog-driven local search)', () => {
   beforeEach(async () => {
     await cacheClear();
-    mockFetch.mockReset();
-    mockFetch.mockImplementation(async ({ muscle }) => ({
-      data: [row(`${muscle || 'all'}-1`, `${muscle || 'all'} move`)],
-      meta: { current_page: 1, per_page: 30, total: 1, total_pages: 1 },
-    }) as never);
+    mockGet.mockReset().mockResolvedValue(CATALOG as never);
+    mockSync.mockReset().mockResolvedValue(CATALOG as never);
   });
 
-  it('asks for summary rows and warms every body-part chip once', async () => {
-    render(<LibraryTab header={<></>} />);
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(8)); // All + 7 chips
-    expect(mockFetch.mock.calls.every(([f]) => f.fields === 'summary')).toBe(true);
-    expect(mockFetch.mock.calls.map(([f]) => f.muscle)).toEqual(['', 'chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio']);
-  });
-
-  it('shows a warmed chip from cache without waiting for the network', async () => {
+  it('shows the whole cached catalog without a per-query network call', async () => {
     const screen = render(<LibraryTab header={<></>} />);
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(8));
-    mockFetch.mockImplementation(() => new Promise(() => undefined)); // network never answers
+    expect(await screen.findByText('Barbell Bench Press')).toBeTruthy();
+    expect(screen.getByText('Lat Pulldown')).toBeTruthy();
+  });
+
+  it('searches locally by title', async () => {
+    const screen = render(<LibraryTab header={<></>} />);
+    await screen.findByText('Barbell Bench Press');
+    fireEvent.changeText(screen.getByLabelText('Search exercises'), 'squat');
+    expect(await screen.findByText('Barbell Back Squat')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Lat Pulldown')).not.toBeOnTheScreen());
+  });
+
+  it('tolerates typos', async () => {
+    const screen = render(<LibraryTab header={<></>} />);
+    await screen.findByText('Barbell Bench Press');
+    fireEvent.changeText(screen.getByLabelText('Search exercises'), 'benh');
+    expect(await screen.findByText('Barbell Bench Press')).toBeTruthy();
+  });
+
+  it('filters by body-part chip locally', async () => {
+    const screen = render(<LibraryTab header={<></>} />);
+    await screen.findByText('Barbell Bench Press');
     fireEvent.press(screen.getByRole('button', { name: 'Back' }));
-    expect(await screen.findByText('back move')).toBeTruthy();
-  });
-
-  it('drops the previous chip’s rows when the next one has no cache', async () => {
-    mockFetch.mockImplementationOnce(async () => ({
-      data: [row('all-1', 'all move')], meta: { current_page: 1, per_page: 30, total: 1, total_pages: 1 },
-    }) as never);
-    mockFetch.mockImplementation(() => new Promise(() => undefined)); // prefetch + chip fetch hang
-    const screen = render(<LibraryTab header={<></>} />);
-    expect(await screen.findByText('all move')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Legs' }));
-    await waitFor(() => expect(screen.queryByText('all move')).not.toBeOnTheScreen());
+    expect(await screen.findByText('Lat Pulldown')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Barbell Bench Press')).not.toBeOnTheScreen());
   });
 });

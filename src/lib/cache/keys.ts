@@ -4,6 +4,9 @@ export const cacheKeys = {
   onboardingStatus: (userId: string) => `onboarding:${userId}`,
   workoutPlans: (userId: string) => `plans:${userId}`,
   exercises: 'exercises:all',
+  // The whole exercise catalog (summary fields only) for instant local search
+  // and full offline browse — synced daily, searched on the device.
+  exerciseCatalog: 'exercises:catalog',
   // First page of the exercise list per filter combination (offline fallback).
   exerciseListPage: (filters: string) => `exercises:list:${filters}`,
   exerciseCategories: 'exercises:categories',
