@@ -24,7 +24,7 @@ const SUGGESTED: Record<string, Weekday[]> = {
   everyday: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
 };
 
-function Chip({ label, on, onPress, a11y }: { label: string; on: boolean; onPress: () => void; a11y: string }) {
+function Chip({ label, on, onPress, a11y, fill }: { label: string; on: boolean; onPress: () => void; a11y: string; fill?: boolean }) {
   const c = useThemeColors();
   return (
     <Pressable
@@ -32,7 +32,7 @@ function Chip({ label, on, onPress, a11y }: { label: string; on: boolean; onPres
       accessibilityRole="checkbox"
       accessibilityState={{ checked: on }}
       accessibilityLabel={a11y}
-      style={[styles.chip, { backgroundColor: on ? c.primary : c.card, borderColor: on ? c.primary : c.border }]}
+      style={[styles.chip, fill && styles.chipFill, { backgroundColor: on ? c.primary : c.card, borderColor: on ? c.primary : c.border }]}
     >
       <Text style={[styles.chipText, { color: on ? c.primaryText : c.text }]}>{label}</Text>
     </Pressable>
@@ -64,9 +64,9 @@ export function ScheduleStep({ data, onNext, saving }: OnboardingStepProps) {
     >
       <View style={styles.wrap}>
         <Text style={[styles.label, { color: c.mutedText }]}>Days</Text>
-        <View style={styles.row}>
+        <View style={styles.dayRow}>
           {WEEKDAYS.map((d) => (
-            <Chip key={d} label={DAY_LABELS[d].slice(0, 2)} on={days.includes(d)} onPress={() => toggleDay(d)} a11y={DAY_LABELS[d]} />
+            <Chip key={d} label={DAY_LABELS[d].slice(0, 2)} on={days.includes(d)} onPress={() => toggleDay(d)} a11y={DAY_LABELS[d]} fill />
           ))}
         </View>
         <Text style={[styles.label, { color: c.mutedText }]}>Time of day</Text>
@@ -86,6 +86,10 @@ const styles = StyleSheet.create({
   wrap: { gap: 12 },
   label: { fontSize: 14, fontFamily: type.weight.semibold, marginTop: 4 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // The 7 day chips share one row (2-letter labels) so the last one never
+  // orphans onto a second line; time/length chips keep their padded width.
+  dayRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6 },
   chip: { minWidth: 44, minHeight: 44, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  chipFill: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, paddingHorizontal: 0 },
   chipText: { fontSize: 15, fontFamily: type.weight.semibold },
 });
