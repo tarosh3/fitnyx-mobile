@@ -33,6 +33,14 @@ export interface HealthBackend {
   readTodaySteps(): Promise<number | null>;
   /** Active energy burned today in kcal; null if unavailable. */
   readTodayActiveEnergyKcal(): Promise<number | null>;
+  /** Average + peak heart rate (bpm) over a time range; nulls if unavailable. */
+  readHeartRate(from: Date, to: Date): Promise<HeartRateStats>;
+}
+
+/** Heart-rate summary over a range; a field is null when unknown. */
+export interface HeartRateStats {
+  avg: number | null;
+  max: number | null;
 }
 
 /** Today's totals read from the health store; a field is null when unknown. */

@@ -26,4 +26,7 @@ export const healthBackend: HealthBackend = {
   async readTodayActiveEnergyKcal() {
     return null;
   },
+  async readHeartRate() {
+    return { avg: null, max: null };
+  },
 };

@@ -27,7 +27,11 @@ const EXERCISE_TYPE: Record<HealthWorkoutKind, number> = {
 };
 
 const WRITE_RECORDS = ['ExerciseSession', 'Distance', 'TotalCaloriesBurned', 'Steps', 'Weight'];
-const READ_RECORDS = ['Steps', 'ActiveCaloriesBurned'];
+const READ_RECORDS = ['Steps', 'ActiveCaloriesBurned', 'HeartRate'];
+
+function rangeBetween(from: Date, to: Date): TimeRange {
+  return { operator: 'between', startTime: from.toISOString(), endTime: to.toISOString() };
+}
 const PERMS: Perm[] = [
   ...WRITE_RECORDS.map((recordType): Perm => ({ accessType: 'write', recordType })),
   ...READ_RECORDS.map((recordType): Perm => ({ accessType: 'read', recordType })),
@@ -120,6 +124,22 @@ export const healthBackend: HealthBackend = {
       return typeof energy?.inKilocalories === 'number' ? energy.inKilocalories : null;
     } catch {
       return null;
+    }
+  },
+
+  async readHeartRate(from: Date, to: Date) {
+    if (!(await ready())) return { avg: null, max: null };
+    try {
+      const res = (await hc().aggregateRecord({
+        recordType: 'HeartRate',
+        timeRangeFilter: rangeBetween(from, to),
+      })) as { BPM_AVG?: number; BPM_MAX?: number };
+      return {
+        avg: typeof res.BPM_AVG === 'number' ? Math.round(res.BPM_AVG) : null,
+        max: typeof res.BPM_MAX === 'number' ? Math.round(res.BPM_MAX) : null,
+      };
+    } catch {
+      return { avg: null, max: null };
     }
   },
 };

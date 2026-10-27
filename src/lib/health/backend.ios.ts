@@ -28,7 +28,11 @@ interface HealthKit {
     identifier: string,
     statistics: string[],
     options?: { from?: Date; to?: Date; unit?: string },
-  ): Promise<{ sumQuantity?: { quantity: number } }>;
+  ): Promise<{
+    sumQuantity?: { quantity: number };
+    averageQuantity?: { quantity: number };
+    maximumQuantity?: { quantity: number };
+  }>;
   StatisticsOptions?: Record<string, string>;
 }
 
@@ -42,9 +46,10 @@ const DIST_WALK_RUN = 'HKQuantityTypeIdentifierDistanceWalkingRunning';
 const DIST_CYCLE = 'HKQuantityTypeIdentifierDistanceCycling';
 
 const STEP_COUNT = 'HKQuantityTypeIdentifierStepCount';
+const HEART_RATE = 'HKQuantityTypeIdentifierHeartRate';
 
 const SHARE_TYPES = [WORKOUT_TYPE, ACTIVE_ENERGY, DIST_WALK_RUN, DIST_CYCLE, BODY_MASS];
-const READ_TYPES = [STEP_COUNT, ACTIVE_ENERGY];
+const READ_TYPES = [STEP_COUNT, ACTIVE_ENERGY, HEART_RATE];
 
 function startOfToday(): Date {
   const d = new Date();
@@ -125,5 +130,26 @@ export const healthBackend: HealthBackend = {
 
   async readTodayActiveEnergyKcal() {
     return sumToday(ACTIVE_ENERGY, 'kcal');
+  },
+
+  async readHeartRate(from: Date, to: Date) {
+    try {
+      const mod = hk();
+      const avgOpt = mod.StatisticsOptions?.discreteAverage ?? 'discreteAverage';
+      const maxOpt = mod.StatisticsOptions?.discreteMax ?? 'discreteMax';
+      const res = await mod.queryStatisticsForQuantity(HEART_RATE, [avgOpt, maxOpt], {
+        from,
+        to,
+        unit: 'count/min',
+      });
+      const avg = res?.averageQuantity?.quantity;
+      const max = res?.maximumQuantity?.quantity;
+      return {
+        avg: typeof avg === 'number' ? Math.round(avg) : null,
+        max: typeof max === 'number' ? Math.round(max) : null,
+      };
+    } catch {
+      return { avg: null, max: null };
+    }
   },
 };

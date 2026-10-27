@@ -3,7 +3,7 @@ import type { WorkoutSession } from '@/src/lib/api/workoutSessions';
 import { getHealthSync } from '@/src/lib/prefs';
 import { healthBackend } from './backend';
 import { roamToHealthWorkout, sessionToHealthWorkout } from './map';
-import type { HealthToday } from './types';
+import type { HealthToday, HeartRateStats } from './types';
 
 /**
  * One-way export of FitNyx activity to the platform health store (Apple Health /
@@ -62,6 +62,17 @@ export async function readHealthToday(): Promise<HealthToday> {
       healthBackend.readTodayActiveEnergyKcal().catch(() => null),
     ]);
     return { steps, activeKcal };
+  } catch {
+    return none;
+  }
+}
+
+/** Heart-rate summary for a time range (e.g. a just-finished Roam); nulls when off/unavailable. */
+export async function readHealthHeartRate(from: Date, to: Date): Promise<HeartRateStats> {
+  const none: HeartRateStats = { avg: null, max: null };
+  try {
+    if (!(await enabled())) return none;
+    return await healthBackend.readHeartRate(from, to);
   } catch {
     return none;
   }

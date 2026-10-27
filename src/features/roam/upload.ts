@@ -3,7 +3,7 @@ import { createActivity, type ActivityDetail, type CreateActivityInput } from '@
 import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { addToOfflineQueue } from '@/src/lib/cache/indexeddb';
 import { isTransientStatus } from '@/src/lib/offline/syncEngine';
-import { syncRoamToHealth } from '@/src/lib/health';
+import { readHealthHeartRate, syncRoamToHealth } from '@/src/lib/health';
 import type { RoamPoint, VehicleWindow } from '@/src/features/roam/geo';
 import type { RecordingMeta } from '@/src/features/roam/recordingStore';
 
@@ -56,6 +56,15 @@ export async function saveRoam(
 ): Promise<SaveOutcome> {
   const input = buildActivityInput(meta, points, Date.now(), name, vehicleWindows);
   if (!input) return { status: 'too-short' };
+  // Attach heart rate from the health store for the activity's window (no-op
+  // unless the user enabled Health sync; null when nothing has synced yet).
+  try {
+    const hr = await readHealthHeartRate(new Date(input.started_at), new Date(input.ended_at));
+    if (hr.avg != null) input.avg_hr = hr.avg;
+    if (hr.max != null) input.max_hr = hr.max;
+  } catch {
+    /* best-effort */
+  }
   try {
     const activity = await createActivity(input);
     syncRoamToHealth(activity).catch(() => undefined); // best-effort mirror to Apple Health / Health Connect
