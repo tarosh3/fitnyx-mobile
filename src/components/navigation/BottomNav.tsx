@@ -11,7 +11,6 @@ import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { motion, type } from '@/src/styles/tokens';
-import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { NavIcon, type NavIconName } from './NavIcon';
 import { BOTTOM_NAV_HEIGHT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
 
@@ -25,9 +24,9 @@ const destinations = [
 const SPRING = { damping: 20, stiffness: 320, mass: 0.7, reduceMotion: ReduceMotion.System };
 const DOCK_PADDING = 6;
 
-// The dock floats over a frosted scrim so content fades behind it instead of
-// hitting a solid band. Reduce Transparency swaps the frost for an opaque fade
-// (ScreenEdgeFade), keeping contrast consistent for users who disable blur.
+// The dock is a frosted-glass pill: content scrolled behind it shows through
+// blurred, while the area above and beside the pill is left untouched. Reduce
+// Transparency swaps the frost for the opaque nav surface.
 export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -82,14 +81,6 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { height: totalHeight + gap + 24 }]}>
-      {reduceTransparency ? (
-        <ScreenEdgeFade edge="bottom" inset={gap} fade={totalHeight + 24} />
-      ) : (
-        <BlurView pointerEvents="none" style={StyleSheet.absoluteFill}
-          tint={theme === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
-          intensity={40} blurReductionFactor={4} blurMethod="dimezisBlurViewSdk31Plus"
-          blurTarget={blurTarget ?? undefined} />
-      )}
       <View testID="bottom-nav" pointerEvents="box-none" style={[styles.dock, {
         bottom: gap, left: dockLeft, width: dockWidth, height: totalHeight,
         backgroundColor: reduceTransparency ? c.nav.surface : 'transparent',
