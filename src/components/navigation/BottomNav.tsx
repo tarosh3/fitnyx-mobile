@@ -81,6 +81,14 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { height: totalHeight + gap + 24 }]}>
+      {/* The pill is inset, so wide cards can peek in the margins beside it and
+          in the gap below. Paint those areas (never behind the pill) with the
+          page background: dark content was already invisible there, and this
+          also hides bright content, while the pill keeps showing content through
+          its frost. Nothing above the pill's top edge is covered. */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: gap, backgroundColor: c.background }} />
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, bottom: gap, width: dockLeft, height: totalHeight, backgroundColor: c.background }} />
+      <View pointerEvents="none" style={{ position: 'absolute', right: 0, bottom: gap, width: Math.max(0, width - dockLeft - dockWidth), height: totalHeight, backgroundColor: c.background }} />
       <View testID="bottom-nav" pointerEvents="box-none" style={[styles.dock, {
         bottom: gap, left: dockLeft, width: dockWidth, height: totalHeight,
         backgroundColor: reduceTransparency ? c.nav.surface : 'transparent',
@@ -93,9 +101,10 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
               tint={theme === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
               intensity={64} blurReductionFactor={4} blurMethod="dimezisBlurViewSdk31Plus"
               blurTarget={blurTarget ?? undefined} />
-            {/* A light wash keeps icons and labels legible over any content. */}
+            {/* A wash keeps icons/labels legible and stops bright content from
+                bleeding through the pill's corners while keeping a subtle frost. */}
             <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.glass,
-              { backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.5)' : 'rgba(20,20,20,0.4)' }]} />
+              { backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.62)' : 'rgba(22,22,22,0.66)' }]} />
           </>
         )}
         <View pointerEvents="box-none" style={styles.row}>
