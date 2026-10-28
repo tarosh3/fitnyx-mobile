@@ -1,7 +1,8 @@
+import { ContourArt } from '@/src/components/art/ContourArt';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Flame, Pencil } from 'lucide-react-native';
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { type } from '@/src/styles/tokens';
@@ -32,7 +33,7 @@ export function SummaryCard({ eaten, goal, burned, onEditGoals }: { eaten: Macro
             <Text style={[styles.big, { color: c.hero.text }]}>{fmt(Math.abs(left))}</Text>
             <Text style={[styles.unit, { color: c.hero.muted }]}>{over ? 'kcal over' : 'kcal left'}</Text>
           </View>
-          {!compact ? <Image source={require('../../../../assets/images/nutrition/fuel-bowl.png')} style={styles.bowl} accessible={false} /> : null}
+          {!compact ? <ContourArt subject="nutrition" width={100} height={80} /> : null}
         </View>
         <View style={[styles.track, { backgroundColor: c.hero.line }]} accessibilityRole="progressbar" accessibilityLabel="Daily calories" accessibilityValue={{ min: 0, max: goal.kcal, now: Math.min(eaten.kcal, goal.kcal), text: `${fmt(eaten.kcal)} of ${fmt(goal.kcal)} kcal eaten` }}>
           <View style={[styles.fill, { backgroundColor: c.hero.accent, width: `${frac * 100}%` }]} />
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   energy: { flex: 1, gap: 2 },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 7 },
-  eyebrow: { fontFamily: type.weight.bold, fontSize: 10, letterSpacing: 1.8 },
+  eyebrow: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 1.8 },
   big: { fontFamily: type.weight.extrabold, fontSize: 46, letterSpacing: -2, fontVariant: ['tabular-nums'] },
   unit: { fontFamily: type.weight.medium, fontSize: 14 },
   bowl: { width: 108, height: 108, transform: [{ rotate: '-12deg' }] },

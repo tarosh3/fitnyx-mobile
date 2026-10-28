@@ -1,3 +1,4 @@
+import { type } from '@/src/styles/tokens';
 import { BlurView } from 'expo-blur';
 import { Zap } from 'lucide-react-native';
 import React from 'react';
@@ -82,7 +83,7 @@ const getStyles = (palette: any) => StyleSheet.create({
         backgroundColor: palette.surface,
     },
     levelCircleLabel: {
-        fontSize: 8,
+        fontSize: type.size.micro,
         fontWeight: '900',
         color: palette.mutedText,
         letterSpacing: 1,

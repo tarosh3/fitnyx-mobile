@@ -306,13 +306,13 @@ function WeightChart({
           />
 
           {/* Y axis labels */}
-          <SvgText x={Y_AXIS_W - 6} y={CHART_PAD_TOP + 4} fill={mutedText} fontSize={10} textAnchor="end">
+          <SvgText x={Y_AXIS_W - 6} y={CHART_PAD_TOP + 4} fill={mutedText} fontSize={t.size.micro} textAnchor="end">
             {yMax.toFixed(0)}
           </SvgText>
-          <SvgText x={Y_AXIS_W - 6} y={(CHART_PAD_TOP + (CHART_HEIGHT - CHART_PAD_BOTTOM)) / 2 + 4} fill={mutedText} fontSize={10} textAnchor="end">
+          <SvgText x={Y_AXIS_W - 6} y={(CHART_PAD_TOP + (CHART_HEIGHT - CHART_PAD_BOTTOM)) / 2 + 4} fill={mutedText} fontSize={t.size.micro} textAnchor="end">
             {yMid.toFixed(0)}
           </SvgText>
-          <SvgText x={Y_AXIS_W - 6} y={CHART_HEIGHT - CHART_PAD_BOTTOM + 4} fill={mutedText} fontSize={10} textAnchor="end">
+          <SvgText x={Y_AXIS_W - 6} y={CHART_HEIGHT - CHART_PAD_BOTTOM + 4} fill={mutedText} fontSize={t.size.micro} textAnchor="end">
             {yMin.toFixed(0)}
           </SvgText>
 
@@ -328,7 +328,7 @@ function WeightChart({
                 strokeWidth={1.5}
                 strokeDasharray="6 4"
               />
-              <SvgText x={width - CHART_PAD_RIGHT - 2} y={targetY - 4} fill={warning} fontSize={10} textAnchor="end" fontWeight="700">
+              <SvgText x={width - CHART_PAD_RIGHT - 2} y={targetY - 4} fill={warning} fontSize={t.size.micro} textAnchor="end" fontWeight="700">
                 TARGET
               </SvgText>
             </>
@@ -348,7 +348,7 @@ function WeightChart({
               x={l.x}
               y={CHART_HEIGHT - 12}
               fill={mutedText}
-              fontSize={10}
+              fontSize={t.size.micro}
               textAnchor="middle"
             >
               {l.label}

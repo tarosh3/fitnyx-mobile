@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   arrow: { position: 'absolute', right: 12, top: 12, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   copy: { paddingHorizontal: 14, paddingBottom: 16, gap: 5 },
   label: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  kind: { flexShrink: 1, fontFamily: type.weight.bold, fontSize: 9, lineHeight: 14, letterSpacing: 0.6, textTransform: 'uppercase' },
+  kind: { flexShrink: 1, fontFamily: type.weight.bold, fontSize: type.size.micro, lineHeight: 14, letterSpacing: 0.6, textTransform: 'uppercase' },
   name: { fontFamily: type.weight.bold, fontSize: 17, lineHeight: 22, letterSpacing: -0.35 },
   meta: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 17 },
 });

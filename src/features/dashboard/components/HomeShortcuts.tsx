@@ -1,7 +1,8 @@
+import { ContourArt } from '@/src/components/art/ContourArt';
 import { useRouter } from 'expo-router';
 import { ArrowRight, ArrowUpRight, Droplets } from 'lucide-react-native';
 import React from 'react';
-import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, G, Path } from 'react-native-svg';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -47,13 +48,12 @@ export function HomeShortcuts({ children }: { children?: React.ReactNode }) {
       <View style={styles.nutritionSection}>
         <HomePressable testID="home-nutrition" accessibilityRole="button" accessibilityLabel="Open Nutrition: plan and log your meals"
           onPress={() => router.push('/diet')} style={[styles.feature, styles.nutritionFeature]}>
-          <Image source={require('../../../../assets/images/home/nutrition.png')} resizeMode="contain"
-            accessible={false} importantForAccessibility="no" style={[styles.foodArtwork, compact && styles.compactFoodArtwork, largeText && styles.smallArtwork]} />
+          <View pointerEvents="none" style={[styles.foodArtwork, compact && styles.compactFoodArtwork, largeText && styles.smallArtwork]}><ContourArt subject="nutrition" width="100%" height={largeText ? 100 : 148} /></View>
           <View style={[styles.featureCopy, styles.nutritionCopy]}>
-            <Text style={[styles.eyebrow, { color: c.diet.fat }]}>NUTRITION</Text>
+            <Text style={[styles.eyebrow, { color: c.accent }]}>NUTRITION</Text>
             <Text style={[styles.featureTitle, compact && styles.compactTitle, { color: c.text }]}>Eat well.{ '\n' }Feel your best.</Text>
             <Text style={[styles.description, { color: c.mutedText }]}>Meals, macros & daily fuel.</Text>
-            <View style={styles.action}><Text style={[styles.actionText, { color: c.diet.fat }]}>Plan & log meals</Text><ArrowUpRight size={17} color={c.diet.fat} /></View>
+            <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>Plan & log meals</Text><ArrowUpRight size={17} color={c.diet.fat} /></View>
           </View>
         </HomePressable>
 
@@ -77,10 +77,10 @@ const styles = StyleSheet.create({
   nutritionSection: { paddingTop: spacing.sm },
   nutritionFeature: { minHeight: 148 },
   featureCopy: { flex: 1, paddingVertical: spacing.base, paddingLeft: spacing.lg, gap: 5 },
-  eyebrow: { fontFamily: type.weight.semibold, fontSize: 10, lineHeight: 15, letterSpacing: 1.5 },
+  eyebrow: { fontFamily: type.weight.semibold, fontSize: type.size.micro, lineHeight: 15, letterSpacing: 1.5 },
   featureTitle: { fontFamily: type.weight.bold, fontSize: 25, lineHeight: 28, letterSpacing: -0.8 },
   compactTitle: { fontSize: 22, lineHeight: 26 },
-  description: { fontFamily: type.weight.regular, fontSize: 11, lineHeight: 17 },
+  description: { fontFamily: type.weight.regular, fontSize: type.size.xs, lineHeight: 18 },
   action: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   actionText: { flexShrink: 1, fontFamily: type.weight.semibold, fontSize: 12, lineHeight: 18 },
   artwork: { width: '41%', height: 144 },
@@ -91,5 +91,5 @@ const styles = StyleSheet.create({
   water: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xs, minHeight: 52, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth },
   waterCopy: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: spacing.sm, rowGap: 2 },
   waterTitle: { fontFamily: type.weight.medium, fontSize: 13, lineHeight: 19 },
-  waterSubtitle: { fontFamily: type.weight.regular, fontSize: 11, lineHeight: 17 },
+  waterSubtitle: { fontFamily: type.weight.regular, fontSize: type.size.xs, lineHeight: 18 },
 });

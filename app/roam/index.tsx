@@ -1,7 +1,9 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
+import { IllustratedEmpty } from '@/src/components/art/Illustration';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight, Flame } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
@@ -112,12 +114,12 @@ export default function RoamScreen() {
       ) : null}
 
       <Text style={[styles.heading, { color: palette.mutedText }]}>YOUR ROAMS</Text>
-      {loading && !data ? <ActivityIndicator color={palette.primary} /> : null}
+      {loading && !data ? <BrandLoader color={palette.primary} /> : null}
       {error ? (
         <Text style={[styles.hint, { color: offline ? palette.mutedText : palette.destructive }]}>{error}</Text>
       ) : null}
       {data && data.data.length === 0 && pending.length === 0 ? (
-        <Text style={[styles.hint, { color: palette.mutedText }]}>No Roams yet — your first one will show up here.</Text>
+        <IllustratedEmpty art="roam" title="Your next path starts here" detail="No Roams yet — your first one will show up here." />
       ) : null}
       <View style={styles.list}>
         {pending.map((a) => (

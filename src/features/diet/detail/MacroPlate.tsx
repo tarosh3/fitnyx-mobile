@@ -28,6 +28,6 @@ const styles = StyleSheet.create({
   stat: { flexGrow: 1, flexBasis: 55, gap: 6 },
   dot: { width: 16, height: 3, borderRadius: 2, marginBottom: 3 },
   value: { fontFamily: type.weight.bold, fontSize: 20, fontVariant: ['tabular-nums'] },
-  unit: { fontFamily: type.weight.medium, fontSize: 10 },
+  unit: { fontFamily: type.weight.medium, fontSize: type.size.micro },
   label: { fontFamily: type.weight.medium, fontSize: 11 },
 });

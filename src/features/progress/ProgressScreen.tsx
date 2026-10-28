@@ -1,3 +1,4 @@
+import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
 import React, { useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -121,7 +122,7 @@ export function ProgressScreen() {
 
         {/* Totals from no data would read as real zeros ("0h 00m"), so wait for the first load. */}
         {!daily.data && ['overview', 'strength', 'roam'].includes(segment) ? (
-          <Empty testID="progress-loading" text={daily.failed ? (isOnline ? 'Nothing to show yet' : 'Offline') : 'Loading your progress…'} />
+          <>{daily.failed ? <Empty text={isOnline ? 'Nothing to show yet' : 'Offline'} /> : <ContentSkeleton testID="progress-loading" variant="progress" label="Loading your progress" />}</>
         ) : null}
 
         {daily.data && segment === 'overview' ? (
@@ -131,7 +132,7 @@ export function ProgressScreen() {
         ) : null}
         {daily.data && segment === 'strength' ? <StrengthView {...common} change={pctChange(totals.volumeKg, prev.volumeKg)} strength={strength.data} loading={strength.loading} /> : null}
         {daily.data && segment === 'roam' ? <RoamView {...common} change={pctChange(totals.distanceM, prev.distanceM)} summary={summary.data} today={today} /> : null}
-        {segment === 'body' ? <BodyView history={body.history} targetKg={body.targetKg} range={range} /> : null}
+        {segment === 'body' && body.loading ? <ContentSkeleton variant="progress" label="Loading body measurements" /> : segment === 'body' ? <BodyView history={body.history} targetKg={body.targetKg} range={range} /> : null}
         {segment === 'fuel' ? <FuelView userId={userId} range={range} buckets={buckets} gran={gran} /> : null}
       </ScrollView>
 

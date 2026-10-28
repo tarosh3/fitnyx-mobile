@@ -43,7 +43,7 @@ export function exerciseImage(ex?: Props['exercise'], px = 160): string | null {
 function ThumbnailImage({ source, size, fallback }: { source: string; size: number; fallback: React.ReactNode }) {
   const [failed, setFailed] = useState(false);
   return failed ? fallback : (
-    <Image source={{ uri: source }} style={{ width: size, height: size }} resizeMode="cover" onError={() => setFailed(true)} />
+    <Image source={{ uri: source }} style={{ width: size, height: size, borderRadius: Math.round(size / 5) }} resizeMode="cover" onError={() => setFailed(true)} />
   );
 }
 
@@ -60,8 +60,8 @@ export function ExerciseThumb({ exercise, size = 56 }: Props) {
     : <WorkoutGlyph part={part} size={Math.round(size * 0.7)} color={tone.fg} />;
 
   return (
-    <View style={[styles.box, { width: size, height: size, borderRadius: radius, backgroundColor: tone.bg }]} accessible={false}>
-      {img ? <ThumbnailImage key={img} source={img} size={size} fallback={fallback} /> : fallback}
+    <View style={[styles.box, { width: size, height: size, borderRadius: radius, backgroundColor: tone.bg, borderWidth: 1, borderColor: tone.fg + '55' }]} accessible={false}>
+      {img ? <ThumbnailImage key={img} source={img} size={Math.max(1, size - 8)} fallback={fallback} /> : fallback}
     </View>
   );
 }

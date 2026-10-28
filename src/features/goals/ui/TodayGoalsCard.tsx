@@ -9,13 +9,17 @@ import { ActivityGoalsSheet } from '@/src/features/goals/ui/ActivityGoalsSheet';
 import { GoalRingsRow } from '@/src/features/goals/ui/GoalRings';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { spacing, type } from '@/src/styles/tokens';
+import { MilestoneNotice } from '@/src/components/ui/MilestoneNotice';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { localDateKey } from '@/src/lib/api/workoutSessions';
 
 /** Home: today's distance / calories / steps against the daily goals. */
 export function TodayGoalsCard() {
   const c = useThemeColors();
   const router = useRouter();
   const goals = useGoals();
-  const { day } = useTodayActivity();
+  const { user } = useAuth();
+  const { day, loaded } = useTodayActivity();
   const [editing, setEditing] = useState(false);
   const list = activityGoals(goals.data);
   // Before the first load (or on an older backend) there is nothing to show.
@@ -40,6 +44,8 @@ export function TodayGoalsCard() {
             {done === list.length ? 'All goals reached today' : done > 0 ? `${done} of ${list.length} reached` : 'Keep moving'}
           </Text>
           <GoalRingsRow goals={list} day={day} />
+          {user && <MilestoneNotice storageKey={`milestone:goals:${user.id}`} scope={`${localDateKey(new Date())}:${list.map((g) => `${g.kind}:${g.target}`).join(',')}`}
+            value={done} ready={loaded && !goals.loading && !goals.failed} message={done === list.length ? 'All daily goals reached!' : `${done} daily ${done === 1 ? 'goal' : 'goals'} reached!`} />}
           <Pressable onPress={() => router.push('/roam')} accessibilityRole="button" accessibilityLabel="Start a Roam"
             style={({ pressed }) => [styles.link, pressed && styles.pressed]}>
             <Text style={[styles.linkText, { color: c.accent }]}>Start a Roam</Text>
@@ -67,7 +73,7 @@ export function TodayGoalsCard() {
 const styles = StyleSheet.create({
   card: { paddingVertical: spacing.lg, gap: spacing.md },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 },
-  eyebrow: { fontFamily: type.weight.semibold, fontSize: 10, letterSpacing: type.tracking.eyebrow },
+  eyebrow: { fontFamily: type.weight.semibold, fontSize: type.size.micro, letterSpacing: type.tracking.eyebrow },
   edit: { minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },
   title: { fontFamily: type.weight.semibold, fontSize: 17 },
   body: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18 },

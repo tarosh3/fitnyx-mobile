@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   emblem: { width: 48, height: 64, borderWidth: 1, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.85 },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  eyebrow: { fontFamily: type.weight.bold, fontSize: 9, letterSpacing: 1.2 },
+  eyebrow: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 1.2 },
   body: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   copy: { width: '100%', gap: spacing.xs },
   title: { fontFamily: type.weight.semibold, fontSize: 17 },

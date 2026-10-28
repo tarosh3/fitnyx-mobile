@@ -1,6 +1,7 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
@@ -68,7 +69,7 @@ export function ArenaScreen() {
       <Text style={[styles.hint, { color: c.mutedText }]}>{BOARD_HINT[board]}</Text>
 
       {!b ? (
-        data.loading ? <ActivityIndicator style={styles.spinner} color={c.accent} /> : <Empty text="The Arena needs a connection the first time." />
+        data.loading ? <BrandLoader style={styles.spinner} color={c.accent} /> : <Empty text="The Arena needs a connection the first time." />
       ) : (
         <FlatList
           data={alone ? [] : b.rows}

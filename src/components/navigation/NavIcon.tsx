@@ -1,3 +1,4 @@
+import { FiloGlyph } from '@/src/components/art/FiloGlyph';
 import React from 'react';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
@@ -7,6 +8,7 @@ export type NavIconName = 'home' | 'workouts' | 'progress' | 'profile' | 'coach'
 export function NavIcon({ name, color, fill, size = 28 }: {
   name: NavIconName; color: string; fill: string; size?: number;
 }) {
+  if (name === 'coach') return <FiloGlyph size={size} />;
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32" fill="none" accessible={false}>
       <G stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
@@ -33,12 +35,6 @@ export function NavIcon({ name, color, fill, size = 28 }: {
           <Circle cx="16" cy="10" r="5.3" fill={fill} />
           <Path d="M5.5 26.8v-1.5a8.3 8.3 0 0 1 8.3-8.3h4.4a8.3 8.3 0 0 1 8.3 8.3v1.5Z" fill={fill} />
           <Path d="M12.5 21.5a6.5 6.5 0 0 0 7 0" strokeOpacity={0.65} />
-        </> : null}
-        {name === 'coach' ? <>
-          <Path d="M23 6H9a5 5 0 0 0-5 5v10a5 5 0 0 0 5 5h1v4l6-4h7a5 5 0 0 0 5-5V11a5 5 0 0 0-5-5Z" fill={fill} strokeWidth={2} />
-          <Path d="M11 13v5m10-5v5" strokeWidth={3} />
-          <Path d="M16 6V2m-2 0h4" strokeWidth={2} />
-          <Path d="M14 21h4" strokeWidth={1.8} />
         </> : null}
       </G>
     </Svg>

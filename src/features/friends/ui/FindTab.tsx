@@ -1,5 +1,6 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import React, { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
 import { Input } from '@/src/components/ui/Input';
 import { Empty } from '@/src/features/progress/ui/bits';
@@ -47,7 +48,7 @@ export function FindTab({ onChange }: { onChange: (change: FriendChange, user: F
           );
         }}
         ListEmptyComponent={search.loading && !search.results.length
-          ? <ActivityIndicator style={styles.spinner} color={c.accent} />
+          ? <BrandLoader style={styles.spinner} color={c.accent} />
           : empty ? <Empty text={empty} /> : null}
       />
     </View>

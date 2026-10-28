@@ -1,3 +1,4 @@
+import { type } from '@/src/styles/tokens';
 import { BlurView } from 'expo-blur';
 import { Calendar, Flame, Target, Trophy, Zap } from 'lucide-react-native';
 import React, { useMemo, useRef, useState } from 'react';
@@ -8,7 +9,7 @@ import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { useTheme } from '@/src/providers/ThemeProvider';
 
 const NEON_LIME = '#5fc793';
-const CELL_SIZE = 12;
+const CELL_SIZE = 16;
 const CELL_GAP = 3;
 const MONTHS_BACK = 5;
 const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
@@ -260,13 +261,13 @@ const getStyles = (palette: any, theme: string) => StyleSheet.create({
         gap: 6,
     },
     sectionTitle: {
-        fontSize: 10,
+        fontSize: type.size.micro,
         fontWeight: '900',
         color: palette.mutedText,
         letterSpacing: 2,
     },
     totalLabel: {
-        fontSize: 10,
+        fontSize: type.size.micro,
         fontWeight: '700',
         color: palette.mutedText,
     },
@@ -302,7 +303,7 @@ const getStyles = (palette: any, theme: string) => StyleSheet.create({
         letterSpacing: -0.5,
     },
     statLabel: {
-        fontSize: 9,
+        fontSize: type.size.micro,
         fontWeight: '700',
         color: palette.mutedText,
         letterSpacing: 0.5,
@@ -330,10 +331,10 @@ const getStyles = (palette: any, theme: string) => StyleSheet.create({
         justifyContent: 'center',
     },
     dayLabelText: {
-        fontSize: 8,
+        fontSize: type.size.micro,
         fontWeight: '700',
         color: palette.mutedText,
-        width: 20,
+        width: 28,
     },
     heatmapGrid: {
         flexDirection: 'row',
@@ -353,7 +354,7 @@ const getStyles = (palette: any, theme: string) => StyleSheet.create({
         position: 'relative',
     },
     monthText: {
-        fontSize: 9,
+        fontSize: type.size.micro,
         fontWeight: '800',
         color: palette.mutedText,
     },
@@ -387,7 +388,7 @@ const getStyles = (palette: any, theme: string) => StyleSheet.create({
         borderTopColor: theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
     },
     legendHint: {
-        fontSize: 10,
+        fontSize: type.size.micro,
         fontWeight: '600',
         color: palette.mutedText,
         fontStyle: 'italic',
@@ -398,7 +399,7 @@ const getStyles = (palette: any, theme: string) => StyleSheet.create({
         gap: 4,
     },
     legendText: {
-        fontSize: 8,
+        fontSize: type.size.micro,
         fontWeight: '900',
         color: palette.mutedText,
         textTransform: 'uppercase',

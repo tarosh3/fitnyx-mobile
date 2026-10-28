@@ -1,3 +1,4 @@
+import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -55,7 +56,7 @@ export function StrengthView({ buckets, totals, change, span, gran, strength, lo
               );
             })}
           </View>
-        ) : <Empty text={loading ? 'Loading…' : 'Log a workout in this range to see which muscles you trained'} style={styles.gapTop} />}
+        ) : loading ? <ContentSkeleton label="Loading muscle activity" /> : <Empty text="Log a workout in this range to see which muscles you trained" style={styles.gapTop} />}
       </Card>
 
       <Card style={styles.listCard}>
@@ -77,7 +78,7 @@ export function StrengthView({ buckets, totals, change, span, gran, strength, lo
               </View>
             </View>
           );
-        }) : <Empty text={loading ? 'Loading…' : 'Weighted sets of 1–12 reps show up here'} style={styles.inset} />}
+        }) : loading ? <ContentSkeleton variant="list" label="Loading strength records" /> : <Empty text="Weighted sets of 1–12 reps show up here" style={styles.inset} />}
       </Card>
 
       <Card style={[styles.card, styles.trio]}>

@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   hudItem: { flex: 1, alignItems: 'center' },
   hudValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   hudValue: { fontSize: 16, fontFamily: type.weight.extrabold, fontVariant: ['tabular-nums'] },
-  hudLabel: { fontSize: 10, fontFamily: type.weight.bold, letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 },
+  hudLabel: { fontSize: type.size.micro, fontFamily: type.weight.bold, letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
   legendBar: { flex: 1, height: 6, borderRadius: 3 },

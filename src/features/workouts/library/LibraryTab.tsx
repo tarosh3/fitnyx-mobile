@@ -1,3 +1,4 @@
+import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -149,7 +150,7 @@ export function LibraryTab({ header }: { header: React.ReactElement }) {
       // already complete on the device.
       onEndReached={() => { if (!catalog && !loading && items.length < total) load(page + 1); }}
       onEndReachedThreshold={0.5}
-      ListEmptyComponent={(!catalog && loading) ? <ActivityIndicator style={{ marginTop: spacing['2xl'] }} color={c.primary} /> : (
+      ListEmptyComponent={(!catalog && loading) ? <ContentSkeleton variant="list" label="Loading exercises" /> : (
         <Text style={[styles.empty, { color: c.mutedText }]}>
           {(!catalog && failed) ? 'Couldn’t load exercises. Check your connection.'
             : part === 'mine' ? 'No exercises of your own yet. Add one from “Add exercise” in a workout or routine.'

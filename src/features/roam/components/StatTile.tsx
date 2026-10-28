@@ -73,5 +73,5 @@ const styles = StyleSheet.create({
   unit: { fontSize: 14, fontFamily: type.weight.semibold, letterSpacing: 0 },
   big: { fontSize: 52, fontFamily: type.weight.extrabold, fontVariant: ['tabular-nums'], letterSpacing: -1 },
   bigUnit: { fontSize: 22, fontFamily: type.weight.bold, letterSpacing: 0 },
-  label: { fontSize: 10.5, fontFamily: type.weight.bold, letterSpacing: 1.2, marginTop: 4, textTransform: 'uppercase' },
+  label: { fontSize: type.size.micro, fontFamily: type.weight.bold, letterSpacing: 1.2, marginTop: 4, textTransform: 'uppercase' },
 });

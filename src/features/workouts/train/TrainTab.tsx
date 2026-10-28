@@ -1,3 +1,5 @@
+import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
+import { Entrance } from '@/src/components/ui/Motion';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -49,9 +51,13 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
     start(r.id, r.day_id);
   };
 
+  if (!activeSession && (metrics.loading || routines.loading) && !sessions.length && !list.length) {
+    return <><ContentSkeleton label="Loading your next workout" /><ContentSkeleton variant="list" label="Loading routines" /></>;
+  }
+
   return (
     <View>
-      <View style={styles.gapTop}>
+      <Entrance style={styles.gapTop}>
         <TrainHero
           routines={list}
           trainedToday={sessions.some((s) => s.workout_date === today)}
@@ -62,7 +68,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
           } : null}
           onError={toast}
         />
-      </View>
+      </Entrance>
       <View style={styles.gapTop}>
         <WeekCard sessions={sessions} />
       </View>

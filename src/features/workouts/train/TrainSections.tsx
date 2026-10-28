@@ -1,3 +1,4 @@
+import { Illustration, IllustratedEmpty } from '@/src/components/art/Illustration';
 import { useRouter } from 'expo-router';
 import { CalendarDays, ChevronRight, ListPlus, Play, Plus } from 'lucide-react-native';
 import React from 'react';
@@ -21,6 +22,7 @@ export function RoutineList({ routines, onStart }: { routines: Routine[]; onStar
   return (
     <View style={styles.section}>
       <SectionHead title="My routines" right={<Text style={[styles.meta, { color: c.mutedText }]}>{plural(routines.length, 'routine')}</Text>} />
+      {!routines.length ? <IllustratedEmpty art="workouts" title="Make room for your routine" detail="Save your favourite exercises together, ready for next time." /> : null}
       <Pressable testID="new-routine" onPress={() => router.push('/workouts/routine/edit')} accessibilityRole="button"
         style={({ pressed }) => [styles.newRoutine, { borderColor: c.border, backgroundColor: c.accentSoft }, pressed && styles.pressed]}>
         <Plus size={20} color={c.accent} /><Text style={[styles.newText, { color: c.accent }]}>New routine</Text>
@@ -87,6 +89,7 @@ export function FirstVisitChoices({ onEmpty }: { onEmpty: () => void }) {
   );
   return (
     <View style={styles.section}>
+      <Illustration name="workouts" size={140} />
       <SectionHead title="How would you like to start?" />
       {choice('Just log a workout', 'Start now and add exercises as you go.', c.parts.core, Play, onEmpty)}
       {choice('Build my own routine', 'Pick from templates like Push, Legs or Abs.', c.parts.back, ListPlus, () => router.push('/workouts/routine/edit'))}

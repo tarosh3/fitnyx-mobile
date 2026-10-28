@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
 import { radii, spacing, type } from '@/src/styles/tokens';
+import { AnimatedCount } from '@/src/components/ui/Motion';
 
 interface HomeWeekSummaryProps {
   activityDays: ReadonlyMap<string, number>;
@@ -122,7 +123,7 @@ export function HomeWeekSummary({
               largeText && styles.metricRow,
             ]}
           >
-            <Text style={[styles.metricValue, compact && styles.metricValueCompact, { color: palette.text }]}>{formatCount(metric.value)}</Text>
+            <AnimatedCount value={metric.value} label={metric.label} style={[styles.metricValue, compact && styles.metricValueCompact, { color: palette.text }]} />
             <Text style={[styles.metricLabel, { color: palette.mutedText }]}>{metric.label}</Text>
           </View>
         ))}

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii } from '@/src/styles/tokens';
@@ -28,6 +28,7 @@ export function Skeleton({ width = '100%', height = 16, radius = radii.sm, style
       return;
     }
     pulse.value = withRepeat(withTiming(1, { duration: 850 }), -1, true);
+    return () => cancelAnimation(pulse);
   }, [reduceMotion, pulse]);
 
   const animatedStyle = useAnimatedStyle(() => ({ opacity: 0.35 + pulse.value * 0.4 }));

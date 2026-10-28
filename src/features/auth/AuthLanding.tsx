@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, width: '100%', maxWidth: 528, alignSelf: 'center', paddingTop: spacing.sm },
   copy: { paddingBottom: spacing.xl },
   eyebrow: {
-    color: palette.mutedText, fontFamily: type.weight.semibold, fontSize: 10,
+    color: palette.mutedText, fontFamily: type.weight.semibold, fontSize: type.size.micro,
     lineHeight: 16, letterSpacing: type.tracking.eyebrow, marginBottom: spacing.md,
   },
   headline: { color: palette.text, fontFamily: type.display.fontFamily, fontSize: 48, lineHeight: 57, letterSpacing: -0.4 },

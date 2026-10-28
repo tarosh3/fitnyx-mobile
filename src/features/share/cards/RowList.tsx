@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   name: { flex: 1, fontFamily: type.weight.bold, fontSize: 14 },
   detail: { fontFamily: type.weight.medium, fontSize: 13, fontVariant: ['tabular-nums'] },
   pr: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 },
-  prText: { fontFamily: type.weight.extrabold, fontSize: 9.5, letterSpacing: 0.8 },
+  prText: { fontFamily: type.weight.extrabold, fontSize: type.size.micro, letterSpacing: 0.8 },
   highlight: { fontFamily: type.weight.bold, fontSize: 12.5, letterSpacing: 0.3, marginTop: 10, textAlign: 'center' },
 });
 

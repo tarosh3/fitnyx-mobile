@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.88 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
   close: { flexShrink: 0, minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },
-  eyebrow: { flexShrink: 1, fontFamily: type.weight.semibold, fontSize: 10, letterSpacing: 1.2 },
+  eyebrow: { flexShrink: 1, fontFamily: type.weight.semibold, fontSize: type.size.micro, letterSpacing: 1.2 },
   body: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18 },
   stats: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   stacked: { flexDirection: 'column' },

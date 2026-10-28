@@ -1,3 +1,4 @@
+import { type } from '@/src/styles/tokens';
 import { useRouter } from 'expo-router';
 import { Brain, ChevronLeft, Save } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -198,7 +199,7 @@ const getStyles = (palette: any) =>
       letterSpacing: -0.5,
     },
     headerSubtitle: {
-      fontSize: 10,
+      fontSize: type.size.micro,
       fontWeight: '800',
       color: palette.mutedText,
       letterSpacing: 2,

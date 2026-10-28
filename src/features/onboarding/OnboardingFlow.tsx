@@ -1,5 +1,7 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
+import { OnboardingArtContext } from './StepArtwork';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, LogOut } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -172,7 +174,7 @@ export function OnboardingFlow() {
   if (loading) {
     return (
       <View style={[styles.loading, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={PRIMARY} size="large" />
+        <BrandLoader color={PRIMARY} size="large" />
       </View>
     );
   }
@@ -211,7 +213,7 @@ export function OnboardingFlow() {
         // system navigation bar.
         style={[styles.content, { paddingBottom: insets.bottom + 10 }, !showHeader && { paddingTop: insets.top + 16 }]}
       >
-        <StepComponent onNext={handleNext} onBack={handleBack} data={onboardingData} saving={saving} />
+        <OnboardingArtContext.Provider value={STEPS[currentStep].id}><StepComponent onNext={handleNext} onBack={handleBack} data={onboardingData} saving={saving} /></OnboardingArtContext.Provider>
       </Animated.View>
     </View>
   );

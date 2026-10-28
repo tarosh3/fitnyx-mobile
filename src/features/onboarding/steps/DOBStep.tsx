@@ -1,3 +1,4 @@
+import { type } from '@/src/styles/tokens';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { NativeScrollEvent, NativeSyntheticEvent, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   columnLabel: {
-    fontSize: 10,
+    fontSize: type.size.micro,
     fontWeight: '800',
     letterSpacing: 1.5,
     marginBottom: 4,

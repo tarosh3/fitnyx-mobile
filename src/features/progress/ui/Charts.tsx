@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   col: { flex: 1, minWidth: 0, justifyContent: 'flex-end', height: '100%' },
   target: { position: 'absolute', left: 0, right: 0, borderTopWidth: 1.5, borderStyle: 'dashed' },
   labels: { height: 16, marginTop: 8 },
-  label: { position: 'absolute', top: 0, width: LABEL_W, fontFamily: type.weight.semibold, fontSize: 10, textAlign: 'center' },
+  label: { position: 'absolute', top: 0, width: LABEL_W, fontFamily: type.weight.semibold, fontSize: type.size.micro, textAlign: 'center' },
   labelEnd: { right: 0, textAlign: 'right' },
   labelStart: { left: 0, textAlign: 'left' },
 });

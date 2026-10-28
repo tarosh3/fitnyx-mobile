@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, minHeight: 48, fontFamily: type.weight.regular, fontSize: 16 },
   loader: { marginVertical: spacing.lg },
   list: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  eyebrow: { fontFamily: type.weight.bold, fontSize: 10, letterSpacing: 1.5, marginTop: 8, marginBottom: -8 },
+  eyebrow: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 1.5, marginTop: 8, marginBottom: -8 },
   clear: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -12 },
   emptyCard: { borderRadius: 24, padding: 24, alignItems: 'center', gap: 12 },
   emptyIcon: { width: 56, height: 56, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },

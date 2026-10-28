@@ -1,3 +1,4 @@
+import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -22,7 +23,7 @@ export function FuelView({ userId, range, buckets, gran }: { userId?: string; ra
   const goals = withDietGoals(goalsFromPlan(plan), useGoals().data);
   const logged = (summary?.days ?? []).filter((d) => d.meals > 0);
 
-  if (!summary) return <Empty text={offline ? "You're offline. Food logs show up when you reconnect" : 'Loading…'} />;
+  if (!summary) return offline ? <Empty text="You're offline. Food logs show up when you reconnect" /> : <ContentSkeleton variant="progress" label="Loading nutrition progress" />;
   if (!logged.length) {
     return (
       <Card style={styles.card}>

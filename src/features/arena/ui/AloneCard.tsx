@@ -1,5 +1,5 @@
+import { Illustration } from '@/src/components/art/Illustration';
 import { useRouter } from 'expo-router';
-import { Users } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -13,7 +13,7 @@ export function AloneCard({ onGlobal }: { onGlobal: () => void }) {
   const router = useRouter();
   return (
     <View testID="arena-alone" style={[styles.card, { borderColor: c.border }]}>
-      <View style={[styles.icon, { backgroundColor: c.accentSoft }]}><Users size={24} color={c.accent} /></View>
+      <Illustration name="community" />
       <Text style={[styles.title, { color: c.text }]}>Better with friends</Text>
       <Text style={[styles.sub, { color: c.mutedText }]}>Add friends by username and see who trains hardest.</Text>
       {/* Secondary: the hero above already holds the screen's one primary action. */}

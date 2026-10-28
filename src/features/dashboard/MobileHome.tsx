@@ -3,7 +3,7 @@ import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout'
 import { useRouter } from 'expo-router';
 import { ArrowDown, ArrowRight, ChevronDown, Flame } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArenaHomeCard } from '@/src/features/arena/ui/ArenaHomeCard';
@@ -19,6 +19,10 @@ import { cacheGet, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useWorkoutOverlayInset } from '@/src/providers/WorkoutOverlayProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
+import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
+import { MilestoneNotice } from '@/src/components/ui/MilestoneNotice';
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
+import { Entrance, StreakPulse } from '@/src/components/ui/Motion';
 import { FiloMark } from '@/src/components/ai/FiloMark';
 import { HomeShortcuts } from './components/HomeShortcuts';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
@@ -89,11 +93,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
   const workoutSection = (
     <View>
       {metrics.loading && !metrics.activeSession ? (
-        <View style={styles.stateCard}>
-          <ActivityIndicator color={palette.primary} />
-          <Text style={styles.stateTitle}>Getting your day ready</Text>
-          <Text style={styles.secondaryText}>Your workout and recent progress will appear here.</Text>
-        </View>
+        <ContentSkeleton testID="home-workout-loading" label="Getting your day ready" />
       ) : metrics.error && !metrics.activeSession ? (
         <View style={styles.stateCard}>
           <Text style={styles.stateTitle}>Your progress is taking a moment</Text>
@@ -155,15 +155,12 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
           <Text style={styles.sectionTitle}>Move. Eat. Feel good.</Text>
         </View>
 
-        {metrics.activeSession && <View style={styles.resumeSection}>{workoutSection}</View>}
-        <HomeShortcuts><PlanTodayCard /></HomeShortcuts>
+        <MilestoneNotice storageKey={`milestone:level:${user.id}`} scope="level" value={metrics.level}
+          ready={!metrics.loading && !metrics.error} message={`Level ${metrics.level} reached. Keep it going!`} />
+        <Entrance style={styles.resumeSection}>{workoutSection}</Entrance>
+        <Entrance delay={70}><HomeShortcuts><PlanTodayCard /></HomeShortcuts></Entrance>
 
-        <View testID="home-today-section" style={styles.dailySection}>
-          <View style={styles.chapterHeading}>
-            <Text style={styles.chapterEyebrow}>YOUR DAILY RHYTHM</Text>
-            <Text accessibilityRole="header" style={styles.sectionTitle}>A little, every day.</Text>
-          </View>
-          {!metrics.activeSession && workoutSection}
+        <View testID="home-today-section">
           <TodayGoalsCard />
         </View>
 
@@ -171,7 +168,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
           <View style={styles.coachHeader}>
             <View style={styles.coachTitleRow}>
               <FiloMark size={28} />
-              <View style={styles.coachIdentity}><Text style={styles.coachName}>A word from Filo</Text><Text style={styles.coachEyebrow}>A MOMENT TO RESET</Text></View>
+              <View style={styles.coachIdentity}><Text style={styles.coachName}>Filo’s daily insight</Text></View>
             </View>
           </View>
           <Pressable
@@ -193,7 +190,6 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
 
         {!metrics.loading && !metrics.error && (
           <View testID="home-momentum-section" style={styles.momentumSection}>
-            <Text style={styles.chapterEyebrow}>THE BIGGER PICTURE</Text>
             <HomeWeekSummary
               activityDays={activity.days}
               weeklyWorkouts={recentTraining.workouts}
@@ -209,9 +205,9 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
           <>
             <View style={styles.section}>
               <View style={styles.todayRow}>
-                <Text style={styles.consistencyLabel}>Keep building</Text>
+                <Text style={styles.consistencyLabel}>Your progress</Text>
                 <View accessible style={styles.streak} accessibilityLabel={`${metrics.streakDays} day workout streak`}>
-                  <Flame size={15} color={styles.accent.color} />
+                  <StreakPulse active={metrics.streakDays > 0}><Flame size={17} color={styles.accent.color} /></StreakPulse>
                   <Text style={styles.streakText}>{metrics.streakDays > 0 ? `${metrics.streakDays}-day workout streak` : 'A fresh start'}</Text>
                 </View>
               </View>
@@ -242,7 +238,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         <ArenaHomeCard />
       </View>
     </ScrollView>
-    <View pointerEvents="none" accessible={false} style={[styles.statusBarCover, { height: insets.top }]} />
+    <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
     </View>
   );
 }
@@ -251,13 +247,12 @@ const getStyles = (palette: ReturnType<typeof useThemeColors>) => {
   const accent = palette.accent;
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: palette.background },
-    statusBarCover: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: palette.background },
     scrollContent: { flexGrow: 1 },
     content: { width: '100%', maxWidth: 600, alignSelf: 'center' },
     accent: { color: accent },
     header: { flexDirection: 'row', alignItems: 'center', gap: spacing.base, marginBottom: spacing.xl },
     greetingBlock: { flex: 1 },
-    date: { fontFamily: type.weight.medium, fontSize: 10, lineHeight: 16, letterSpacing: 0.6, color: palette.mutedText, marginBottom: spacing.xs },
+    date: { fontFamily: type.weight.medium, fontSize: type.size.xs, lineHeight: 18, letterSpacing: 0.3, color: palette.mutedText, marginBottom: spacing.xs },
     greeting: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18, color: palette.mutedText },
     name: { fontFamily: type.weight.bold, fontSize: 24, lineHeight: 30, letterSpacing: -0.8, color: palette.text },
     avatar: { width: 44, height: 44, borderRadius: radii.pill, overflow: 'hidden', backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center', borderColor: palette.border, borderWidth: 1 },
@@ -266,27 +261,23 @@ const getStyles = (palette: ReturnType<typeof useThemeColors>) => {
     todayRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md },
     sectionTitle: { fontFamily: type.weight.semibold, fontSize: 21, lineHeight: 28, letterSpacing: -0.7, color: palette.text },
     streak: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-    streakText: { fontFamily: type.weight.medium, fontSize: 11, lineHeight: 18, color: accent },
+    streakText: { fontFamily: type.weight.medium, fontSize: type.size.xs, lineHeight: 18, color: accent },
     resumeSection: { marginBottom: spacing.base },
-    dailySection: { marginTop: spacing['2xl'] },
-    chapterHeading: { gap: spacing.sm, marginBottom: spacing.xs },
-    chapterEyebrow: { color: palette.mutedText, fontFamily: type.weight.semibold, fontSize: 9, lineHeight: 15, letterSpacing: 1.7 },
-    momentumSection: { marginTop: spacing['3xl'], gap: spacing.md },
+    momentumSection: { marginTop: spacing['2xl'], gap: spacing.md },
     consistencyLabel: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: 12, lineHeight: 18 },
     section: { marginTop: spacing.xl },
     pressed: { opacity: 0.75 },
-    coachSection: { marginTop: spacing['2xl'], paddingLeft: spacing.lg, borderLeftWidth: 2, borderLeftColor: palette.accent },
+    coachSection: { marginTop: spacing['2xl'], padding: spacing.lg, borderRadius: radii.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: palette.border, backgroundColor: palette.surface },
     coachHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
     coachTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
     coachIdentity: { flex: 1, gap: 3 },
-    coachEyebrow: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: 9, lineHeight: 15, letterSpacing: 1 },
     coachName: { fontFamily: type.weight.semibold, fontSize: 13, color: palette.text },
     insightButton: { paddingTop: spacing.base, paddingBottom: spacing.sm, gap: spacing.sm, alignItems: 'flex-start', minHeight: 48 },
     insight: { fontFamily: type.weight.medium, fontSize: 18, lineHeight: 28, letterSpacing: -0.3, color: palette.text },
     coachAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, minHeight: 44, alignSelf: 'flex-start' },
     actionText: { fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 22, color: accent },
     readMore: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 32 },
-    readMoreText: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: 11 },
+    readMoreText: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: type.size.xs },
     chevronOpen: { transform: [{ rotate: '180deg' }] },
     historyButton: { marginTop: spacing.lg, paddingVertical: spacing.base, flexDirection: 'row', alignItems: 'center', gap: spacing.base, borderTopWidth: 1, borderTopColor: palette.border },
     historyCopy: { flex: 1, gap: spacing.xs },
