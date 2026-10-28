@@ -92,8 +92,21 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
       )}
       <View testID="bottom-nav" pointerEvents="box-none" style={[styles.dock, {
         bottom: gap, left: dockLeft, width: dockWidth, height: totalHeight,
-        backgroundColor: c.nav.surface, borderColor: c.nav.edge, shadowColor: c.nav.shadow,
+        backgroundColor: reduceTransparency ? c.nav.surface : 'transparent',
+        borderColor: c.nav.edge, shadowColor: c.nav.shadow,
       }]}>
+        {!reduceTransparency && (
+          <>
+            {/* Frosted-glass pill: content behind the dock shows through, blurred. */}
+            <BlurView pointerEvents="none" style={[StyleSheet.absoluteFill, styles.glass]}
+              tint={theme === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
+              intensity={64} blurReductionFactor={4} blurMethod="dimezisBlurViewSdk31Plus"
+              blurTarget={blurTarget ?? undefined} />
+            {/* A light wash keeps icons and labels legible over any content. */}
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.glass,
+              { backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.5)' : 'rgba(20,20,20,0.4)' }]} />
+          </>
+        )}
         <View pointerEvents="box-none" style={styles.row}>
           {destinations.slice(0, 2).map(tab)}
           <CoachAction onPress={() => { haptic.light(); openCenteredChat(); }} />
@@ -159,6 +172,7 @@ function CoachAction({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 50 },
   dock: { position: 'absolute', borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  glass: { borderRadius: 20, overflow: 'hidden' },
   row: { position: 'absolute', left: DOCK_PADDING, right: DOCK_PADDING, bottom: 0, top: 0, flexDirection: 'row' },
   tab: { flex: 1, height: BOTTOM_NAV_HEIGHT, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
   tabContent: { width: '100%', height: BOTTOM_NAV_HEIGHT, alignItems: 'center', paddingTop: 6, gap: 2 },
