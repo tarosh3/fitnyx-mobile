@@ -136,7 +136,8 @@
         }
       ],
       "react-native-health-connect",
-      "./plugins/withHealthConnectPermissions"
+      "./plugins/withHealthConnectPermissions",
+      "./plugins/withSceneLifecycle"
     ],
     "experiments": {
       "typedRoutes": true
