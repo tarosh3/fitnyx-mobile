@@ -1,11 +1,12 @@
 import { BrandLoader } from '@/src/components/ui/BrandLoader';
+import { OnboardingProgress } from './OnboardingProgress';
 import { OnboardingArtContext } from './StepArtwork';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, LogOut } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 
 import {
   completeOnboarding,
@@ -34,8 +35,6 @@ import { ScheduleStep } from '@/src/features/onboarding/steps/ScheduleStep';
 import { resumeStepIndex } from '@/src/features/onboarding/resumeStep';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 
-const PRIMARY = '#5FC793';
-
 // id = the backend's step number (PUT /onboarding/step/:id). Schedule is 13 so
 // older app versions keep their numbers; it is shown right after Frequency.
 const STEPS = [
@@ -55,23 +54,6 @@ const STEPS = [
   { id: 12, title: 'Motivation', component: MotivationStep },
 ];
 const STEP_NUMBERS = STEPS.map((s) => s.id);
-
-function DotProgress({ current, total }: { current: number; total: number }) {
-  return (
-    <View style={styles.dotRow}>
-      {Array.from({ length: total }, (_, i) => (
-        <View
-          key={i}
-          style={[
-            styles.dot,
-            i < current && styles.dotCompleted,
-            i === current && styles.dotCurrent,
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
 
 export function OnboardingFlow() {
   const router = useRouter();
@@ -174,7 +156,7 @@ export function OnboardingFlow() {
   if (loading) {
     return (
       <View style={[styles.loading, { backgroundColor: palette.background }]}>
-        <BrandLoader color={PRIMARY} size="large" />
+        <BrandLoader color={palette.accent} size="large" />
       </View>
     );
   }
@@ -186,6 +168,7 @@ export function OnboardingFlow() {
           <View style={styles.headerRow}>
             <Pressable
               onPress={handleBack}
+              disabled={saving} accessibilityRole="button" accessibilityLabel="Previous question"
               style={[styles.iconBtn, { backgroundColor: `${palette.text}08`, borderColor: palette.border }]}
             >
               <ChevronLeft size={18} color={palette.text} />
@@ -195,20 +178,21 @@ export function OnboardingFlow() {
 
             <Pressable
               onPress={handleLogout}
+              disabled={saving} accessibilityRole="button" accessibilityLabel="Sign out"
               style={[styles.iconBtn, { backgroundColor: `${palette.text}08`, borderColor: palette.border }]}
             >
               <LogOut size={16} color={palette.mutedText} />
             </Pressable>
           </View>
 
-          <DotProgress current={currentStep} total={STEPS.length - 1} />
+          <OnboardingProgress step={currentStep} />
         </View>
       )}
 
       {/* Step content with animated transition */}
       <Animated.View
         key={stepKey}
-        entering={FadeIn.duration(350)}
+        entering={FadeIn.duration(350).reduceMotion(ReduceMotion.System)}
         // Android draws edge-to-edge: lift each step's bottom button above the
         // system navigation bar.
         style={[styles.content, { paddingBottom: insets.bottom + 10 }, !showHeader && { paddingTop: insets.top + 16 }]}
@@ -241,39 +225,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 999,
     borderWidth: 1,
-    height: 38,
+    height: 44,
     justifyContent: 'center',
-    width: 38,
+    width: 44,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
-  },
-  dotRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 5,
-    justifyContent: 'center',
-    marginTop: 14,
-  },
-  dot: {
-    backgroundColor: '#333',
-    borderRadius: 3,
-    height: 6,
-    width: 6,
-  },
-  dotCompleted: {
-    backgroundColor: PRIMARY,
-    borderRadius: 3,
-    height: 6,
-    width: 6,
-  },
-  dotCurrent: {
-    backgroundColor: PRIMARY,
-    borderRadius: 4,
-    height: 8,
-    width: 16,
   },
   content: {
     flex: 1,

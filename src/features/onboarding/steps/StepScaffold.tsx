@@ -1,11 +1,9 @@
 import { StepArtwork } from '../StepArtwork';
 import React, { useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown, FadeInUp, ReduceMotion } from 'react-native-reanimated';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-
-const PRIMARY = '#5FC793';
 
 interface StepScaffoldProps {
   title: string;
@@ -41,12 +39,12 @@ export function StepScaffold({
   return (
     <View style={styles.wrap}>
       {/* Header area with entrance animation */}
-      <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
+      <Animated.View entering={FadeInDown.duration(500).delay(100).reduceMotion(ReduceMotion.System)} style={styles.header}>
         {/* A distinct, compact vignette for the current step. */}
         <StepArtwork />
 
         <Text style={styles.title}>
-          <Text style={{ color: PRIMARY }}>{titleParts.first}</Text>
+          <Text style={{ color: palette.accent }}>{titleParts.first}</Text>
           <Text style={{ color: palette.text }}>{titleParts.rest}</Text>
         </Text>
 
@@ -64,27 +62,30 @@ export function StepScaffold({
         <View style={styles.content}>{children}</View>
 
         {error ? (
-          <Animated.Text entering={FadeInDown.duration(300)} style={styles.error}>
+          <Animated.Text entering={FadeInDown.duration(300).reduceMotion(ReduceMotion.System)} style={[styles.error, { color: palette.destructive }]}>
             {error}
           </Animated.Text>
         ) : null}
       </Animated.ScrollView>
 
-      {/* Continue button with green glow */}
-      <Animated.View entering={FadeInUp.duration(400).delay(400)} style={styles.buttonWrap}>
+      {/* Keep the primary action pinned below the scrollable choices. */}
+      <Animated.View entering={FadeInUp.duration(400).delay(400).reduceMotion(ReduceMotion.System)} style={styles.buttonWrap}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isDisabled, busy: saving }}
           onPress={onContinue}
           disabled={isDisabled}
           style={({ pressed }) => [
             styles.button,
+            { backgroundColor: palette.primary },
             isDisabled && styles.buttonDisabled,
             pressed && styles.buttonPressed,
           ]}
         >
           {saving ? (
-            <Text style={styles.buttonText}>...</Text>
+            <Text style={[styles.buttonText, { color: palette.primaryText }]}>...</Text>
           ) : (
-            <Text style={styles.buttonText}>{continueLabel.toUpperCase()}</Text>
+            <Text style={[styles.buttonText, { color: palette.primaryText }]}>{continueLabel.toUpperCase()}</Text>
           )}
         </Pressable>
       </Animated.View>
@@ -120,7 +121,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   error: {
-    color: '#EF4444',
     fontSize: 12,
     fontWeight: '600',
     marginTop: 12,
@@ -130,22 +130,10 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    backgroundColor: PRIMARY,
     borderRadius: 16,
     justifyContent: 'center',
     minHeight: 54,
     paddingHorizontal: 18,
-    ...Platform.select({
-      ios: {
-        shadowColor: PRIMARY,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.45,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -155,7 +143,6 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   buttonText: {
-    color: '#000',
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 1.6,

@@ -48,7 +48,7 @@ export function FuelView({ userId, range, buckets, gran }: { userId?: string; ra
   const bars = buckets.map((b) => {
     const ds = logged.filter((d) => d.date >= b.start && d.date <= b.end);
     const v = ds.length ? ds.reduce((a, d) => a + d.kcal, 0) / ds.length : 0;
-    return { label: b.label, parts: [{ value: v, color: goals && v > goals.kcal * 1.1 ? c.diet.over : c.progress.lift }] };
+    return { label: b.label, parts: [{ value: v, color: goals && v > goals.kcal * 1.1 ? c.diet.over : c.accent }] };
   });
   const proteinDays = goals?.protein ? logged.filter((d) => d.protein_g >= goals.protein * 0.9).length : null;
 

@@ -14,9 +14,9 @@ export function Challenges({ monthWorkouts, streak, level, levelProgress, xpToNe
   const c = useThemeColors();
   const monthName = new Date().toLocaleDateString('en-GB', { month: 'long' });
   const cards = [
-    { id: 'month', tone: c.parts.shoulders, Icon: Trophy, eyebrow: `${monthName} challenge`, title: '12 workouts this month', percent: monthWorkouts / 12 * 100, text: monthWorkouts >= 12 ? 'Completed!' : `${monthWorkouts} / 12 · ${12 - monthWorkouts} to go` },
-    { id: 'streak', tone: c.parts.arms, Icon: Flame, eyebrow: 'Next badge', title: '7-day streak', percent: streak / 7 * 100, text: streak >= 7 ? 'Unlocked!' : `${streak} / 7 · ${plural(7 - streak, 'more day')}` },
-    { id: 'level', tone: c.parts.legs, Icon: Sparkles, eyebrow: `Level ${level}`, title: `Reach level ${level + 1}`, percent: levelProgress, text: `${fmtVolume(xpToNext)} XP to go` },
+    { id: 'month', tone: { fg: c.progress.record, bg: c.progress.recordSoft }, Icon: Trophy, eyebrow: `${monthName} challenge`, title: '12 workouts this month', percent: monthWorkouts / 12 * 100, text: monthWorkouts >= 12 ? 'Completed!' : `${monthWorkouts} / 12 · ${12 - monthWorkouts} to go` },
+    { id: 'streak', tone: { fg: c.progress.record, bg: c.progress.recordSoft }, Icon: Flame, eyebrow: 'Next badge', title: '7-day streak', percent: streak / 7 * 100, text: streak >= 7 ? 'Unlocked!' : `${streak} / 7 · ${plural(7 - streak, 'more day')}` },
+    { id: 'level', tone: { fg: c.progress.record, bg: c.progress.recordSoft }, Icon: Sparkles, eyebrow: `Level ${level}`, title: `Reach level ${level + 1}`, percent: levelProgress, text: `${fmtVolume(xpToNext)} XP to go` },
   ];
   return (
     <View style={styles.section}>

@@ -62,13 +62,14 @@ export const colors = {
     hero: { from: '#1A6140', to: '#08180F', text: '#F2FBF6', muted: 'rgba(242,251,246,0.76)', accent: '#B8F0D3', line: 'rgba(255,255,255,0.12)' },
     gold: { from: '#FFE7A3', to: '#F2B705', text: '#5A3B00' },
     /** Progress tab: lifting vs Roam series, records, and the activity calendar (rest → big day). */
+    // Mint: Roam/brand. Blue: strength comparisons. Gold: achievements.
     progress: {
-      lift: '#5fc793', roam: '#F2A65A', roamSoft: 'rgba(242,166,90,0.16)', liftSoft: '#14231C',
+      lift: '#8AAEFF', roam: '#5fc793', roamSoft: '#14231C', liftSoft: '#151D35',
       record: '#F2C14E', recordSoft: 'rgba(242,193,78,0.14)', empty: '#262626',
       heat: ['#1B1F1C', '#24503A', '#2F7A52', '#7FE0AE'], heatInk: ['#A1A1AA', '#F5F5F5', '#F5F5F5', '#0C0C0C'],
     },
     /** Daily goal rings: Roam distance, calories burned, steps. */
-    goals: { distance: '#6F95FF', burn: '#FF7A45', steps: '#5fc793', track: '#262626' },
+    goals: { distance: '#5fc793', burn: '#F2C14E', steps: '#8AAEFF', track: '#262626' },
     share,
   },
   light: {
@@ -113,12 +114,13 @@ export const colors = {
     },
     hero: { from: '#1E6E47', to: '#0B3522', text: '#F2FBF6', muted: 'rgba(242,251,246,0.76)', accent: '#B8F0D3', line: 'rgba(255,255,255,0.12)' },
     gold: { from: '#FFE7A3', to: '#F2B705', text: '#5A3B00' },
+    // Mint: Roam/brand. Blue: strength comparisons. Gold: achievements.
     progress: {
-      lift: '#2E9E68', roam: '#D9741C', roamSoft: 'rgba(217,116,28,0.12)', liftSoft: '#E2F2E8',
+      lift: '#2F5BEA', roam: '#23734A', roamSoft: '#E5F2EA', liftSoft: '#E8EDFF',
       record: '#A36A00', recordSoft: 'rgba(242,183,5,0.16)', empty: '#E4E4E7',
       heat: ['#ECEDEE', '#BFE5CF', '#5FB98A', '#1E6E47'], heatInk: ['#52525B', '#103724', '#0B2A1A', '#F2FBF6'],
     },
-    goals: { distance: '#2F5BEA', burn: '#D9480F', steps: '#23734A', track: '#E9E9EC' },
+    goals: { distance: '#23734A', burn: '#A36A00', steps: '#2F5BEA', track: '#E9E9EC' },
     share,
   },
 } as const;

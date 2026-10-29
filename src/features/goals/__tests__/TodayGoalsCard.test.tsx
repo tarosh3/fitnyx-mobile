@@ -4,7 +4,7 @@ import React from 'react';
 const mockSave = jest.fn();
 let mockGoals: Record<string, number | null> | null = null;
 let mockDay = { distanceM: 0, kcal: 0, steps: 0 };
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+jest.mock('expo-router', () => ({ useIsFocused: () => true, useRouter: () => ({ push: jest.fn() }) }));
 jest.mock('@/src/providers/ThemeProvider', () => ({ useTheme: () => ({ theme: 'dark' }) }));
 jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'goals-user' } }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));

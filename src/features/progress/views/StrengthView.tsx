@@ -28,7 +28,7 @@ export function StrengthView({ buckets, totals, change, span, gran, strength, lo
     <View style={styles.stack}>
       <Card style={styles.card}>
         <Eyebrow>Volume lifted</Eyebrow>
-        <BigNumber value={(totals.volumeKg / 1000).toFixed(1)} unit="tonnes" size={48} />
+        <BigNumber value={(totals.volumeKg / 1000).toFixed(1)} unit="tonnes" size={48} animate />
         <Change pct={change} suffix={`vs the ${span} days before`} />
         <View style={styles.chart}>
           <Bars data={buckets.map((b) => ({ label: b.label, parts: [{ value: b.volumeKg, color: c.progress.lift }] }))} height={110}

@@ -91,9 +91,9 @@ export function FirstVisitChoices({ onEmpty }: { onEmpty: () => void }) {
     <View style={styles.section}>
       <Illustration name="workouts" size={140} />
       <SectionHead title="How would you like to start?" />
-      {choice('Just log a workout', 'Start now and add exercises as you go.', c.parts.core, Play, onEmpty)}
-      {choice('Build my own routine', 'Pick from templates like Push, Legs or Abs.', c.parts.back, ListPlus, () => router.push('/workouts/routine/edit'))}
-      {choice('Follow a program for me', 'A simple weekly plan made for your level.', c.parts.legs, CalendarDays, () => router.push('/workouts/programs'))}
+      {choice('Just log a workout', 'Start now and add exercises as you go.', { fg: c.accent, bg: c.accentSoft }, Play, onEmpty)}
+      {choice('Build my own routine', 'Pick from templates like Push, Legs or Abs.', { fg: c.accent, bg: c.accentSoft }, ListPlus, () => router.push('/workouts/routine/edit'))}
+      {choice('Follow a program for me', 'A simple weekly plan made for your level.', { fg: c.accent, bg: c.accentSoft }, CalendarDays, () => router.push('/workouts/programs'))}
     </View>
   );
 }

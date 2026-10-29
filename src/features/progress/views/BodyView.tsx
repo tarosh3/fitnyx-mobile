@@ -77,7 +77,7 @@ export function BodyView({ history, targetKg, range }: { history: BodyMetric[]; 
             <View style={styles.goal}><Muted>Height</Muted><Text style={[styles.goalValue, { color: c.text }]}>{heightText}</Text></View>
           </View>
           <View style={styles.scale}>
-            {BMI_SCALE.map((b, i) => <View key={b.label} style={[styles.scalePart, { flex: BMI_FLEX[i], backgroundColor: [c.diet.carbs, c.progress.lift, c.diet.fat, c.progress.roam][i] }]} />)}
+            {BMI_SCALE.map((b, i) => <View key={b.label} style={[styles.scalePart, { flex: BMI_FLEX[i], backgroundColor: [c.diet.carbs, c.accent, c.warning, c.destructive][i] }]} />)}
             <View style={[styles.marker, { left: `${Math.min(98, Math.max(2, ((bmi - 15) / 25) * 100))}%`, backgroundColor: c.text, borderColor: c.card }]} />
           </View>
           <View style={styles.scaleLabels}>{BMI_SCALE.map((b) => <Muted key={b.label}>{b.label}</Muted>)}</View>

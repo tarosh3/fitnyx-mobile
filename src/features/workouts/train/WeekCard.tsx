@@ -48,20 +48,27 @@ export function WeekCard({ sessions }: { sessions: WeekSession[] }) {
     };
   }, [sessions, days.join()]);
 
+  const empty = week.workouts === 0 && week.minutes === 0 && week.sets === 0;
   const left = WEEKLY_GOAL.workouts - week.workouts;
   const legend = [
     { color: c.primary, label: 'Workouts', value: `${week.workouts}/${WEEKLY_GOAL.workouts}` },
-    { color: c.parts.back.fg, label: 'Minutes', value: `${week.minutes}/${WEEKLY_GOAL.minutes}` },
-    { color: c.parts.legs.fg, label: 'Sets', value: `${week.sets}/${WEEKLY_GOAL.sets}` },
+    { color: c.progress.lift, label: 'Minutes', value: `${week.minutes}/${WEEKLY_GOAL.minutes}` },
+    { color: c.mutedText, label: 'Sets', value: `${week.sets}/${WEEKLY_GOAL.sets}` },
   ];
 
   return (
     <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
-      <View style={styles.top}>
+      {empty ? (
+        <View testID="week-empty" style={styles.empty}>
+          <Text style={[styles.title, { color: c.text }]}>This week</Text>
+          <Text style={[styles.emptyTitle, { color: c.accent }]}>Your week starts here</Text>
+          <Text style={[styles.note, { color: c.mutedText }]}>Finish your first workout to start filling your week.</Text>
+        </View>
+      ) : <View testID="week-progress" style={styles.top}>
         <Rings size={96} stroke={9} rings={[
           { value: week.workouts, goal: WEEKLY_GOAL.workouts, color: c.primary },
-          { value: week.minutes, goal: WEEKLY_GOAL.minutes, color: c.parts.back.fg },
-          { value: week.sets, goal: WEEKLY_GOAL.sets, color: c.parts.legs.fg },
+          { value: week.minutes, goal: WEEKLY_GOAL.minutes, color: c.progress.lift },
+          { value: week.sets, goal: WEEKLY_GOAL.sets, color: c.mutedText },
         ]} />
         <View style={styles.legend} accessible accessibilityLabel={`This week: ${legend.map((l) => `${l.label} ${l.value}`).join(', ')}`}>
           <Text style={[styles.title, { color: c.text }]}>This week</Text>
@@ -73,7 +80,7 @@ export function WeekCard({ sessions }: { sessions: WeekSession[] }) {
             </View>
           ))}
         </View>
-      </View>
+      </View>}
       <View style={styles.days}>
         {days.map((key, i) => {
           const sessionId = week.byDay.get(key);
@@ -106,6 +113,8 @@ export function WeekCard({ sessions }: { sessions: WeekSession[] }) {
 
 const styles = StyleSheet.create({
   card: { borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: spacing.base, gap: spacing.md },
+  empty: { gap: 6 },
+  emptyTitle: { fontFamily: type.weight.semibold, fontSize: 22, lineHeight: 28 },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.base },
   legend: { flex: 1, gap: 6 },
   title: { fontFamily: type.weight.bold, fontSize: 16 },
