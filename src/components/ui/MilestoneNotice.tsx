@@ -1,3 +1,4 @@
+import { useIsFocused } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
@@ -30,12 +31,13 @@ export function claimMilestone(key: string, scope: string, value: number): Promi
 export function MilestoneNotice({ storageKey, scope, value, ready, message }: {
   storageKey: string; scope: string; value: number; ready: boolean; message: string;
 }) {
+  const focused = useIsFocused();
   const c = useThemeColors();
   const reduced = useReducedMotion();
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     setVisible(false);
-    if (!ready) return;
+    if (!ready || !focused) return;
     let alive = true;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     void claimMilestone(storageKey, scope, value).then((claimed) => {
@@ -46,8 +48,8 @@ export function MilestoneNotice({ storageKey, scope, value, ready, message }: {
       timeout = setTimeout(() => setVisible(false), 4000);
     }).catch(() => undefined);
     return () => { alive = false; clearTimeout(timeout); };
-  }, [storageKey, scope, value, ready, message]);
-  if (!visible) return null;
+  }, [storageKey, scope, value, ready, message, focused]);
+  if (!visible || !focused) return null;
   return (
     <View style={[styles.notice, { backgroundColor: c.accentSoft }]}>
       <Text style={[styles.message, { color: c.accent }]}>{message}</Text>

@@ -15,7 +15,7 @@ jest.mock('@react-native-community/netinfo', () => ({
 }));
 
 // Mock expo-router
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () => ({ useIsFocused: () => true,
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),

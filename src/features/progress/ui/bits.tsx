@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnimatedCount } from '@/src/components/ui/Motion';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -10,12 +11,16 @@ export function Eyebrow({ children, color, style }: { children: React.ReactNode;
 }
 
 /** A big display number with an optional small unit after it. */
-export function BigNumber({ value, unit, size = 48, color }: { value: string; unit?: string; size?: number; color?: string }) {
+export function BigNumber({ value, unit, size = 48, color, animate = false }: { value: string; unit?: string; size?: number; color?: string; animate?: boolean }) {
   const c = useThemeColors();
   return (
     <View style={styles.bigRow}>
-      <Text style={[styles.big, { fontSize: size, lineHeight: Math.round(size * 1.2), letterSpacing: -size * 0.03, color: color ?? c.text }]}
-        numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>{value}</Text>
+      {animate && /^\d+(\.\d{1,2})?$/.test(value) ? (
+        <AnimatedCount inline value={Number(value)} label={unit ?? ''}
+          decimals={value.split('.')[1]?.length ?? 0} minDigits={value.startsWith('0') ? value.split('.')[0].length : 1}
+          style={[styles.big, { fontSize: size, lineHeight: Math.round(size * 1.2), letterSpacing: -size * 0.03, color: color ?? c.text }]} />
+      ) : <Text style={[styles.big, { fontSize: size, lineHeight: Math.round(size * 1.2), letterSpacing: -size * 0.03, color: color ?? c.text }]}
+        numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>{value}</Text>}
       {unit ? <Text style={[styles.unit, { color: c.mutedText }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>{unit}</Text> : null}
     </View>
   );

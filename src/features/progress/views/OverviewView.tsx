@@ -64,8 +64,8 @@ export function OverviewView(p: OverviewProps) {
       {p.totals.workouts === 0 && p.totals.roams === 0 ? <Card><IllustratedEmpty art="progress" title="Your progress starts with one session" detail="No activity in this date range. Log a workout or a Roam to see your trends." action="Explore workouts" onAction={() => router.push('/workouts')} /></Card> : <Card style={styles.hero}>
         <Eyebrow>Active time</Eyebrow>
         <View style={styles.timeRow}>
-          <BigNumber value={String(time.h)} unit="h" size={56} />
-          <BigNumber value={String(time.m).padStart(2, '0')} unit="m" size={56} />
+          <BigNumber value={String(time.h)} unit="h" size={56} animate />
+          <BigNumber value={String(time.m).padStart(2, '0')} unit="m" size={56} animate />
         </View>
         <Change pct={p.change} suffix={`vs the ${p.span} days before`} />
         <View style={styles.chart}>

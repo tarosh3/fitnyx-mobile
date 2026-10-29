@@ -33,8 +33,8 @@ export function StreakCard({ streak, days, today }: { streak?: ProgressSummary['
   return (
     <Card style={styles.card}>
       <View style={styles.head}>
-        <View style={[styles.flame, { backgroundColor: c.progress.roamSoft }]}>
-          <Flame size={24} color={c.progress.roam} strokeWidth={1.9} />
+        <View style={[styles.flame, { backgroundColor: c.progress.recordSoft }]}>
+          <Flame size={24} color={c.progress.record} strokeWidth={1.9} />
         </View>
         <View style={styles.flex}>
           <View style={styles.titleRow}>

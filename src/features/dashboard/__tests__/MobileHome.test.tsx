@@ -38,7 +38,7 @@ function emptyMetrics() {
 let mockMetrics = emptyMetrics();
 let mockTheme: 'dark' | 'light' = 'dark';
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () => ({ useIsFocused: () => true,
   useRouter: () => ({ push: mockPush, replace: mockReplace, dismissAll: mockDismissAll, canDismiss: mockCanDismiss }),
 }));
 jest.mock('@/src/hooks/useRetentionMetrics', () => ({ useRetentionMetrics: () => mockMetrics }));

@@ -53,7 +53,7 @@ export function HomeShortcuts({ children }: { children?: React.ReactNode }) {
             <Text style={[styles.eyebrow, { color: c.accent }]}>NUTRITION</Text>
             <Text style={[styles.featureTitle, compact && styles.compactTitle, { color: c.text }]}>Eat well.{ '\n' }Feel your best.</Text>
             <Text style={[styles.description, { color: c.mutedText }]}>Meals, macros & daily fuel.</Text>
-            <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>Plan & log meals</Text><ArrowUpRight size={17} color={c.diet.fat} /></View>
+            <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>Plan & log meals</Text><ArrowUpRight size={17} color={c.accent} /></View>
           </View>
         </HomePressable>
 

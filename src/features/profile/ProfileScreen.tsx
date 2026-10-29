@@ -69,7 +69,7 @@ export function ProfileScreen() {
     <ScrollView testID="profile-scroll" style={{ backgroundColor: c.background }} showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.accent} colors={[c.accent]} />}
       contentContainerStyle={{ paddingTop: insets.top + spacing.sm, paddingBottom: bottomNavClearance(insets.bottom) + spacing.xl + workoutInset,
-        paddingLeft: Math.max(insets.left, spacing.lg), paddingRight: Math.max(insets.right, spacing.lg) }}>
+        paddingLeft: Math.max(insets.left, spacing.base), paddingRight: Math.max(insets.right, spacing.base) }}>
       <View style={styles.content}>
         <View style={styles.top}>
           <Text style={[styles.pageTitle, { color: c.text }]}>Profile</Text>

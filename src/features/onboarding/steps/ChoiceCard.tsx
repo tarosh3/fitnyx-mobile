@@ -1,14 +1,13 @@
 import React from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-
-const PRIMARY = '#5FC793';
 
 const AnimatedPressable = Animated.createAnimatedComponent(
   require('react-native').Pressable
@@ -31,15 +30,18 @@ export function ChoiceCard({ label, description, emoji, selected, onPress }: Cho
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 200 });
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 200, reduceMotion: ReduceMotion.System });
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 200 });
+    scale.value = withSpring(1, { damping: 15, stiffness: 200, reduceMotion: ReduceMotion.System });
   };
 
   return (
     <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={description ? `${label}. ${description}` : label}
+      accessibilityState={{ selected }}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
@@ -47,10 +49,9 @@ export function ChoiceCard({ label, description, emoji, selected, onPress }: Cho
         animatedStyle,
         styles.card,
         {
-          borderColor: selected ? PRIMARY : palette.border,
-          backgroundColor: selected ? `${PRIMARY}15` : palette.card,
+          borderColor: selected ? palette.accent : palette.border,
+          backgroundColor: selected ? palette.accentSoft : palette.card,
         },
-        selected && styles.cardSelectedShadow,
       ]}
     >
       {/* Emoji in circular badge */}
@@ -59,7 +60,7 @@ export function ChoiceCard({ label, description, emoji, selected, onPress }: Cho
           style={[
             styles.emojiBadge,
             {
-              backgroundColor: selected ? `${PRIMARY}30` : `${palette.text}10`,
+              backgroundColor: selected ? palette.accentSoft : palette.surface,
             },
           ]}
         >
@@ -79,8 +80,8 @@ export function ChoiceCard({ label, description, emoji, selected, onPress }: Cho
 
       {/* Green checkmark circle when selected */}
       {selected ? (
-        <View style={styles.checkCircle}>
-          <Text style={styles.checkMark}>✓</Text>
+        <View style={[styles.checkCircle, { backgroundColor: palette.primary }]}>
+          <Text style={[styles.checkMark, { color: palette.primaryText }]}>✓</Text>
         </View>
       ) : (
         <View style={[styles.emptyCircle, { borderColor: palette.border }]} />
@@ -98,19 +99,6 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingHorizontal: 16,
     paddingVertical: 16,
-  },
-  cardSelectedShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: PRIMARY,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
   },
   emojiBadge: {
     alignItems: 'center',
@@ -136,14 +124,12 @@ const styles = StyleSheet.create({
   },
   checkCircle: {
     alignItems: 'center',
-    backgroundColor: PRIMARY,
     borderRadius: 12,
     height: 24,
     justifyContent: 'center',
     width: 24,
   },
   checkMark: {
-    color: '#000',
     fontSize: 14,
     fontWeight: '800',
   },

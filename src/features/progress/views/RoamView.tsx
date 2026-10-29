@@ -37,7 +37,7 @@ export function RoamView({ buckets, totals, change, span, gran, summary, today }
     <View style={styles.stack}>
       <Card style={styles.card}>
         <Eyebrow>Distance</Eyebrow>
-        <BigNumber value={km.toFixed(1)} unit="km" size={48} />
+        <BigNumber value={km.toFixed(1)} unit="km" size={48} animate />
         <Change pct={change} suffix={`vs the ${span} days before`} />
         <View style={styles.chart}>
           <Bars data={buckets.map((b) => ({ label: b.label, parts: [{ value: b.distanceM, color: c.progress.roam }] }))} height={110}
