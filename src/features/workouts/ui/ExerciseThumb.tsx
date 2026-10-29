@@ -5,7 +5,16 @@ import { Image, StyleSheet, View } from 'react-native';
 import { partOf, trackingOf } from '@/src/features/workouts/model';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { Exercise } from '@/src/types/exercise';
-import { WorkoutGlyph } from './WorkoutGlyph';
+
+const exerciseThumbs: Record<string, number> = {
+  chest: require('../../../../assets/images/exercise-thumbs/thumb-chest.png'),
+  back: require('../../../../assets/images/exercise-thumbs/thumb-back.png'),
+  legs: require('../../../../assets/images/exercise-thumbs/thumb-legs.png'),
+  shoulders: require('../../../../assets/images/exercise-thumbs/thumb-shoulders.png'),
+  arms: require('../../../../assets/images/exercise-thumbs/thumb-arms.png'),
+  core: require('../../../../assets/images/exercise-thumbs/thumb-core.png'),
+  cardio: require('../../../../assets/images/exercise-thumbs/thumb-cardio.png'),
+};
 
 interface Props {
   exercise?: Pick<Exercise, 'primary_muscles' | 'tracking_type' | 'variations' | 'alternatives' | 'media_url' | 'video_url'> | null;
@@ -25,11 +34,11 @@ export function videoPoster(url: string | null | undefined, px = 160): string | 
   return m ? `${m[1]}so_50p,w_${px},h_${px},c_fill,q_auto,f_jpg/${m[2]}.jpg` : null;
 }
 
-/** A frame of this exercise's video, else its image, else its primary muscle illustration — never another move. */
+/** Only this exercise's video poster or photo; anatomy diagrams and related moves are never thumbnails. */
 export function exerciseImage(ex?: Props['exercise'], px = 160): string | null {
   const poster = videoPoster(ex?.video_url, px) ?? videoPoster(ex?.media_url, px);
   if (poster) return poster;
-  const candidates = [ex?.media_url, ...(ex?.primary_muscles ?? []).map((muscle) => muscle.image)];
+  const candidates = [ex?.media_url];
   for (const candidate of candidates) {
     const source = candidate?.trim();
     if (!source) continue;
@@ -57,7 +66,8 @@ export function ExerciseThumb({ exercise, size = 56 }: Props) {
   const radius = Math.round(size / 4);
   const fallback = t === 'duration'
     ? <Timer size={Math.round(size * 0.46)} color={tone.fg} strokeWidth={1.7} accessible={false} />
-    : <WorkoutGlyph part={part} size={Math.round(size * 0.7)} color={tone.fg} />;
+    : <Image source={exerciseThumbs[part] ?? exerciseThumbs.core} resizeMode="contain"
+        style={{ width: Math.round(size * 0.82), height: Math.round(size * 0.82) }} accessible={false} />;
 
   return (
     <View style={[styles.box, { width: size, height: size, borderRadius: radius, backgroundColor: tone.bg, borderWidth: 1, borderColor: tone.fg + '55' }]} accessible={false}>
