@@ -119,7 +119,7 @@ export default function WaterScreen() {
   const avgLabel = `${(avgMl / 1000).toFixed(1)} L`;
 
   return (
-    <Screen scroll contentContainerStyle={styles.screen}>
+    <Screen scroll style={styles.screenOuter} contentContainerStyle={styles.screen}>
       <View style={styles.headerRow}>
         <PressableScale
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/settings'))}
@@ -445,6 +445,9 @@ function Sheet({
 }
 
 const styles = StyleSheet.create({
+  // Screen pads 16px; every block adds its own 16px, so zero Screen's here or
+  // content sits at 32px (narrower than the 16px dock). See settings.tsx.
+  screenOuter: { paddingHorizontal: 0 },
   screen: { paddingBottom: spacing['3xl'], paddingHorizontal: 0, gap: spacing.xs },
   headerRow: {
     flexDirection: 'row',

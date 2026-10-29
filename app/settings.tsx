@@ -194,7 +194,7 @@ export default function SettingsScreen() {
   );
 
   return (
-    <Screen scroll contentContainerStyle={[styles.screen, { backgroundColor: c.background }]}>
+    <Screen scroll style={styles.screenOuter} contentContainerStyle={[styles.screen, { backgroundColor: c.background }]}>
       {/* Header */}
       <View style={styles.headerRow}>
         <PressableScale
@@ -579,6 +579,12 @@ function PickerSheet({
 }
 
 const styles = StyleSheet.create({
+  // Screen already pads 16px; every block below adds its own 16px margin, so
+  // zero Screen's horizontal padding here or content sits at 32px (narrower
+  // than the 16px dock). Other tabs don't use Screen, hence only settings doubled.
+  screenOuter: {
+    paddingHorizontal: 0,
+  },
   screen: {
     // Clear the bottom tab bar (76) plus breathing room.
     paddingBottom: 120,
