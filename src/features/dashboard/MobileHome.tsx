@@ -122,7 +122,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
       style={styles.screen}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingTop: insets.top + spacing.base, paddingBottom: bottomNavClearance(insets.bottom) + spacing['2xl'] + workoutInset, paddingLeft: Math.max(insets.left, spacing.xl), paddingRight: Math.max(insets.right, spacing.xl) },
+        { paddingTop: insets.top + spacing.base, paddingBottom: bottomNavClearance(insets.bottom) + spacing['2xl'] + workoutInset, paddingLeft: Math.max(insets.left, spacing.lg), paddingRight: Math.max(insets.right, spacing.lg) },
       ]}
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="never"

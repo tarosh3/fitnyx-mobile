@@ -95,7 +95,7 @@ export default function WorkoutsScreen() {
     </View>
   );
 
-  const pad = { paddingTop: insets.top + spacing.base, paddingHorizontal: spacing.base };
+  const pad = { paddingTop: insets.top + spacing.base, paddingHorizontal: spacing.lg };
   return (
     <View style={[styles.fill, { backgroundColor: c.background }]}>
       {tab === 'train' ? (
