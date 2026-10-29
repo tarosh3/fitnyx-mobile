@@ -144,12 +144,12 @@ export function ProgressScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingHorizontal: spacing.lg, gap: spacing.md },
+  content: { paddingHorizontal: spacing.base, gap: spacing.md },
   head: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.md },
   date: { fontFamily: type.weight.bold, fontSize: 11, letterSpacing: type.tracking.eyebrow, textTransform: 'uppercase' },
   h1: { fontFamily: type.weight.extrabold, fontSize: 34, letterSpacing: -0.6, marginTop: 4 },
-  segScroll: { marginHorizontal: -spacing.lg },
-  segs: { gap: spacing.sm, paddingHorizontal: spacing.lg },
+  segScroll: { marginHorizontal: -spacing.base },
+  segs: { gap: spacing.sm, paddingHorizontal: spacing.base },
   seg: { minHeight: 40, paddingHorizontal: spacing.base, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth, justifyContent: 'center' },
   segText: { fontFamily: type.weight.semibold, fontSize: 14 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, minHeight: 40 },

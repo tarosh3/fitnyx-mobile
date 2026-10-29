@@ -66,7 +66,8 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
   if (!user || !onboardingComplete || keyboardVisible || coachOpen || !isBottomNavRoute(pathname)) return null;
 
   const gap = bottomNavGap(insets.bottom);
-  const horizontalInset = width < 360 ? 12 : 20;
+  // Match the app-wide 16px content margin so the dock lines up with every screen.
+  const horizontalInset = 16;
   const leftInset = Math.max(insets.left, horizontalInset);
   const rightInset = Math.max(insets.right, horizontalInset);
   const availableWidth = width - leftInset - rightInset;
