@@ -15,12 +15,12 @@ const exercise = (overrides: Partial<Exercise> = {}): Exercise => ({
 const muscle = (image: string) => ({ name: 'Pectoralis major', image, description: '' });
 
 describe('exerciseImage', () => {
-  it('prefers the exercise’s own still over anatomy and related movements', () => {
+  it('rejects catalog stills, anatomy and related movements in favor of illustrations', () => {
     expect(exerciseImage(exercise({
       media_url: ' https://images.example/bench.JPG?width=160#preview ',
       primary_muscles: [muscle('https://images.example/chest.png')],
       variations: [{ uuid: 'incline', name: 'Incline press', image: 'https://images.example/incline.jpg' }],
-    }))).toBe('https://images.example/bench.JPG?width=160#preview');
+    }))).toBeNull();
   });
 
   it.each([
@@ -51,37 +51,42 @@ describe('exerciseImage', () => {
 });
 
 describe('ExerciseThumb image failures', () => {
-  it('uses the branded chest thumbnail when only an anatomical image is available', () => {
-    const screen = render(<ExerciseThumb exercise={exercise({ primary_muscles: [muscle('https://images.example/anatomy.png')] })} />);
+  it('uses the generic chest thumbnail for an unknown movement', () => {
+    const screen = render(<ExerciseThumb exercise={exercise({ title: 'Custom chest exercise', primary_muscles: [muscle('https://images.example/anatomy.png')] })} />);
     const image = screen.UNSAFE_getByType(Image);
     expect(image.props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/thumb-chest.png'));
     expect(image.props.source).not.toEqual({ uri: 'https://images.example/anatomy.png' });
     expect(image.props.resizeMode).toBe('contain');
   });
 
-  it('keeps the Timer fallback for duration exercises', () => {
-    const screen = render(<ExerciseThumb exercise={exercise({ tracking_type: 'duration' })} />);
-    expect(screen.UNSAFE_queryByType(Image)).toBeNull();
-    expect(screen.getByTestId('icon-Timer')).toBeTruthy();
+  it('uses a movement illustration for a timed plank even with a mannequin still', () => {
+    const screen = render(<ExerciseThumb exercise={exercise({ title: 'Forearm plank', tracking_type: 'duration', media_url: 'https://images.example/mannequin.jpg' })} />);
+    expect(screen.UNSAFE_getByType(Image).props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/movement-core-anti-extension.png'));
+    expect(screen.UNSAFE_getByType(Image).props.resizeMode).toBe('contain');
+  });
+
+  it('uses a generic part illustration when movement metadata is missing', () => {
+    const screen = render(<ExerciseThumb />);
+    expect(screen.UNSAFE_getByType(Image).props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/thumb-core.png'));
   });
 
   it('keeps a broken source on its fallback but tries a different exercise’s source', () => {
-    const first = exercise({ media_url: 'https://images.example/bench.jpg' });
-    const second = exercise({ uuid: 'squat', media_url: 'https://images.example/squat.jpg' });
+    const first = exercise({ video_url: 'https://res.cloudinary.com/demo/video/upload/bench.mp4' });
+    const second = exercise({ uuid: 'squat', title: 'Front squat', video_url: 'https://res.cloudinary.com/demo/video/upload/squat.mp4' });
     const screen = render(<ExerciseThumb exercise={first} />);
 
     fireEvent(screen.UNSAFE_getByType(Image), 'error');
-    expect(screen.UNSAFE_getByType(Image).props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/thumb-core.png'));
+    expect(screen.UNSAFE_getByType(Image).props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/movement-horizontal-press.png'));
     screen.rerender(<ExerciseThumb exercise={{ ...first }} />);
-    expect(screen.UNSAFE_getByType(Image).props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/thumb-core.png'));
+    expect(screen.UNSAFE_getByType(Image).props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/movement-horizontal-press.png'));
 
     screen.rerender(<ExerciseThumb exercise={second} />);
-    expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: second.media_url });
+    expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: videoPoster(second.video_url) });
     fireEvent(screen.UNSAFE_getByType(Image), 'error');
-    expect(screen.UNSAFE_getByType(Image).props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/thumb-core.png'));
+    expect(screen.UNSAFE_getByType(Image).props.source).toEqual(require('../../../../../assets/images/exercise-thumbs/movement-squat.png'));
 
     screen.rerender(<ExerciseThumb exercise={first} />);
-    expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: first.media_url });
+    expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: videoPoster(first.video_url) });
   });
 });
 
@@ -102,5 +107,10 @@ describe('videoPoster', () => {
   it('keeps real video posters when muscle illustrations are present', () => {
     expect(exerciseImage(exercise({ video_url: video, primary_muscles: [muscle('https://images.example/chest.png')] })))
       .toContain('so_50p');
+  });
+
+  it('prefers video_url over media_url and supports legacy videos in media_url', () => {
+    expect(exerciseImage(exercise({ video_url: video, media_url: 'https://res.cloudinary.com/demo/video/upload/other.mp4' }))).toBe(videoPoster(video));
+    expect(exerciseImage(exercise({ media_url: video }))).toBe(videoPoster(video));
   });
 });

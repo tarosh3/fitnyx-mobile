@@ -44,6 +44,43 @@ export function partOf(ex?: Pick<Exercise, 'primary_muscles' | 'tracking_type'> 
 
 export const partLabel = (p: Part) => PARTS.find((x) => x.key === p)?.label ?? 'Other';
 
+export type MovementPattern =
+  | 'horizontal-press' | 'vertical-press' | 'horizontal-pull' | 'vertical-pull'
+  | 'squat' | 'hinge' | 'lunge' | 'core-anti-extension' | 'core-rotation'
+  | 'carry' | 'curl' | 'triceps-extension' | 'calf' | 'cardio';
+
+const movementRules: [MovementPattern, RegExp][] = [
+  ['carry', /\b(carry|carries|farmer(?:s| s)? walk|suitcase walk)\b/],
+  ['calf', /\b(calf|calves|heel raise)\b/],
+  ['lunge', /\b(lunge|lunges|split squat|bulgarian|step ups?)\b/],
+  ['hinge', /\b(deadlift|deadlifts|rdl|good morning|hip hinge|hip thrust|glute bridge|kettlebell swing)\b/],
+  ['squat', /\b(squat|squats|leg press|hack press)\b/],
+  ['core-rotation', /\b(russian twist|wood ?chop|rotation|rotational|pallof|bicycle crunch)\b/],
+  ['core-anti-extension', /\b(plank|dead ?bug|ab wheel|roll ?out|hollow (?:body|hold))\b/],
+  ['triceps-extension', /\b(triceps?|skull ?crushers?|push ?down|press ?down)\b/],
+  ['vertical-pull', /\b(pull ?ups?|chin ?ups?|pull ?down|lat pull)\b/],
+  ['horizontal-pull', /\b(rows?|rowing|face pull)\b/],
+  ['vertical-press', /\b((?:overhead|shoulder|military|arnold|push) press|handstand push ?up)\b/],
+  ['horizontal-press', /\b((?:bench|chest|floor) press|push ?ups?)\b/],
+  ['curl', /\b(curl|curls)\b/],
+  ['cardio', /\b(running|jogging|treadmill|cycling|bike|elliptical|stair ?climber|jump rope|skipping|burpees?)\b/],
+];
+
+/** Specific movement names win; unknown exercises retain their body-part icon. */
+export function movementOf(ex?: Partial<Pick<Exercise, 'title' | 'category' | 'tracking_type'>> | null): MovementPattern | null {
+  if (ex?.tracking_type === 'cardio') return 'cardio';
+  const normalize = (value = '') => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const category = normalize(ex?.category);
+  const explicit = movementRules.find(([movement]) => normalize(movement) === category);
+  if (explicit) return explicit[0];
+  const name = normalize(ex?.title);
+  // Leg curls and wrist curls are not biceps curls. Keep the generic part icon.
+  if (/\b(leg|hamstring|wrist)\b.*\bcurls?\b/.test(name)) return null;
+  return movementRules.find(([, pattern]) => pattern.test(name))?.[0]
+    ?? movementRules.find(([, pattern]) => pattern.test(category))?.[0]
+    ?? null;
+}
+
 // ---------- formatting ----------
 
 export function fmtClock(totalSec: number): string {

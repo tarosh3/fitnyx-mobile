@@ -3,6 +3,7 @@ import {
   describeTarget,
   draftToLog,
   fmtClock,
+  movementOf,
   partOf,
   partOfMuscle,
   prefill,
@@ -25,6 +26,39 @@ describe('body parts', () => {
   it('puts cardio exercises in cardio whatever their muscles say', () => {
     expect(partOf({ tracking_type: 'cardio', primary_muscles: [{ name: 'Quadriceps', image: '', description: '' }] })).toBe('cardio');
     expect(partOf({ primary_muscles: [{ name: 'Biceps', image: '', description: '' }] })).toBe('arms');
+  });
+});
+
+describe('movement thumbnails', () => {
+  it.each([
+    ['Barbell bench press', 'horizontal-press'],
+    ['Dumbbell shoulder press', 'vertical-press'],
+    ['Seated cable row', 'horizontal-pull'],
+    ['Lat pulldown', 'vertical-pull'],
+    ['Front squat', 'squat'],
+    ['Romanian deadlift', 'hinge'],
+    ['Bulgarian split squat', 'lunge'],
+    ['Forearm plank', 'core-anti-extension'],
+    ['Russian twist', 'core-rotation'],
+    ['Farmer’s walk', 'carry'],
+    ['Hammer curl', 'curl'],
+    ['Overhead triceps extension', 'triceps-extension'],
+    ['Standing calf raise', 'calf'],
+    ['Treadmill running', 'cardio'],
+    ['Push-up', 'horizontal-press'],
+    ['Chin-up', 'vertical-pull'],
+    ['Leg curl', null],
+    ['Wrist curl', null],
+    ['Dumbbell lateral raise', null],
+  ])('maps %s without replacing unknown movements with misleading art', (title, expected) => {
+    expect(movementOf({ title })).toBe(expected);
+  });
+
+  it('uses explicit movement categories and cardio tracking, with a safe missing-data fallback', () => {
+    expect(movementOf({ title: 'Custom movement', category: 'horizontal-pull' })).toBe('horizontal-pull');
+    expect(movementOf({ title: 'Row', tracking_type: 'cardio' })).toBe('cardio');
+    expect(movementOf({ category: 'strength' })).toBeNull();
+    expect(movementOf()).toBeNull();
   });
 });
 
