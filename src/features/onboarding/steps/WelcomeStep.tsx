@@ -1,64 +1,14 @@
-import React, { useEffect } from 'react';
+import { Illustration } from '@/src/components/art/Illustration';
+import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Clock, Sparkles, Target, TrendingUp, Zap } from 'lucide-react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import { Clock, Target, TrendingUp, Zap } from 'lucide-react-native';
+import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Svg, { Circle, G } from 'react-native-svg';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { OnboardingStepProps } from '@/src/features/onboarding/types';
 
 const PRIMARY = '#5FC793';
-
-function PulsingIcon() {
-  const scale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0.3);
-
-  useEffect(() => {
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.06, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-    );
-    glowOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.6, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.2, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-    );
-  }, []);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
-  return (
-    <View style={wStyles.iconContainer}>
-      {/* Decorative rings */}
-      <Animated.View style={[wStyles.glowRing, glowStyle]} />
-      <Animated.View style={[wStyles.iconCircle, pulseStyle]}>
-        <Sparkles size={48} color="#000" strokeWidth={2.5} />
-      </Animated.View>
-    </View>
-  );
-}
 
 function DecoRings() {
   return (
@@ -90,10 +40,10 @@ export function WelcomeStep({ onNext }: OnboardingStepProps) {
 
       <View style={wStyles.center}>
         <Animated.View entering={FadeIn.duration(600)}>
-          <PulsingIcon />
+          <Illustration name="filo" size={144} />
         </Animated.View>
 
-        <Animated.Text entering={FadeInDown.duration(500).delay(200)} style={wStyles.title}>
+        <Animated.Text entering={FadeInDown.duration(500).delay(200)} style={[wStyles.title, { color: palette.text }]}>
           Let's <Text style={{ color: PRIMARY }}>personalize</Text>{'\n'}your fitness journey
         </Animated.Text>
 
@@ -154,41 +104,6 @@ const wStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
     paddingHorizontal: 10,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    height: 120,
-    justifyContent: 'center',
-    marginBottom: 28,
-    width: 120,
-  },
-  glowRing: {
-    backgroundColor: `${PRIMARY}15`,
-    borderColor: `${PRIMARY}20`,
-    borderRadius: 60,
-    borderWidth: 1,
-    height: 120,
-    position: 'absolute',
-    width: 120,
-  },
-  iconCircle: {
-    alignItems: 'center',
-    backgroundColor: PRIMARY,
-    borderRadius: 44,
-    height: 88,
-    justifyContent: 'center',
-    width: 88,
-    ...Platform.select({
-      ios: {
-        shadowColor: PRIMARY,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.5,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
   },
   title: {
     color: '#FFFFFF',

@@ -1,6 +1,7 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { ChevronLeft, ChevronRight, FileText, Table } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { AiReportCard } from '@/src/features/workouts/report/AiReportCard';
@@ -78,7 +79,7 @@ export function ReportScreen() {
         </View>
 
         {failed ? <Text style={[styles.body, { color: c.mutedText }]}>Couldn’t load this period. Reports need a connection.</Text>
-          : !totals ? <ActivityIndicator style={styles.pad} color={c.primary} />
+          : !totals ? <BrandLoader style={styles.pad} color={c.primary} />
             : (
               <>
                 <View style={styles.tiles}>

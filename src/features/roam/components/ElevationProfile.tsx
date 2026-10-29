@@ -61,5 +61,5 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   title: { fontSize: 14, fontFamily: type.weight.extrabold },
   meta: { fontSize: 12, fontFamily: type.weight.semibold, fontVariant: ['tabular-nums'] },
-  credit: { fontSize: 9.5 },
+  credit: { fontSize: type.size.micro },
 });

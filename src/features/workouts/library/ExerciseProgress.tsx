@@ -1,6 +1,7 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { Trophy } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 
 import { asLog, progressStats, shortDate } from '@/src/features/workouts/library/text';
@@ -30,7 +31,7 @@ export function ExerciseProgress({ uuid, t }: { uuid: string; t: TrackingType })
     return () => { alive = false; };
   }, [uuid]);
 
-  if (loading && !history) return <ActivityIndicator color={c.primary} style={styles.spinner} />;
+  if (loading && !history) return <BrandLoader color={c.primary} style={styles.spinner} />;
   if (!history?.days.length) {
     return (
       <View style={[styles.empty, { backgroundColor: c.surface }]}>

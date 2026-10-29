@@ -1,3 +1,4 @@
+import { IllustratedEmpty } from '@/src/components/art/Illustration';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Footprints, Dumbbell, Sparkles } from 'lucide-react-native';
 import React from 'react';
@@ -55,11 +56,12 @@ function NewRecords({ summary, today }: { summary: ProgressSummary; today: strin
 
 export function OverviewView(p: OverviewProps) {
   const c = useThemeColors();
+  const router = useRouter();
   const time = formatDuration(p.totals.workoutSec + p.totals.roamSec);
   const bars = p.buckets.map((b) => ({ label: b.label, parts: [{ value: b.workoutSec, color: c.progress.lift }, { value: b.roamSec, color: c.progress.roam }] }));
   return (
     <View style={styles.stack}>
-      <Card style={styles.hero}>
+      {p.totals.workouts === 0 && p.totals.roams === 0 ? <Card><IllustratedEmpty art="progress" title="Your progress starts with one session" detail="No activity in this date range. Log a workout or a Roam to see your trends." action="Explore workouts" onAction={() => router.push('/workouts')} /></Card> : <Card style={styles.hero}>
         <Eyebrow>Active time</Eyebrow>
         <View style={styles.timeRow}>
           <BigNumber value={String(time.h)} unit="h" size={56} />
@@ -79,7 +81,7 @@ export function OverviewView(p: OverviewProps) {
           <View style={styles.flex}><BigNumber value={(p.totals.distanceM / 1000).toFixed(1)} unit="km" size={26} /><Muted>Roamed</Muted></View>
           <View style={styles.flex}><BigNumber value={(p.totals.volumeKg / 1000).toFixed(1)} unit="t" size={26} /><Muted>Lifted</Muted></View>
         </View>
-      </Card>
+      </Card>}
 
       <StreakCard streak={p.summary?.streak} days={p.monthDays} today={p.today} />
 

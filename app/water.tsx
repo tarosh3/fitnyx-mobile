@@ -287,8 +287,8 @@ export default function WaterScreen() {
           hideRules
           xAxisColor={c.border}
           yAxisColor="transparent"
-          yAxisTextStyle={{ color: c.mutedText, fontSize: 10 }}
-          xAxisLabelTextStyle={{ color: c.mutedText, fontSize: 9, marginTop: 4 }}
+          yAxisTextStyle={{ color: c.mutedText, fontSize: t.size.micro }}
+          xAxisLabelTextStyle={{ color: c.mutedText, fontSize: t.size.micro, marginTop: 4 }}
           noOfSections={4}
           maxValue={Math.max(goalMl, ...monthData.map((d) => d.total), 500)}
           formatYLabel={(v) => {
@@ -305,7 +305,7 @@ export default function WaterScreen() {
             dashGap: 4,
             thickness: 1,
             labelText: 'Goal',
-            labelTextStyle: { color: c.mutedText, fontSize: 10 },
+            labelTextStyle: { color: c.mutedText, fontSize: t.size.micro },
           }}
         />
       </View>
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: { fontFamily: t.weight.bold, fontSize: t.size.xs },
   avgPill: { alignItems: 'flex-end' },
-  avgLabel: { fontFamily: t.weight.semibold, fontSize: 10, letterSpacing: t.tracking.eyebrow },
+  avgLabel: { fontFamily: t.weight.semibold, fontSize: t.size.micro, letterSpacing: t.tracking.eyebrow },
   avgValue: { fontFamily: t.weight.extrabold, fontSize: t.size.body },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {

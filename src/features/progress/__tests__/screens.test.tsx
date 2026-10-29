@@ -97,7 +97,11 @@ describe('Progress tab', () => {
     await waitFor(() => expect(pending.length).toBeGreaterThan(0));
     released = true;
     pending.forEach((r) => r({ from: today, to: today, days: [] }));
-    expect(await screen.findByText('Active time')).toBeTruthy();
+    expect(await screen.findByText('Your progress starts with one session')).toBeTruthy();
+    expect(screen.queryByText('Active time')).toBeNull();
+    expect(screen.getByText('Explore workouts')).toBeTruthy();
+    fireEvent.press(screen.getByText('Explore workouts'));
+    expect(mockPush).toHaveBeenCalledWith('/workouts');
     expect(screen.queryByTestId('progress-loading')).toBeNull();
   });
 

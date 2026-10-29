@@ -1,10 +1,12 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
+import { Illustration } from '@/src/components/art/Illustration';
 import {
   Archive, ArrowUp, ArrowUpRight, ChartSpline, Check, ChevronDown,
   ChevronRight, History, Leaf, MessageCircle, Plus, Target, Utensils, WifiOff, X,
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform,
+  FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform,
   Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
@@ -130,7 +132,7 @@ export function AICoachChat() {
               <View style={styles.flex}>
                 <FlatList data={threads} keyExtractor={(item) => item.id} contentContainerStyle={styles.historyContent}
                   ListHeaderComponent={<Text style={[styles.eyebrow, { color: c.mutedText }]}>PICK UP WHERE YOU LEFT OFF</Text>}
-                  ListEmptyComponent={<View style={styles.historyEmpty}><MessageCircle size={32} color={c.accent} /><Text style={[styles.promptTitle, { color: c.text }]}>A fresh start</Text><Text style={[styles.body, { color: c.mutedText }]}>Your conversations will appear here.</Text></View>}
+                  ListEmptyComponent={<View style={styles.historyEmpty}><Illustration name="start" size={140} /><Text style={[styles.promptTitle, { color: c.text }]}>A fresh start</Text><Text style={[styles.body, { color: c.mutedText }]}>Your conversations will appear here.</Text></View>}
                   renderItem={({ item }) => (
                     <Pressable accessibilityRole="button" accessibilityState={{ selected: item.id === currentThreadId, disabled: !canSend }}
                       disabled={!canSend} onPress={() => { setInputValue(''); void switchThread(item.id); }}
@@ -163,7 +165,7 @@ export function AICoachChat() {
                   }} scrollEventThrottle={100}>
                   {messages.length === 0 && !isLoading ? (
                     <View style={[styles.welcome, compact && { paddingTop: 0 }]}>
-                      <View style={[styles.welcomeIntro, compact && { gap: spacing.sm, marginBottom: spacing.xs }]}>
+                      <View style={[styles.welcomeIntro, compact && { gap: spacing.sm, marginBottom: spacing.xs }]}><Illustration name="filo" size={compact ? 64 : 104} />
                         <Text style={[styles.eyebrow, { color: c.accent }]}>IN YOUR CORNER. EVERY DAY.</Text>
                         <Text accessibilityRole="header" style={[styles.welcomeTitle, { color: c.text }, compact && { fontSize: 30, lineHeight: 36 }]}>
                           A LITTLE GUIDANCE.{'\n'}<Text style={{ color: c.accent }}>A STRONGER YOU.</Text>
@@ -214,7 +216,7 @@ export function AICoachChat() {
                     </View>
                   ))}
                   {isLoading || isSending ? <View accessibilityLiveRegion="polite" style={styles.thinking}>
-                    <FiloMark size={28} /><ActivityIndicator size="small" color={c.accent} /><Text style={[styles.detail, { color: c.mutedText }]}>Filo is thinking…</Text>
+                    <FiloMark size={28} /><BrandLoader size="small" color={c.accent} /><Text style={[styles.detail, { color: c.mutedText }]}>Filo is thinking…</Text>
                   </View> : null}
                 </ScrollView>
                 {showLatest ? <Pressable accessibilityRole="button" accessibilityLabel="Jump to latest message" onPress={scrollToLatest}
@@ -274,7 +276,7 @@ const styles = StyleSheet.create({
   welcomeContent: { gap: 0 },
   welcome: { flex: 1, justifyContent: 'center', paddingTop: spacing.md, paddingBottom: spacing.sm, gap: spacing.md },
   welcomeIntro: { gap: spacing.md, marginBottom: spacing.sm },
-  eyebrow: { fontFamily: t.weight.bold, fontSize: 10, letterSpacing: 1.6, lineHeight: 16 },
+  eyebrow: { fontFamily: t.weight.bold, fontSize: t.size.micro, letterSpacing: 1.6, lineHeight: 16 },
   welcomeTitle: { ...t.display, fontSize: 38, lineHeight: 44, letterSpacing: -0.4 },
   body: { fontFamily: t.weight.regular, fontSize: 14, lineHeight: 22 },
   featuredPrompt: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.base, minHeight: 84, borderRadius: radii.lg, borderWidth: StyleSheet.hairlineWidth },
@@ -294,7 +296,7 @@ const styles = StyleSheet.create({
   inputWrap: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.sm, borderRadius: radii.xl, borderWidth: 1 },
   input: { flex: 1, fontFamily: t.weight.regular, fontSize: 15, paddingHorizontal: spacing.sm, paddingVertical: spacing.md, minHeight: 44, maxHeight: 120 },
   sendButton: { width: 44, height: 44, borderRadius: radii.lg, alignItems: 'center', justifyContent: 'center' },
-  composerHint: { fontFamily: t.weight.regular, fontSize: 10, lineHeight: 16, textAlign: 'center', marginTop: spacing.sm },
+  composerHint: { fontFamily: t.weight.regular, fontSize: t.size.micro, lineHeight: 16, textAlign: 'center', marginTop: spacing.sm },
   offlineNote: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center', marginBottom: spacing.sm },
   historyContent: { padding: spacing.lg, gap: spacing.md, flexGrow: 1 },
   threadRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.base, borderRadius: radii.lg, borderWidth: StyleSheet.hairlineWidth, minHeight: 76 },

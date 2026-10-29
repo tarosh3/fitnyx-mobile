@@ -1,11 +1,15 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { DashboardPlan, DashboardPlanDay } from '@/src/lib/api/dashboard';
 import type { WorkoutSession } from '@/src/lib/api/workoutSessions';
 import { ActiveMissionCard } from '../ActiveMissionCard';
 
 const mockPush = jest.fn();
+const mockSetActiveSession = jest.fn();
+const mockStart = jest.fn<Promise<void>, unknown[]>(() => Promise.resolve());
+jest.mock('@/src/providers/WorkoutProvider', () => ({ useWorkout: () => ({ setActiveSession: mockSetActiveSession }) }));
+jest.mock('@/src/features/workouts/start', () => ({ startWorkout: (...args: unknown[]) => mockStart(...args) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 
 const plan: DashboardPlan = { id: 'plan-1', title: 'Build strength' };
@@ -19,24 +23,47 @@ const session: WorkoutSession = {
 beforeEach(() => jest.clearAllMocks());
 
 describe('ActiveMissionCard', () => {
-  it('points a new user to the plan built from their answers, without inventing workout metrics', () => {
+  it('starts an empty workout and keeps starter-plan discovery available', async () => {
     render(<ActiveMissionCard activePlan={null} activeSession={null} currentDay={null} nextExercisesCount={0} currentDayIndex={1} totalDays={0} />);
-    expect(screen.getByText('Your plan is ready.')).toBeTruthy();
-    expect(screen.getByText('See your plan')).toBeTruthy();
+    expect(screen.getByText('Ready to move?')).toBeTruthy();
+    expect(screen.getByText('Start workout')).toBeTruthy();
     expect(screen.queryByText(/exercises/)).toBeNull();
-    fireEvent.press(screen.getByTestId('home-workout-card'));
+    await act(async () => fireEvent.press(screen.getByTestId('home-workout-card')));
+    expect(mockStart).toHaveBeenCalledWith({ planId: undefined, dayId: undefined }, { router: expect.anything(), setActiveSession: mockSetActiveSession });
+    fireEvent.press(screen.getByText('See your starter plan'));
     expect(mockPush).toHaveBeenCalledWith('/plan');
   });
 
-  it('labels plan navigation accurately and shows the supplied workout details', () => {
+  it('starts the supplied plan day directly from Home', async () => {
     render(<ActiveMissionCard activePlan={plan} activeSession={null} currentDay={day} currentDayIndex={2} totalDays={4} />);
     expect(screen.getByText('UP NEXT')).toBeTruthy();
     expect(screen.getByText('Push day')).toBeTruthy();
     expect(screen.getByText('Build strength')).toBeTruthy();
     expect(screen.getByText('5 exercises  ·  Day 2 of 4')).toBeTruthy();
-    expect(screen.getByText('View workout')).toBeTruthy();
+    expect(screen.getByText('Start workout')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('home-workout-card')));
+    expect(mockStart).toHaveBeenCalledWith({ planId: plan.id, dayId: day.id }, { router: expect.anything(), setActiveSession: mockSetActiveSession });
+  });
+
+  it('shows recoverable start failures and permits retry', async () => {
+    mockStart.mockRejectedValueOnce(new Error('offline'));
+    render(<ActiveMissionCard activePlan={plan} activeSession={null} currentDay={day} />);
+    await act(async () => fireEvent.press(screen.getByTestId('home-workout-card')));
+    expect(screen.getByRole('alert')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('home-workout-card')));
+    expect(mockStart).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('disables starting while a request is pending', async () => {
+    let finish!: () => void;
+    mockStart.mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));
+    render(<ActiveMissionCard activePlan={plan} activeSession={null} currentDay={day} />);
     fireEvent.press(screen.getByTestId('home-workout-card'));
-    expect(mockPush).toHaveBeenCalledWith('/workouts/programs/plan-1');
+    expect(screen.getByTestId('home-workout-card')).toHaveProp('accessibilityState', { busy: true, disabled: true });
+    fireEvent.press(screen.getByTestId('home-workout-card'));
+    expect(mockStart).toHaveBeenCalledTimes(1);
+    await act(async () => finish());
   });
 
   it('prioritizes an active session over the active plan', () => {

@@ -35,7 +35,8 @@ export const type = {
     body: 16,
     sm: 14,
     xs: 12,
-    micro: 10,
+    // Captions and chart labels; body-adjacent copy uses xs (12) or larger.
+    micro: 11,
   },
   weight: {
     regular: 'Inter_400Regular',

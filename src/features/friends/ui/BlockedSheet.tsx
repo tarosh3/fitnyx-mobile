@@ -1,5 +1,6 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Empty } from '@/src/features/progress/ui/bits';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
@@ -31,7 +32,7 @@ export function BlockedSheet({ visible, onClose }: { visible: boolean; onClose: 
   return (
     <Sheet visible={visible} title="Blocked accounts" subtitle="They can’t find you or send you requests." onClose={onClose}>
       {failed || error ? <Text style={[styles.error, { color: c.destructive }]}>{failed ?? error}</Text> : null}
-      {users == null ? (error ? null : <ActivityIndicator color={c.accent} style={styles.spinner} />) : users.length ? (
+      {users == null ? (error ? null : <BrandLoader color={c.accent} style={styles.spinner} />) : users.length ? (
         <View>
           {users.map((u) => (
             <FriendRow key={u.id} user={u}>

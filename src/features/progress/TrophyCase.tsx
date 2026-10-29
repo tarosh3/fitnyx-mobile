@@ -13,7 +13,7 @@ import { useProgressSummary } from './data';
 import { shortDate } from './range';
 import { badgesFor, effortName, formatClock, formatKg, isRecent } from './records';
 import { BigNumber, Empty, Eyebrow, Muted } from './ui/bits';
-import { Medal } from './ui/Medal';
+import { MilestoneEmblem } from '@/src/components/art/MilestoneEmblem';
 
 type Tab = 'records' | 'badges';
 interface Row { key: string; name: string; value: string; unit?: string; sub: string; date: string; href?: string }
@@ -88,7 +88,7 @@ export function TrophyCase() {
         <View style={styles.grid}>
           {badgesFor(data).map((b) => (
             <Card key={b.id} style={styles.badgeCard}>
-              <Medal mark={b.mark} earned={b.earned} size={64} />
+              <MilestoneEmblem id={b.id} earned={b.earned} size={72} />
               <Text style={[styles.badgeName, { color: c.text }]} numberOfLines={2}>{b.name}</Text>
               <Muted style={styles.center}>{b.detail}</Muted>
               {!b.earned ? (

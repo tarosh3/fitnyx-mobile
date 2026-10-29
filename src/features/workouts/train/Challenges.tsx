@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   medal: { width: 52, height: 56, alignItems: 'center', justifyContent: 'center' },
   percent: { fontFamily: type.weight.extrabold, fontSize: 27, letterSpacing: -1, fontVariant: ['tabular-nums'] },
   percentSign: { fontFamily: type.weight.medium, fontSize: 14 },
-  eyebrow: { fontFamily: type.weight.bold, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
+  eyebrow: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 1, textTransform: 'uppercase' },
   name: { fontFamily: type.weight.bold, fontSize: 17, lineHeight: 22 },
   bar: { height: 5, borderRadius: 3, overflow: 'hidden', marginTop: 5, marginBottom: 2 },
   barFill: { height: '100%', borderRadius: 3 },

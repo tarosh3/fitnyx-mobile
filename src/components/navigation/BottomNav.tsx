@@ -1,6 +1,7 @@
 import { usePathname, useRouter } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import React, { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, Keyboard, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,6 +9,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { haptic } from '@/src/lib/haptics';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { motion, type } from '@/src/styles/tokens';
 import { NavIcon, type NavIconName } from './NavIcon';
 import { BOTTOM_NAV_HEIGHT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
@@ -22,23 +24,33 @@ const destinations = [
 const SPRING = { damping: 20, stiffness: 320, mass: 0.7, reduceMotion: ReduceMotion.System };
 const DOCK_PADDING = 6;
 
-// Keep the existing prop contract for the root overlay. The new surface is opaque,
-// so its contrast and finish are consistent above every screen and with Reduce Transparency.
-export function BottomNav(_props: { blurTarget?: RefObject<View | null> }) {
+// The dock is a frosted-glass pill: content scrolled behind it shows through
+// blurred, while the area above and beside the pill is left untouched. Reduce
+// Transparency swaps the frost for the opaque nav surface.
+export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> }) {
   const pathname = usePathname();
   const router = useRouter();
   const c = useThemeColors();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { user, onboardingComplete } = useAuth();
   const { openCenteredChat, isOpen: coachOpen } = useAICoach();
   const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible());
+  const [reduceTransparency, setReduceTransparency] = useState(false);
   const lastNavTime = useRef(0);
 
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
     return () => { show.remove(); hide.remove(); };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceTransparencyEnabled?.().then((v) => { if (active) setReduceTransparency(!!v); }).catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', setReduceTransparency);
+    return () => { active = false; sub.remove(); };
   }, []);
 
   const navigate = useCallback((href: string) => {
@@ -68,11 +80,33 @@ export function BottomNav(_props: { blurTarget?: RefObject<View | null> }) {
   );
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { height: totalHeight + gap }]}>
+    <View pointerEvents="box-none" style={[styles.wrap, { height: totalHeight + gap + 24 }]}>
+      {/* The pill is inset, so wide cards can peek in the margins beside it and
+          in the gap below. Paint those areas (never behind the pill) with the
+          page background: dark content was already invisible there, and this
+          also hides bright content, while the pill keeps showing content through
+          its frost. Nothing above the pill's top edge is covered. */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: gap, backgroundColor: c.background }} />
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, bottom: gap, width: dockLeft, height: totalHeight, backgroundColor: c.background }} />
+      <View pointerEvents="none" style={{ position: 'absolute', right: 0, bottom: gap, width: Math.max(0, width - dockLeft - dockWidth), height: totalHeight, backgroundColor: c.background }} />
       <View testID="bottom-nav" pointerEvents="box-none" style={[styles.dock, {
         bottom: gap, left: dockLeft, width: dockWidth, height: totalHeight,
-        backgroundColor: c.nav.surface, borderColor: c.nav.edge, shadowColor: c.nav.shadow,
+        backgroundColor: reduceTransparency ? c.nav.surface : 'transparent',
+        borderColor: c.nav.edge, shadowColor: c.nav.shadow,
       }]}>
+        {!reduceTransparency && (
+          <>
+            {/* Frosted-glass pill: content behind the dock shows through, blurred. */}
+            <BlurView pointerEvents="none" style={[StyleSheet.absoluteFill, styles.glass]}
+              tint={theme === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
+              intensity={64} blurReductionFactor={4} blurMethod="dimezisBlurViewSdk31Plus"
+              blurTarget={blurTarget ?? undefined} />
+            {/* A wash keeps icons/labels legible and stops bright content from
+                bleeding through the pill's corners while keeping a subtle frost. */}
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.glass,
+              { backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.62)' : 'rgba(22,22,22,0.66)' }]} />
+          </>
+        )}
         <View pointerEvents="box-none" style={styles.row}>
           {destinations.slice(0, 2).map(tab)}
           <CoachAction onPress={() => { haptic.light(); openCenteredChat(); }} />
@@ -103,12 +137,12 @@ function DockItem({ id, label, active, onPress }: {
       onPressOut={() => { press.value = withSpring(1, SPRING); }} style={styles.tab}>
       <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.tabContent, pressStyle]}>
         <View style={styles.iconStage}>
+          <Animated.View style={[styles.activePill, { backgroundColor: c.primary }, selectedStyle]} />
           <Animated.View style={[styles.iconLayer, inactiveStyle]}><NavIcon name={id} size={24} color={c.nav.inactive} fill={c.nav.iconFill} /></Animated.View>
-          <Animated.View style={[styles.iconLayer, selectedStyle]}><NavIcon name={id} size={24} color={c.nav.active} fill={c.nav.activeFill} /></Animated.View>
+          <Animated.View style={[styles.iconLayer, selectedStyle]}><NavIcon name={id} size={24} color={c.primaryText} fill={c.primary} /></Animated.View>
         </View>
-        <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.2} adjustsFontSizeToFit minimumFontScale={0.9}
+        <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.2}
           style={[styles.label, { color: active ? c.nav.active : c.nav.inactive, fontFamily: active ? type.weight.bold : type.weight.medium }]}>{label}</Text>
-        <Animated.View style={[styles.activeDash, { backgroundColor: c.nav.active }, selectedStyle]} />
       </Animated.View>
     </Pressable>
   );
@@ -138,11 +172,12 @@ function CoachAction({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 50 },
   dock: { position: 'absolute', borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  glass: { borderRadius: 20, overflow: 'hidden' },
   row: { position: 'absolute', left: DOCK_PADDING, right: DOCK_PADDING, bottom: 0, top: 0, flexDirection: 'row' },
   tab: { flex: 1, height: BOTTOM_NAV_HEIGHT, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
   tabContent: { width: '100%', height: BOTTOM_NAV_HEIGHT, alignItems: 'center', paddingTop: 6, gap: 2 },
-  iconStage: { width: 32, height: 26, alignItems: 'center', justifyContent: 'center' },
+  iconStage: { width: 44, height: 30, alignItems: 'center', justifyContent: 'center' },
   iconLayer: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 10, lineHeight: 14, textAlign: 'center', maxWidth: '100%' },
-  activeDash: { width: 4, height: 2, borderRadius: 2 },
+  label: { fontSize: type.size.micro, lineHeight: 14, textAlign: 'center', maxWidth: '100%' },
+  activePill: { ...StyleSheet.absoluteFillObject, borderRadius: 15 },
 });

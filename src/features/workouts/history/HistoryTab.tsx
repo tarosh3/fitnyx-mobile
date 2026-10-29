@@ -1,7 +1,9 @@
+import { Illustration } from '@/src/components/art/Illustration';
+import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, FileText, History } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useWorkoutHistory } from '@/src/features/workouts/hooks';
 import { fmtKm, fmtVolume, plural } from '@/src/features/workouts/model';
@@ -139,9 +141,9 @@ export function HistoryTab({ header }: { header: React.ReactElement }) {
       data={items}
       keyExtractor={(it, i) => (it.kind === 'head' ? `h-${it.title}` : it.s.id) + i}
       ListHeaderComponent={top}
-      ListEmptyComponent={history.loading ? <ActivityIndicator style={{ marginTop: spacing['2xl'] }} color={c.primary} /> : (
+      ListEmptyComponent={history.loading ? <ContentSkeleton variant="list" label="Loading workout history" /> : (
         <View style={styles.empty}>
-          <View style={[styles.emptyIcon, { backgroundColor: c.accentSoft }]}><History size={30} color={c.accent} /></View>
+          <Illustration name="history" />
           <Text style={[styles.emptyTitle, { color: c.text }]}>{sessions.length ? 'Nothing here yet' : 'No workouts yet'}</Text>
           <Text style={[styles.meta, { color: c.mutedText, textAlign: 'center' }]}>Finished workouts show up here, with every set you did.</Text>
         </View>

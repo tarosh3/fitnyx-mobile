@@ -185,9 +185,9 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row' },
   stat: { flex: 1, gap: 6, paddingRight: 6, minWidth: 0 },
   statValue: { fontFamily: DISPLAY, fontSize: 24, lineHeight: 29, includeFontPadding: false },
-  statUnit: { fontFamily: type.weight.medium, fontSize: 10 },
+  statUnit: { fontFamily: type.weight.medium, fontSize: type.size.micro },
   pill: { alignSelf: 'flex-start', borderRadius: 99, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
-  pillText: { fontFamily: type.weight.bold, fontSize: 10, letterSpacing: 0.4 },
+  pillText: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 0.4 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   completed: { flexDirection: 'row', gap: 5, alignItems: 'center' },
 });

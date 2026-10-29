@@ -1,3 +1,4 @@
+import { StepArtwork } from '../StepArtwork';
 import React, { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -41,11 +42,8 @@ export function StepScaffold({
     <View style={styles.wrap}>
       {/* Header area with entrance animation */}
       <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.header}>
-        {/* Accent glow dot */}
-        <View style={styles.accentRow}>
-          <View style={styles.glowDot} />
-          <View style={styles.accentLine} />
-        </View>
+        {/* A distinct, compact vignette for the current step. */}
+        <StepArtwork />
 
         <Text style={styles.title}>
           <Text style={{ color: PRIMARY }}>{titleParts.first}</Text>
@@ -56,9 +54,12 @@ export function StepScaffold({
       </Animated.View>
 
       {/* Content area — vertically centered so sparse steps don't look empty */}
-      <Animated.View
-        entering={FadeInDown.duration(500).delay(250)}
-        style={styles.contentWrap}
+      <Animated.ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.contentWrap}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>{children}</View>
 
@@ -67,7 +68,7 @@ export function StepScaffold({
             {error}
           </Animated.Text>
         ) : null}
-      </Animated.View>
+      </Animated.ScrollView>
 
       {/* Continue button with green glow */}
       <Animated.View entering={FadeInUp.duration(400).delay(400)} style={styles.buttonWrap}>
@@ -99,35 +100,6 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 8,
   },
-  accentRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
-  glowDot: {
-    backgroundColor: PRIMARY,
-    borderRadius: 5,
-    height: 10,
-    width: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: PRIMARY,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.9,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  accentLine: {
-    backgroundColor: `${PRIMARY}40`,
-    borderRadius: 1,
-    height: 2,
-    width: 40,
-  },
   title: {
     fontSize: 30,
     fontWeight: '800',
@@ -140,8 +112,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   contentWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
+    paddingVertical: 8,
   },
   content: {
     gap: 10,

@@ -1,6 +1,7 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { Lock, Sparkles } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Share, StyleSheet, Text, View } from 'react-native';
+import { Share, StyleSheet, Text, View } from 'react-native';
 
 import { reportFileName, sharePdf } from '@/src/features/workouts/report/exportFile';
 import { aiReportHtml } from '@/src/features/workouts/report/formats';
@@ -41,7 +42,7 @@ export function AiReportCard({ userId, firstName }: { userId?: string; firstName
 
   let body: React.ReactNode;
   if (loading && !status) {
-    body = <ActivityIndicator color={c.primary} />;
+    body = <BrandLoader color={c.primary} />;
   } else if (status && !status.unlocked) {
     const pct = Math.min(1, status.training_days / status.required_days);
     const left = status.required_days - status.training_days;
@@ -54,7 +55,7 @@ export function AiReportCard({ userId, firstName }: { userId?: string; firstName
     );
   } else if (status?.generating) {
     body = (
-      <View style={styles.row}><ActivityIndicator color={c.primary} /><Text style={[styles.body, styles.grow, { color: c.text }]}>Your coach is writing your report. This takes about a minute.</Text></View>
+      <View style={styles.row}><BrandLoader color={c.primary} /><Text style={[styles.body, styles.grow, { color: c.text }]}>Your coach is writing your report. This takes about a minute.</Text></View>
     );
   } else if (report?.content) {
     body = (

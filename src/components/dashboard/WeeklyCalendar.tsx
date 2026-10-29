@@ -1,3 +1,4 @@
+import { type } from '@/src/styles/tokens';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { addDays, format, isSameDay, startOfWeek } from 'date-fns';
 import React, { useMemo } from 'react';
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     width: 4,
   },
   dayText: {
-    fontSize: 10,
+    fontSize: type.size.micro,
     fontWeight: '600',
     letterSpacing: 0.5,
     marginBottom: 4,

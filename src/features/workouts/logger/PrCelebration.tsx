@@ -1,6 +1,7 @@
 import { Trophy } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -10,19 +11,25 @@ const PIECES = 18;
 /** "New best!" card with a short confetti burst. Tap anywhere (or wait) to close. */
 export function PrCelebration({ title, detail, onClose }: { title: string; detail: string; onClose: () => void }) {
   const c = useThemeColors();
+  const reduceMotion = useReducedMotion();
   const pop = useRef(new Animated.Value(0)).current;
   const burst = useRef(new Animated.Value(0)).current;
   const palette = [c.gold.to, c.primary, c.parts.cardio.fg, c.parts.back.fg, c.parts.legs.fg];
 
   useEffect(() => {
     AccessibilityInfo.announceForAccessibility?.(`New best! ${title}, ${detail}`);
-    Animated.parallel([
+    if (reduceMotion) {
+      pop.setValue(1);
+      burst.setValue(1);
+    }
+    const animation = Animated.parallel([
       Animated.spring(pop, { toValue: 1, friction: 5, useNativeDriver: true }),
       Animated.timing(burst, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-    ]).start();
+    ]);
+    if (!reduceMotion) animation.start();
     const id = setTimeout(onClose, 3200);
-    return () => clearTimeout(id);
-  }, []);
+    return () => { clearTimeout(id); animation.stop(); };
+  }, [reduceMotion]);
 
   return (
     <Pressable testID="pr-celebration" onPress={onClose} style={styles.overlay} accessibilityRole="button" accessibilityLabel="Close">

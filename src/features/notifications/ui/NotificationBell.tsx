@@ -31,5 +31,5 @@ const styles = StyleSheet.create({
   button: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.8 },
   badge: { position: 'absolute', top: -2, right: -2, minWidth: 20, height: 20, borderRadius: 10, borderWidth: 2, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontFamily: type.weight.extrabold, fontSize: 10 },
+  badgeText: { fontFamily: type.weight.extrabold, fontSize: type.size.micro },
 });

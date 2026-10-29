@@ -1,6 +1,7 @@
+import { ContourArt } from '@/src/components/art/ContourArt';
 import { Check, ChevronRight, Info } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Input } from '@/src/components/ui/Input';
 import { type } from '@/src/styles/tokens';
@@ -82,7 +83,7 @@ export function DietWizard({ onComplete, isLoading, offline, onStepChange, initi
           <Text style={styles.title} accessibilityRole="header">{TITLES[currentStep]}</Text>
           <Text style={styles.subtitle}>{DESCRIPTIONS[currentStep]}</Text>
         </View>
-        {currentStep === 0 && fontScale < 1.3 ? <Image source={require('../../../assets/images/nutrition/fuel-bowl.png')} style={{ width: 88, height: 88 }} accessible={false} /> : null}
+        {currentStep === 0 && fontScale < 1.3 ? <ContourArt subject="nutrition" width={100} height={80} /> : null}
       </View>
 
       {/* Form Content */}

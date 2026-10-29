@@ -61,6 +61,6 @@ const styles = StyleSheet.create({
   tile: { width: 34, height: 34, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1, minWidth: 0, gap: 4 },
   title: { fontFamily: type.weight.semibold, fontSize: 13, lineHeight: 19 },
-  when: { fontFamily: type.weight.regular, fontSize: 10, lineHeight: 16 },
+  when: { fontFamily: type.weight.regular, fontSize: type.size.micro, lineHeight: 16 },
   stats: { fontFamily: type.weight.medium, fontSize: 11, lineHeight: 18 },
 });

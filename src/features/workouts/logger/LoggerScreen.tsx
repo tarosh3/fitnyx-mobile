@@ -1,8 +1,9 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { useWorkoutDetails, updateWorkoutDetails, loadWorkoutDetails } from '@/src/lib/workoutActivityDetails';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Plus, Timer } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -244,7 +245,7 @@ export function LoggerScreen() {
   const rb = removeBi != null ? blocks[removeBi] : null;
 
   if (lg.loading && !blocks.length) {
-    return <View style={[styles.center, { backgroundColor: c.background }]}><ActivityIndicator color={c.primary} size="large" /></View>;
+    return <View style={[styles.center, { backgroundColor: c.background }]}><BrandLoader color={c.primary} size="large" /></View>;
   }
   if (lg.error && !lg.session) {
     return (

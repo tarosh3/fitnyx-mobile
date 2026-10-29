@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePrograms } from '@/src/features/workouts/hooks';
@@ -51,10 +52,7 @@ export function ProgramsScreen() {
           </View>
 
           {programs.loading ? (
-            <View style={styles.loading} accessibilityRole="progressbar" accessibilityLabel="Loading programs">
-              <ActivityIndicator color={c.primary} />
-              <Text style={[styles.statusText, { color: c.mutedText }]}>Loading programs…</Text>
-            </View>
+            <ContentSkeleton variant="list" label="Loading programs" />
           ) : null}
 
           {!programs.loading && !list.length ? (
@@ -100,7 +98,7 @@ export function ProgramsScreen() {
 const styles = StyleSheet.create({
   content: { width: '100%', maxWidth: 680, alignSelf: 'center', paddingHorizontal: spacing.lg, gap: spacing['2xl'] },
   intro: { paddingTop: spacing.xl, gap: spacing.md },
-  eyebrow: { fontFamily: type.weight.bold, fontSize: 10, lineHeight: 16, letterSpacing: 1.8 },
+  eyebrow: { fontFamily: type.weight.bold, fontSize: type.size.micro, lineHeight: 16, letterSpacing: 1.8 },
   heading: { fontFamily: type.weight.extrabold, fontSize: 38, lineHeight: 43, letterSpacing: -1.2 },
   description: { fontFamily: type.weight.regular, fontSize: 15, lineHeight: 23, maxWidth: 440 },
   loading: { minHeight: 120, alignItems: 'center', justifyContent: 'center', gap: spacing.md },

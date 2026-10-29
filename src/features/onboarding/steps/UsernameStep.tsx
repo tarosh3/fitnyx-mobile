@@ -1,5 +1,6 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AtSign, Check, X } from 'lucide-react-native';
 
 import { Input } from '@/src/components/ui/Input';
@@ -145,7 +146,7 @@ export function UsernameStep({ data, onNext, saving }: OnboardingStepProps) {
   const canContinue = status === 'available' && isLocked && !saving;
 
   const indicator = (() => {
-    if (status === 'checking') return <ActivityIndicator size="small" color={palette.mutedText} />;
+    if (status === 'checking') return <BrandLoader size="small" color={palette.mutedText} />;
     if (status === 'available') return <Check size={18} color={palette.success} />;
     if (status === 'taken' || status === 'invalid') return <X size={18} color={palette.destructive} />;
     return null;
@@ -160,7 +161,7 @@ export function UsernameStep({ data, onNext, saving }: OnboardingStepProps) {
         disabled
       >
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={palette.primary} />
+          <BrandLoader size="large" color={palette.primary} />
           <Text style={[styles.loadingText, { color: palette.mutedText }]}>Finding the perfect username for you…</Text>
         </View>
       </StepScaffold>

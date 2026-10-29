@@ -1,8 +1,9 @@
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronDown, ChevronUp, Play } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { usePrograms } from '@/src/features/workouts/hooks';
 import { describeTarget, plural, trackingOf } from '@/src/features/workouts/model';
@@ -49,7 +50,7 @@ export function ProgramDetailScreen() {
   }, [id, !!programs.data]);
 
   if (!program) {
-    return <View style={[styles.flex, { backgroundColor: c.background }]}><TopBar title="Program" /><ActivityIndicator style={styles.spinner} color={c.primary} /></View>;
+    return <View style={[styles.flex, { backgroundColor: c.background }]}><TopBar title="Program" /><BrandLoader style={styles.spinner} color={c.primary} /></View>;
   }
 
   const days = [...(program.days ?? [])].sort((a, b) => a.day_index - b.day_index);

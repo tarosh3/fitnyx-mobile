@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   frequencyLabel: { fontFamily: type.weight.medium, fontSize: 12, lineHeight: 17 },
   body: { padding: spacing.lg, gap: spacing.sm },
   active: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.xs },
-  activeLabel: { flexShrink: 1, fontFamily: type.weight.bold, fontSize: 10, lineHeight: 15, letterSpacing: 1.2 },
+  activeLabel: { flexShrink: 1, fontFamily: type.weight.bold, fontSize: type.size.micro, lineHeight: 15, letterSpacing: 1.2 },
   title: { fontFamily: type.weight.bold, fontSize: 22, lineHeight: 28, letterSpacing: -0.45 },
   desc: { fontFamily: type.weight.regular, fontSize: 14, lineHeight: 21 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.base, paddingTop: spacing.sm },

@@ -1,8 +1,8 @@
+import { IllustratedEmpty } from '@/src/components/art/Illustration';
 import { MoreHorizontal } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text } from 'react-native';
 
-import { Empty } from '@/src/features/progress/ui/bits';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { FriendUser } from '@/src/lib/api/friends';
 import { spacing, type } from '@/src/styles/tokens';
@@ -37,9 +37,7 @@ export function FriendsTab({ friends, loading, onMenu, onFind, onBlocked, onRefr
         </FriendRow>
       )}
       ListEmptyComponent={loading ? null : (
-        <Pressable onPress={onFind} accessibilityRole="button">
-          <Empty text="No friends yet. Find people by their username." />
-        </Pressable>
+        <IllustratedEmpty art="community" title="Better together" detail="No friends yet. Find people by their username." action="Find friends" onAction={onFind} />
       )}
       ListFooterComponent={(
         <Pressable onPress={onBlocked} accessibilityRole="button" style={styles.blocked}>

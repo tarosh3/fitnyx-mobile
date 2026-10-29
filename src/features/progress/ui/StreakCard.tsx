@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   monthRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: spacing.xs },
   month: { fontFamily: type.weight.bold, fontSize: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 6 },
-  weekday: { width: `${100 / 7}%`, textAlign: 'center', fontFamily: type.weight.bold, fontSize: 10 },
+  weekday: { width: `${100 / 7}%`, textAlign: 'center', fontFamily: type.weight.bold, fontSize: type.size.micro },
   cellWrap: { width: `${100 / 7}%`, paddingHorizontal: 3 },
   cell: { aspectRatio: 1, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
   cellText: { fontFamily: type.weight.semibold, fontSize: 11 },

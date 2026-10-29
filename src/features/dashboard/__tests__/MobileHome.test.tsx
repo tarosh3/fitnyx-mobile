@@ -61,6 +61,8 @@ jest.mock('expo-linear-gradient', () => ({
     require('react').createElement(require('react-native').View, props, children),
 }));
 // Plan data has its own fetch + cache; Home's tests cover Home.
+jest.mock('@/src/providers/WorkoutProvider', () => ({ useWorkout: () => ({ setActiveSession: jest.fn() }) }));
+jest.mock('@/src/features/workouts/start', () => ({ startWorkout: jest.fn(() => Promise.resolve()) }));
 jest.mock('../components/PlanTodayCard', () => ({ PlanTodayCard: () => null }));
 jest.mock('@/src/features/goals/ui/TodayGoalsCard', () => ({ TodayGoalsCard: () => null }));
 jest.mock('@/src/features/arena/ui/ArenaHomeCard', () => ({ ArenaHomeCard: () => null }));
@@ -129,8 +131,8 @@ describe('MobileHome actions and data states', () => {
   it('offers plan discovery and activity stats to a user with no workouts', () => {
     const screen = render(<MobileHome user={user} />);
 
-    expect(screen.getByText('See your plan')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('home-workout-card'));
+    expect(screen.getByText('Start workout')).toBeTruthy();
+    fireEvent.press(screen.getByText('See your starter plan'));
     expect(mockPush).toHaveBeenLastCalledWith('/plan');
     fireEvent.press(screen.getByTestId('home-view-stats'));
     expect(mockPush).toHaveBeenLastCalledWith('/dashboard');
@@ -161,11 +163,11 @@ describe('MobileHome actions and data states', () => {
     expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
-  it('prioritizes Roam and nutrition ahead of planned workouts and detailed stats', () => {
+  it('puts the workout action before shortcuts and detailed stats', () => {
     const screen = render(<MobileHome user={user} />);
     const actions = screen.getAllByRole('button').map((button) => button.props.testID);
-    expect(actions.indexOf('home-roam')).toBeLessThan(actions.indexOf('home-workout-card'));
-    expect(actions.indexOf('home-nutrition')).toBeLessThan(actions.indexOf('home-workout-card'));
+    expect(actions.indexOf('home-workout-card')).toBeLessThan(actions.indexOf('home-roam'));
+    expect(actions.indexOf('home-workout-card')).toBeLessThan(actions.indexOf('home-nutrition'));
     expect(actions.indexOf('home-workout-card')).toBeLessThan(actions.indexOf('home-view-stats'));
   });
 
@@ -215,13 +217,3 @@ describe('MobileHome actions and data states', () => {
     expect(mockGetDailyInsight).not.toHaveBeenCalled();
   });
 });
-
-// Navigation/data tests don't require the native worklet runtime.
-jest.mock('react-native-reanimated', () => ({
-  __esModule: true,
-  default: { createAnimatedComponent: (component: unknown) => component },
-  ReduceMotion: { System: 'system' },
-  useSharedValue: (value: number) => ({ value }),
-  useAnimatedStyle: (style: () => unknown) => style(),
-  withTiming: (value: number) => value,
-}));

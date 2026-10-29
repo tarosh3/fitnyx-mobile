@@ -1,3 +1,4 @@
+import { type } from '@/src/styles/tokens';
 import { Dumbbell, Flame, TrendingUp } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -67,7 +68,7 @@ const getStyles = (palette: any) => StyleSheet.create({
         marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 10,
+        fontSize: type.size.micro,
         fontWeight: '900',
         color: palette.mutedText,
         letterSpacing: 2,
@@ -99,7 +100,7 @@ const getStyles = (palette: any) => StyleSheet.create({
         flex: 1,
     },
     statLabel: {
-        fontSize: 9,
+        fontSize: type.size.micro,
         fontWeight: '900',
         color: palette.mutedText,
         letterSpacing: 0.5,
@@ -112,7 +113,7 @@ const getStyles = (palette: any) => StyleSheet.create({
         fontStyle: 'italic',
     },
     statUnit: {
-        fontSize: 10,
+        fontSize: type.size.micro,
         fontWeight: '700',
         fontStyle: 'normal',
         color: palette.mutedText,
