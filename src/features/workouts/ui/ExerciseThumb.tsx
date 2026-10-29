@@ -1,8 +1,7 @@
-import { Timer } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
-import { partOf, trackingOf } from '@/src/features/workouts/model';
+import { movementOf, partOf, type MovementPattern } from '@/src/features/workouts/model';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { Exercise } from '@/src/types/exercise';
 
@@ -16,12 +15,28 @@ const exerciseThumbs: Record<string, number> = {
   cardio: require('../../../../assets/images/exercise-thumbs/thumb-cardio.png'),
 };
 
+const movementThumbs: Record<MovementPattern, number> = {
+  'horizontal-press': require('../../../../assets/images/exercise-thumbs/movement-horizontal-press.png'),
+  'vertical-press': require('../../../../assets/images/exercise-thumbs/movement-vertical-press.png'),
+  'horizontal-pull': require('../../../../assets/images/exercise-thumbs/movement-horizontal-pull.png'),
+  'vertical-pull': require('../../../../assets/images/exercise-thumbs/movement-vertical-pull.png'),
+  squat: require('../../../../assets/images/exercise-thumbs/movement-squat.png'),
+  hinge: require('../../../../assets/images/exercise-thumbs/movement-hinge.png'),
+  lunge: require('../../../../assets/images/exercise-thumbs/movement-lunge.png'),
+  'core-anti-extension': require('../../../../assets/images/exercise-thumbs/movement-core-anti-extension.png'),
+  'core-rotation': require('../../../../assets/images/exercise-thumbs/movement-core-rotation.png'),
+  carry: require('../../../../assets/images/exercise-thumbs/movement-carry.png'),
+  curl: require('../../../../assets/images/exercise-thumbs/movement-curl.png'),
+  'triceps-extension': require('../../../../assets/images/exercise-thumbs/movement-triceps-extension.png'),
+  calf: require('../../../../assets/images/exercise-thumbs/movement-calf.png'),
+  cardio: require('../../../../assets/images/exercise-thumbs/movement-cardio.png'),
+};
+
 interface Props {
-  exercise?: Pick<Exercise, 'primary_muscles' | 'tracking_type' | 'variations' | 'alternatives' | 'media_url' | 'video_url'> | null;
+  exercise?: (Pick<Exercise, 'primary_muscles' | 'tracking_type' | 'variations' | 'alternatives' | 'media_url' | 'video_url'> & Partial<Pick<Exercise, 'title' | 'category'>>) | null;
   size?: number;
 }
 
-const VIDEO_EXT = /\.(?:mp4|m4v|mov|webm|avi|mkv|m3u8|mpd)$/i;
 const CLOUDINARY_VIDEO = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(.+)\.(?:mp4|m4v|mov|webm)$/i;
 
 /**
@@ -34,18 +49,9 @@ export function videoPoster(url: string | null | undefined, px = 160): string | 
   return m ? `${m[1]}so_50p,w_${px},h_${px},c_fill,q_auto,f_jpg/${m[2]}.jpg` : null;
 }
 
-/** Only this exercise's video poster or photo; anatomy diagrams and related moves are never thumbnails. */
+/** Only actual video posters; catalog stills can be clinical mannequin renders. */
 export function exerciseImage(ex?: Props['exercise'], px = 160): string | null {
-  const poster = videoPoster(ex?.video_url, px) ?? videoPoster(ex?.media_url, px);
-  if (poster) return poster;
-  const candidates = [ex?.media_url];
-  for (const candidate of candidates) {
-    const source = candidate?.trim();
-    if (!source) continue;
-    const path = source.split(/[?#]/, 1)[0];
-    if (!VIDEO_EXT.test(path)) return source;
-  }
-  return null;
+  return videoPoster(ex?.video_url, px) ?? videoPoster(ex?.media_url, px);
 }
 
 /** Keyed by source so one failed URL cannot suppress a subsequent exercise's image. */
@@ -56,17 +62,15 @@ function ThumbnailImage({ source, size, fallback }: { source: string; size: numb
   );
 }
 
-/** Square tile in the exercise's body-part colour, with a frame of its video (or its picture) when there is one. */
+/** Video poster → movement illustration → generic body-part illustration. */
 export function ExerciseThumb({ exercise, size = 56 }: Props) {
   const c = useThemeColors();
   const part = partOf(exercise);
   const tone = c.parts[part];
   const img = exerciseImage(exercise, size <= 64 ? 160 : 480);
-  const t = trackingOf(exercise);
+  const movement = movementOf(exercise);
   const radius = Math.round(size / 4);
-  const fallback = t === 'duration'
-    ? <Timer size={Math.round(size * 0.46)} color={tone.fg} strokeWidth={1.7} accessible={false} />
-    : <Image source={exerciseThumbs[part] ?? exerciseThumbs.core} resizeMode="contain"
+  const fallback = <Image source={movement ? movementThumbs[movement] : exerciseThumbs[part] ?? exerciseThumbs.core} resizeMode="contain"
         style={{ width: Math.round(size * 0.82), height: Math.round(size * 0.82) }} accessible={false} />;
 
   return (

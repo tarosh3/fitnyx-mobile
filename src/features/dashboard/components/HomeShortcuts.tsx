@@ -35,7 +35,7 @@ export function HomeShortcuts({ children }: { children?: React.ReactNode }) {
   return (
     <View testID="home-essentials" style={styles.group}>
       <HomePressable testID="home-roam" accessibilityRole="button" accessibilityLabel="Open Roam: walk, run or cycle"
-        onPress={() => router.push('/roam')} style={[styles.feature, styles.roamFeature, { backgroundColor: c.accentSoft }]}>
+        onPress={() => router.push('/roam')} style={[styles.feature, { backgroundColor: c.card }]}>
         <View style={styles.featureCopy}>
           <Text style={[styles.eyebrow, { color: c.accent }]}>ROAM</Text>
           <Text style={[styles.featureTitle, compact && styles.compactTitle, { color: c.text }]}>Find your{ '\n' }own pace.</Text>
@@ -47,7 +47,7 @@ export function HomeShortcuts({ children }: { children?: React.ReactNode }) {
 
       <View style={styles.nutritionSection}>
         <HomePressable testID="home-nutrition" accessibilityRole="button" accessibilityLabel="Open Nutrition: plan and log your meals"
-          onPress={() => router.push('/diet')} style={[styles.feature, styles.nutritionFeature]}>
+          onPress={() => router.push('/diet')} style={[styles.feature, { backgroundColor: c.card }]}>
           <View pointerEvents="none" style={[styles.foodArtwork, compact && styles.compactFoodArtwork, largeText && styles.smallArtwork]}><ContourArt subject="nutrition" width="100%" height={largeText ? 100 : 148} /></View>
           <View style={[styles.featureCopy, styles.nutritionCopy]}>
             <Text style={[styles.eyebrow, { color: c.accent }]}>NUTRITION</Text>
@@ -72,11 +72,9 @@ export function HomeShortcuts({ children }: { children?: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   group: { gap: spacing.lg },
-  feature: { flexDirection: 'row', alignItems: 'center' },
-  roamFeature: { borderRadius: radii['2xl'], overflow: 'hidden', minHeight: 184 },
+  feature: { flexDirection: 'row', alignItems: 'center', borderRadius: radii['2xl'], overflow: 'hidden', minHeight: 184, paddingHorizontal: spacing.lg, paddingVertical: spacing.base },
   nutritionSection: { paddingTop: spacing.sm },
-  nutritionFeature: { minHeight: 148 },
-  featureCopy: { flex: 1, paddingVertical: spacing.base, paddingLeft: spacing.lg, gap: 5 },
+  featureCopy: { flex: 1, gap: 5 },
   eyebrow: { fontFamily: type.weight.semibold, fontSize: type.size.micro, lineHeight: 15, letterSpacing: 1.5 },
   featureTitle: { fontFamily: type.weight.bold, fontSize: 25, lineHeight: 28, letterSpacing: -0.8 },
   compactTitle: { fontSize: 22, lineHeight: 26 },
@@ -84,8 +82,8 @@ const styles = StyleSheet.create({
   action: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   actionText: { flexShrink: 1, fontFamily: type.weight.semibold, fontSize: 12, lineHeight: 18 },
   artwork: { width: '41%', height: 144 },
-  nutritionCopy: { paddingLeft: spacing.md, paddingRight: spacing.xs },
-  foodArtwork: { width: '43%', height: 158, marginLeft: -spacing.sm },
+  nutritionCopy: { paddingLeft: spacing.md },
+  foodArtwork: { width: '36%', height: 158 },
   compactFoodArtwork: { width: '35%', height: 136 },
   smallArtwork: { width: '26%', height: 100 },
   water: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xs, minHeight: 52, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth },

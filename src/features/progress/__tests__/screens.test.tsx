@@ -117,11 +117,14 @@ describe('Progress tab', () => {
   it('reuses the range data for the calendar month instead of fetching it again', async () => {
     const screen = renderWithQuery(<ProgressScreen />);
     await screen.findByLabelText(/1 hours 30 minutes/);
-    (fetchProgressDaily as jest.Mock).mockClear();
+    // On the 30th, the calendar has already fetched this exact range.
     fireEvent.press(screen.getByTestId('range-30d'));
     await waitFor(() => expect(fetchProgressDaily).toHaveBeenCalledWith(addDays(today, -59), today));
-    // 60 days back always reaches the 1st of this month: one request, not two.
-    expect(fetchProgressDaily).toHaveBeenCalledTimes(1);
+    // Count the initial calendar fetch too; switching must not duplicate it.
+    const rangeCalls = (fetchProgressDaily as jest.Mock).mock.calls.filter(
+      ([from, to]) => from === addDays(today, -59) && to === today,
+    );
+    expect(rangeCalls).toHaveLength(1);
   });
 
   it('loads strength only when its view opens', async () => {

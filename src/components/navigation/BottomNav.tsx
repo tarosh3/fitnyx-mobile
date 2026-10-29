@@ -6,13 +6,14 @@ import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring, w
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import { FiloGlyph } from '@/src/components/art/FiloGlyph';
 import { haptic } from '@/src/lib/haptics';
 import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { motion, type } from '@/src/styles/tokens';
 import { NavIcon, type NavIconName } from './NavIcon';
-import { BOTTOM_NAV_HEIGHT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
+import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_LIFT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
 
 const destinations = [
   { key: 'home', label: 'Home', href: '/', match: (p: string) => p === '/' || p === '/roam' || p.startsWith('/roam/') || p === '/arena' || p === '/notifications' },
@@ -108,11 +109,14 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
               { backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.62)' : 'rgba(22,22,22,0.66)' }]} />
           </>
         )}
-        <View pointerEvents="box-none" style={styles.row}>
-          {destinations.slice(0, 2).map(tab)}
-          <CoachAction onPress={() => { haptic.light(); openCenteredChat(); }} />
-          {destinations.slice(2).map(tab)}
-        </View>
+      </View>
+      {/* Keep the raised button inside the row's hit area, above the glass. */}
+      <View pointerEvents="box-none" style={[styles.row, {
+        bottom: gap, left: dockLeft + DOCK_PADDING, width: dockWidth - DOCK_PADDING * 2,
+      }]}>
+        {destinations.slice(0, 2).map(tab)}
+        <CoachAction onPress={() => { haptic.light(); openCenteredChat(); }} />
+        {destinations.slice(2).map(tab)}
       </View>
     </View>
   );
@@ -158,10 +162,10 @@ function CoachAction({ onPress }: { onPress: () => void }) {
       accessibilityHint="Opens your fitness coach conversation" onPress={onPress}
       onPressIn={() => { press.value = withTiming(0.94, { duration: motion.duration.fast, reduceMotion: ReduceMotion.System }); }}
       onPressOut={() => { press.value = withSpring(1, SPRING); }}
-      style={styles.tab}>
-      <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.tabContent, pressStyle]}>
-        <View style={styles.iconStage}>
-          <NavIcon name="coach" color={c.nav.coachInk} fill={c.nav.coachFill} size={24} />
+      style={[styles.tab, styles.coachTab]}>
+      <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.coachContent, pressStyle]}>
+        <View style={[styles.coachFab, { backgroundColor: c.primary, shadowColor: c.nav.shadow }]}>
+          <FiloGlyph size={30} color={c.primaryText} ink={c.primary} />
         </View>
         <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.2}
           style={[styles.label, { color: c.nav.coachInk, fontFamily: type.weight.medium }]}>Coach</Text>
@@ -174,8 +178,11 @@ const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 50 },
   dock: { position: 'absolute', borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   glass: { borderRadius: 20, overflow: 'hidden' },
-  row: { position: 'absolute', left: DOCK_PADDING, right: DOCK_PADDING, bottom: 0, top: 0, flexDirection: 'row' },
+  row: { position: 'absolute', height: BOTTOM_NAV_HEIGHT + BOTTOM_NAV_LIFT, flexDirection: 'row', alignItems: 'flex-end' },
   tab: { flex: 1, height: BOTTOM_NAV_HEIGHT, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+  coachTab: { height: BOTTOM_NAV_HEIGHT + BOTTOM_NAV_LIFT },
+  coachContent: { width: '100%', height: BOTTOM_NAV_HEIGHT + BOTTOM_NAV_LIFT, alignItems: 'center', gap: 2 },
+  coachFab: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 5 },
   tabContent: { width: '100%', height: BOTTOM_NAV_HEIGHT, alignItems: 'center', paddingTop: 6, gap: 2 },
   iconStage: { width: 44, height: 30, alignItems: 'center', justifyContent: 'center' },
   iconLayer: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },

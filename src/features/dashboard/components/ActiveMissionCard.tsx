@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, Dumbbell, Play } from 'lucide-react-native';
+import { ArrowUpRight, ChevronRight, Dumbbell, Play } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -111,7 +111,10 @@ export function ActiveMissionCard({
       </HomePressable>
       {error && <Text accessibilityRole="alert" style={[styles.subtitle, { color: c.destructive, marginTop: spacing.sm }]}>Couldn’t start your workout. Tap Start workout to try again.</Text>}
       {!hasSession && <Pressable accessibilityRole="button" onPress={() => router.push(activePlan?.id ? `/workouts/programs/${activePlan.id}` : '/plan')}
-        style={styles.planLink}><Text style={[styles.actionText, { color: c.mutedText }]}>{hasPlan ? 'Review your plan' : 'See your starter plan'}</Text></Pressable>}
+        style={({ pressed }) => [styles.planLink, { backgroundColor: c.card, opacity: pressed ? 0.75 : 1 }]}>
+        <Text style={[styles.actionText, { color: c.accent }]}>{hasPlan ? 'Review your plan' : 'See your starter plan'}</Text>
+        <ChevronRight size={18} color={c.accent} />
+      </Pressable>}
     </View>
   );
 }
@@ -127,5 +130,5 @@ const styles = StyleSheet.create({
   metadata: { fontFamily: type.weight.medium, fontSize: type.size.xs, lineHeight: 18 },
   action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   actionText: { fontFamily: type.weight.semibold, fontSize: 13, lineHeight: 20, flexShrink: 1 },
-  planLink: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center', paddingHorizontal: spacing.xs },
+  planLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingHorizontal: spacing.base, marginTop: spacing.sm, borderRadius: radii.md },
 });

@@ -1,6 +1,8 @@
 # FitNyx exercise thumbnails
 
-Generated with the built-in image_gen tool. Seven transparent PNGs; originals/ contains 1024×1024 deliverables. The top-level PNGs are 512×512 runtime copies, compressed with the requested sips and pngquant commands. The existing tile theme colors, border, real-image priority, and duration Timer fallback are unchanged.
+The fourteen mint movement icons and their generation prompts are documented in [PROMPTS.md](PROMPTS.md). Exercise tiles use video poster → movement icon → generic body-part icon priority, including timed exercises. Catalog mannequin stills are skipped.
+
+The seven generic body-part PNGs below remain as fallbacks. Generated with the built-in image_gen tool; originals/ contains 1024×1024 deliverables. The top-level PNGs are 512×512 runtime copies, compressed with sips and pngquant. Tile colors and borders come from the theme.
 
 ## Files
 
