@@ -1,4 +1,4 @@
-import type { HealthBackend, HealthWorkout, HealthWorkoutKind } from './types';
+import type { HealthBackend, HealthWorkout, HealthWorkoutKind, ReadinessDay } from './types';
 
 // Android Health Connect backend. The native SDK is lazy-`require`d so the web
 // bundle and jest never pull it in (see backend.ts for the default no-op).
@@ -15,6 +15,7 @@ interface HealthConnect {
   getGrantedPermissions(): Promise<Perm[]>;
   insertRecords(records: unknown[]): Promise<string[]>;
   aggregateRecord(request: { recordType: string; timeRangeFilter: TimeRange }): Promise<Record<string, unknown>>;
+  readRecords(recordType: string, options: { timeRangeFilter: TimeRange }): Promise<{ records: Record<string, unknown>[] }>;
 }
 
 // Health Connect ExerciseType constants (stable).
@@ -27,10 +28,54 @@ const EXERCISE_TYPE: Record<HealthWorkoutKind, number> = {
 };
 
 const WRITE_RECORDS = ['ExerciseSession', 'Distance', 'TotalCaloriesBurned', 'Steps', 'Weight'];
-const READ_RECORDS = ['Steps', 'ActiveCaloriesBurned', 'HeartRate'];
+const READ_RECORDS = ['Steps', 'ActiveCaloriesBurned', 'HeartRate', 'HeartRateVariabilityRmssd', 'RestingHeartRate', 'SleepSession'];
 
 function rangeBetween(from: Date, to: Date): TimeRange {
   return { operator: 'between', startTime: from.toISOString(), endTime: to.toISOString() };
+}
+
+function dayStartAgo(daysAgo: number): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - daysAgo);
+  return d;
+}
+
+function dateKey(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+async function avgRecords(recordType: string, field: string, from: Date, to: Date): Promise<number | null> {
+  try {
+    const { records } = await hc().readRecords(recordType, { timeRangeFilter: rangeBetween(from, to) });
+    const vals = (records ?? []).map((r) => r[field]).filter((v): v is number => typeof v === 'number');
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  } catch {
+    return null;
+  }
+}
+
+// Sleep for the night ending on `morning`: previous 18:00 → morning 11:00.
+async function sleepHoursForNight(morning: Date): Promise<number | null> {
+  const from = new Date(morning);
+  from.setDate(from.getDate() - 1);
+  from.setHours(18, 0, 0, 0);
+  const to = new Date(morning);
+  to.setHours(11, 0, 0, 0);
+  try {
+    const { records } = await hc().readRecords('SleepSession', { timeRangeFilter: rangeBetween(from, to) });
+    let ms = 0;
+    for (const r of records ?? []) {
+      const s = r.startTime as string | undefined;
+      const e = r.endTime as string | undefined;
+      if (s && e) ms += new Date(e).getTime() - new Date(s).getTime();
+    }
+    return ms > 0 ? Math.round((ms / 3_600_000) * 10) / 10 : null;
+  } catch {
+    return null;
+  }
 }
 const PERMS: Perm[] = [
   ...WRITE_RECORDS.map((recordType): Perm => ({ accessType: 'write', recordType })),
@@ -140,6 +185,31 @@ export const healthBackend: HealthBackend = {
       };
     } catch {
       return { avg: null, max: null };
+    }
+  },
+
+  async readReadinessSeries(days: number) {
+    if (!(await ready())) return [];
+    try {
+      const out: ReadinessDay[] = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const start = dayStartAgo(i);
+        const end = dayStartAgo(i - 1);
+        const [hrv, rhr, sleepHours] = await Promise.all([
+          avgRecords('HeartRateVariabilityRmssd', 'heartRateVariabilityMillis', start, end),
+          avgRecords('RestingHeartRate', 'beatsPerMinute', start, end),
+          sleepHoursForNight(start),
+        ]);
+        out.push({
+          date: dateKey(start),
+          hrvMs: hrv != null ? Math.round(hrv * 10) / 10 : null,
+          restingHr: rhr != null ? Math.round(rhr) : null,
+          sleepHours,
+        });
+      }
+      return out;
+    } catch {
+      return [];
     }
   },
 };
