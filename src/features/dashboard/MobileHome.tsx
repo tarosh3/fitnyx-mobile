@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArenaHomeCard } from '@/src/features/arena/ui/ArenaHomeCard';
 import { TodayGoalsCard } from '@/src/features/goals/ui/TodayGoalsCard';
+import { ReadinessCard } from '@/src/features/readiness/ui/ReadinessCard';
 import { NotificationBell } from '@/src/features/notifications/ui/NotificationBell';
 import { useActivityData } from '@/src/hooks/useActivityData';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
@@ -158,6 +159,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         <MilestoneNotice storageKey={`milestone:level:${user.id}`} scope="level" value={metrics.level}
           ready={!metrics.loading && !metrics.error} message={`Level ${metrics.level} reached. Keep it going!`} />
         <Entrance style={styles.resumeSection}>{workoutSection}</Entrance>
+        <Entrance delay={60}><ReadinessCard /></Entrance>
         <Entrance delay={70}><HomeShortcuts><PlanTodayCard /></HomeShortcuts></Entrance>
 
         <View testID="home-today-section">
