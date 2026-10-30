@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Mountain, Route, Timer } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,11 +14,24 @@ import { shortDate } from './range';
 import { badgesFor, effortName, formatClock, formatKg, isRecent } from './records';
 import { BigNumber, Empty, Eyebrow, Muted } from './ui/bits';
 import { MilestoneEmblem } from '@/src/components/art/MilestoneEmblem';
+import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
 
 type Tab = 'records' | 'badges';
 interface Row { key: string; name: string; value: string; unit?: string; sub: string; date: string; href?: string }
 
-function RecordList({ title, rows, today }: { title: string; rows: Row[]; today: string }) {
+/** Lift rows reuse the movement thumbnail; Roam rows get a matching icon tile. */
+function RecordThumb({ row, kind }: { row: Row; kind: 'lift' | 'roam' }) {
+  const c = useThemeColors();
+  if (kind === 'lift') return <ExerciseThumb exercise={{ title: row.name }} size={40} />;
+  const Icon = row.key.startsWith('e') ? Timer : row.key === 'climb' ? Mountain : Route;
+  return (
+    <View style={[styles.roamTile, { backgroundColor: c.accentSoft }]}>
+      <Icon size={20} color={c.accent} strokeWidth={2} accessible={false} />
+    </View>
+  );
+}
+
+function RecordList({ title, rows, today, kind }: { title: string; rows: Row[]; today: string; kind: 'lift' | 'roam' }) {
   const c = useThemeColors();
   const router = useRouter();
   if (!rows.length) return null;
@@ -28,13 +41,17 @@ function RecordList({ title, rows, today }: { title: string; rows: Row[]; today:
       <Card style={styles.list}>
         {rows.map((r, i) => (
           <Pressable key={r.key} disabled={!r.href} onPress={() => r.href && router.push(r.href as never)} accessibilityRole={r.href ? 'button' : undefined}
-            style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }]}>
+            style={({ pressed }) => [styles.row, pressed && r.href ? { backgroundColor: c.surface } : null]}>
+            <RecordThumb row={r} kind={kind} />
             <View style={styles.flex}>
               <Text style={[styles.rowTitle, { color: c.text }]} numberOfLines={1}>{r.name}</Text>
-              <Muted>{r.sub} · {shortDate(r.date)}</Muted>
+              <Muted style={styles.rowSub}>{r.sub} · {shortDate(r.date)}</Muted>
             </View>
-            {isRecent(r.date, today) ? <Text style={[styles.badge, { color: c.progress.record, backgroundColor: c.progress.recordSoft }]}>New</Text> : null}
-            <BigNumber value={r.value} unit={r.unit} size={20} />
+            <View style={styles.valueCol}>
+              {isRecent(r.date, today) ? <Text style={[styles.newTag, { color: c.progress.record, backgroundColor: c.progress.recordSoft }]}>NEW</Text> : null}
+              <BigNumber value={r.value} unit={r.unit} size={22} />
+            </View>
+            {i > 0 ? <View pointerEvents="none" style={[styles.separator, { backgroundColor: c.border }]} /> : null}
           </Pressable>
         ))}
       </Card>
@@ -80,8 +97,8 @@ export function TrophyCase() {
       {!data ? <Empty text={loading ? 'Loading…' : failed ? "Couldn't load your records" : ''} /> : tab === 'records' ? (
         lifts.length || roams.length ? (
           <>
-            <RecordList title="Strength · est. 1-rep max" rows={lifts} today={today} />
-            <RecordList title="Roam" rows={roams} today={today} />
+            <RecordList title="Strength · est. 1-rep max" rows={lifts} today={today} kind="lift" />
+            <RecordList title="Roam" rows={roams} today={today} kind="roam" />
           </>
         ) : <Empty text="Log weighted sets or run a Roam to set your first records" />
       ) : (
@@ -115,10 +132,16 @@ const styles = StyleSheet.create({
   group: { gap: spacing.sm },
   groupTitle: { marginLeft: 4 },
   list: { padding: 0, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.base, paddingVertical: spacing.md, minHeight: 60 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.base, paddingVertical: spacing.md, minHeight: 64 },
+  roamTile: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1, minWidth: 0, gap: 3 },
   rowTitle: { fontFamily: type.weight.semibold, fontSize: 15 },
-  badge: { fontFamily: type.weight.bold, fontSize: 11, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, overflow: 'hidden' },
+  rowSub: { fontSize: 12.5 },
+  // Fixed-width right column so every record number lines up, NEW floating above.
+  valueCol: { alignItems: 'flex-end', justifyContent: 'center', minWidth: 68, gap: 3 },
+  newTag: { fontFamily: type.weight.bold, fontSize: 9.5, letterSpacing: 0.6, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' },
+  // Inset past the thumbnail so the list reads as grouped rows, not a grid.
+  separator: { position: 'absolute', top: 0, left: spacing.base + 40 + spacing.md, right: 0, height: StyleSheet.hairlineWidth },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   badgeCard: { width: '31.6%', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
   badgeName: { fontFamily: type.weight.bold, fontSize: 12, textAlign: 'center' },

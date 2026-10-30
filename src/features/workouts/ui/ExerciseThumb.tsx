@@ -33,7 +33,7 @@ const movementThumbs: Record<MovementPattern, number> = {
 };
 
 interface Props {
-  exercise?: (Pick<Exercise, 'primary_muscles' | 'tracking_type' | 'variations' | 'alternatives' | 'media_url' | 'video_url'> & Partial<Pick<Exercise, 'title' | 'category'>>) | null;
+  exercise?: Partial<Pick<Exercise, 'primary_muscles' | 'tracking_type' | 'variations' | 'alternatives' | 'media_url' | 'video_url' | 'title' | 'category'>> | null;
   size?: number;
 }
 

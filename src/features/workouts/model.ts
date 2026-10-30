@@ -33,7 +33,7 @@ export function trackingOf(ex?: Pick<Exercise, 'tracking_type'> | null): Trackin
   return ex?.tracking_type ?? 'weight_reps';
 }
 
-export function partOf(ex?: Pick<Exercise, 'primary_muscles' | 'tracking_type'> | null): Part {
+export function partOf(ex?: Partial<Pick<Exercise, 'primary_muscles' | 'tracking_type'>> | null): Part {
   if (trackingOf(ex) === 'cardio') return 'cardio';
   for (const m of ex?.primary_muscles ?? []) {
     const p = partOfMuscle(m.name);
