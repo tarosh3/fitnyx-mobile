@@ -47,6 +47,14 @@ export async function fetchExerciseUsage(): Promise<ExerciseUsage[]> {
   return res?.data ?? [];
 }
 
+/** Exercises the user usually does alongside the given ones, most-paired first. */
+export async function fetchExerciseSuggestions(current: string[]): Promise<Exercise[]> {
+  if (!current.length) return [];
+  const q = new URLSearchParams({ current: current.join(',') });
+  const res = (await fetchWithAuth(`/exercises/suggestions?${q.toString()}`)) as { data?: Exercise[] };
+  return res?.data ?? [];
+}
+
 // --- Custom exercises (one user's own; backend caps active ones at MAX_CUSTOM_EXERCISES) ---
 
 export const MAX_CUSTOM_EXERCISES = 10;
