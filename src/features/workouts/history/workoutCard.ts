@@ -1,3 +1,4 @@
+import { workoutFocus } from '@/src/features/share/artwork';
 import { setLoad, workoutCardData, type ShareCardData } from '@/src/features/share/cardData';
 import type { ExerciseGroup } from '@/src/features/workouts/history/useSessionDetail';
 import { describeSet, type SessionTotals, workoutXp } from '@/src/features/workouts/model';
@@ -18,13 +19,27 @@ export function sessionCardData(name: string, { session, logs, groups, totals: t
   const rows = groups
     .map((g) => {
       const top = g.logs.reduce((a, b) => (best(b) > best(a) ? b : a), g.logs[0]);
-      return { name: g.exercise?.title ?? 'Exercise', detail: describeSet(typeOf(g.uuid), top), pr: g.logs.some((l) => l.is_pr), sets: g.logs.length };
+      return {
+        name: g.exercise?.title ?? 'Exercise',
+        detail: describeSet(typeOf(g.uuid), top),
+        pr: g.logs.some((l) => l.is_pr),
+        sets: g.logs.length,
+      };
     })
     .sort((a, b) => Number(b.pr) - Number(a.pr) || b.sets - a.sets)
     .map(({ name: n, detail, pr }) => ({ name: n, detail, pr }));
   const cardioOnly = t.volumeKg === 0 && t.cardioSec > 0;
   return workoutCardData({
     name,
+    focus: workoutFocus(
+      groups.map((group) => ({
+        title: group.exercise?.title ?? '',
+        muscles: group.exercise?.primary_muscles?.map((muscle) => muscle.name),
+        category: group.exercise?.category,
+        trackingType: typeOf(group.uuid),
+        sets: group.logs.length,
+      })),
+    ),
     startedAt: session.started_at,
     durationSec: session.total_duration_sec,
     volumeKg: t.volumeKg,

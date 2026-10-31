@@ -1,0 +1,419 @@
+{
+  "schemaVersion": 1,
+  "revision": 0,
+  "templates": [
+    {
+      "id": "field-notes",
+      "label": "Field notes",
+      "description": "Every effort has a story.",
+      "kinds": [
+        "workout",
+        "roam"
+      ],
+      "layouts": {
+        "story": {
+          "background": "#F7F3E8",
+          "blocks": [
+            {
+              "type": "text",
+              "x": 26,
+              "y": 48,
+              "width": 220,
+              "height": 16,
+              "binding": "kicker",
+              "size": 9,
+              "font": "sans",
+              "color": "#31714C"
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 80,
+              "width": 308,
+              "height": 52,
+              "binding": "title",
+              "size": 34
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 134,
+              "width": 308,
+              "height": 27,
+              "text": "showed up. put the work in.",
+              "size": 18,
+              "color": "#31714C"
+            },
+            {
+              "type": "artwork",
+              "x": 26,
+              "y": 164,
+              "width": 308,
+              "height": 168
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 336,
+              "width": 308,
+              "height": 16,
+              "binding": "hero.label",
+              "size": 9,
+              "font": "sans",
+              "color": "#31714C"
+            },
+            {
+              "type": "metric",
+              "x": 26,
+              "y": 352,
+              "width": 308,
+              "height": 98,
+              "size": 80
+            },
+            {
+              "type": "rule",
+              "x": 26,
+              "y": 458,
+              "width": 308,
+              "height": 8,
+              "color": "#31714C"
+            },
+            {
+              "type": "stats",
+              "x": 26,
+              "y": 470,
+              "width": 308,
+              "height": 60
+            },
+            {
+              "type": "brand",
+              "x": 26,
+              "y": 540,
+              "width": 132,
+              "height": 32
+            },
+            {
+              "type": "text",
+              "x": 211,
+              "y": 544,
+              "width": 123,
+              "height": 25,
+              "text": "track with fitnyx",
+              "size": 16,
+              "align": "right",
+              "color": "#31714C"
+            }
+          ]
+        },
+        "post": {
+          "background": "#F7F3E8",
+          "blocks": [
+            {
+              "type": "text",
+              "x": 26,
+              "y": 24,
+              "width": 220,
+              "height": 16,
+              "binding": "kicker",
+              "size": 9,
+              "font": "sans",
+              "color": "#31714C"
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 44,
+              "width": 308,
+              "height": 42,
+              "binding": "title",
+              "size": 28
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 86,
+              "width": 308,
+              "height": 27,
+              "text": "showed up. put the work in.",
+              "size": 18,
+              "color": "#31714C"
+            },
+            {
+              "type": "artwork",
+              "x": 26,
+              "y": 110,
+              "width": 308,
+              "height": 110
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 224,
+              "width": 308,
+              "height": 16,
+              "binding": "hero.label",
+              "size": 9,
+              "font": "sans",
+              "color": "#31714C"
+            },
+            {
+              "type": "metric",
+              "x": 26,
+              "y": 240,
+              "width": 308,
+              "height": 75,
+              "size": 62
+            },
+            {
+              "type": "rule",
+              "x": 26,
+              "y": 318,
+              "width": 308,
+              "height": 8,
+              "color": "#31714C"
+            },
+            {
+              "type": "stats",
+              "x": 26,
+              "y": 328,
+              "width": 308,
+              "height": 60
+            },
+            {
+              "type": "brand",
+              "x": 26,
+              "y": 396,
+              "width": 132,
+              "height": 32
+            },
+            {
+              "type": "text",
+              "x": 211,
+              "y": 400,
+              "width": 123,
+              "height": 25,
+              "text": "track with fitnyx",
+              "size": 16,
+              "align": "right",
+              "color": "#31714C"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "trail-journal",
+      "label": "Trail journal",
+      "description": "Your route, written in motion.",
+      "kinds": [
+        "roam"
+      ],
+      "layouts": {
+        "story": {
+          "background": "#EEF3E9",
+          "blocks": [
+            {
+              "type": "text",
+              "x": 26,
+              "y": 48,
+              "width": 220,
+              "height": 16,
+              "binding": "kicker",
+              "size": 9,
+              "font": "sans",
+              "color": "#31714C"
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 80,
+              "width": 308,
+              "height": 52,
+              "binding": "title",
+              "size": 34
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 134,
+              "width": 308,
+              "height": 27,
+              "text": "a little further. a little stronger.",
+              "size": 18,
+              "color": "#31714C"
+            },
+            {
+              "type": "route",
+              "x": 26,
+              "y": 164,
+              "width": 130,
+              "height": 168,
+              "color": "#31714C"
+            },
+            {
+              "type": "artwork",
+              "x": 160,
+              "y": 164,
+              "width": 174,
+              "height": 168
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 336,
+              "width": 308,
+              "height": 16,
+              "binding": "hero.label",
+              "size": 9,
+              "font": "sans",
+              "color": "#31714C"
+            },
+            {
+              "type": "metric",
+              "x": 26,
+              "y": 352,
+              "width": 308,
+              "height": 98,
+              "size": 80
+            },
+            {
+              "type": "rule",
+              "x": 26,
+              "y": 458,
+              "width": 308,
+              "height": 8,
+              "color": "#31714C"
+            },
+            {
+              "type": "stats",
+              "x": 26,
+              "y": 470,
+              "width": 308,
+              "height": 60
+            },
+            {
+              "type": "brand",
+              "x": 26,
+              "y": 540,
+              "width": 132,
+              "height": 32
+            },
+            {
+              "type": "text",
+              "x": 211,
+              "y": 544,
+              "width": 123,
+              "height": 25,
+              "text": "track with fitnyx",
+              "size": 16,
+              "align": "right",
+              "color": "#31714C"
+            }
+          ]
+        },
+        "post": {
+          "background": "#EEF3E9",
+          "blocks": [
+            {
+              "type": "text",
+              "x": 26,
+              "y": 24,
+              "width": 220,
+              "height": 16,
+              "binding": "kicker",
+              "size": 9,
+              "font": "sans",
+              "color": "#31714C"
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 44,
+              "width": 308,
+              "height": 42,
+              "binding": "title",
+              "size": 28
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 86,
+              "width": 308,
+              "height": 27,
+              "text": "a little further. a little stronger.",
+              "size": 18,
+              "color": "#31714C"
+            },
+            {
+              "type": "route",
+              "x": 26,
+              "y": 110,
+              "width": 130,
+              "height": 110,
+              "color": "#31714C"
+            },
+            {
+              "type": "artwork",
+              "x": 160,
+              "y": 110,
+              "width": 174,
+              "height": 110
+            },
+            {
+              "type": "text",
+              "x": 26,
+              "y": 224,
+              "width": 308,
+              "height": 16,
+              "binding": "hero.label",
+              "size": 9,
+              "font": "sans",
+              "color": "#31714C"
+            },
+            {
+              "type": "metric",
+              "x": 26,
+              "y": 240,
+              "width": 308,
+              "height": 75,
+              "size": 62
+            },
+            {
+              "type": "rule",
+              "x": 26,
+              "y": 318,
+              "width": 308,
+              "height": 8,
+              "color": "#31714C"
+            },
+            {
+              "type": "stats",
+              "x": 26,
+              "y": 328,
+              "width": 308,
+              "height": 60
+            },
+            {
+              "type": "brand",
+              "x": 26,
+              "y": 396,
+              "width": 132,
+              "height": 32
+            },
+            {
+              "type": "text",
+              "x": 211,
+              "y": 400,
+              "width": 123,
+              "height": 25,
+              "text": "track with fitnyx",
+              "size": 16,
+              "align": "right",
+              "color": "#31714C"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

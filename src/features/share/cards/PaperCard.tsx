@@ -1,67 +1,73 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
+import type { ShareCardData } from '../cardData';
+import { BigNumber, CARD_SIZE, CardTitle, Label, SAFE, StatRow, type CardFormat } from './parts';
+import { type ArtworkCallbacks, DoodleArt, HandNote, SKETCH as s, Scribble, SketchFooter, SketchHeader } from './sketch';
 
-import type { ShareCardData } from '@/src/features/share/cardData';
-import { BigNumber, CARD_SIZE, CardFooter, CardTitle, Label, SAFE, StatRow, type CardFormat } from '@/src/features/share/cards/parts';
-import { RoutePanel, SessionHighlight } from '@/src/features/share/cards/visuals';
-import { share } from '@/src/theme/colors';
-import { type } from '@/src/styles/tokens';
-
-/** A personal sporting journal: warm paper, generous type and fine rules. */
-export function PaperCard({ data, format }: { data: ShareCardData; format: CardFormat }) {
-  const p = share.paper;
+/** A scrapbook page: taped illustration, personal result, and a handwritten caption. */
+export function PaperCard({ data, format, onArtworkLoad, onArtworkError }: { data: ShareCardData; format: CardFormat } & ArtworkCallbacks) {
   const story = format === 'story';
   const safe = SAFE[format];
-  const width = CARD_SIZE[format].width - safe.side * 2;
   return (
     <View
       style={[
         CARD_SIZE[format],
-        styles.card,
-        { backgroundColor: p.bg, paddingHorizontal: safe.side, paddingTop: safe.top, paddingBottom: safe.bottom },
+        { backgroundColor: s.desk, paddingTop: safe.top, paddingBottom: safe.bottom, paddingHorizontal: safe.side, overflow: 'hidden' },
       ]}
     >
-      <View style={[styles.header, { borderColor: p.ink }]}>
-        <Label color={p.ink} size={10}>
-          THE DAILY EFFORT
-        </Label>
-        <Label color={p.muted} size={8}>
-          {data.date.toUpperCase()}
-        </Label>
+      <SketchHeader data={data} />
+      <View style={{ marginTop: 10 }}>
+        <CardTitle title={data.title} color={s.ink} size={story ? 38 : 31} />
       </View>
-      <View style={{ marginTop: story ? 20 : 14, gap: 8 }}>
-        <Label color={p.accent} size={8}>{`${data.kicker} / ${data.time.toUpperCase()}`}</Label>
-        <CardTitle title={data.title} color={p.ink} size={story ? 49 : 37} lines={1} />
-      </View>
-      <View style={styles.visual}>
-        {data.kind === 'roam' ? (
-          <RoutePanel data={data} width={width} height={story ? 150 : 80} color={p.accent} muted={p.muted} background={p.bg} />
-        ) : (
-          <View style={{ alignSelf: 'stretch' }}>
-            <SessionHighlight data={data} color={p.ink} muted={p.accent} rule={p.faint} compact={!story} />
+      <View style={{ flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{
+            backgroundColor: s.paper,
+            padding: 8,
+            paddingBottom: 10,
+            transform: [{ rotate: '-3deg' }],
+            borderWidth: 1,
+            borderColor: s.tapeEdge,
+          }}
+        >
+          <View
+            style={{
+              position: 'absolute',
+              top: -7,
+              width: 70,
+              height: 18,
+              backgroundColor: s.tape,
+              opacity: 0.85,
+              alignSelf: 'center',
+              zIndex: 1,
+              transform: [{ rotate: '7deg' }],
+            }}
+          />
+          <DoodleArt
+            onArtworkLoad={onArtworkLoad}
+            onArtworkError={onArtworkError}
+            data={data}
+            width={story ? 280 : 230}
+            height={story ? 152 : 92}
+          />
+          <View style={{ alignItems: 'center' }}>
+            <HandNote size={story ? 20 : 16}>
+              {data.kind === 'roam' ? 'a little adventure to remember.' : 'a date with my stronger self.'}
+            </HandNote>
           </View>
-        )}
+        </View>
       </View>
-      <Label color={p.muted} size={8}>
+      <Label color={s.green} size={8}>
         {data.hero.label.toUpperCase()}
       </Label>
-      <BigNumber stat={data.hero} size={story ? 91 : 72} color={p.ink} unitColor={p.accent} />
-      {data.fact && story ? (
-        <Text allowFontScaling={false} numberOfLines={1} style={[styles.fact, { color: p.muted }]}>
-          {data.fact}
-        </Text>
-      ) : null}
-      <View style={[styles.stats, { borderColor: p.ink }]}>
-        <StatRow stats={data.stats} color={p.ink} muted={p.muted} rule={p.faint} />
+      <BigNumber stat={data.hero} size={story ? 80 : 62} color={s.ink} unitColor={s.green} />
+      <Scribble />
+      <View style={{ paddingVertical: story ? 14 : 10 }}>
+        <StatRow stats={data.stats} color={s.ink} muted={s.muted} rule={s.rule} />
       </View>
-      <CardFooter data={data} color={p.ink} muted={p.muted} />
+      <View style={{ marginTop: story ? 16 : 8 }}>
+        <SketchFooter />
+      </View>
     </View>
   );
 }
-const styles = StyleSheet.create({
-  card: { overflow: 'hidden' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 2, paddingBottom: 12 },
-  visual: { flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: 0, marginVertical: 8 },
-  fact: { fontFamily: type.weight.regular, fontSize: 11, marginTop: 3 },
-  stats: { borderTopWidth: 1, paddingTop: 14, marginTop: 14, marginBottom: 20 },
-});

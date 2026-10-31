@@ -1,88 +1,44 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
+import type { ShareCardData } from '../cardData';
+import { BigNumber, CARD_SIZE, CardTitle, Label, SAFE, StatRow, type CardFormat } from './parts';
+import { type ArtworkCallbacks, DoodleArt, HandNote, SKETCH as s, Scribble, SketchFooter, SketchHeader } from './sketch';
 
-import type { ShareCardData } from '@/src/features/share/cardData';
-import {
-  BigNumber,
-  CARD_SIZE,
-  CardFooter,
-  CardTitle,
-  Completed,
-  Label,
-  SAFE,
-  StatRow,
-  type CardFormat,
-} from '@/src/features/share/cards/parts';
-import { RoutePanel, SessionHighlight, SetBars } from '@/src/features/share/cards/visuals';
-import { share } from '@/src/theme/colors';
-
-/** The signature poster: mint stock, oversized ink, a dark results band. */
-export function GlowCard({ data, format }: { data: ShareCardData; format: CardFormat }) {
-  const n = share.night;
+/** A personal sketchbook cover, with live results typeset independently of the art. */
+export function GlowCard({ data, format, onArtworkLoad, onArtworkError }: { data: ShareCardData; format: CardFormat } & ArtworkCallbacks) {
   const story = format === 'story';
   const safe = SAFE[format];
-  const width = CARD_SIZE[format].width - safe.side * 2;
-  const roam = data.kind === 'roam';
   return (
-    <View style={[CARD_SIZE[format], styles.card, { backgroundColor: n.bg }]}>
-      <View style={[styles.poster, { backgroundColor: n.panel, paddingHorizontal: safe.side, paddingTop: safe.top }]}>
-        <View style={styles.header}>
-          <Label color={n.ink}>{`FITNYX / ${data.kicker}`}</Label>
-          <Label color={n.panelMuted} size={8}>
-            {data.date.toUpperCase()}
-          </Label>
-        </View>
-        <View style={{ marginTop: story ? 22 : 14 }}>
-          <CardTitle title={data.title} color={n.ink} size={story ? 36 : 29} />
-        </View>
-        <View style={{ marginTop: story ? 18 : 12 }}>
-          <Label color={n.panelMuted}>{data.hero.label.toUpperCase()}</Label>
-          <BigNumber stat={data.hero} size={story ? 112 : 88} color={n.ink} unitColor={n.ink} />
-        </View>
-        <View style={styles.art}>
-          {roam ? (
-            <RoutePanel data={data} width={width} height={story ? 122 : 76} color={n.ink} muted={n.panelMuted} background={n.panel} />
-          ) : (
-            <View style={styles.workoutArt}>
-              <SetBars loads={data.bars ?? []} width={width} height={story ? 50 : 34} color={n.ink} muted={n.panelMuted} />
-              <View style={styles.header}>
-                <Label color={n.panelMuted} size={7}>
-                  EVERY SET COUNTS.
-                </Label>
-                <Completed color={n.ink} />
-              </View>
-            </View>
-          )}
-        </View>
-        {roam ? (
-          <View style={[styles.header, styles.routeCaption]}>
-            <Completed color={n.ink} label="ROAM COMPLETE" />
-            <Label color={n.panelMuted} size={7}>
-              YOUR ROUTE. YOUR EFFORT.
-            </Label>
-          </View>
-        ) : null}
+    <View
+      style={[
+        CARD_SIZE[format],
+        { backgroundColor: s.paper, paddingHorizontal: safe.side, paddingTop: safe.top, paddingBottom: safe.bottom, overflow: 'hidden' },
+      ]}
+    >
+      <SketchHeader data={data} />
+      <View style={{ marginTop: story ? 16 : 10 }}>
+        <CardTitle title={data.title} color={s.ink} size={story ? 41 : 34} />
+        <HandNote size={story ? 20 : 17}>
+          {data.kind === 'roam' ? 'a little fresh air. a lot of good.' : 'showed up. put the work in.'}
+        </HandNote>
       </View>
-      <View style={{ paddingHorizontal: safe.side, paddingTop: story ? 20 : 16, paddingBottom: safe.bottom }}>
-        <StatRow stats={data.stats} color={n.text} muted={n.muted} rule={n.faint} />
-        {!roam && story ? (
-          <View style={styles.highlight}>
-            <SessionHighlight data={data} color={n.text} muted={n.accent} rule={n.faint} compact />
-          </View>
-        ) : null}
-        <View style={{ marginTop: story ? 20 : 16 }}>
-          <CardFooter data={data} color={n.accent} muted={n.muted} />
-        </View>
+      <View style={{ flex: 1, minHeight: 0, justifyContent: 'center', alignItems: 'center' }}>
+        <DoodleArt onArtworkLoad={onArtworkLoad} onArtworkError={onArtworkError} data={data} height={story ? 174 : 112} />
+      </View>
+      <View>
+        <Label color={s.green} size={8}>
+          {data.hero.label.toUpperCase()}
+        </Label>
+        <BigNumber stat={data.hero} size={story ? 84 : 66} color={s.ink} unitColor={s.green} />
+      </View>
+      <Scribble />
+      <View style={{ paddingVertical: story ? 14 : 10 }}>
+        <StatRow stats={data.stats} color={s.ink} muted={s.muted} rule={s.line} />
+      </View>
+      <Scribble />
+      <View style={{ marginTop: story ? 18 : 12 }}>
+        <SketchFooter />
       </View>
     </View>
   );
 }
-const styles = StyleSheet.create({
-  card: { overflow: 'hidden' },
-  poster: { flex: 1, paddingBottom: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  art: { flex: 1, minHeight: 0, justifyContent: 'center' },
-  workoutArt: { gap: 9 },
-  routeCaption: { marginTop: 4 },
-  highlight: { marginTop: 16 },
-});

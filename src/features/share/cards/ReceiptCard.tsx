@@ -1,122 +1,120 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { ArrowUpRight } from 'lucide-react-native';
-
-import type { ShareCardData } from '@/src/features/share/cardData';
-import {
-  BigNumber,
-  CARD_SIZE,
-  CardFooter,
-  CardTitle,
-  Completed,
-  Label,
-  SAFE,
-  StatRow,
-  type CardFormat,
-} from '@/src/features/share/cards/parts';
-import { share } from '@/src/theme/colors';
+import { Text, View } from 'react-native';
+import type { ShareCardData } from '../cardData';
+import { BigNumber, CARD_SIZE, CardTitle, Label, SAFE, StatRow, type CardFormat } from './parts';
+import { HAND, HandNote, SKETCH as s, Scribble, SketchFooter, EffortMark } from './sketch';
 import { type } from '@/src/styles/tokens';
 
-/** A collectible session log: numbered efforts, clear totals and real PRs. */
+/** A little proof-of-effort receipt, with actual exercises or splits. */
 export function ReceiptCard({ data, format }: { data: ShareCardData; format: CardFormat }) {
-  const r = share.receipt;
-  const n = share.night;
   const story = format === 'story';
   const safe = SAFE[format];
   const rows = data.rows.slice(0, story ? 5 : 3);
   const remaining = Math.max(0, (data.rowCount ?? data.rows.length) - rows.length);
   return (
-    <View style={[CARD_SIZE[format], { backgroundColor: n.bg, paddingHorizontal: 18, paddingTop: safe.top, paddingBottom: safe.bottom }]}>
-      <View style={[styles.sheet, { backgroundColor: r.paper }]}>
-        <View style={styles.header}>
-          <Label color={r.ink} size={9}>
-            THE SESSION LOG
-          </Label>
-          <ArrowUpRight size={18} color={r.ink} />
+    <View
+      style={[
+        CARD_SIZE[format],
+        { backgroundColor: s.desk, paddingHorizontal: 22, paddingTop: safe.top, paddingBottom: safe.bottom, overflow: 'hidden' },
+      ]}
+    >
+      <View style={{ flex: 1, backgroundColor: s.paper, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 12 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <HandNote color={s.ink} size={story ? 27 : 23}>
+            proof I showed up.
+          </HandNote>
+          <EffortMark size={27} />
         </View>
-        <View style={[styles.date, { borderColor: r.ink }]}>
-          <Label color={r.muted} size={7}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginBottom: 8 }}>
+          <Label color={s.muted} size={7}>
             {data.date.toUpperCase()}
           </Label>
-          <Label color={r.muted} size={7}>{`${data.kicker} / ${data.time.toUpperCase()}`}</Label>
+          <Label color={s.muted} size={7}>
+            {data.kicker}
+          </Label>
         </View>
-        <CardTitle title={data.title} color={r.ink} size={story ? 31 : 25} />
-        <View style={{ marginTop: 10 }}>
-          <Label color={r.muted} size={8}>
+        <Scribble width={280} />
+        <CardTitle title={data.title} color={s.ink} size={story ? 31 : 25} />
+        <View style={{ marginTop: 6 }}>
+          <Label color={s.green} size={7}>
             {data.hero.label.toUpperCase()}
           </Label>
-          <BigNumber stat={data.hero} size={story ? 58 : 48} color={r.ink} unitColor={r.ink} />
+          <BigNumber stat={data.hero} size={story ? 59 : 43} color={s.ink} unitColor={s.green} />
         </View>
-        <View style={[styles.columns, { borderColor: r.rule }]}>
-          <Label color={r.muted} size={7}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            borderBottomWidth: 1,
+            borderStyle: 'dashed',
+            borderColor: s.line,
+            paddingVertical: 6,
+          }}
+        >
+          <Label color={s.muted} size={7}>
             {data.kind === 'roam' ? 'KILOMETRE' : 'EXERCISE'}
           </Label>
-          <Label color={r.muted} size={7}>
+          <Label color={s.muted} size={7}>
             {data.kind === 'roam' ? 'SPLIT TIME' : 'BEST SET'}
           </Label>
         </View>
-        <View style={styles.rows}>
+        <View style={{ flex: 1, minHeight: rows.length * (story ? 31 : 25) + (remaining > 0 ? 23 : 0) }}>
           {rows.map((row, i) => (
-            <View key={i} style={[styles.row, { borderColor: r.rule, paddingVertical: story ? 6 : 5 }]}>
-              <Text allowFontScaling={false} style={[styles.index, { color: r.muted }]}>
+            <View
+              key={i}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                minHeight: story ? 31 : 25,
+                borderBottomWidth: 0.7,
+                borderColor: s.line,
+              }}
+            >
+              <Text allowFontScaling={false} style={{ fontFamily: HAND, fontSize: 14, color: s.green }}>
                 {String(i + 1).padStart(2, '0')}
               </Text>
-              <Text allowFontScaling={false} numberOfLines={1} style={[styles.name, { color: r.ink }]}>
+              <Text
+                allowFontScaling={false}
+                numberOfLines={1}
+                style={{ flex: 1, fontFamily: type.weight.medium, fontSize: 10, color: s.ink }}
+              >
                 {row.name}
               </Text>
               {row.pr ? (
-                <View style={[styles.pr, { backgroundColor: n.panel }]}>
-                  <Text allowFontScaling={false} style={[styles.prText, { color: n.ink }]}>
-                    PR
-                  </Text>
-                </View>
+                <Text allowFontScaling={false} style={{ fontFamily: HAND, fontSize: 12, color: s.green }}>
+                  PR!
+                </Text>
               ) : null}
-              <Text allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit style={[styles.detail, { color: r.ink }]}>
+              <Text
+                allowFontScaling={false}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={{ maxWidth: '36%', fontFamily: type.weight.semibold, fontSize: 11, color: s.ink }}
+              >
                 {row.detail}
               </Text>
             </View>
           ))}
           {remaining > 0 ? (
-            <Text
-              allowFontScaling={false}
-              style={[styles.more, { color: r.muted }]}
-            >{`+ ${remaining} more ${data.kind === 'roam' ? (remaining === 1 ? 'split' : 'splits') : remaining === 1 ? 'exercise' : 'exercises'}`}</Text>
+            <View style={{ marginTop: 4 }}>
+              <HandNote size={14}>{`+ ${remaining} more ${data.kind === 'roam' ? 'splits' : 'exercises'}`}</HandNote>
+            </View>
           ) : null}
-          {!rows.length ? (
-            <Text allowFontScaling={false} style={[styles.more, { color: r.muted }]}>
-              Every effort counts.
-            </Text>
-          ) : null}
+          {!rows.length ? <HandNote size={17}>every little effort counts.</HandNote> : null}
         </View>
-        <View style={[styles.stats, { borderColor: r.ink }]}>
-          <StatRow stats={data.stats} color={r.ink} muted={r.muted} rule={r.rule} />
+        <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: s.muted, paddingTop: 9, marginTop: 8 }}>
+          <StatRow stats={data.stats} color={s.ink} muted={s.muted} rule={s.line} />
         </View>
         {story ? (
-          <View style={styles.complete}>
-            <Completed color={share.paper.accent} label="EFFORT, ON THE RECORD." />
+          <View style={{ alignItems: 'center', marginTop: 8 }}>
+            <HandNote size={17}>{data.badge ? `${data.badge} · earned, not given.` : 'paid in effort. kept forever.'}</HandNote>
           </View>
         ) : null}
       </View>
-      <View style={styles.footer}>
-        <CardFooter data={data} color={n.accent} muted={n.muted} />
+      <View style={{ marginTop: story ? 18 : 12, paddingHorizontal: 4 }}>
+        <SketchFooter />
       </View>
     </View>
   );
 }
-const styles = StyleSheet.create({
-  sheet: { flex: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, borderRadius: 2 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  date: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 2, paddingBottom: 10, marginTop: 8, marginBottom: 12 },
-  columns: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, paddingBottom: 7, marginTop: 10 },
-  rows: { flex: 1 },
-  row: { flexDirection: 'row', gap: 7, alignItems: 'center', borderBottomWidth: 1 },
-  index: { fontFamily: type.weight.medium, fontSize: type.size.micro },
-  name: { flex: 1, fontFamily: type.weight.semibold, fontSize: 11 },
-  detail: { maxWidth: '37%', fontFamily: type.weight.medium, fontSize: 11 },
-  pr: { paddingHorizontal: 4, paddingVertical: 2, borderRadius: 3 },
-  prText: { fontFamily: type.weight.extrabold, fontSize: 7 },
-  more: { fontFamily: type.weight.medium, fontSize: type.size.micro, marginTop: 7 },
-  stats: { borderTopWidth: 2, paddingTop: 10, marginTop: 8 },
-  complete: { alignItems: 'center', marginTop: 10 },
-  footer: { marginTop: 16, paddingHorizontal: 8 },
-});
