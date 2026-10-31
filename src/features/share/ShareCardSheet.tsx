@@ -1,12 +1,17 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Check, Download, ImagePlus, Share2 } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
+import { Download, ImagePlus, Share2 } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { ArtCustomizer } from '@/src/features/share/ArtCustomizer';
+import { artworkChoices, artworkSubject, profileAppearance, type ArtworkSelection, type ArtworkSubject } from '@/src/features/share/artwork';
 import type { ShareCardData } from '@/src/features/share/cardData';
-import { CARD_SIZE, ShareCard, TEMPLATES, type CardFormat, type ShareTemplate } from '@/src/features/share/ShareCard';
+import { LookPicker, type LookOption } from '@/src/features/share/LookPicker';
+import { useCardCatalog } from '@/src/features/share/remote/useCardCatalog';
+import { CARD_SIZE, ShareCard, TEMPLATES, type CardFormat, type BuiltinTemplate, type ShareTemplate } from '@/src/features/share/ShareCard';
 import { captureCard, saveCardImage, shareCardImage } from '@/src/features/share/shareImage';
 import { Button } from '@/src/features/workouts/ui/Chrome';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
@@ -17,10 +22,10 @@ const FORMATS: { label: string; value: CardFormat }[] = [
   { label: 'Story  ·  9:16', value: 'story' },
   { label: 'Post  ·  4:5', value: 'post' },
 ];
-const LOOK_NOTES: Record<ShareTemplate, string> = {
-  glow: 'Big effort. Bold statement.',
-  motion: 'Your sport. Its own signature.',
-  paper: 'A page from your personal best era.',
+const LOOK_NOTES: Record<BuiltinTemplate, string> = {
+  glow: 'A little effort. A lot of character.',
+  motion: 'Your effort, straight from the notebook.',
+  paper: 'One for the scrapbook.',
   receipt: 'Every effort, on the record.',
   photo: 'Your moment. Your numbers.',
   sticker: 'Transparent PNG · layer it over your story.',
@@ -35,31 +40,62 @@ interface Props {
 /** A small share studio: real previews, social-safe formats, pinned export actions. */
 export function ShareCardSheet({ visible, data, onClose }: Props) {
   const c = useThemeColors();
+  const { userProfile, user } = useAuth();
   const window = useWindowDimensions();
   const cardRef = useRef<View>(null);
+  const [appearance, setAppearance] = useState<ArtworkSelection>('auto');
+  const [subject, setSubject] = useState<ArtworkSubject | 'auto'>('auto');
   const [template, setTemplate] = useState<ShareTemplate>('glow');
   const [format, setFormat] = useState<CardFormat>('story');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [photoReady, setPhotoReady] = useState(false);
+  const [loadedArt, setLoadedArt] = useState<string | null>(null);
+  const [loadedPhoto, setLoadedPhoto] = useState<string | null>(null);
   const [busy, setBusy] = useState<'share' | 'save' | null>(null);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  const catalog = useCardCatalog(visible, busy !== null);
   const { width, height } = CARD_SIZE[format];
-  const previewHeight = Math.min(360, window.height * 0.36, ((window.width - 64) * height) / width);
+  const previewHeight = Math.min(410, window.height * 0.42, ((window.width - 64) * height) / width);
   const scale = previewHeight / height;
-  const needsPhoto = template === 'photo' && (!photoUri || !photoReady);
-  const templates = data ? TEMPLATES[data.kind] : [];
+  const choices = data ? artworkChoices(data) : [];
+  const inferredSubject = data ? artworkSubject(data) : 'full-body';
+  const selectedSubject = subject !== 'auto' && choices.includes(subject) ? subject : inferredSubject;
+  const gender = userProfile?.gender ?? user?.user_metadata?.gender;
+  const selectedAppearance = appearance === 'auto' ? profileAppearance(typeof gender === 'string' ? gender : undefined) : appearance;
+  const renderedData = data ? { ...data, artworkAppearance: selectedAppearance, artworkSubject: selectedSubject } : null;
+  const design = catalog?.templates.find(t => `remote:${t.id}` === template && data && t.kinds.includes(data.kind));
+  const activeTemplate = template.startsWith('remote:') && !design ? 'glow' : template;
+  const artKey = `${visible}:${data?.kind}:${activeTemplate}:${catalog?.revision}:${format}:${selectedAppearance}:${selectedSubject}:${appearance}:${subject}`;
+  const artReady = loadedArt === artKey;
+  const needsArt = !!design || activeTemplate === 'glow' || activeTemplate === 'paper' || (activeTemplate === 'photo' && !photoUri);
+  const customizeArt = design ? design.layouts[format].blocks.some(b => b.type === 'artwork' || !!b.variants?.length) : needsArt;
+  const photoKey = `${artKey}:${photoUri}`;
+  const photoReady = loadedPhoto === photoKey;
+  const needsPhoto = activeTemplate === 'photo' && (!photoUri || !photoReady);
+  const templates: LookOption[] = data ? [
+    ...TEMPLATES[data.kind],
+    ...(catalog?.templates.filter(t => t.kinds.includes(data.kind)).map(t => ({ value: `remote:${t.id}` as ShareTemplate, label: t.label, design: t })) ?? []),
+  ] : [];
+
+  useEffect(() => {
+    if (!visible) {
+      setLoadedArt(null);
+      setLoadedPhoto(null);
+      setAppearance('auto');
+      setSubject('auto');
+    }
+  }, [visible]);
 
   const pickPhoto = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 }).catch(() => null);
     if (res && !res.canceled && res.assets[0]) {
-      if (res.assets[0].uri !== photoUri) setPhotoReady(false);
+      if (res.assets[0].uri !== photoUri) setLoadedPhoto(null);
       setPhotoUri(res.assets[0].uri);
       setNotice(null);
     }
   };
 
   const run = async (action: 'share' | 'save') => {
-    if (!data || needsPhoto || busy) return;
+    if (!data || (needsArt && !artReady) || needsPhoto || busy) return;
     setBusy(action);
     setNotice(null);
     try {
@@ -83,8 +119,8 @@ export function ShareCardSheet({ visible, data, onClose }: Props) {
   return (
     <Sheet
       visible={visible}
-      title="Made to be shared."
-      subtitle="You put in the work. Own the moment."
+      title="Worth a little brag."
+      subtitle="Your effort, with a little character."
       onClose={onClose}
       footer={
         <View style={styles.actions}>
@@ -94,14 +130,14 @@ export function ShareCardSheet({ visible, data, onClose }: Props) {
             icon={<Download size={19} color={c.text} />}
             onPress={() => void run('save')}
             loading={busy === 'save'}
-            disabled={!data || needsPhoto || busy !== null}
+            disabled={!data || (needsArt && !artReady) || needsPhoto || busy !== null}
           />
           <Button
             title="Share"
             icon={<Share2 size={19} color={c.primaryText} />}
             onPress={() => void run('share')}
             loading={busy === 'share'}
-            disabled={!data || needsPhoto || busy !== null}
+            disabled={!data || (needsArt && !artReady) || needsPhoto || busy !== null}
           />
         </View>
       }
@@ -112,6 +148,9 @@ export function ShareCardSheet({ visible, data, onClose }: Props) {
             options={FORMATS}
             value={format}
             onChange={(next) => {
+              if (next === format) return;
+              setLoadedArt(null);
+              setLoadedPhoto(null);
               setFormat(next);
               setNotice(null);
             }}
@@ -120,76 +159,73 @@ export function ShareCardSheet({ visible, data, onClose }: Props) {
         <View style={[styles.stage, { backgroundColor: c.background, borderColor: c.border }]}>
           {data ? (
             <View style={[styles.preview, { width: width * scale, height: previewHeight }]}>
-              {template === 'sticker' ? <Checker color={c.share.sticker} width={width * scale} height={previewHeight} /> : null}
+              {activeTemplate === 'sticker' ? <Checker color={c.share.sticker} width={width * scale} height={previewHeight} /> : null}
               {/* The surrounding stage/checker are outside the capture ref. */}
               <View style={{ width, height, transform: [{ scale }], transformOrigin: 'top left' }}>
                 <ShareCard
+                  key={artKey}
                   ref={cardRef}
-                  data={data}
+                  onArtworkLoad={() => setLoadedArt(artKey)}
+                  onArtworkError={() => {
+                    setLoadedArt(null);
+                    if (design) setTemplate('glow');
+                    setNotice({ text: design ? 'This design is unavailable. Using the offline Doodle card.' : 'Artwork couldn’t load. Reopen this sheet to try again.', error: true });
+                  }}
+                  data={renderedData!}
                   format={format}
-                  template={template}
+                  template={activeTemplate}
+                  design={design}
                   photoUri={photoUri}
-                  onPhotoLoad={() => setPhotoReady(true)}
+                  onPhotoLoad={() => setLoadedPhoto(photoKey)}
                   onPhotoError={() => {
-                    setPhotoReady(false);
+                    setLoadedPhoto(null);
                     setNotice({ text: 'This photo couldn’t load. Please choose another.', error: true });
                   }}
                 />
               </View>
             </View>
           ) : null}
-          <Text style={[styles.caption, { color: c.mutedText }]}>{LOOK_NOTES[template]}</Text>
+          <Text style={[styles.caption, { color: c.mutedText }]}>{design?.description ?? LOOK_NOTES[activeTemplate as BuiltinTemplate]}</Text>
         </View>
         <View style={styles.lookHeader}>
           <Text style={[styles.eyebrow, { color: c.mutedText }]}>CHOOSE YOUR LOOK</Text>
           <Text style={[styles.exportNote, { color: c.mutedText }]}>1080 px PNG</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.looks}>
-          {templates.map((t) => {
-            const on = t.value === template;
-            return (
-              <Pressable
-                key={t.value}
-                disabled={busy !== null}
-                accessibilityRole="button"
-                accessibilityLabel={`${t.label} style`}
-                accessibilityState={{ selected: on, disabled: busy !== null }}
-                onPress={() => {
-                  if (t.value === 'photo' && template !== 'photo') setPhotoReady(false);
-                  setTemplate(t.value);
-                  setNotice(null);
-                }}
-                style={styles.look}
-              >
-                <View style={[styles.thumbnailFrame, { borderColor: on ? c.primary : c.border }]}>
-                  <View
-                    pointerEvents="none"
-                    accessibilityElementsHidden
-                    importantForAccessibility="no-hide-descendants"
-                    style={[styles.thumbnail, { backgroundColor: c.share.sticker.checkB }]}
-                  >
-                    {data ? (
-                      <View style={{ width: 360, height: 450, transform: [{ scale: 64 / 360 }], transformOrigin: 'top left' }}>
-                        <ShareCard data={data} format="post" template={t.value} photoUri={photoUri} />
-                      </View>
-                    ) : null}
-                  </View>
-                  {on ? (
-                    <View style={[styles.selected, { backgroundColor: c.primary }]}>
-                      <Check size={11} strokeWidth={3} color={c.primaryText} />
-                    </View>
-                  ) : null}
-                </View>
-                <Text
-                  style={[styles.lookLabel, { color: on ? c.text : c.mutedText, fontFamily: on ? type.weight.bold : type.weight.medium }]}
-                >
-                  {t.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        {template === 'photo' ? (
+        <LookPicker
+          looks={templates}
+          active={activeTemplate}
+          data={renderedData}
+          format={format}
+          photoUri={photoUri}
+          disabled={busy !== null}
+          onSelect={(value) => {
+            if (value === template) return;
+            setLoadedArt(null);
+            setLoadedPhoto(null);
+            setTemplate(value);
+            setNotice(null);
+          }}
+        />
+        {customizeArt && data ? (
+          <ArtCustomizer
+            appearance={appearance}
+            subject={subject}
+            inferredSubject={inferredSubject}
+            choices={choices}
+            disabled={busy !== null}
+            onAppearance={(value) => {
+              setAppearance(value);
+              setLoadedArt(null);
+              setNotice(null);
+            }}
+            onSubject={(value) => {
+              setSubject(value);
+              setLoadedArt(null);
+              setNotice(null);
+            }}
+          />
+        ) : null}
+        {activeTemplate === 'photo' ? (
           <Pressable
             disabled={busy !== null}
             onPress={() => void pickPhoto()}
@@ -233,21 +269,6 @@ const styles = StyleSheet.create({
   lookHeader: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18, marginBottom: 10 },
   eyebrow: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 1.1 },
   exportNote: { fontFamily: type.weight.medium, fontSize: type.size.micro },
-  looks: { gap: 12, paddingBottom: 4 },
-  look: { alignItems: 'center', gap: 6 },
-  thumbnailFrame: { padding: 3, borderRadius: 8, borderWidth: 2 },
-  thumbnail: { width: 64, height: 80, overflow: 'hidden', borderRadius: 3 },
-  selected: {
-    position: 'absolute',
-    right: -4,
-    top: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lookLabel: { fontSize: 11 },
   photoBtn: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -1,3 +1,4 @@
+import type { ArtworkAppearance, ArtworkSubject, WorkoutFocus } from './artwork';
 import { defaultActivityName } from '@/src/features/roam/activityName';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
 import { decodePolyline, formatDuration, type ActivityType } from '@/src/features/roam/geo';
@@ -24,6 +25,11 @@ export interface ShareCardData {
   kind: 'roam' | 'workout';
   /** Select activity artwork independently of names or display labels. */
   activityType?: ActivityType;
+  workoutFocus?: WorkoutFocus;
+  avgSpeedMps?: number;
+  avgPaceSecPerKm?: number | null;
+  artworkAppearance?: ArtworkAppearance;
+  artworkSubject?: ArtworkSubject;
   /** "RIDE" / "WORKOUT" — the activity, in caps. */
   kicker: string;
   title: string;
@@ -53,7 +59,10 @@ const MAX_ROWS = 8;
 
 /** "Evening Ride" → "FitNyx-Evening-Ride.png" (shown when shared as a file). */
 export function cardFileName(title: string): string {
-  const slug = title.replace(/[^\p{L}\p{M}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  const slug = title
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
   return `FitNyx-${slug || 'Achievement'}.png`;
 }
 
@@ -125,6 +134,8 @@ export function roamCardData(a: ActivityDetail): ShareCardData {
   return {
     kind: 'roam',
     activityType: a.activity_type,
+    avgSpeedMps: a.avg_speed_mps,
+    avgPaceSecPerKm: a.avg_pace_sec_per_km,
     kicker: ACTIVITY_LABEL[a.activity_type].toUpperCase(),
     title: a.name || defaultActivityName(a.activity_type, a.started_at),
     date: cardDate(a.started_at),
@@ -140,6 +151,7 @@ export function roamCardData(a: ActivityDetail): ShareCardData {
 }
 
 export interface WorkoutCardInput {
+  focus?: WorkoutFocus;
   name: string;
   startedAt: string;
   durationSec: number;
@@ -165,7 +177,8 @@ export function setLoad(s: { reps: number; weight_kg?: number; duration_sec?: nu
 export function workoutCardData(w: WorkoutCardInput): ShareCardData {
   const clock = formatDuration(w.durationSec);
   const lifted = w.volumeKg > 0;
-  const third: ShareStat = w.prs > 0 ? { label: w.prs === 1 ? 'Record' : 'Records', value: String(w.prs) } : { label: 'Exercises', value: String(w.rows.length) };
+  const third: ShareStat =
+    w.prs > 0 ? { label: w.prs === 1 ? 'Record' : 'Records', value: String(w.prs) } : { label: 'Exercises', value: String(w.rows.length) };
   const stats: ShareStat[] = lifted
     ? [{ label: 'Time', value: clock }, { label: 'Sets', value: String(w.sets) }, third]
     : w.distanceM > 0
@@ -173,11 +186,14 @@ export function workoutCardData(w: WorkoutCardInput): ShareCardData {
       : [{ label: 'Sets', value: String(w.sets) }, third];
   return {
     kind: 'workout',
+    workoutFocus: w.focus ?? (w.distanceM > 0 ? 'cardio' : 'full-body'),
     kicker: 'WORKOUT',
     title: w.name,
     date: cardDate(w.startedAt),
     time: cardTime(w.startedAt),
-    hero: lifted ? { label: 'Total lifted', value: Math.round(w.volumeKg).toLocaleString('en-US'), unit: 'kg' } : { label: 'Time', value: clock },
+    hero: lifted
+      ? { label: 'Total lifted', value: Math.round(w.volumeKg).toLocaleString('en-US'), unit: 'kg' }
+      : { label: 'Time', value: clock },
     stats: stats.slice(0, MAX_STATS),
     fact: lifted ? volumeFact(w.volumeKg) : undefined,
     rowCount: w.rows.length,
