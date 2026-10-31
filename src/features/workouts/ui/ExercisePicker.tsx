@@ -9,8 +9,11 @@ import { ExercisePreview } from '@/src/features/workouts/ui/ExercisePreview';
 import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
 import { FinderChips } from '@/src/features/workouts/ui/FinderChips';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
+import { rankUsage, sortAlphabetical, type UsageSort } from '@/src/features/workouts/usageRank';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { fetchExercises } from '@/src/lib/api/exercises';
+import { fetchExercises, fetchExerciseUsage, type ExerciseUsage } from '@/src/lib/api/exercises';
+import { cacheGet, cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { useAuth } from '@/src/providers/AuthProvider';
 import type { Exercise } from '@/src/types/exercise';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
@@ -34,7 +37,10 @@ interface Props {
 
 export function ExercisePicker({ visible, onClose, mode, title, subtitle, initialPart = null, addedUuids = [], confirmLabel, emptyLabel, onConfirm }: Props) {
   const c = useThemeColors();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<UsageSort>('frequent');
+  const [usage, setUsage] = useState<ExerciseUsage[]>([]);
   const [part, setPart] = useState<Part | null>(initialPart);
   // A muscle within the part (backend muscle-name term) and an equipment group.
   const [muscle, setMuscle] = useState<string | null>(null);
@@ -51,12 +57,40 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     if (!visible) return;
     setPicked([]);
     setQuery('');
+    setSort('frequent');
     setPart(initialPart);
     setMuscle(null);
     setEquipment(null);
     setPreview(null);
     setCreating(false);
   }, [visible, initialPart]);
+
+  // The user's exercise usage (for frequency-first, recovery-aware ordering).
+  // Hydrated from cache, refreshed from the store at most as often as LONG.
+  useEffect(() => {
+    if (!visible || !user) return;
+    let alive = true;
+    const key = cacheKeys.exerciseUsage(user.id);
+    (async () => {
+      const stale = await cacheGetStale<ExerciseUsage[]>(key);
+      if (alive && stale) setUsage(stale);
+      const fresh = await cacheGet<ExerciseUsage[]>(key);
+      if (fresh) {
+        if (alive) setUsage(fresh);
+        return;
+      }
+      try {
+        const u = await fetchExerciseUsage();
+        if (alive) setUsage(u);
+        cacheSet(key, u, cacheTTL.LONG).catch(() => undefined);
+      } catch {
+        /* keep whatever we hydrated */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [visible, user]);
 
   // A new custom exercise goes to the top of the list, already picked.
   const created = (ex: Exercise) => {
@@ -85,6 +119,20 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
   }, [visible, query, part, muscle, equipment]);
 
   const added = useMemo(() => new Set(addedUuids), [addedUuids]);
+
+  // Default "Frequent": your most-done exercises first (recovery-aware, or by
+  // frequency within an explicit part), then the rest of the catalog. A-Z and
+  // search fall back to the catalog order. Equipment/search narrow explicitly,
+  // so usage isn't prepended then.
+  const displayed = useMemo<Exercise[]>(() => {
+    if (sort === 'frequent' && !query.trim() && !equipment) {
+      const ranked = rankUsage(usage, part).map((i) => i.exercise);
+      const seen = new Set(ranked.map((e) => e.uuid));
+      return [...ranked, ...items.filter((e) => !seen.has(e.uuid))];
+    }
+    if (sort === 'az') return sortAlphabetical(items);
+    return items;
+  }, [sort, query, equipment, usage, part, items]);
   const toggle = (ex: Exercise) => {
     if (mode === 'single') return setPicked((p) => (p[0]?.uuid === ex.uuid ? [] : [ex]));
     setPicked((p) => (p.some((x) => x.uuid === ex.uuid) ? p.filter((x) => x.uuid !== ex.uuid) : [...p, ex]));
@@ -121,6 +169,16 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
           style={[styles.input, { color: c.text }]} accessibilityLabel="Search exercises" returnKeyType="search" autoCorrect={false} />
       </View>
       <FinderChips part={part} muscle={muscle} equipment={equipment} onPart={setPart} onMuscle={setMuscle} onEquipment={setEquipment} />
+      <View style={styles.sortRow}>
+        <Text style={[styles.sortLabel, { color: c.mutedText }]}>SORT</Text>
+        {(['frequent', 'az'] as UsageSort[]).map((s) => (
+          <Pressable key={s} onPress={() => setSort(s)} accessibilityRole="button" accessibilityState={{ selected: sort === s }}
+            accessibilityLabel={s === 'frequent' ? 'Sort by most frequent' : 'Sort alphabetically'}
+            style={[styles.sortChip, { borderColor: sort === s ? c.accent : c.border, backgroundColor: sort === s ? c.accentSoft : 'transparent' }]}>
+            <Text style={[styles.sortChipText, { color: sort === s ? c.accent : c.mutedText }]}>{s === 'frequent' ? 'Frequent' : 'A–Z'}</Text>
+          </Pressable>
+        ))}
+      </View>
       {preview ? <ExercisePreview key={preview.uuid} exercise={preview} onClose={() => setPreview(null)} /> : null}
     </View>
   );
@@ -129,7 +187,7 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     <Sheet visible={visible} title={title} subtitle={subtitle} onClose={onClose} footer={footer} scroll={false} testID="exercise-picker">
       <FlatList
         style={styles.list}
-        data={items}
+        data={displayed}
         keyExtractor={(e) => e.uuid}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -181,6 +239,10 @@ const styles = StyleSheet.create({
   // Content-sized, then shrinks to the space the sheet has left (and scrolls).
   list: { flexGrow: 0, flexShrink: 1 },
   header: { paddingBottom: spacing.sm },
+  sortRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.sm },
+  sortLabel: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 1, marginRight: 2 },
+  sortChip: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth, minHeight: 34, justifyContent: 'center' },
+  sortChipText: { fontFamily: type.weight.semibold, fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xs, paddingVertical: 10, minHeight: 68 },
   sep: { height: StyleSheet.hairlineWidth },
   grow: { flex: 1, minWidth: 0 },

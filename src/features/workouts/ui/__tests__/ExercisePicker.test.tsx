@@ -14,10 +14,12 @@ jest.mock('@/src/features/workouts/ui/ExercisePreview', () => ({
     return require('react').createElement(Text, { testID: 'exercise-preview' }, `Watching ${exercise.title}`);
   },
 }));
+jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 const mockFetch = jest.fn(async (..._a: unknown[]) => ({ data: [], meta: { total: 0 } }));
 jest.mock('@/src/lib/api/exercises', () => ({
   ...jest.requireActual('@/src/lib/api/exercises'),
   fetchExercises: (...a: unknown[]) => mockFetch(...a),
+  fetchExerciseUsage: () => Promise.resolve([]),
 }));
 const mockCreate = jest.fn();
 jest.mock('@/src/lib/offline/customExercises', () => ({ offlineCreateExercise: (...a: unknown[]) => mockCreate(...a) }));
