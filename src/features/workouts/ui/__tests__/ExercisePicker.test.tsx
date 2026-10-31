@@ -14,10 +14,14 @@ jest.mock('@/src/features/workouts/ui/ExercisePreview', () => ({
     return require('react').createElement(Text, { testID: 'exercise-preview' }, `Watching ${exercise.title}`);
   },
 }));
+jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 const mockFetch = jest.fn(async (..._a: unknown[]) => ({ data: [], meta: { total: 0 } }));
+const mockSuggest = jest.fn(async (..._a: unknown[]) => [] as unknown[]);
 jest.mock('@/src/lib/api/exercises', () => ({
   ...jest.requireActual('@/src/lib/api/exercises'),
   fetchExercises: (...a: unknown[]) => mockFetch(...a),
+  fetchExerciseUsage: () => Promise.resolve([]),
+  fetchExerciseSuggestions: (...a: unknown[]) => mockSuggest(...a),
 }));
 const mockCreate = jest.fn();
 jest.mock('@/src/lib/offline/customExercises', () => ({ offlineCreateExercise: (...a: unknown[]) => mockCreate(...a) }));
@@ -87,5 +91,31 @@ describe('ExercisePicker — find an exercise by body part, muscle and equipment
     fireEvent.press(screen.getByTestId('preview-sq'));
     expect(screen.getByText('Watching Front Squat')).toBeOnTheScreen();
     expect(screen.getByText('Pick one')).toBeOnTheScreen(); // still nothing picked
+  });
+});
+
+describe('ExercisePicker — suggested next', () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValue({ data: [], meta: { total: 0 } } as never);
+    mockSuggest.mockReset();
+    mockSuggest.mockResolvedValue([] as never);
+  });
+
+  it('shows co-occurrence suggestions mid-workout', async () => {
+    mockSuggest.mockResolvedValueOnce([
+      { uuid: 'tri1', title: 'Triceps Pushdown', primary_muscles: [{ name: 'Triceps', image: '', description: '' }], equipment: [{ name: 'Cable', description: '' }] },
+    ] as never);
+    render(<ExercisePicker {...props} mode="multi" addedUuids={['chest1']} onConfirm={jest.fn()} />);
+    expect(await screen.findByText('SUGGESTED NEXT')).toBeOnTheScreen();
+    expect(screen.getByText('Triceps Pushdown')).toBeOnTheScreen();
+    expect(mockSuggest).toHaveBeenCalledWith(['chest1']);
+  });
+
+  it('shows no suggestions when the workout is empty', async () => {
+    render(<ExercisePicker {...props} onConfirm={jest.fn()} />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+    expect(screen.queryByText('SUGGESTED NEXT')).not.toBeOnTheScreen();
+    expect(mockSuggest).not.toHaveBeenCalled();
   });
 });

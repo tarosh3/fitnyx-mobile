@@ -50,6 +50,8 @@ export const cacheKeys = {
   arenaBoard: (userId: string, board: string, scope: string, period: string, date: string) => `arena:${userId}:${board}:${scope}:${period}:${date}`,
   // In-app notifications (GET /notifications) — the list and the bell's unread badge.
   notifications: (userId: string) => `notifications:${userId}`,
+
+  exerciseUsage: (userId: string) => `exercise:usage:${userId}`,
 } as const;
 
 export const cacheTTL = {
