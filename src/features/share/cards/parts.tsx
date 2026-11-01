@@ -1,10 +1,12 @@
 import React from 'react';
 import { Platform, StyleSheet, Text, View, type TextStyle } from 'react-native';
+import { MetricNumber } from './MetricNumber';
 import { Check } from 'lucide-react-native';
 
 import { FitNyxWordmark } from '@/src/components/brand/FitNyxWordmark';
 
 import type { ShareCardData, ShareStat } from '@/src/features/share/cardData';
+import { share } from '@/src/theme/colors';
 import { type } from '@/src/styles/tokens';
 
 export type CardFormat = 'story' | 'post';
@@ -14,7 +16,7 @@ export const CARD_SIZE: Record<CardFormat, { width: number; height: number }> = 
 };
 /** Clear of social apps' profile header and reply controls. */
 export const SAFE = {
-  story: { top: 58, bottom: 84, side: 26 },
+  story: { top: 50, bottom: 66, side: 26 },
   post: { top: 24, bottom: 24, side: 26 },
 } as const;
 export const DISPLAY = 'Anton_400Regular';
@@ -23,7 +25,12 @@ export const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 /** The same custom wordmark used by the app's primary brand surfaces. */
 export function Wordmark({ color, accent, size = 16, shadow }: { color: string; accent: string; size?: number; shadow?: TextStyle }) {
   return (
-    <View style={shadow ? { shadowColor: shadow.textShadowColor, shadowOpacity: 1, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } } : undefined}>
+    <View>
+      {shadow ? (
+        <View style={{ position: 'absolute', top: 1, left: 1, opacity: 0.5 }}>
+          <FitNyxWordmark height={size * 1.2} color={String(shadow.textShadowColor ?? share.sketch.shadow)} accessible={false} />
+        </View>
+      ) : null}
       <FitNyxWordmark height={size * 1.2} color={color} accentColor={accent} />
     </View>
   );
@@ -53,36 +60,17 @@ export function BigNumber({
   color,
   unitColor,
   shadow,
+  centered = false,
 }: {
   stat: ShareStat;
+  centered?: boolean;
   size: number;
   color: string;
   unitColor: string;
   shadow?: TextStyle;
 }) {
-  const characters = [...stat.value].reduce((sum, char) => sum + (/[.,:]/.test(char) ? 0.26 : 0.55), 0);
-  const unitWidth = stat.unit ? (stat.unit.length * 0.55 + 0.4) * 0.27 : 0;
-  const fitted = Math.min(size, 280 / (characters + unitWidth));
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-      <Text
-        allowFontScaling={false}
-        style={[styles.big, { fontSize: fitted, lineHeight: fitted * 1.16, color, flexShrink: 1 }, shadow]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.45}
-      >
-        {stat.value}
-      </Text>
-      {stat.unit ? (
-        <Text
-          allowFontScaling={false}
-          style={[{ fontFamily: DISPLAY, fontSize: fitted * 0.27, lineHeight: fitted * 0.34, color: unitColor }, shadow]}
-        >
-          {stat.unit}
-        </Text>
-      ) : null}
-    </View>
+    <MetricNumber value={stat.value} unit={stat.unit} size={size} color={color} unitColor={unitColor} centered={centered} shadow={shadow} />
   );
 }
 
@@ -106,16 +94,16 @@ export function StatRow({
           <Label color={muted} size={8} style={shadow}>
             {s.label.toUpperCase()}
           </Label>
-          <Text
-            allowFontScaling={false}
-            style={[styles.statValue, { color }, shadow]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.6}
-          >
-            {s.value}
-            {s.unit ? <Text style={[styles.statUnit, { color: muted, lineHeight: 12 }]}> {s.unit}</Text> : null}
-          </Text>
+          <MetricNumber
+            value={s.value}
+            unit={s.unit}
+            size={24}
+            unitScale={0.38}
+            maxWidth={(280 - (stats.length - 1) * 12) / stats.length - 6}
+            color={color}
+            unitColor={muted}
+            shadow={shadow}
+          />
         </View>
       ))}
     </View>
@@ -133,22 +121,21 @@ export function Pill({ text, color, bg, border }: { text: string; color: string;
 }
 
 export function CardTitle({ title, color, size = 32, lines = 1 }: { title: string; color: string; size?: number; lines?: number }) {
-  const long = title.length > 30;
-  const lineHeight = (size * 1.17) / (long ? 2 : 1);
-  const fontSize = long ? Math.min(18, lineHeight * 0.9) : Math.min(size, 550 / Math.max(12, title.length));
+  const lineCount = title.length > 26 ? 2 : lines;
+  const boxHeight = size * 1.18 * lines;
+  const fontSize = lineCount > lines ? Math.min(23, (boxHeight / 2) * 0.9) : size;
   return (
     <Text
       allowFontScaling={false}
-      numberOfLines={long ? 2 : lines}
+      numberOfLines={lineCount}
       adjustsFontSizeToFit
-      minimumFontScale={0.8}
+      minimumFontScale={0.7}
       style={{
-        fontFamily: DISPLAY,
+        fontFamily: 'PatrickHand',
         fontSize,
-        lineHeight,
-        height: size * 1.17,
+        lineHeight: boxHeight / lineCount,
+        height: boxHeight,
         color,
-        textTransform: 'uppercase',
         includeFontPadding: false,
       }}
     >

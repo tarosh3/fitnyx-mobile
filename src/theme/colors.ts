@@ -10,6 +10,13 @@ export const share = {
   receipt: { paper: '#F4F1E8', ink: '#20271F', muted: '#62685E', rule: '#CCD1C4' },
   photo: { scrim: 'rgba(6,16,11,0.94)', clear: 'rgba(6,16,11,0)', text: '#FFFFFF', muted: '#E0E7DD', placeholderA: '#344D3C', placeholderB: '#101C18' },
   sticker: { text: '#FFFFFF', muted: '#FFFFFF', shadow: 'rgba(0,0,0,0.6)', checkA: '#35473D', checkB: '#2A3A31' },
+  /** Hand-drawn cards (Doodle · Notebook · Scrapbook · Log · Photo · Cutout) and remote designs. */
+  sketch: {
+    paper: '#F7F3E8', ink: '#282D29', muted: '#667064', mint: '#BCE8C8', green: '#31714C', yellow: '#F7DE8D', line: '#D5D8CC',
+    desk: '#E8ECDD', tape: '#F4DFA6', tapeEdge: '#D5D8CA', rule: '#C8D0BF', barMuted: '#94BBA0',
+    ground: '#A8C9B0', speedLines: '#628E70', notebookLine: '#D8E0D3', notebookMargin: '#E8C6B8',
+    white: '#FFFFFF', photoMuted: '#E3E9DC', photoRule: '#697A6E', shadow: '#000000',
+  },
 } as const;
 
 export const colors = {
