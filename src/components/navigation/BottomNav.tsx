@@ -83,14 +83,9 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { height: totalHeight + gap + 24 }]}>
-      {/* The pill is inset, so wide cards can peek in the margins beside it and
-          in the gap below. Paint those areas (never behind the pill) with the
-          page background: dark content was already invisible there, and this
-          also hides bright content, while the pill keeps showing content through
-          its frost. Nothing above the pill's top edge is covered. */}
-      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: gap, backgroundColor: c.background }} />
-      <View pointerEvents="none" style={{ position: 'absolute', left: 0, bottom: gap, width: dockLeft, height: totalHeight, backgroundColor: c.background }} />
-      <View pointerEvents="none" style={{ position: 'absolute', right: 0, bottom: gap, width: Math.max(0, width - dockLeft - dockWidth), height: totalHeight, backgroundColor: c.background }} />
+      {/* The dock floats: content scrolls freely behind and below it — visible
+          in the gap under the pill and in the margins beside it, and blurred
+          through the frosted pill itself. No background masks here. */}
       <View testID="bottom-nav" pointerEvents="box-none" style={[styles.dock, {
         bottom: gap, left: dockLeft, width: dockWidth, height: totalHeight,
         backgroundColor: reduceTransparency ? c.nav.surface : 'transparent',
