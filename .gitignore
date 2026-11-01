@@ -51,3 +51,4 @@ google-services.json
 
 # Uncompressed source art (runtime uses the 512px copies)
 assets/images/exercise-thumbs/originals/
+dist-update/

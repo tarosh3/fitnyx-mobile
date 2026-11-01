@@ -13,6 +13,14 @@
       "backgroundColor": "#050505"
     },
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1dca1118-e477-40fe-9e29-df941784fb68",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fitnyx.app",
