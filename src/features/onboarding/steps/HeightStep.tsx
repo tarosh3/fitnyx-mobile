@@ -1,68 +1,80 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Slider from '@react-native-community/slider';
-import Svg, { Circle } from 'react-native-svg';
+import React, { useState } from 'react';
+import { Text, TextInput, View } from 'react-native';
 
+import { RulerPicker } from '@/src/features/onboarding/RulerPicker';
+import { nudge } from '@/src/features/onboarding/ruler';
+import { measureStyles, StepButton, UnitToggle } from '@/src/features/onboarding/steps/MeasureParts';
 import { StepScaffold } from '@/src/features/onboarding/steps/StepScaffold';
 import { OnboardingStepProps } from '@/src/features/onboarding/types';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
-const PRIMARY = '#5FC793';
-const GAUGE_SIZE = 220;
-const STROKE_WIDTH = 12;
-const RADIUS = (GAUGE_SIZE - STROKE_WIDTH) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+type Unit = 'cm' | 'ft';
 
-function cmToFtIn(cm: number) {
-  const totalInches = cm / 2.54;
-  return { feet: Math.floor(totalInches / 12), inches: Math.round(totalInches % 12) };
-}
+// cm: a tick per cm, labelled every 10. ft: a tick per inch, labelled every foot.
+const RULER = {
+  cm: { min: 100, max: 250, step: 1, ticksPerLabel: 10 },
+  ft: { min: 36, max: 96, step: 1, ticksPerLabel: 12 },
+} as const;
+const UNITS = [{ value: 'cm' as const, label: 'cm' }, { value: 'ft' as const, label: 'ft / in' }];
 
-function ftInToCm(feet: number, inches: number) {
-  return (feet * 12 + inches) * 2.54;
-}
+const cmToIn = (cm: number) => Math.round(cm / 2.54);
+const inToCm = (inches: number) => Math.round(inches * 2.54);
+const ftIn = (inches: number) => `${Math.floor(inches / 12)}'${inches % 12}"`;
+const cmLabel = (n: number) => String(n);
+const ftLabel = (n: number) => `${Math.floor(n / 12)}'`;
 
 export function HeightStep({ data, onNext, saving }: OnboardingStepProps) {
   const palette = useThemeColors();
 
-  const [unit, setUnit] = useState<'cm' | 'ft'>('cm');
-  const initCm = data?.height_cm || 170;
-  const initFtIn = cmToFtIn(initCm);
-
-  const [heightCm, setHeightCm] = useState(initCm);
-  const [feet, setFeet] = useState(initFtIn.feet);
-  const [inches, setInches] = useState(initFtIn.inches);
+  const [unit, setUnit] = useState<Unit>('cm');
+  // Whole cm is what the backend stores; ft mode edits whole inches.
+  const [heightCm, setHeightCm] = useState(Math.round(data?.height_cm || 170));
+  const [inches, setInches] = useState(cmToIn(data?.height_cm || 170));
+  const [text, setText] = useState(String(Math.round(data?.height_cm || 170)));
   const [error, setError] = useState('');
 
-  const totalInches = useMemo(() => feet * 12 + inches, [feet, inches]);
+  const ruler = RULER[unit];
+  const shown = unit === 'cm' ? heightCm : inches;
 
-  const handleUnitChange = (nextUnit: 'cm' | 'ft') => {
-    if (nextUnit === 'ft' && unit === 'cm') {
-      const converted = cmToFtIn(heightCm);
-      setFeet(converted.feet);
-      setInches(converted.inches);
-    } else if (nextUnit === 'cm' && unit === 'ft') {
-      setHeightCm(Math.round(ftInToCm(feet, inches)));
+  const setShown = (value: number) => {
+    setError('');
+    if (unit === 'cm') {
+      setHeightCm(value);
+      setText(String(value));
+    } else {
+      setInches(value);
+    }
+  };
+
+  const handleUnitChange = (nextUnit: Unit) => {
+    if (nextUnit === unit) return;
+    if (nextUnit === 'ft') {
+      setInches(cmToIn(heightCm));
+    } else {
+      const cm = inToCm(inches);
+      setHeightCm(cm);
+      setText(String(cm));
     }
     setUnit(nextUnit);
   };
 
-  // Progress for the ring (0-1)
-  const progress = useMemo(() => {
-    if (unit === 'cm') return (heightCm - 100) / (250 - 100);
-    return (totalInches - 36) / (96 - 36);
-  }, [unit, heightCm, totalInches]);
-
-  const strokeDashoffset = CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, progress)));
+  const handleType = (raw: string) => {
+    setError('');
+    const t = raw.replace(/[^0-9]/g, '').slice(0, 3);
+    setText(t);
+    if (t) setHeightCm(parseInt(t, 10));
+  };
 
   const handleSubmit = () => {
-    const finalCm = unit === 'cm' ? heightCm : ftInToCm(feet, inches);
-    if (finalCm < 100 || finalCm > 250) {
+    const finalCm = unit === 'cm' ? heightCm : inToCm(inches);
+    if ((unit === 'cm' && !text) || finalCm < 100 || finalCm > 250) {
       setError('Please enter a valid height (100-250 cm)');
       return;
     }
-    onNext({ height_cm: Math.round(finalCm) });
+    onNext({ height_cm: finalCm });
   };
+
+  const stepLabel = unit === 'cm' ? '1 centimetre' : '1 inch';
 
   return (
     <StepScaffold
@@ -72,173 +84,54 @@ export function HeightStep({ data, onNext, saving }: OnboardingStepProps) {
       saving={saving}
       error={error}
     >
-      {/* Unit toggle */}
-      <View style={styles.toggleRow}>
-        <Pressable
-          onPress={() => handleUnitChange('cm')}
-          style={[styles.toggleBtn, unit === 'cm' ? styles.toggleActive : { backgroundColor: palette.card }]}
-        >
-          <Text style={[styles.toggleText, { color: unit === 'cm' ? '#000' : palette.text }]}>cm</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => handleUnitChange('ft')}
-          style={[styles.toggleBtn, unit === 'ft' ? styles.toggleActive : { backgroundColor: palette.card }]}
-        >
-          <Text style={[styles.toggleText, { color: unit === 'ft' ? '#000' : palette.text }]}>ft / in</Text>
-        </Pressable>
-      </View>
+      <UnitToggle options={UNITS} value={unit} onChange={handleUnitChange} />
 
-      {/* Circular gauge */}
-      <View style={styles.gaugeContainer}>
-        <Svg width={GAUGE_SIZE} height={GAUGE_SIZE} style={styles.gaugeSvg}>
-          {/* Background ring */}
-          <Circle
-            cx={GAUGE_SIZE / 2}
-            cy={GAUGE_SIZE / 2}
-            r={RADIUS}
-            stroke={palette.border}
-            strokeWidth={STROKE_WIDTH}
-            fill="none"
-            opacity={0.3}
-          />
-          {/* Progress ring */}
-          <Circle
-            cx={GAUGE_SIZE / 2}
-            cy={GAUGE_SIZE / 2}
-            r={RADIUS}
-            stroke={PRIMARY}
-            strokeWidth={STROKE_WIDTH}
-            fill="none"
-            strokeLinecap="round"
-            strokeDasharray={`${CIRCUMFERENCE}`}
-            strokeDashoffset={strokeDashoffset}
-            rotation="-90"
-            origin={`${GAUGE_SIZE / 2}, ${GAUGE_SIZE / 2}`}
-          />
-        </Svg>
-        <View style={styles.gaugeCenter}>
-          <Text style={styles.gaugeValue}>
-            {unit === 'cm' ? `${heightCm}` : `${feet}'${inches}"`}
-          </Text>
-          <Text style={[styles.gaugeUnit, { color: palette.mutedText }]}>
-            {unit === 'cm' ? 'cm' : 'ft / in'}
+      <View style={measureStyles.valueRow}>
+        <StepButton
+          kind="minus"
+          accessibilityLabel={`Decrease by ${stepLabel}`}
+          disabled={shown <= ruler.min}
+          onPress={() => setShown(nudge(shown, -1, ruler.min, ruler.max, ruler.step))}
+        />
+        <View style={measureStyles.valueBox}>
+          {unit === 'cm' ? (
+            <TextInput
+              testID="height-input"
+              value={text}
+              onChangeText={handleType}
+              keyboardType="number-pad"
+              selectTextOnFocus
+              maxLength={3}
+              accessibilityLabel="Height in centimetres"
+              style={[measureStyles.value, { color: palette.text }]}
+            />
+          ) : (
+            <Text testID="height-value" style={[measureStyles.value, { color: palette.text }]}>{ftIn(inches)}</Text>
+          )}
+          <Text style={[measureStyles.unit, { color: palette.mutedText }]}>
+            {unit === 'cm' ? `cm · ≈ ${ftIn(cmToIn(heightCm))}` : `ft / in · ≈ ${inToCm(inches)} cm`}
           </Text>
         </View>
+        <StepButton
+          kind="plus"
+          accessibilityLabel={`Increase by ${stepLabel}`}
+          disabled={shown >= ruler.max}
+          onPress={() => setShown(nudge(shown, 1, ruler.min, ruler.max, ruler.step))}
+        />
       </View>
 
-      {/* Slider */}
-      <View style={styles.sliderWrap}>
-        <Text style={[styles.sliderLabel, { color: palette.mutedText }]}>
-          {unit === 'cm' ? '100' : "3'0\""}
-        </Text>
-        <View style={styles.sliderTrack}>
-          <Slider
-            minimumValue={unit === 'cm' ? 100 : 36}
-            maximumValue={unit === 'cm' ? 250 : 96}
-            step={1}
-            value={unit === 'cm' ? heightCm : totalInches}
-            minimumTrackTintColor={PRIMARY}
-            maximumTrackTintColor={palette.border}
-            thumbTintColor={PRIMARY}
-            onValueChange={(value) => {
-              setError('');
-              if (unit === 'cm') {
-                setHeightCm(Math.round(value));
-              } else {
-                const total = Math.round(value);
-                setFeet(Math.floor(total / 12));
-                setInches(total % 12);
-              }
-            }}
-          />
-        </View>
-        <Text style={[styles.sliderLabel, { color: palette.mutedText }]}>
-          {unit === 'cm' ? '250' : "8'0\""}
-        </Text>
-      </View>
-
-      {/* Conversion badge */}
-      <View style={styles.conversionBadge}>
-        <Text style={[styles.conversionText, { color: palette.mutedText }]}>
-          {unit === 'cm'
-            ? `${cmToFtIn(heightCm).feet}'${cmToFtIn(heightCm).inches}"`
-            : `${Math.round(ftInToCm(feet, inches))} cm`}
-        </Text>
-      </View>
+      <RulerPicker
+        key={unit}
+        {...ruler}
+        value={Math.max(ruler.min, Math.min(ruler.max, shown))}
+        onChange={setShown}
+        formatLabel={unit === 'cm' ? cmLabel : ftLabel}
+        formatSpoken={(v) => (unit === 'cm' ? `${v} centimetres` : `${Math.floor(v / 12)} feet ${v % 12} inches`)}
+        accessibilityLabel="Height ruler"
+      />
+      <Text style={[measureStyles.hint, { color: palette.mutedText }]}>
+        {unit === 'cm' ? 'Slide the ruler, use − / +, or tap the number to type.' : 'Slide the ruler or use − / + (1 inch each).'}
+      </Text>
     </StepScaffold>
   );
 }
-
-const styles = StyleSheet.create({
-  toggleRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  toggleBtn: {
-    alignItems: 'center',
-    borderRadius: 14,
-    flex: 1,
-    paddingVertical: 12,
-  },
-  toggleActive: {
-    backgroundColor: PRIMARY,
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  gaugeContainer: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    height: GAUGE_SIZE,
-    justifyContent: 'center',
-    marginVertical: 8,
-    width: GAUGE_SIZE,
-  },
-  gaugeSvg: {
-    position: 'absolute',
-  },
-  gaugeCenter: {
-    alignItems: 'center',
-  },
-  gaugeValue: {
-    color: '#FFFFFF',
-    fontSize: 56,
-    fontWeight: '900',
-    letterSpacing: -2,
-  },
-  gaugeUnit: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: -4,
-  },
-  sliderWrap: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  sliderTrack: {
-    flex: 1,
-  },
-  sliderLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    minWidth: 30,
-    textAlign: 'center',
-  },
-  conversionBadge: {
-    alignSelf: 'center',
-    borderColor: `${PRIMARY}30`,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginTop: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: `${PRIMARY}10`,
-  },
-  conversionText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});
