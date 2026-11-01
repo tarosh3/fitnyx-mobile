@@ -119,6 +119,7 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - **One toast for the whole app** (`src/features/workouts/ui/Toast.tsx`, 2026-10-22): a dark `c.card` card above the dock (and above the active-workout mini-player; above a screen's own bottom bar on routes without the dock; above the keyboard) — never at the top, where it covered headers and back buttons. `toast(message, 'success' | 'error')` adds a mint check / red alert icon; plain = info. Outside the provider (root overlays like `ActiveSessionIndicator`, the back handler) use `showToast`.
 - **No `Alert.alert` and no `ToastAndroid`** — Android draws them as white system boxes, off-theme. Messages → `toast`; real choices → `ConfirmModal`; feedback raised while a `Modal` is open → inline text in that modal (a toast would hide under it).
 - Never add Android `READ_MEDIA_*` (Play photo-permission policy): saving needs none on Android 13+; they're in `android.blockedPermissions` and the media-library plugin uses `granularPermissions: []`.
+- `android.blockedPermissions` also strips `RECORD_AUDIO` (expo-image-picker adds it; the app never records) and `SYSTEM_ALERT_WINDOW` (Expo template; the debug manifest keeps its own copy for the dev overlay). Keep `WRITE_EXTERNAL_STORAGE`: expo-media-library needs it to save share cards on Android 8–9 (minSdk 26). Check the final list with `npx expo config --type introspect --json` (entries with `tools:node="remove"` are dropped).
 
 **Plan (`src/features/plan/`, route `app/plan.tsx`)** — 2026-10-20: what the onboarding answers turn into. `GET /plan` (backend `internal/fitplan`, pure + tested) returns daily calorie/macro targets (Mifflin-St Jeor → TDEE → goal adjustment), a schedule (days, minutes, time → reminder time), avoid/eat-more guidance and a rule-based starter program preview; `POST /plan/starter-program` saves it as the active plan (`source='starter'`, replaces an earlier one, doesn't count toward the 2-plan limit). Filo's fixed context, the daily insight (training vs rest day) and diet generation (must hit the calorie target, one retry) read the same numbers.
 - Shown on: `/plan?welcome=1` right after onboarding, Home `PlanTodayCard` (one-time "new" state for older users) + the no-program hero, Train `StarterCard`, Diet setup (wizard pre-filled from `diet_defaults`), Fitness profile link.
@@ -150,6 +151,13 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Opening the list marks read whenever unread ones appear (cached copy, then the focus refresh) and **reloads after the server confirms** — the focus GET can still be in flight with the old count. Rows that arrived unread stay tinted while open.
 - No remote push yet: `@react-native-firebase/app` is installed but there is no messaging module, no Android `google-services.json`, no APNs entitlement (free Apple accounts can't use push).
 
+**OTA updates + remote app config (`src/features/appConfig/`)** — 2026-11-02:
+- **OTA (expo-updates + EAS Update):** `runtimeVersion` policy `fingerprint`, channels `production` / `preview` / `development` in eas.json. Updates download at launch (`checkAutomatically: ON_LOAD`, `fallbackToCacheTimeout: 0`) and on return to the foreground (`ota.ts`, at most every 30 min), and apply at the **next cold start** — never `reloadAsync()` mid-use (it would cut off a workout / Roam screen). Only builds made after 2026-11-02 can receive updates.
+- **Publish only with `npm run update:production -- "message"`** (or `update:preview`; add `--dry-run` via `node scripts/publish-update.js production "msg" --dry-run` to build + check without uploading). Never run bare `eas update`: it bundles with the local `.env`, whose `EXPO_PUBLIC_BACKEND_URL` is `http://localhost:8080`, and eas.json's build-profile `env` does not apply to updates — every installed app would call localhost. The script bundles with `EXPO_NO_DOTENV=1` + the profile env, requires the profile's backend + Supabase URLs in each bundle, then uploads with `--skip-bundler`. The code's own `localhost` fallback is always in the bundle, so never check for its absence.
+- An update reaches only builds with the same fingerprint. The fingerprint changes with native deps, config plugins, `app.json`, `patches/`, `modules/`, **`eas.json` and `.gitignore`** — after changing any of them, ship a new store build; `npx expo-updates runtimeversion:resolve --platform android` prints it.
+- **Remote config:** `GET /api/v1/app-config` (public, plain `fetch` in `src/lib/api/appConfig.ts` — signed-out users must see a forced update too), edited in the admin dashboard's App Config page. `model.ts` mirrors backend `service.AppConfigResponse` — change both together. `store.ts` keeps it in a module store (`useAppConfig`, `useAppNotices`, `useFeatureFlag(name, fallback)`), saved with no expiry under `cacheKeys.appConfig`. A failed or malformed fetch never blocks.
+- `AppGate` (last overlay in `app/_layout.tsx`) covers the app when the **native** version (`expo-application`, not an OTA) is below `min_version` (store link: config's, else the Play listing; iOS has no default, so iOS is never blocked without `update_url_ios`) or when maintenance is on. Maintenance is honoured only from a fetch made during this run, so a saved copy can't lock an offline user out; a forced update applies from the saved copy too. `AppNoticeCard` on Home shows "update available" (`latest_version`) and the banner, each closable per version / text.
+
 **Supabase (`src/lib/supabase.ts`):**
 PKCE flow, AsyncStorage session persistence, auto-refresh pauses when backgrounded.
 
@@ -165,7 +173,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`arena` · `auth` · `dashboard` · `diet` · `friends` · `goals` · `notifications` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
+`appConfig` · `arena` · `auth` · `dashboard` · `diet` · `friends` · `goals` · `notifications` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 

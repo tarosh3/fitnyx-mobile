@@ -6,6 +6,7 @@ import React, { useMemo, useState } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppNoticeCard } from '@/src/features/appConfig/ui/AppNoticeCard';
 import { ArenaHomeCard } from '@/src/features/arena/ui/ArenaHomeCard';
 import { TodayGoalsCard } from '@/src/features/goals/ui/TodayGoalsCard';
 import { ReadinessCard } from '@/src/features/readiness/ui/ReadinessCard';
@@ -156,6 +157,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
           <Text style={styles.sectionTitle}>Move. Eat. Feel good.</Text>
         </View>
 
+        <AppNoticeCard />
         <MilestoneNotice storageKey={`milestone:level:${user.id}`} scope="level" value={metrics.level}
           ready={!metrics.loading && !metrics.error} message={`Level ${metrics.level} reached. Keep it going!`} />
         <Entrance style={styles.resumeSection}>{workoutSection}</Entrance>

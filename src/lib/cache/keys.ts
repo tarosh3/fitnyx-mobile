@@ -52,6 +52,9 @@ export const cacheKeys = {
   notifications: (userId: string) => `notifications:${userId}`,
   // Share-card designs published by the backend (GET /share-cards/catalog), per backend.
   shareCardCatalog: (apiBase: string) => `share-card-catalog:v1:${apiBase}`,
+  // Remote app config (GET /app-config, public), per backend; Home notices the user closed.
+  appConfig: (apiBase: string) => `app-config:v1:${apiBase}`,
+  appNoticeDismissed: (notice: string) => `app-notice:dismissed:${notice}`,
 
   exerciseUsage: (userId: string) => `exercise:usage:${userId}`,
   readinessSeries: (userId: string) => `readiness:series:${userId}`,
