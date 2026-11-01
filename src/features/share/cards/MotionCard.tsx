@@ -1,59 +1,57 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Text, View } from 'react-native';
+import type { ShareCardData } from '../cardData';
+import { BigNumber, CARD_SIZE, CardTitle, Label, SAFE, StatRow, type CardFormat } from './parts';
+import { RoutePanel, SetBars } from './visuals';
+import { HAND, HandNote, NotebookLines, SKETCH as s, Scribble, SketchFooter, SketchHeader, EffortMark } from './sketch';
 
-import type { ShareCardData } from '@/src/features/share/cardData';
-import { ActivityArtwork, activityArt } from '@/src/features/share/cards/ActivityArtwork';
-import { BigNumber, CARD_SIZE, CardFooter, CardTitle, Label, SAFE, StatRow, type CardFormat } from '@/src/features/share/cards/parts';
-import { share } from '@/src/theme/colors';
-
-/** A collectible sports print: custom activity artwork, warm ink and mint. */
+/** The activity's actual route or set rhythm becomes a page from a training notebook. */
 export function MotionCard({ data, format }: { data: ShareCardData; format: CardFormat }) {
-  const n = share.night;
   const story = format === 'story';
   const safe = SAFE[format];
-  const width = CARD_SIZE[format].width - safe.side * 2;
   return (
-    <View
-      style={[
-        CARD_SIZE[format],
-        styles.card,
-        { backgroundColor: n.bg, paddingTop: safe.top, paddingBottom: safe.bottom, paddingHorizontal: safe.side },
-      ]}
-    >
-      <View style={styles.header}>
-        <Label color={n.accent}>{`${data.kicker} / COMPLETE`}</Label>
-        <Label color={n.muted} size={8}>
-          {data.date.toUpperCase()}
+    <View style={[CARD_SIZE[format], { backgroundColor: s.paper, overflow: 'hidden' }]}>
+      <NotebookLines height={CARD_SIZE[format].height} />
+      <View style={{ flex: 1, paddingHorizontal: safe.side, paddingTop: safe.top, paddingBottom: safe.bottom }}>
+        <SketchHeader data={data} />
+        <View style={{ marginTop: story ? 16 : 10 }}>
+          <CardTitle title={data.title} color={s.ink} size={story ? 39 : 32} />
+        </View>
+        <View style={{ flex: 1, minHeight: 0, justifyContent: 'center', marginBottom: 12 }}>
+          <View style={{ position: 'absolute', right: 2, top: 8, transform: [{ rotate: '12deg' }] }}>
+            <EffortMark size={30} />
+          </View>
+          {data.kind === 'roam' ? (
+            <RoutePanel data={data} width={308} height={story ? 134 : 90} color={s.green} muted={s.muted} background={s.paper} />
+          ) : (
+            <View style={{ gap: 8 }}>
+              <SetBars loads={data.bars ?? []} width={308} height={story ? 84 : 48} color={s.green} muted={s.barMuted} />
+              <HandNote size={17}>one set at a time.</HandNote>
+            </View>
+          )}
+          {data.kind === 'roam' ? (
+            <HandNote size={17}>
+              {(data.route?.length ?? 0) > 1 ? 'left a little line on the world.' : 'time outside, well spent.'}
+            </HandNote>
+          ) : null}
+        </View>
+        <Label color={s.green} size={8}>
+          {data.hero.label.toUpperCase()}
         </Label>
-      </View>
-      <View style={{ marginTop: story ? 22 : 16 }}>
-        <CardTitle title={data.title} color={n.text} size={story ? 36 : 29} />
-      </View>
-      <View style={styles.art}>
-        <ActivityArtwork
-          activity={activityArt(data)}
-          width={width}
-          height={story ? 176 : 116}
-          ink={n.text}
-          accent={n.accent}
-          background={n.bg}
-        />
-      </View>
-      <Label color={n.accent} size={9}>
-        {data.hero.label.toUpperCase()}
-      </Label>
-      <BigNumber stat={data.hero} size={story ? 104 : 84} color={n.text} unitColor={n.accent} />
-      <View style={[styles.rule, { backgroundColor: n.faint }]} />
-      <StatRow stats={data.stats} color={n.text} muted={n.muted} rule={n.faint} />
-      <View style={{ marginTop: story ? 24 : 20 }}>
-        <CardFooter data={data} color={n.accent} muted={n.muted} />
+        <BigNumber stat={data.hero} size={story ? 90 : 70} color={s.ink} unitColor={s.green} />
+        {story ? (
+          <Text allowFontScaling={false} numberOfLines={1} style={{ fontFamily: HAND, fontSize: 19, color: s.green, marginBottom: 10 }}>
+            {data.fact ?? 'a little progress worth keeping.'}
+          </Text>
+        ) : null}
+        <Scribble />
+        <View style={{ paddingVertical: 12 }}>
+          <StatRow stats={data.stats} color={s.ink} muted={s.muted} rule={s.line} />
+        </View>
+        <View style={{ marginTop: story ? 16 : 10 }}>
+          <SketchFooter />
+        </View>
       </View>
     </View>
   );
 }
-const styles = StyleSheet.create({
-  card: { overflow: 'hidden' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  art: { flex: 1, minHeight: 0, justifyContent: 'center', alignItems: 'center' },
-  rule: { height: 1, marginTop: 12, marginBottom: 16 },
-});

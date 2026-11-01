@@ -35,6 +35,28 @@ export interface HealthBackend {
   readTodayActiveEnergyKcal(): Promise<number | null>;
   /** Average + peak heart rate (bpm) over a time range; nulls if unavailable. */
   readHeartRate(from: Date, to: Date): Promise<HeartRateStats>;
+  /**
+   * Daily readiness inputs (HRV, resting HR, sleep) for the last `days` days,
+   * oldest → newest. Returns [] when unavailable or unpermitted. These come
+   * from a wearable (watch/ring) feeding the store; phone-only users get nulls.
+   */
+  readReadinessSeries(days: number): Promise<ReadinessDay[]>;
+}
+
+/**
+ * One day's readiness inputs; a field is null when the store has no sample.
+ * HRV is SDNN on iOS and RMSSD on Android (different scales) — only ever
+ * compared to the user's own rolling baseline, never across platforms.
+ */
+export interface ReadinessDay {
+  /** Local date key YYYY-MM-DD; the morning these overnight values belong to. */
+  date: string;
+  /** Overnight heart-rate variability in milliseconds. */
+  hrvMs: number | null;
+  /** Resting heart rate in bpm. */
+  restingHr: number | null;
+  /** Hours asleep the night before. */
+  sleepHours: number | null;
 }
 
 /** Heart-rate summary over a range; a field is null when unknown. */

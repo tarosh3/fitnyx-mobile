@@ -141,6 +141,7 @@ function RootLayout() {
   const router = useRouter();
   const [loaded, error] = useFonts({
     Anton_400Regular,
+    PatrickHand: require('../assets/fonts/PatrickHand-Regular.ttf'),
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,

@@ -29,6 +29,32 @@ export async function fetchExerciseByUUID(uuid: string): Promise<Exercise> {
   return fetchWithAuth(`/view/exercise/${uuid}`);
 }
 
+/** One exercise the user has logged, with the signals the picker ranks by. */
+export interface ExerciseUsage {
+  exercise: Exercise;
+  /** Distinct workouts that logged this exercise. */
+  sessions: number;
+  last_used: string;
+  /** Body part (chest/back/shoulders/arms/legs/core), or '' when unknown. */
+  part: string;
+  /** Days since this part was last trained; null when unknown. */
+  group_days_ago: number | null;
+}
+
+/** The user's exercises ranked by use, with per-part recovery signals. */
+export async function fetchExerciseUsage(): Promise<ExerciseUsage[]> {
+  const res = (await fetchWithAuth(`/exercises/usage`)) as { data?: ExerciseUsage[] };
+  return res?.data ?? [];
+}
+
+/** Exercises the user usually does alongside the given ones, most-paired first. */
+export async function fetchExerciseSuggestions(current: string[]): Promise<Exercise[]> {
+  if (!current.length) return [];
+  const q = new URLSearchParams({ current: current.join(',') });
+  const res = (await fetchWithAuth(`/exercises/suggestions?${q.toString()}`)) as { data?: Exercise[] };
+  return res?.data ?? [];
+}
+
 // --- Custom exercises (one user's own; backend caps active ones at MAX_CUSTOM_EXERCISES) ---
 
 export const MAX_CUSTOM_EXERCISES = 10;

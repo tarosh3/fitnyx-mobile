@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import type { ShareCardData } from '@/src/features/share/cardData';
 import { projectToBox, thinForDisplay, type LngLatPair } from '@/src/features/roam/routeGeometry';
@@ -66,15 +66,23 @@ export function SetBars({
       {shown.map((load, i) => {
         const h = Math.max(3, (load / max) * (height - 4));
         return (
-          <Rect
-            key={i}
-            x={i * (barW + gap)}
-            y={height - h}
-            width={barW}
-            height={h}
-            fill={i === shown.indexOf(max) ? color : muted}
-            rx={1}
-          />
+          <React.Fragment key={i}>
+            <Path
+              d={`M${i * (barW + gap) + 1} ${height - 1} L${i * (barW + gap) + 0.8} ${height - h} L${i * (barW + gap) + barW - 1} ${height - h + 0.7} L${i * (barW + gap) + barW - 0.5} ${height - 1} Z`}
+              stroke={i === shown.indexOf(max) ? color : muted}
+              strokeWidth={1.2}
+              fill={muted}
+              fillOpacity={0.12}
+            />
+            {barW > 12 ? (
+              <Path
+                d={`M${i * (barW + gap) + 4} ${height - 2} L${i * (barW + gap) + 6} ${height - h + 3} M${i * (barW + gap) + barW / 2} ${height - 2} L${i * (barW + gap) + barW / 2 + 2} ${height - h + 3}`}
+                stroke={muted}
+                strokeWidth={2}
+                opacity={0.5}
+              />
+            ) : null}
+          </React.Fragment>
         );
       })}
     </Svg>

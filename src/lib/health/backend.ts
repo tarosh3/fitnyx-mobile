@@ -29,4 +29,7 @@ export const healthBackend: HealthBackend = {
   async readHeartRate() {
     return { avg: null, max: null };
   },
+  async readReadinessSeries() {
+    return [];
+  },
 };

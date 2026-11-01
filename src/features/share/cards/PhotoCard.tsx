@@ -1,103 +1,87 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ImagePlus } from 'lucide-react-native';
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+import type { ShareCardData } from '../cardData';
+import { BigNumber, CARD_SIZE, CardTitle, Label, SAFE, StatRow, type CardFormat } from './parts';
+import { RouteArt } from './visuals';
+import { type ArtworkCallbacks, DoodleArt, HandNote, SKETCH as s, Scribble, SketchFooter, SketchHeader, EffortMark } from './sketch';
 
-import type { ShareCardData } from '@/src/features/share/cardData';
-import {
-  BigNumber,
-  CARD_SIZE,
-  CardFooter,
-  CardTitle,
-  Completed,
-  Label,
-  SAFE,
-  StatRow,
-  type CardFormat,
-} from '@/src/features/share/cards/parts';
-import { RouteArt } from '@/src/features/share/cards/visuals';
-import { share } from '@/src/theme/colors';
-import { type } from '@/src/styles/tokens';
-
-/** The photo stays the subject; the lower scrim protects the result's contrast. */
+/** A handwritten dedication over the user's own photo. */
 export function PhotoCard({
   data,
   format,
   photoUri,
   onPhotoLoad,
   onPhotoError,
+  onArtworkLoad,
+  onArtworkError,
 }: {
   data: ShareCardData;
   format: CardFormat;
   photoUri?: string | null;
   onPhotoLoad?: () => void;
   onPhotoError?: () => void;
-}) {
-  const p = share.photo;
+} & ArtworkCallbacks) {
   const story = format === 'story';
   const safe = SAFE[format];
-  const { width, height } = CARD_SIZE[format];
+  const ink = photoUri ? s.white : s.ink;
+  const muted = photoUri ? s.photoMuted : s.muted;
   return (
-    <View style={{ width, height, backgroundColor: p.placeholderB, overflow: 'hidden' }}>
+    <View style={[CARD_SIZE[format], { backgroundColor: s.paper, overflow: 'hidden' }]}>
       {photoUri ? (
-        <Image
-          key={photoUri}
-          source={{ uri: photoUri }}
-          onLoad={onPhotoLoad}
-          onError={onPhotoError}
-          style={[StyleSheet.absoluteFill, { width: undefined, height: undefined }]}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, styles.placeholder, { backgroundColor: p.placeholderA, paddingTop: story ? 135 : 85 }]}>
-          <ImagePlus size={30} color={p.text} strokeWidth={1.5} />
-          <Text allowFontScaling={false} style={[styles.placeholderTitle, { color: p.text }]}>
-            Your moment goes here.
-          </Text>
-          <Text allowFontScaling={false} style={[styles.placeholderText, { color: p.muted }]}>
-            Add a photo to make it yours
-          </Text>
+        <>
+          <Image
+            key={photoUri}
+            source={{ uri: photoUri }}
+            onLoad={onPhotoLoad}
+            onError={onPhotoError}
+            resizeMode="cover"
+            style={[StyleSheet.absoluteFill, { width: undefined, height: undefined }]}
+          />
+          <LinearGradient
+            colors={['rgba(8,18,13,0.48)', 'rgba(8,18,13,0.05)', 'rgba(8,18,13,0.88)', 'rgba(8,18,13,0.96)']}
+            locations={[0, 0.28, 0.64, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </>
+      ) : null}
+      <View style={{ flex: 1, paddingHorizontal: safe.side, paddingTop: safe.top, paddingBottom: safe.bottom }}>
+        <SketchHeader data={data} color={ink} />
+        <View style={{ marginTop: 14 }}>
+          <HandNote color={ink} size={story ? 29 : 24}>
+            a good day to show up.
+          </HandNote>
         </View>
-      )}
-      <LinearGradient colors={[p.scrim, p.clear]} style={[styles.topScrim, { height: 140 }]} />
-      <LinearGradient
-        colors={[p.clear, p.scrim, p.scrim]}
-        locations={[0, 0.5, 1]}
-        style={[styles.bottomScrim, { height: height * 0.72 }]}
-      />
-      <View style={[styles.body, { paddingTop: safe.top, paddingBottom: safe.bottom, paddingHorizontal: safe.side }]}>
-        <View style={styles.header}>
-          <Completed color={p.text} />
-          <Label color={p.text} size={8}>
-            {data.date.toUpperCase()}
-          </Label>
+        <View style={{ flex: 1, minHeight: 0, justifyContent: 'center', alignItems: 'center' }}>
+          {!photoUri ? (
+            <>
+              <DoodleArt onArtworkLoad={onArtworkLoad} onArtworkError={onArtworkError} data={data} height={story ? 130 : 78} />
+              <HandNote size={18}>your photo belongs here.</HandNote>
+            </>
+          ) : (
+            <View style={{ alignSelf: 'flex-end', transform: [{ rotate: '10deg' }] }}>
+              <EffortMark color={ink} size={44} />
+            </View>
+          )}
         </View>
-        <View style={styles.spacer} />
-        {story && (data.route?.length ?? 0) > 1 ? (
-          <View style={styles.route}>
-            <RouteArt route={data.route!} width={100} height={85} color={p.text} background={p.placeholderB} stroke={2.5} />
+        {photoUri && story && (data.route?.length ?? 0) > 1 ? (
+          <View style={{ alignSelf: 'flex-end', marginBottom: 8 }}>
+            <RouteArt route={data.route!} width={100} height={74} color={ink} background="transparent" stroke={3} />
           </View>
         ) : null}
-        <Label color={share.night.accent} size={8}>{`${data.kicker} / ${data.hero.label.toUpperCase()}`}</Label>
-        <BigNumber stat={data.hero} size={story ? 96 : 78} color={p.text} unitColor={p.text} />
-        <CardTitle title={data.title} color={p.text} size={story ? 27 : 23} />
-        <View style={[styles.stats, { borderColor: share.night.muted }]}>
-          <StatRow stats={data.stats} color={p.text} muted={p.muted} rule={share.night.muted} />
+        <Label color={photoUri ? s.mint : s.green} size={8}>
+          {data.hero.label.toUpperCase()}
+        </Label>
+        <BigNumber stat={data.hero} size={story ? 86 : 64} color={ink} unitColor={ink} />
+        <CardTitle title={data.title} color={ink} size={story ? 32 : 27} />
+        <Scribble color={ink} />
+        <View style={{ paddingVertical: 12 }}>
+          <StatRow stats={data.stats} color={ink} muted={muted} rule={photoUri ? s.photoRule : s.line} />
         </View>
-        <CardFooter data={data} color={p.text} muted={p.muted} />
+        <View style={{ marginTop: story ? 12 : 6 }}>
+          <SketchFooter color={ink} muted={muted} />
+        </View>
       </View>
     </View>
   );
 }
-const styles = StyleSheet.create({
-  body: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  placeholder: { alignItems: 'center', gap: 9 },
-  placeholderTitle: { fontFamily: type.weight.semibold, fontSize: 17 },
-  placeholderText: { fontFamily: type.weight.regular, fontSize: 11 },
-  topScrim: { position: 'absolute', top: 0, left: 0, right: 0 },
-  bottomScrim: { position: 'absolute', bottom: 0, left: 0, right: 0 },
-  spacer: { flex: 1 },
-  route: { marginBottom: 12 },
-  stats: { borderTopWidth: 1, paddingTop: 14, marginTop: 18, marginBottom: 22 },
-});

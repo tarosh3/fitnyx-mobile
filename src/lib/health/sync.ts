@@ -3,7 +3,7 @@ import type { WorkoutSession } from '@/src/lib/api/workoutSessions';
 import { getHealthSync } from '@/src/lib/prefs';
 import { healthBackend } from './backend';
 import { roamToHealthWorkout, sessionToHealthWorkout } from './map';
-import type { HealthToday, HeartRateStats } from './types';
+import type { HealthToday, HeartRateStats, ReadinessDay } from './types';
 
 /**
  * One-way export of FitNyx activity to the platform health store (Apple Health /
@@ -75,5 +75,15 @@ export async function readHealthHeartRate(from: Date, to: Date): Promise<HeartRa
     return await healthBackend.readHeartRate(from, to);
   } catch {
     return none;
+  }
+}
+
+/** Daily readiness inputs (HRV, resting HR, sleep) for the last N days; [] when off/unavailable. */
+export async function readReadinessSeries(days: number): Promise<ReadinessDay[]> {
+  try {
+    if (!(await enabled())) return [];
+    return await healthBackend.readReadinessSeries(days);
+  } catch {
+    return [];
   }
 }
