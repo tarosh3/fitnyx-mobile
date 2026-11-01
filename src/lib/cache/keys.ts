@@ -54,6 +54,7 @@ export const cacheKeys = {
   shareCardCatalog: (apiBase: string) => `share-card-catalog:v1:${apiBase}`,
 
   exerciseUsage: (userId: string) => `exercise:usage:${userId}`,
+  readinessSeries: (userId: string) => `readiness:series:${userId}`,
 } as const;
 
 export const cacheTTL = {

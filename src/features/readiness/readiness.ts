@@ -15,6 +15,13 @@ import type { ReadinessDay } from '@/src/lib/health/types';
 
 export type ReadinessBand = 'recover' | 'moderate' | 'primed' | 'insufficient';
 
+export const BAND_LABEL: Record<ReadinessBand, string> = {
+  primed: 'Primed',
+  moderate: 'Moderate',
+  recover: 'Recover',
+  insufficient: '—',
+};
+
 export interface ReadinessDriver {
   /** Today's value (HRV ms / resting bpm / sleep hours), or null if missing. */
   value: number | null;
