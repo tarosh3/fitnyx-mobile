@@ -1,6 +1,6 @@
 import React from 'react';
-import { ActivityIndicator } from 'react-native';
 
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { Screen } from '@/src/components/ui/Screen';
 import { AuthLanding } from '@/src/features/auth/AuthLanding';
 import { MobileHome } from '@/src/features/dashboard/MobileHome';
@@ -17,7 +17,8 @@ export default function HomeScreen() {
   if (loading || (user && !onboardingComplete)) {
     return (
       <Screen scroll={false} contentContainerStyle={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={palette.primary} />
+        {/* Same loader as onboarding, so the hand-off there doesn't swap spinners. */}
+        <BrandLoader size="large" color={palette.accent} />
       </Screen>
     );
   }
