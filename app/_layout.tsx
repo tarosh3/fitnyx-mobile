@@ -274,7 +274,7 @@ function ThemedStack() {
       <Stack.Screen name="signup" options={{ gestureEnabled: false }} />
       <Stack.Screen name="invite" options={{ gestureEnabled: false }} />
       <Stack.Screen name="access-expired" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="onboarding" options={{ gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="dashboard/index" options={{ animation: 'fade' }} />
       <Stack.Screen name="exercises" options={{ animation: 'fade' }} />
       <Stack.Screen name="dashboard/stats" options={{ animation: 'fade' }} />

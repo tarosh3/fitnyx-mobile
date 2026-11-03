@@ -2,10 +2,6 @@ import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
 jest.mock('@/src/hooks/useThemeColors', () => ({ useThemeColors: () => require('@/src/theme/colors').colors.dark }));
-jest.mock('@react-native-community/slider', () => {
-  const { View } = require('react-native');
-  return (props: object) => require('react').createElement(View, { testID: 'weight-slider', ...props });
-});
 
 // The scaffold's entrance animations need reanimated; the step's logic doesn't.
 jest.mock('@/src/features/onboarding/steps/StepScaffold', () => {
@@ -18,6 +14,11 @@ jest.mock('@/src/features/onboarding/steps/StepScaffold', () => {
 });
 
 import { WeightStep } from '../steps/WeightStep';
+
+// A full scroll event: VirtualizedList reads the viewport and content sizes.
+const scrollAt = (x: number) => ({
+  nativeEvent: { contentOffset: { x, y: 0 }, layoutMeasurement: { width: 300, height: 76 }, contentSize: { width: 20000, height: 76 } },
+});
 
 function setup(weight = 70) {
   const onNext = jest.fn();
@@ -50,4 +51,35 @@ it('rejects an empty or out-of-range weight', () => {
   fireEvent.changeText(screen.getByTestId('weight-input'), '250');
   fireEvent.press(screen.getByText('Continue'));
   expect(onNext).not.toHaveBeenCalled();
+});
+
+it('steps by 0.1 kg with − / +', () => {
+  const { screen, onNext } = setup(72.4);
+  fireEvent.press(screen.getByLabelText('Increase by 0.1 kg'));
+  fireEvent.press(screen.getByLabelText('Increase by 0.1 kg'));
+  fireEvent.press(screen.getByLabelText('Decrease by 0.1 kg'));
+  expect(screen.getByTestId('weight-input').props.value).toBe('72.5');
+  fireEvent.press(screen.getByText('Continue'));
+  expect(onNext).toHaveBeenCalledWith({ weight_kg: 72.5 });
+});
+
+it('picks a decimal weight by sliding the ruler', () => {
+  const { screen, onNext } = setup(70);
+  fireEvent(screen.getByLabelText('Weight ruler'), 'layout', { nativeEvent: { layout: { width: 300 } } });
+  const list = screen.getByTestId('ruler-list');
+  fireEvent(list, 'scrollBeginDrag');
+  // 10 px per 0.1 kg tick from 30 kg: tick 427 = 72.7 kg.
+  fireEvent.scroll(list, scrollAt(4270));
+  expect(screen.getByTestId('weight-input').props.value).toBe('72.7');
+  fireEvent.press(screen.getByText('Continue'));
+  expect(onNext).toHaveBeenCalledWith({ weight_kg: 72.7 });
+});
+
+it('ignores scrolls it makes itself (a typed value is not snapped)', () => {
+  const { screen, onNext } = setup(70);
+  fireEvent(screen.getByLabelText('Weight ruler'), 'layout', { nativeEvent: { layout: { width: 300 } } });
+  fireEvent.changeText(screen.getByTestId('weight-input'), '72.45');
+  fireEvent.scroll(screen.getByTestId('ruler-list'), scrollAt(4250));
+  fireEvent.press(screen.getByText('Continue'));
+  expect(onNext).toHaveBeenCalledWith({ weight_kg: 72.45 });
 });
