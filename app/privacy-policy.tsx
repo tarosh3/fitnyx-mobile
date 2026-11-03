@@ -43,13 +43,13 @@ export default function PrivacyPolicyScreen() {
       <Card style={{ gap: 10 }}>
         {SECTIONS.map((section) => (
           <View key={section.title} style={styles.sectionWrap}>
-            <Text style={[styles.sectionTitle, { color: palette.primary }]}>{section.title}</Text>
+            <Text style={[styles.sectionTitle, { color: palette.accent }]}>{section.title}</Text>
             <Text style={[styles.sectionBody, { color: palette.mutedText }]}>{section.body}</Text>
           </View>
         ))}
 
         <View style={styles.sectionWrap}>
-          <Text style={[styles.sectionTitle, { color: palette.primary }]}>Contact</Text>
+          <Text style={[styles.sectionTitle, { color: palette.accent }]}>Contact</Text>
           <Text style={[styles.sectionBody, { color: palette.mutedText }]}>For privacy requests: support@fitnyx.in</Text>
           <Pressable onPress={() => Linking.openURL('mailto:support@fitnyx.in')}>
             <Text style={{ color: palette.text, fontSize: 13, fontWeight: '700' }}>Email Support</Text>

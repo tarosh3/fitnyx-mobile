@@ -32,7 +32,7 @@ export function ActivityRow({
       style={({ pressed }) => [styles.row, { backgroundColor: palette.card, borderColor: palette.border }, pressed && { opacity: 0.8 }]}
     >
       <View style={[styles.icon, { backgroundColor: palette.surface }]}>
-        <ActivityTypeIcon type={activity.activity_type} color={palette.primary} />
+        <ActivityTypeIcon type={activity.activity_type} color={palette.accent} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.title, { color: palette.text }]} numberOfLines={1}>
@@ -48,7 +48,7 @@ export function ActivityRow({
             {activity.vehicle_detected ? 'Vehicle travel detected — not counted' : 'Too short to count'}
           </Text>
         ) : (
-          <Text style={[styles.flag, { color: palette.primary }]}>+{activity.xp} XP</Text>
+          <Text style={[styles.flag, { color: palette.accent }]}>+{activity.xp} XP</Text>
         )}
       </View>
       {onPress ? <ChevronRight size={18} color={palette.mutedText} /> : null}

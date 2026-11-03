@@ -236,7 +236,7 @@ export default function FitnessProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.flexCenter, { backgroundColor: c.background }]}>
-        <ActivityIndicator size="large" color={c.primary} />
+        <ActivityIndicator size="large" color={c.accent} />
       </View>
     );
   }
@@ -328,7 +328,7 @@ export default function FitnessProfileScreen() {
               <View style={{ gap: spacing.xs }}>
                 <View style={styles.rowBetween}>
                   <Text style={[styles.fieldLabel, { color: c.mutedText }]}>WEEKLY TARGET</Text>
-                  <Text style={[styles.fieldValue, { color: c.primary }]}>{weeklyTarget} / week</Text>
+                  <Text style={[styles.fieldValue, { color: c.accent }]}>{weeklyTarget} / week</Text>
                 </View>
                 <View style={styles.stepperRow}>
                   {[1, 2, 3, 4, 5, 6, 7].map((n) => {
@@ -412,7 +412,7 @@ export default function FitnessProfileScreen() {
               <View style={{ gap: spacing.xs }}>
                 <View style={styles.rowBetween}>
                   <Text style={[styles.fieldLabel, { color: c.mutedText }]}>SESSION DURATION</Text>
-                  <Text style={[styles.fieldValue, { color: c.primary }]}>{duration} min</Text>
+                  <Text style={[styles.fieldValue, { color: c.accent }]}>{duration} min</Text>
                 </View>
                 <View style={styles.stepperRow}>
                   {[15, 30, 45, 60, 75, 90].map((mins) => {

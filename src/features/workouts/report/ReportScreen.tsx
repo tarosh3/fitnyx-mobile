@@ -101,7 +101,8 @@ export function ReportScreen() {
                     <Text style={[styles.toggleTitle, { color: c.text }]}>Include my profile in the PDF</Text>
                     <Text style={[styles.hint, { color: c.mutedText }]}>Age, sex, height, weight, goal and injuries — helps a doctor or coach.</Text>
                   </View>
-                  <Switch value={profile} onValueChange={setProfile} accessibilityLabel="Include my profile in the PDF" />
+                  <Switch value={profile} onValueChange={setProfile} accessibilityLabel="Include my profile in the PDF"
+                    trackColor={{ false: c.switchTrack, true: c.primary }} ios_backgroundColor={c.switchTrack} thumbColor="#fff" />
                 </View>
               </>
             )}

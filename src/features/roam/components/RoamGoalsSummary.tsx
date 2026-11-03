@@ -19,7 +19,7 @@ export function RoamGoalsSummary({ tracker, roam }: { tracker: GoalTracker; roam
     <View style={[styles.card, { backgroundColor: palette.card, borderColor: reached.length ? palette.primary : palette.border }]}>
       {reached.length ? (
         <View style={styles.head} accessible accessibilityRole="header">
-          <PartyPopper size={18} color={palette.primary} />
+          <PartyPopper size={18} color={palette.accent} />
           <Text style={[styles.title, { color: palette.text }]}>
             {reached.length === tracker.goals.length ? 'Every goal reached today!' : `${reached.map((g) => GOAL_META[g.kind].label).join(' & ')} goal reached!`}
           </Text>

@@ -20,6 +20,8 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 
+import { useThemeColors } from '@/src/hooks/useThemeColors';
+
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -74,6 +76,10 @@ interface Props {
 }
 
 export function WaterGlass({ progress = 0, primary = '#5fc793' }: Props) {
+  const c = useThemeColors();
+  // Strokes follow the text colour (light on dark, dark on light); the open
+  // mouth shows the page behind it. It was dark-only: a black disc on light.
+  const ink = c.text;
   const level = useSharedValue(0);
   const phase = useSharedValue(0);
   const b1 = useSharedValue(0);
@@ -128,9 +134,9 @@ export function WaterGlass({ progress = 0, primary = '#5fc793' }: Props) {
             <Stop offset="1" stopColor="#2f9f72" stopOpacity="0.95" />
           </LinearGradient>
           <LinearGradient id="glassBody" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#ffffff" stopOpacity="0.10" />
-            <Stop offset="0.5" stopColor="#ffffff" stopOpacity="0.02" />
-            <Stop offset="1" stopColor="#ffffff" stopOpacity="0.07" />
+            <Stop offset="0" stopColor={ink} stopOpacity="0.10" />
+            <Stop offset="0.5" stopColor={ink} stopOpacity="0.02" />
+            <Stop offset="1" stopColor={ink} stopOpacity="0.07" />
           </LinearGradient>
           <RadialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
             <Stop offset="0" stopColor={primary} stopOpacity="0.45" />
@@ -165,9 +171,9 @@ export function WaterGlass({ progress = 0, primary = '#5fc793' }: Props) {
         />
 
         {/* Glass outline + open mouth */}
-        <Path d={GLASS_PATH} fill="none" stroke="#ffffff" strokeOpacity={0.22} strokeWidth={2} strokeLinejoin="round" />
-        <Ellipse cx={CX} cy={RIM_Y} rx={TOP_HALF} ry={RIM_RY} fill="#0b0b0b" stroke="#ffffff" strokeOpacity={0.28} strokeWidth={2} />
-        <Ellipse cx={CX} cy={RIM_Y} rx={TOP_HALF - 5} ry={RIM_RY - 4} fill="none" stroke="#ffffff" strokeOpacity={0.10} strokeWidth={1} />
+        <Path d={GLASS_PATH} fill="none" stroke={ink} strokeOpacity={0.22} strokeWidth={2} strokeLinejoin="round" />
+        <Ellipse cx={CX} cy={RIM_Y} rx={TOP_HALF} ry={RIM_RY} fill={c.background} stroke={ink} strokeOpacity={0.28} strokeWidth={2} />
+        <Ellipse cx={CX} cy={RIM_Y} rx={TOP_HALF - 5} ry={RIM_RY - 4} fill="none" stroke={ink} strokeOpacity={0.10} strokeWidth={1} />
       </Svg>
     </View>
   );

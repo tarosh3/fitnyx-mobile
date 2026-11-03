@@ -61,7 +61,7 @@ export function ArenaHero({ board, saving, onListedChange }: {
             </Text>
           </View>
           <Switch testID="arena-optin" value={board.me.listed} disabled={saving} onValueChange={onListedChange}
-            accessibilityLabel="Show me on Global leaderboards" trackColor={{ true: c.primary, false: c.border }} />
+            accessibilityLabel="Show me on Global leaderboards" trackColor={{ true: c.primary, false: c.switchTrack }} ios_backgroundColor={c.switchTrack} />
         </View>
       ) : null}
     </View>

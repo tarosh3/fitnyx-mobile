@@ -25,6 +25,7 @@ import { PressableScale } from '@/src/components/ui/PressableScale';
 import { WaterGlass } from '@/src/components/water/WaterGlass';
 import { Screen } from '@/src/components/ui/Screen';
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
+import { usePlan } from '@/src/features/plan/data';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { getMonthTotals, useWaterToday, WATER_LIMITS, ymd } from '@/src/lib/water';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
@@ -36,7 +37,9 @@ export default function WaterScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const toast = useToast();
-  const { day, goalMl, totalMl, add, remove, clearAll, setGoal } = useWaterToday();
+  // Until the user sets their own goal, follow the plan's water target (its Water card).
+  const planWaterMl = usePlan().data?.targets?.water_ml;
+  const { day, goalMl, totalMl, add, remove, clearAll, setGoal } = useWaterToday(planWaterMl);
 
   const [customOpen, setCustomOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
@@ -151,7 +154,7 @@ export default function WaterScreen() {
           </View>
         </Animated.View>
         <View style={[styles.tapPill, { borderColor: c.border, backgroundColor: c.surface }]}>
-          <Droplet size={12} color={c.primary} />
+          <Droplet size={12} color={c.accent} />
           <Text style={[styles.tapText, { color: c.mutedText }]}>Tap glass to add 250ml</Text>
         </View>
         <View style={[styles.levelTrack, { backgroundColor: c.border }]}>
@@ -175,7 +178,7 @@ export default function WaterScreen() {
             onPress={() => handleAdd(ml)}
             style={[styles.presetBtn, { backgroundColor: c.surface, borderColor: c.border }]}
           >
-            <Plus size={14} color={c.primary} />
+            <Plus size={14} color={c.accent} />
             <Text style={[styles.presetText, { color: c.text }]}>{ml}ml</Text>
           </PressableScale>
         ))}
@@ -241,7 +244,7 @@ export default function WaterScreen() {
               return (
                 <View key={e.id} style={[styles.entryRow, { borderColor: c.border }]}>
                   <View style={[styles.entryDot, { backgroundColor: `${c.primary}22` }]}>
-                    <Droplet size={14} color={c.primary} />
+                    <Droplet size={14} color={c.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.entryAmount, { color: c.text }]}>{e.amountMl} ml</Text>

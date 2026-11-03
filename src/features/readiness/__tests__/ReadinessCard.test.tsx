@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import type { Readiness } from '../readiness';
 
@@ -7,9 +7,12 @@ import type { Readiness } from '../readiness';
 const mockUse = jest.fn();
 jest.mock('../useReadiness', () => ({ useReadiness: () => mockUse() }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+const mockHint = jest.fn();
+jest.mock('../useConnectHealth', () => ({ useConnectHealth: () => mockHint() }));
+const hidden = { show: false, label: 'Apple Health', connect: jest.fn(), dismiss: jest.fn() };
 
 const colors = {
-  card: '#111', text: '#fff', mutedText: '#999', border: '#333',
+  card: '#111', text: '#fff', mutedText: '#999', border: '#333', accent: '#5fc793', accentSoft: '#14231C',
   success: '#22C55E', warning: '#F59E0B', destructive: '#EF4444', primary: '#5fc793',
   progress: { empty: '#222' },
 };
@@ -28,7 +31,8 @@ const readiness = (over: Partial<Readiness>): Readiness => ({
 });
 
 describe('ReadinessCard', () => {
-  afterEach(() => mockUse.mockReset());
+  beforeEach(() => mockHint.mockReturnValue(hidden));
+  afterEach(() => { mockUse.mockReset(); mockHint.mockReset(); });
 
   it('renders the score and reason when scored', () => {
     mockUse.mockReturnValue({ readiness: readiness({}), series: [{ date: 'd', hrvMs: 60, restingHr: 48, sleepHours: 8 }] });
@@ -51,5 +55,18 @@ describe('ReadinessCard', () => {
     mockUse.mockReturnValue({ readiness: r, series: [] });
     const { toJSON } = render(<ReadinessCard />);
     expect(toJSON()).toBeNull();
+  });
+
+  it('offers to connect the health store while sync is off, then re-reads it', async () => {
+    const refresh = jest.fn().mockResolvedValue(undefined);
+    const hint = { ...hidden, show: true, connect: jest.fn().mockResolvedValue(true), dismiss: jest.fn() };
+    mockHint.mockReturnValue(hint);
+    mockUse.mockReturnValue({ readiness: readiness({ score: null, band: 'insufficient', baselineDays: 0 }), series: [], refresh });
+    render(<ReadinessCard />);
+    expect(screen.getByText('Recovery & heart rate')).toBeOnTheScreen();
+    fireEvent.press(screen.getByLabelText('Connect Apple Health'));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    fireEvent.press(screen.getByLabelText('Hide this card'));
+    expect(hint.dismiss).toHaveBeenCalledTimes(1);
   });
 });

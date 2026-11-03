@@ -23,9 +23,18 @@ export function met(type: Exclude<ActivityType, 'stride'>, kmh: number): number 
   return pts[pts.length - 1][1];
 }
 
-/** Calories a Roam burned: MET × 3.5 × kg / 200 per minute of moving time, at the average moving speed. A Stride uses the type it is saved as. */
+/** MET above rest (1 MET), never below 0. */
+export function activeMet(m: number): number {
+  return Math.max(m - 1, 0);
+}
+
+/**
+ * Active calories a Roam burned: (MET − 1) × 3.5 × kg / 200 per minute of moving
+ * time, at the average moving speed — resting burn left out, so it matches the
+ * health store's "active energy". A Stride uses the type it is saved as.
+ */
 export function roamKcal(type: ActivityType, distanceM: number, movingSec: number, weightKg: number | null | undefined): number {
   if (!weightKg || weightKg <= 0 || movingSec <= 0) return 0;
   const kmh = (distanceM / movingSec) * 3.6;
-  return Math.round(((met(resolveType(type, distanceM, movingSec), kmh) * 3.5 * weightKg) / 200) * (movingSec / 60));
+  return Math.round(((activeMet(met(resolveType(type, distanceM, movingSec), kmh)) * 3.5 * weightKg) / 200) * (movingSec / 60));
 }

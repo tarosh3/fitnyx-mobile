@@ -62,7 +62,8 @@ export function ScheduleCard({ schedule, todayTraining }: { schedule: PlanSchedu
           value={reminder}
           onValueChange={toggle}
           accessibilityLabel={`Remind me at ${clock} on training days`}
-          trackColor={{ true: c.primary, false: c.border }}
+          trackColor={{ true: c.primary, false: c.switchTrack }}
+          ios_backgroundColor={c.switchTrack}
         />
       </View>
       {error ? <Text style={[styles.meta, { color: c.destructive }]}>{error}</Text> : null}

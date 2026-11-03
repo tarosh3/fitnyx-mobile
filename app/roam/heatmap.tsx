@@ -35,7 +35,8 @@ export default function RoamHeatmapScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, gap: 14 },
-  map: { flex: 1, marginBottom: 110 },
+  // Screen already pads the bottom past the dock; a margin here doubled it (~230 pt blank under the map).
+  map: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   note: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

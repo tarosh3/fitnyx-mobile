@@ -22,10 +22,10 @@ export function StartRoamCard() {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.title, { color: palette.text }]}>ROAM</Text>
-        <Text style={[styles.sub, { color: palette.mutedText }]}>Stride · Ride — map your route, earn XP</Text>
+        <Text style={[styles.sub, { color: palette.mutedText }]}>Run, walk or ride — map your route, earn XP</Text>
       </View>
-      <View style={[styles.cta, { borderColor: palette.primary }]}>
-        <Text style={[styles.ctaText, { color: palette.primary }]}>START</Text>
+      <View style={[styles.cta, { borderColor: palette.accent }]}>
+        <Text style={[styles.ctaText, { color: palette.accent }]}>START</Text>
       </View>
     </Pressable>
   );

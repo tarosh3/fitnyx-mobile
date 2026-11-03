@@ -68,7 +68,8 @@ export function SettingRow({
             accessibilityLabel={`${label} switch`}
             value={switchValue}
             onValueChange={onSwitchChange}
-            trackColor={{ false: c.border, true: c.primary }}
+            trackColor={{ false: c.switchTrack, true: c.primary }}
+            ios_backgroundColor={c.switchTrack}
             thumbColor="#fff"
           />
         ) : null}

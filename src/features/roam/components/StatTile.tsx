@@ -45,7 +45,7 @@ export function UnitText({ value, color, size = 14 }: { value: string; color: st
 /** One labelled metric (distance, time, pace…). */
 export function StatTile({ label, value, big = false, accent = false }: Props) {
   const palette = useThemeColors();
-  const valueColor = accent ? palette.primary : palette.text;
+  const valueColor = accent ? palette.accent : palette.text;
   return (
     // flex:1 shares a row equally; the big hero tile stacks in a column, where
     // flex:1 with no parent height collapses it to 0 — so it sizes to content.
@@ -53,7 +53,7 @@ export function StatTile({ label, value, big = false, accent = false }: Props) {
       <Text style={[big ? styles.big : styles.value, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
         {splitValue(value).map((p, i) =>
           p.unit ? (
-            <Text key={i} style={[big ? styles.bigUnit : styles.unit, { color: accent ? palette.primary : palette.mutedText }]}>
+            <Text key={i} style={[big ? styles.bigUnit : styles.unit, { color: accent ? palette.accent : palette.mutedText }]}>
               {p.text}
             </Text>
           ) : (

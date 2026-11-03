@@ -17,6 +17,8 @@ interface Props {
   trainedToday: boolean;
   program: { planId: string; dayId: string; title: string; dayName: string; exercises: number } | null;
   firstVisit: boolean;
+  /** Today isn't one of the plan's training days: the program day is "up next", not "today" (Home says Rest day). */
+  restDay?: boolean;
   onError: (message: string) => void;
 }
 
@@ -29,7 +31,7 @@ export function estMinutes(r: Pick<Routine, 'exercises'>): number {
 }
 
 /** The single most useful next action: resume, today's program, a routine, or start fresh. */
-export function TrainHero({ routines, trainedToday, program, firstVisit, onError }: Props) {
+export function TrainHero({ routines, trainedToday, program, firstVisit, restDay = false, onError }: Props) {
   const c = useThemeColors();
   const router = useRouter();
   const { activeSession, setActiveSession } = useWorkout();
@@ -88,7 +90,7 @@ export function TrainHero({ routines, trainedToday, program, firstVisit, onError
   }
   if (program) {
     return (
-      <Hero eyebrow={`Today · ${program.title}`} title={program.dayName} subtitle={plural(program.exercises, 'exercise')}>
+      <Hero eyebrow={`${restDay ? 'Up next' : 'Today'} · ${program.title}`} title={program.dayName} subtitle={plural(program.exercises, 'exercise')}>
         {primary('Start workout', () => go(program.planId, program.dayId), 'hero-start-program')}
         {quiet('See the exercises first', () => router.push(`/workouts/programs/${program.planId}`))}
       </Hero>

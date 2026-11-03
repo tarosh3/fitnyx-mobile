@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { fmtClock } from '@/src/features/workouts/model';
+import { useToastLift } from '@/src/features/workouts/ui/Toast';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { haptic } from '@/src/lib/haptics';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -28,6 +29,8 @@ export function RestBar({ seconds, next, onDone, endTimestamp, onAdjust }: Props
   const endAt = useRef(endTimestamp ?? Date.now() + seconds * 1000);
   const [total, setTotal] = useState(seconds);
   const [left, setLeft] = useState(seconds);
+  const [height, setHeight] = useState(0);
+  useToastLift(height ? height + spacing.md : 0);
   const buzzed = useRef(false);
 
   useEffect(() => {
@@ -71,7 +74,7 @@ export function RestBar({ seconds, next, onDone, endTimestamp, onAdjust }: Props
   );
 
   return (
-    <View testID="rest-bar" accessibilityLiveRegion="polite"
+    <View testID="rest-bar" accessibilityLiveRegion="polite" onLayout={(e) => setHeight(Math.round(e.nativeEvent.layout.height))}
       style={[styles.wrap, { bottom: insets.bottom + spacing.md, backgroundColor: c.card, borderColor: left === 0 ? c.primary : c.border }]}>
       <View style={styles.row}>
         <View style={{ width: size, height: size }} accessible accessibilityLabel={left ? `Rest, ${fmtClock(left)} left` : 'Rest done'}>

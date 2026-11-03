@@ -639,7 +639,7 @@ export default function StatsScreen() {
   if (loading) {
     return (
       <View style={[styles.flexCenter, { backgroundColor: c.background }]}>
-        <ActivityIndicator size="large" color={c.primary} />
+        <ActivityIndicator size="large" color={c.accent} />
       </View>
     );
   }
@@ -692,7 +692,7 @@ export default function StatsScreen() {
           <Text style={[styles.eyebrow, { color: c.mutedText }]}>CURRENT WEIGHT</Text>
           <View style={styles.heroValueRow}>
             <Text style={[styles.heroValue, { color: c.text }]}>{weightDisplay}</Text>
-            <Text style={[styles.heroUnit, { color: c.primary }]}>{weightUnit}</Text>
+            <Text style={[styles.heroUnit, { color: c.accent }]}>{weightUnit}</Text>
           </View>
           {delta != null ? (
             <View style={styles.deltaRow}>

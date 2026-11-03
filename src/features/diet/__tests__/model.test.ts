@@ -2,8 +2,8 @@ import type { DietPlan } from '@/src/lib/api';
 import type { DietDayTotals, DietLog } from '@/src/lib/api/diet';
 import { analyzeDays } from '@/src/features/diet/insights';
 import {
-  addDays, dayStatus, goalsFromPlan, grams, lastDays, loggedPlanMeals, macroSplit, nextMealIndex, planLogItem, planMeals,
-  planProteinShortfall, signed, slotForHour, slotForMeal, sumLogs, withDietGoals,
+  addDays, dayStatus, dietGoalBase, goalsFromPlan, grams, lastDays, loggedPlanMeals, macroSplit, nextMealIndex, planLogItem, planMeals,
+  planCalorieGap, planProteinShortfall, signed, slotForHour, slotForMeal, sumLogs, withDietGoals,
 } from '@/src/features/diet/model';
 
 const plan = {
@@ -82,6 +82,14 @@ describe('diet plan model', () => {
     expect(planProteinShortfall(planMeals(plan), { kcal: 2000, protein: 120, carbs: 0, fat: 0 })).toBeNull();
   });
 
+  it('explains a menu made for a different calorie goal', () => {
+    const meals = planMeals(plan); // 1,925 kcal
+    expect(planCalorieGap(meals, { kcal: 2000, protein: 0, carbs: 0, fat: 0 })).toBeNull();
+    expect(planCalorieGap(meals, { kcal: 2630, protein: 0, carbs: 0, fat: 0 })).toBe(-705);
+    expect(planCalorieGap(meals, { kcal: 1700, protein: 0, carbs: 0, fat: 0 })).toBe(225);
+    expect(planCalorieGap(meals, null)).toBeNull();
+  });
+
   it('formats and splits numbers', () => {
     expect([signed(20), signed(-12), signed(0)]).toEqual(['+20', '−12', '±0']);
     expect(macroSplit({ protein: 140, carbs: 220, fat: 62 })).toEqual({ protein: 28, carbs: 44, fat: 28 });
@@ -136,5 +144,16 @@ describe('your own diet goals', () => {
 
   it('can set only protein', () => {
     expect(withDietGoals(base, goals(null, 170))).toMatchObject({ kcal: 2000, protein: 170 });
+  });
+});
+
+describe('dietGoalBase', () => {
+  const targets = { bmr: 1700, tdee: 2390, calories: 2630, adjustment_kcal: 240, protein_g: 134, carbs_g: 346, fat_g: 79, water_ml: 2600, burn_per_session_kcal: 230, burn_weekly_kcal: 690 };
+  it('uses the plan targets over an older meal plan', () => {
+    expect(dietGoalBase(targets, plan)).toEqual({ kcal: 2630, protein: 134, carbs: 346, fat: 79 });
+  });
+  it('falls back to the meal plan without targets', () => {
+    expect(dietGoalBase(null, plan)).toEqual(goalsFromPlan(plan));
+    expect(dietGoalBase({ ...targets, calories: 0 }, plan)).toEqual(goalsFromPlan(plan));
   });
 });

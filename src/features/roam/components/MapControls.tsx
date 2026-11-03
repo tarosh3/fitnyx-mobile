@@ -32,7 +32,7 @@ export function MapControls(p: Props) {
   const tilt = (
     <MapButton label={p.tilted ? 'Flat map view' : '3D map view'} selected={p.tilted} onPress={p.onToggleTilt}>
       {/* Shows what a tap switches to. */}
-      <Text style={[styles.tiltText, { color: p.tilted ? palette.primary : palette.text }]}>{p.tilted ? '2D' : '3D'}</Text>
+      <Text style={[styles.tiltText, { color: p.tilted ? palette.accent : palette.text }]}>{p.tilted ? '2D' : '3D'}</Text>
     </MapButton>
   );
   return (
@@ -45,12 +45,12 @@ export function MapControls(p: Props) {
               selected={p.headingUp}
               onPress={p.onToggleHeadingUp}
             >
-              <Navigation size={18} color={p.headingUp ? palette.primary : palette.text} fill={p.headingUp ? palette.primary : 'none'} />
+              <Navigation size={18} color={p.headingUp ? palette.accent : palette.text} fill={p.headingUp ? palette.accent : 'none'} />
             </MapButton>
           ) : null}
           {p.onToggleTerrain ? (
             <MapButton label={p.terrain ? 'Hide terrain' : 'Show terrain'} selected={p.terrain} onPress={p.onToggleTerrain}>
-              <Mountain size={18} color={p.terrain ? palette.primary : palette.text} />
+              <Mountain size={18} color={p.terrain ? palette.accent : palette.text} />
             </MapButton>
           ) : null}
           {tilt}

@@ -1,6 +1,7 @@
 import type { DietFoodItem, DietPlan } from '@/src/lib/api';
 import type { DietLog, DietLogItem, Food, MealSlot, RecentFood } from '@/src/lib/api/diet';
 import type { Goals } from '@/src/lib/api/goals';
+import type { PlanTargets } from '@/src/lib/api/plan';
 
 export interface Macros {
   kcal: number;
@@ -43,6 +44,18 @@ export function goalsFromPlan(plan: DietPlan | null): Macros | null {
   const d = plan?.plan_data;
   if (!d || !(d.total_calories > 0)) return null;
   return { kcal: d.total_calories, protein: grams(d.macros?.protein), carbs: grams(d.macros?.carbs), fat: grams(d.macros?.fats) };
+}
+
+/**
+ * The day's macro goal before the user's own goals: the plan's targets (GET
+ * /plan — what Home, the Plan screen and Filo show), else the meal plan's
+ * totals. A meal plan generated before the targets changed (new goal, new
+ * weight) kept its old number: Diet said 1,900 kcal while Home said 2,630
+ * (found 2026-11-03).
+ */
+export function dietGoalBase(targets: PlanTargets | null | undefined, plan: DietPlan | null): Macros | null {
+  if (targets && targets.calories > 0) return { kcal: targets.calories, protein: targets.protein_g, carbs: targets.carbs_g, fat: targets.fat_g };
+  return goalsFromPlan(plan);
 }
 
 /**
@@ -202,6 +215,16 @@ export function planProteinShortfall(meals: PlanMeal[], goal: Macros | null): nu
   if (!goal || goal.protein <= 0 || meals.every((m) => m.macros.protein === 0)) return null;
   const short = Math.round(goal.protein - meals.reduce((t, m) => t + m.macros.protein, 0));
   return short >= 10 ? short : null;
+}
+
+/**
+ * How far the menu's calories are from the goal (+ over, − under), once that's
+ * worth explaining (≥ 10 % and ≥ 150 kcal) — e.g. a menu made for an older goal.
+ */
+export function planCalorieGap(meals: PlanMeal[], goal: Macros | null): number | null {
+  if (!goal || goal.kcal <= 0 || meals.every((m) => m.macros.kcal === 0)) return null;
+  const gap = Math.round(meals.reduce((t, m) => t + m.macros.kcal, 0) - goal.kcal);
+  return Math.abs(gap) >= Math.max(150, goal.kcal * 0.1) ? gap : null;
 }
 
 export function signed(n: number): string {

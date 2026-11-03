@@ -35,7 +35,8 @@ export function LoggerHeader({ title, elapsedSec, state, segments, setsDone, set
           <ChevronLeft size={24} color={c.text} />
         </Pressable>
         <View style={styles.grow} accessible accessibilityLabel={`${title}. ${state === 'ready' ? 'Timer not started' : `${fmtClock(elapsedSec)}${state === 'paused' ? ', paused' : ''}`}`}>
-          <Text style={[styles.eyebrow, { color: c.mutedText }]} numberOfLines={1}>{title}</Text>
+          {/* Start + Finish leave ~105 pt here: shrink rather than cut "Today’s workout" to "TODAY’S WORKO…". */}
+          <Text style={[styles.eyebrow, { color: c.mutedText }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{title}</Text>
           <Text style={[styles.clock, { color: state === 'running' ? c.text : c.mutedText }]}>{fmtClock(elapsedSec)}</Text>
           <Text style={[styles.state, { color: state === 'paused' ? c.warning : c.mutedText }]}>
             {state === 'ready' ? 'Not started yet' : state === 'paused' ? 'Paused' : 'Timer running'}
