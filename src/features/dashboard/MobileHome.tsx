@@ -6,6 +6,7 @@ import React, { useMemo, useState } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppNoticeCard } from '@/src/features/appConfig/ui/AppNoticeCard';
 import { ArenaHomeCard } from '@/src/features/arena/ui/ArenaHomeCard';
 import { TodayGoalsCard } from '@/src/features/goals/ui/TodayGoalsCard';
 import { ReadinessCard } from '@/src/features/readiness/ui/ReadinessCard';
@@ -161,6 +162,8 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         {/* One gap between every section (styles.sections); sections never set their own outer margins.
             Before 2026-11-04 each had its own, and the Recovery card touched the Roam card. */}
         <View style={styles.sections}>
+        {/* Update available / banner rows: renders nothing when there is no notice. */}
+        <AppNoticeCard />
         {/* Roam + Nutrition have no other way in, so they lead; a workout already running stays first. */}
         {metrics.activeSession ? <Entrance>{workoutSection}</Entrance> : null}
         <Entrance delay={30}><HomeEntryTiles /></Entrance>

@@ -37,7 +37,21 @@ npx eas build -p ios --profile production       # App Store build
 
 - Profiles in `eas.json` already bake prod env (`https://fitnyx.onrender.com`, Supabase keys). `EXPO_PUBLIC_*` is inlined at build time — env changes require a rebuild, not an OTA restart.
 - Bundle ID `com.fitnyx.app`; production autoIncrements the version.
-- Native config changed (plugins, app.json, new native dep)? A new build is mandatory — JS-only changes are the only thing OTA-able.
+- Native config changed (plugins, app.json, eas.json, .gitignore, patches, new native dep)? A new build is mandatory — JS-only changes are the only thing OTA-able.
+
+## 3b. Mobile → OTA update (JS / asset changes only)
+
+```bash
+node scripts/publish-update.js production "What changed" --dry-run   # build + check only
+npm run update:production -- "What changed"                         # publish
+npm run update:preview -- "What changed"                            # testers' APKs
+```
+
+- **Never run bare `eas update`** — it bundles with the local `.env` (localhost backend). The script uses the eas.json profile env and refuses to publish a bundle without the production backend URL.
+- Reaches only builds with the same fingerprint (runtimeVersion). Users get it on the cold start after it downloads.
+- Set `SENTRY_AUTH_TOKEN` in the shell to upload source maps; otherwise Sentry shows minified stacks for that update.
+- Bad update? `npx eas update:republish` an earlier group to the channel, or `npx eas update:rollback`.
+- Forced store update / maintenance / Home banner / feature flags: admin dashboard → App Config (backend `app_config`, live within ~1 min).
 
 ## 4. Admin
 

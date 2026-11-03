@@ -72,6 +72,7 @@ guardNavigation(appRouter);
 import * as SystemUI from 'expo-system-ui';
 
 import { AICoachChat } from '@/src/components/ai/AICoachChat';
+import { AppGate } from '@/src/features/appConfig/AppGate';
 import { BackendKeepAlive } from '@/src/components/BackendKeepAlive';
 import { ActiveSessionIndicator } from '@/src/components/navigation/ActiveSessionIndicator';
 import { BottomNav } from '@/src/components/navigation/BottomNav';
@@ -248,6 +249,8 @@ function RootLayout() {
                       <BottomNav blurTarget={navBlurTarget} />
                       <ActiveSessionIndicator />
                       <AICoachChat />
+                      {/* Last, so a forced update / maintenance screen covers everything. */}
+                      <AppGate />
                     </>
                   )}
                 </View>
