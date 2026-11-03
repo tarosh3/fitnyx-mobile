@@ -211,7 +211,9 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     <View style={styles.header}>
       <View style={[styles.search, { backgroundColor: c.surface, borderColor: c.border }]}>
         <Search size={20} color={c.mutedText} />
-        <TextInput value={query} onChangeText={setQuery} placeholder="Search by name, muscle or equipment" placeholderTextColor={c.mutedText}
+        {/* Uncontrolled: as a controlled input, fast typing lost letters while the list re-rendered
+            ("barbell shoulder press" came out as "B"). The Modal remounts it on open, so defaultValue is enough. */}
+        <TextInput defaultValue={query} onChangeText={setQuery} placeholder="Search by name, muscle or equipment" placeholderTextColor={c.mutedText}
           style={[styles.input, { color: c.text }]} accessibilityLabel="Search exercises" returnKeyType="search" autoCorrect={false} />
       </View>
       <FinderChips part={part} muscle={muscle} equipment={equipment} onPart={setPart} onMuscle={setMuscle} onEquipment={setEquipment} />

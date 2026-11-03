@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type DraftSet, draftToLog, trackingOf } from '@/src/features/workouts/model';
-import { type Block, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
+import { type Block, beatsBest, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
 import { moveItem } from '@/src/features/workouts/ui/dragOrder';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
@@ -12,7 +12,7 @@ import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
 import { cacheKeys, cacheTTL } from '@/src/lib/cache/keys';
 import { getCachedDayExercises } from '@/src/lib/db';
 import { cacheExercisesForDay, fetchExerciseWithCache } from '@/src/lib/offline/exerciseCache';
-import { offlineDeleteLog, offlineGetSession, offlineLogSet, offlineUpdateLog } from '@/src/lib/offline/offlineApi';
+import { markOfflineLogPr, offlineDeleteLog, offlineGetSession, offlineLogSet, offlineUpdateLog } from '@/src/lib/offline/offlineApi';
 import { getIdMapping, isOfflineId } from '@/src/lib/offline/offlineStore';
 import { cacheWorkoutVideos } from '@/src/lib/offline/videoCache';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
@@ -130,7 +130,13 @@ export function useWorkoutLogger(sessionId: string) {
     if (!b) return null;
     const row = pendingRows(b)[pi];
     const t = trackingOf(b.exercise);
-    const created = await offlineLogSet(sessionId, { exercise_uuid: b.uuid, set_number: nextSetNumber(b.logs), ...draftToLog(t, row) });
+    let created = await offlineLogSet(sessionId, { exercise_uuid: b.uuid, set_number: nextSetNumber(b.logs), ...draftToLog(t, row) });
+    // The server flags records; a set queued offline has no flag until it syncs, so
+    // "New best!" never showed offline. Judge it here; the server rechecks on sync.
+    if (isOfflineId(created.id) && beatsBest(b, created.weight_kg)) {
+      created = { ...created, is_pr: true };
+      markOfflineLogPr(sessionId, created.id).catch(() => undefined);
+    }
     patch(bi, (x) => {
       // Later drafts shift up one row; this row's draft is used up.
       const drafts: Record<number, typeof row> = {};

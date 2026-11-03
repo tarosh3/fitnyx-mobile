@@ -25,6 +25,11 @@ export const defaultSetsFor = (ex: Exercise | null) => (trackingOf(ex) === 'card
 
 const targetSets = (b: Pick<Block, 'planned' | 'exercise'>) => (b.planned ? b.planned.target_sets ?? defaultSetsFor(b.exercise) : 0);
 
+/** A weight above the all-time best (known from history). Unknown best = no claim. */
+export function beatsBest(b: Pick<Block, 'bestKg'>, weightKg: number | null | undefined): boolean {
+  return b.bestKg != null && weightKg != null && weightKg > b.bestKg;
+}
+
 export function pendingCount(b: Pick<Block, 'planned' | 'logs' | 'extraRows' | 'exercise'>): number {
   return Math.max(0, Math.max(0, targetSets(b) - b.logs.length) + b.extraRows);
 }
