@@ -1,0 +1,13 @@
+# Java IDE metadata (VS Code Java / Eclipse JDT, Gradle tooling) written next to
+# node_modules Android projects. Not part of the build, and absent on EAS: with
+# them the local runtime version differs from EAS's, which fails the build at
+# "Configure expo-updates" and would send OTA updates to the wrong runtime.
+**/.classpath
+**/.project
+**/.settings/**/*
+node_modules/**/*-gradle-plugin/bin/**/*
+node_modules/**/android/bin/**/*
+# Gradle output in sub-projects Expo's defaults don't cover (@sentry/react-native's
+# android/expo-handler, react-native-health-connect's android-expo).
+node_modules/@sentry/react-native/android/expo-handler/build/**/*
+node_modules/**/android-expo/build/**/*
