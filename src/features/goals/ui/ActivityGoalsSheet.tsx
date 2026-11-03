@@ -13,8 +13,8 @@ import { spacing, type } from '@/src/styles/tokens';
 
 const HINTS: Record<GoalKind, string> = {
   distance: 'Runs, walks and rides',
-  burn: 'Roams and workouts',
-  steps: 'During runs and walks',
+  burn: 'Roams and workouts, or all-day active energy with Health sync',
+  steps: 'Runs and walks, or all-day steps with Health sync',
 };
 
 interface Props {

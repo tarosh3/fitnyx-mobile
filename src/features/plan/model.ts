@@ -45,6 +45,15 @@ export function jsWeekdays(days: Weekday[]): number[] {
   return days.map((d) => (WEEKDAYS.indexOf(d) + 1) % 7).sort((a, b) => a - b);
 }
 
+/**
+ * Whether the device's local day is one of the schedule's training days. Use
+ * this, not the plan's `today`: the plan is cached (and read stale offline), so
+ * its server-made `today` can belong to an earlier day.
+ */
+export function isTrainingDay(s: Pick<PlanSchedule, 'preferred_days'>, now: Date = new Date()): boolean {
+  return jsWeekdays(s.preferred_days ?? []).includes(now.getDay());
+}
+
 /** The workout reminder that matches the plan: its time, on its days only. */
 export function planReminder(s: PlanSchedule): Omit<Reminder, 'id' | 'createdAt'> {
   return {

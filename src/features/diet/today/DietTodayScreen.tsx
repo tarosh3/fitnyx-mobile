@@ -14,8 +14,9 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { useToast } from '@/src/features/workouts/ui/Toast';
+import { usePlan } from '@/src/features/plan/data';
 import { useDietDay, useDietPlan, useDietSummary } from '../data/useDiet';
-import { dateFromKey, dayStatus, fmt, goalsFromPlan, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
+import { dateFromKey, dayStatus, dietGoalBase, fmt, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
 import { InsightsPanel } from '../insights/InsightsPanel';
 import { DietSetup } from '../setup/DietSetup';
 import { SectionTitle } from '../ui/bits';
@@ -47,11 +48,12 @@ export function DietTodayScreen() {
   const week = lastDays(today, 7);
   const summary = useDietSummary(user?.id, week[0], today);
   const userGoals = useGoals();
+  const targets = usePlan().data?.targets;
   const activity = useDayActivity(date);
   const [editingGoals, setEditingGoals] = useState(false);
 
   const meals = useMemo(() => planMeals(plan), [plan]);
-  const planGoal = goalsFromPlan(plan);
+  const planGoal = dietGoalBase(targets, plan);
   const goal = withDietGoals(planGoal, userGoals.data);
   const logged = loggedPlanMeals(day.logs);
   const eaten = sumLogs(day.logs);

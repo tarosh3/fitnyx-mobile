@@ -11,7 +11,8 @@ jest.mock('@/src/hooks/useThemeColors', () => ({ useThemeColors: () => require('
 jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: mockUser }) }));
 jest.mock('@/src/features/plan/data', () => ({ usePlan: () => ({ data: mockHasPlan ? {
   targets: { calories: 2210, protein_g: 160, burn_per_session_kcal: 280 },
-  today: { training_day: mockTrainingDay }, schedule: { session_min: 40 },
+  // Training day = today's weekday is in preferred_days (computed on the device).
+  schedule: { session_min: 40, preferred_days: mockTrainingDay ? ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] : [] },
 } : null }) }));
 jest.mock('@/src/lib/cache', () => ({
   cacheGetStale: async () => false,

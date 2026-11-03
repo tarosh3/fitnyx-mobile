@@ -59,7 +59,7 @@ export function TodayGoalsCard() {
           <View style={[styles.emptyIcon, { backgroundColor: c.accentSoft }]}><Target size={22} color={c.accent} /></View>
           <View style={styles.emptyCopy}>
             <Text style={[styles.title, { color: c.text }]}>Set a daily goal</Text>
-            <Text style={[styles.body, { color: c.mutedText }]}>Track distance, calories or steps on every Roam.</Text>
+            <Text style={[styles.body, { color: c.mutedText }]}>Track distance, calories or steps each day.</Text>
           </View>
           <ArrowRight size={18} color={c.mutedText} />
         </Pressable>

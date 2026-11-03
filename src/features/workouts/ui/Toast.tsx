@@ -14,6 +14,7 @@ export type ToastTone = 'info' | 'success' | 'error';
 type Show = (message: string, tone?: ToastTone) => void;
 
 const ToastContext = createContext<Show>(() => undefined);
+const LiftContext = createContext<(px: number) => void>(() => undefined);
 let showGlobal: Show | null = null;
 
 /** For code outside the provider (the root back handler). Does nothing before it mounts. */
@@ -35,6 +36,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const playerInset = useWorkoutOverlayInset();
   const [toast, setToast] = useState<{ message: string; tone: ToastTone } | null>(null);
   const [keyboard, setKeyboard] = useState(0);
+  // Height of a floating bar taller than the usual action bar (the logger's
+  // RestBar), measured from the safe-area bottom; 0 when none is shown.
+  const [lift, setLift] = useState(0);
   const anim = useRef(new Animated.Value(0)).current;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -62,13 +66,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const bottom = keyboard > 0
     ? keyboard + spacing.md
-    : isBottomNavRoute(pathname) ? bottomNavClearance(insets.bottom) + (playerInset ? playerInset + spacing.sm : 0) + spacing.md : insets.bottom + ACTION_BAR_CLEARANCE;
+    : Math.max(
+      isBottomNavRoute(pathname) ? bottomNavClearance(insets.bottom) + (playerInset ? playerInset + spacing.sm : 0) + spacing.md : insets.bottom + ACTION_BAR_CLEARANCE,
+      lift ? insets.bottom + lift + spacing.sm : 0,
+    );
   const Icon = toast?.tone === 'success' ? CircleCheck : toast?.tone === 'error' ? CircleAlert : null;
   const iconColor = toast?.tone === 'error' ? c.destructive : c.accent;
 
   return (
     <ToastContext.Provider value={show}>
-      {children}
+      <LiftContext.Provider value={setLift}>{children}</LiftContext.Provider>
       {toast ? (
         <Animated.View pointerEvents="none" accessibilityLiveRegion="polite"
           style={[styles.toast, elevation.md, {
@@ -84,6 +91,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useToast = () => useContext(ToastContext);
+
+/**
+ * Keeps toasts above a floating bar while it is shown: `px` = the bar's height
+ * plus its gap above the safe-area bottom. The Rest bar is ~140 pt, so "Timer
+ * started" used to land on top of it (found 2026-11-03).
+ */
+export function useToastLift(px: number) {
+  const setLift = useContext(LiftContext);
+  useEffect(() => {
+    setLift(px);
+    return () => setLift(0);
+  }, [px, setLift]);
+}
 
 const styles = StyleSheet.create({
   toast: {

@@ -1,5 +1,5 @@
 import type { Plan, PlanSchedule } from '@/src/lib/api/plan';
-import { adjustmentLabel, dietWizardDefaults, exerciseTarget, formatClock, formatDays, jsWeekdays, planReminder, thousands } from '../model';
+import { adjustmentLabel, dietWizardDefaults, exerciseTarget, formatClock, formatDays, isTrainingDay, jsWeekdays, planReminder, thousands } from '../model';
 
 const schedule: PlanSchedule = {
   days_per_week: 3, session_min: 45, preferred_days: ['mon', 'wed', 'fri'], preferred_time: 'morning',
@@ -46,4 +46,17 @@ it('pre-fills the diet wizard from the plan', () => {
   expect(dietWizardDefaults(plan)).toEqual({ goal: 'weight_loss', activity_level: 'active', diet_type: 'vegetarian' });
   const noType = { diet_defaults: { goal: 'maintenance', activity_level: 'lightly_active' } } as Plan;
   expect(dietWizardDefaults(noType)).toEqual({ goal: 'maintenance', activity_level: 'lightly_active' });
+});
+
+describe('isTrainingDay', () => {
+  // 2026-11-03 is a Tuesday; local dates, so the device's day decides.
+  const tue = new Date(2026, 10, 3, 23, 30);
+  it("uses the device's weekday, not a cached server day", () => {
+    expect(isTrainingDay({ preferred_days: ['mon', 'tue'] }, tue)).toBe(true);
+    expect(isTrainingDay({ preferred_days: ['mon', 'wed'] }, tue)).toBe(false);
+  });
+  it('handles Sunday and a missing day list', () => {
+    expect(isTrainingDay({ preferred_days: ['sun'] }, new Date(2026, 10, 8))).toBe(true);
+    expect(isTrainingDay({ preferred_days: null as never }, tue)).toBe(false);
+  });
 });

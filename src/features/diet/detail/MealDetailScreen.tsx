@@ -13,8 +13,9 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { useGoals } from '@/src/features/goals/data';
 import { useToast } from '@/src/features/workouts/ui/Toast';
+import { usePlan } from '@/src/features/plan/data';
 import { useDietDay, useDietPlan } from '../data/useDiet';
-import { fmt, goalsFromPlan, loggedPlanMeals, planLogItem, planMeals, scaleMacros, SLOT_LABELS, sumLogs, withDietGoals } from '../model';
+import { dietGoalBase, fmt, loggedPlanMeals, planLogItem, planMeals, scaleMacros, SLOT_LABELS, sumLogs, withDietGoals } from '../model';
 import { MealGlyph, SectionTitle, VegMark } from '../ui/bits';
 import { AfterThis, Ingredients, PORTIONS, PortionStepper, Steps, SwapOptions } from './DetailParts';
 import { MacroPlate } from './MacroPlate';
@@ -30,6 +31,7 @@ export function MealDetailScreen() {
   const date = params.date ?? localDateKey(new Date());
   const { plan, state } = useDietPlan(user?.id);
   const userGoals = useGoals().data;
+  const targets = usePlan().data?.targets;
   const day = useDietDay(user?.id, date);
   const meal = useMemo(() => planMeals(plan)[Number(params.index)], [plan, params.index]);
   const log = meal ? loggedPlanMeals(day.logs).get(meal.index) : undefined;
@@ -56,7 +58,7 @@ export function MealDetailScreen() {
 
   const alt = swap !== null ? meal.alternatives[swap] : undefined;
   const macros = scaleMacros(alt?.macros ?? meal.macros, portion);
-  const goal = withDietGoals(goalsFromPlan(plan), userGoals);
+  const goal = withDietGoals(dietGoalBase(targets, plan), userGoals);
   const others = sumLogs(day.logs.filter((l) => l !== log));
   const changed = !!log && (log.name !== (alt?.title ?? meal.title) || (log.items[0]?.qty ?? 1) !== portion);
 

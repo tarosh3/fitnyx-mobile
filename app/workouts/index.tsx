@@ -5,6 +5,7 @@ import { Animated, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text, u
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout';
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { HistoryTab } from '@/src/features/workouts/history/HistoryTab';
 import { LibraryTab } from '@/src/features/workouts/library/LibraryTab';
 import { TrainTab } from '@/src/features/workouts/train/TrainTab';
@@ -108,6 +109,8 @@ export default function WorkoutsScreen() {
           {tab === 'history' ? <HistoryTab header={header} /> : <LibraryTab header={header} />}
         </View>
       )}
+      {/* Content scrolls under the status bar: fade it out like Home does. */}
+      <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
       <View pointerEvents="none" style={[styles.safeFloor, { height: insets.bottom, backgroundColor: c.background }]} />
     </View>
   );

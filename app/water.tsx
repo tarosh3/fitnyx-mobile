@@ -25,6 +25,7 @@ import { PressableScale } from '@/src/components/ui/PressableScale';
 import { WaterGlass } from '@/src/components/water/WaterGlass';
 import { Screen } from '@/src/components/ui/Screen';
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
+import { usePlan } from '@/src/features/plan/data';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { getMonthTotals, useWaterToday, WATER_LIMITS, ymd } from '@/src/lib/water';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
@@ -36,7 +37,9 @@ export default function WaterScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const toast = useToast();
-  const { day, goalMl, totalMl, add, remove, clearAll, setGoal } = useWaterToday();
+  // Until the user sets their own goal, follow the plan's water target (its Water card).
+  const planWaterMl = usePlan().data?.targets?.water_ml;
+  const { day, goalMl, totalMl, add, remove, clearAll, setGoal } = useWaterToday(planWaterMl);
 
   const [customOpen, setCustomOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);

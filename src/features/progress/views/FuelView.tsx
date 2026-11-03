@@ -4,7 +4,8 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/src/components/ui/Card';
-import { goalsFromPlan, withDietGoals } from '@/src/features/diet/model';
+import { dietGoalBase, withDietGoals } from '@/src/features/diet/model';
+import { usePlan } from '@/src/features/plan/data';
 import { useDietPlan, useDietSummary } from '@/src/features/diet/data/useDiet';
 import { useGoals } from '@/src/features/goals/data';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -20,7 +21,7 @@ export function FuelView({ userId, range, buckets, gran }: { userId?: string; ra
   const router = useRouter();
   const { summary, offline } = useDietSummary(userId, range.from, range.to);
   const { plan } = useDietPlan(userId);
-  const goals = withDietGoals(goalsFromPlan(plan), useGoals().data);
+  const goals = withDietGoals(dietGoalBase(usePlan().data?.targets, plan), useGoals().data);
   const logged = (summary?.days ?? []).filter((d) => d.meals > 0);
 
   if (!summary) return offline ? <Empty text="You're offline. Food logs show up when you reconnect" /> : <ContentSkeleton variant="progress" label="Loading nutrition progress" />;
