@@ -75,7 +75,7 @@ export function PlanTodayCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: spacing.md, paddingTop: spacing.md, paddingHorizontal: spacing.xs, gap: spacing.xs },
+  card: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.md, paddingHorizontal: spacing.xs, gap: spacing.xs },
   pressed: { opacity: 0.88 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
   close: { flexShrink: 0, minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },

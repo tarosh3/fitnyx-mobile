@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check } from 'lucide-react-native';
+import { ArrowRight, Check } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -69,7 +69,7 @@ export function HomeWeekSummary({
           style={({ pressed }) => [styles.statsButton, pressed && styles.pressed]}
         >
           <Text style={[styles.statsButtonText, { color: accent }]}>View stats</Text>
-          <ArrowUpRight size={17} color={accent} accessible={false} />
+          <ArrowRight size={16} color={accent} accessible={false} />
         </Pressable>
       </View>
 
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   headerStacked: { alignItems: 'flex-start', flexDirection: 'column', marginTop: 0 },
   title: { fontFamily: type.weight.semibold, fontSize: 21, lineHeight: 28, letterSpacing: -0.6, flexShrink: 1 },
   statsButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingLeft: spacing.sm },
-  statsButtonText: { fontFamily: type.weight.semibold, fontSize: type.size.xs, lineHeight: 18 },
+  statsButtonText: { fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 20 },
   pressed: { opacity: 0.7 },
   week: { flexDirection: 'row', marginTop: spacing.xs },
   weekWrapped: { flexWrap: 'wrap', rowGap: spacing.md },
