@@ -6,18 +6,25 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { BAND_LABEL } from '../readiness';
+import { useConnectHealth } from '../useConnectHealth';
 import { useReadiness } from '../useReadiness';
+import { ConnectHealthCard } from './ConnectHealthCard';
 import { ReadinessRing, bandColor } from './ReadinessRing';
 
 /**
- * Home: the daily readiness score. Hidden entirely for users whose health store
- * has no readiness data (phone-only / sync off), so it never nags them.
+ * Home: the daily readiness score. Without readiness data it is hidden, except
+ * for a closable "connect" hint while health sync is off.
  */
 export function ReadinessCard() {
   const c = useThemeColors();
   const router = useRouter();
-  const { readiness, series } = useReadiness();
-  if (!series.length) return null;
+  const { readiness, series, refresh } = useReadiness();
+  const hint = useConnectHealth();
+  if (!series.length) {
+    // Connecting re-reads the store at once: the cached empty series would hide the card for a day.
+    return hint.show ? <ConnectHealthCard label={hint.label} onDismiss={hint.dismiss}
+      onConnect={async () => { if (await hint.connect()) await refresh(); }} /> : null;
+  }
 
   const color = bandColor(c, readiness.band);
   const label = readiness.score != null ? BAND_LABEL[readiness.band] : readiness.baselineDays ? 'Building' : 'No data';

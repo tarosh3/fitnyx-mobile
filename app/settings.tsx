@@ -47,6 +47,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { formatHeight, formatWeight, useHealthSync, useHeightUnit, useLanguage, useVideoDownloads, useWeightUnit } from '@/src/lib/prefs';
 import { clearVideoCache, prefetchWorkoutMedia, videoCacheBytes } from '@/src/lib/offline';
 import { healthBackend } from '@/src/lib/health';
+import { cacheInvalidate, cacheKeys } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { elevation, radii, spacing, type as t } from '@/src/styles/tokens';
@@ -117,6 +118,8 @@ export default function SettingsScreen() {
       return;
     }
     await setHealthSyncPref(true);
+    // The readiness series read while sync was off is an empty list cached for a day: drop it so Home reads the store.
+    if (user) cacheInvalidate(cacheKeys.readinessSeries(user.id)).catch(() => undefined);
     toast(`Workouts now sync to ${healthBackend.platformLabel}`, 'success');
   };
 
@@ -349,7 +352,7 @@ export default function SettingsScreen() {
             <SettingRow
               icon={<Activity size={20} color={c.accent} strokeWidth={1.8} />}
               label={`Sync to ${healthBackend.platformLabel}`}
-              description="Save your Roams, workouts and weight to the health app"
+              description="Save Roams, workouts and weight. Unlocks readiness and heart rate"
               switchValue={healthSync}
               onSwitchChange={handleToggleHealth}
             />
