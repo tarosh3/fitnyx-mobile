@@ -80,7 +80,7 @@ export default function RoamScreen() {
 
   return (
     <Screen>
-      <PageHeader title="ROAM" subtitle="STRIDE · RIDE" backTo="/" />
+      <PageHeader title="ROAM" subtitle="RUN · WALK · RIDE" backTo="/" />
 
       <View style={styles.section}>
         {inProgress ? (
@@ -90,8 +90,9 @@ export default function RoamScreen() {
             <SegmentedControl options={TYPES} value={type} onChange={setType} />
             {goals.data ? <RoamGoalsRow goals={goals.data} day={today.day} onEdit={() => setEditingGoals(true)} /> : null}
             <Button title={`START ${TYPES.find((t) => t.value === type)?.label.toUpperCase()}`} onPress={onStart} loading={starting} />
+            {/* "Stride" alone didn't say it covers both runs and walks. */}
             <Text style={[styles.hint, { color: palette.mutedText }]}>
-              Vehicle travel (car, bus, train, metro) is detected and never counts.
+              {type === 'stride' ? 'For runs and walks: saved as a run or a walk by your pace.' : 'For bike rides.'} Vehicle travel (car, bus, train, metro) is detected and never counts.
             </Text>
           </>
         )}
@@ -104,7 +105,7 @@ export default function RoamScreen() {
           accessibilityRole="button"
           style={[styles.heatmapLink, { backgroundColor: palette.card, borderColor: palette.border }]}
         >
-          <Flame size={18} color={palette.primary} />
+          <Flame size={18} color={palette.accent} />
           <View style={styles.heatmapText}>
             <Text style={[styles.heatmapTitle, { color: palette.text }]}>Your heatmap</Text>
             <Text style={[styles.hint, { color: palette.mutedText, textAlign: 'left' }]}>Every Roam on one map</Text>

@@ -154,7 +154,7 @@ export default function WaterScreen() {
           </View>
         </Animated.View>
         <View style={[styles.tapPill, { borderColor: c.border, backgroundColor: c.surface }]}>
-          <Droplet size={12} color={c.primary} />
+          <Droplet size={12} color={c.accent} />
           <Text style={[styles.tapText, { color: c.mutedText }]}>Tap glass to add 250ml</Text>
         </View>
         <View style={[styles.levelTrack, { backgroundColor: c.border }]}>
@@ -178,7 +178,7 @@ export default function WaterScreen() {
             onPress={() => handleAdd(ml)}
             style={[styles.presetBtn, { backgroundColor: c.surface, borderColor: c.border }]}
           >
-            <Plus size={14} color={c.primary} />
+            <Plus size={14} color={c.accent} />
             <Text style={[styles.presetText, { color: c.text }]}>{ml}ml</Text>
           </PressableScale>
         ))}
@@ -244,7 +244,7 @@ export default function WaterScreen() {
               return (
                 <View key={e.id} style={[styles.entryRow, { borderColor: c.border }]}>
                   <View style={[styles.entryDot, { backgroundColor: `${c.primary}22` }]}>
-                    <Droplet size={14} color={c.primary} />
+                    <Droplet size={14} color={c.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.entryAmount, { color: c.text }]}>{e.amountMl} ml</Text>

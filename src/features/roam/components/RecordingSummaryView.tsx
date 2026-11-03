@@ -55,7 +55,7 @@ export function RecordingSummaryView({
     <View style={styles.wrap}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View>
-          <Text style={[styles.eyebrow, { color: palette.primary }]} onLongPress={onExportRaw} suppressHighlighting>
+          <Text style={[styles.eyebrow, { color: palette.accent }]} onLongPress={onExportRaw} suppressHighlighting>
             {ACTIVITY_LABEL[type].toUpperCase()} COMPLETE
           </Text>
           {/* The title reads as a heading but is editable in place. */}

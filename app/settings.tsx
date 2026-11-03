@@ -219,7 +219,7 @@ export default function SettingsScreen() {
             <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
           ) : (
             <View style={[styles.avatarFallback, { backgroundColor: c.surface }]}>
-              <User color={c.primary} size={28} strokeWidth={1.8} />
+              <User color={c.accent} size={28} strokeWidth={1.8} />
             </View>
           )}
         </View>
@@ -233,7 +233,7 @@ export default function SettingsScreen() {
           ) : null}
         </View>
         <View style={[styles.editPill, { backgroundColor: `${c.primary}1A` }]}>
-          <Text style={[styles.editPillText, { color: c.primary }]}>EDIT</Text>
+          <Text style={[styles.editPillText, { color: c.accent }]}>EDIT</Text>
         </View>
       </PressableScale>
 
@@ -241,21 +241,21 @@ export default function SettingsScreen() {
       <SectionHeader eyebrow="Account" />
       <SettingGroup>
         <SettingRow
-          icon={<UserCog size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<UserCog size={20} color={c.accent} strokeWidth={1.8} />}
           label="Edit Profile"
           description="Name, username, bio, contact"
           onPress={() => router.push('/profile')}
           showChevron
         />
         <SettingRow
-          icon={<Activity size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Activity size={20} color={c.accent} strokeWidth={1.8} />}
           label="Fitness Profile"
           description="Goals, experience, equipment"
           onPress={() => router.push('/fitness-profile' as any)}
           showChevron
         />
         <SettingRow
-          icon={<Ruler size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Ruler size={20} color={c.accent} strokeWidth={1.8} />}
           label="Body Stats"
           description="Weight, measurements, progress"
           onPress={() => router.push('/dashboard/stats')}
@@ -267,14 +267,14 @@ export default function SettingsScreen() {
       <SectionHeader eyebrow="Habits" />
       <SettingGroup>
         <SettingRow
-          icon={<AlarmClock size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<AlarmClock size={20} color={c.accent} strokeWidth={1.8} />}
           label="Reminders"
           description="Workout, water, food, snack, custom"
           onPress={() => router.push('/reminders' as any)}
           showChevron
         />
         <SettingRow
-          icon={<Droplet size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Droplet size={20} color={c.accent} strokeWidth={1.8} />}
           label="Water Tracker"
           description="Log intake, daily goal, monthly graph"
           onPress={() => router.push('/water' as any)}
@@ -286,34 +286,34 @@ export default function SettingsScreen() {
       <SectionHeader eyebrow="Preferences" />
       <SettingGroup>
         <SettingRow
-          icon={<Bell size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Bell size={20} color={c.accent} strokeWidth={1.8} />}
           label="Notifications"
           description="Reminders, AI coach pings"
           switchValue={notificationsEnabled}
           onSwitchChange={handleToggleNotifications}
         />
         <SettingRow
-          icon={<Moon size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Moon size={20} color={c.accent} strokeWidth={1.8} />}
           label="Dark Mode"
           switchValue={theme === 'dark'}
           onSwitchChange={toggleTheme}
         />
         <SettingRow
-          icon={<Ruler size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Ruler size={20} color={c.accent} strokeWidth={1.8} />}
           label="Units of Measurement"
           value={unitSummary}
           onPress={() => setUnitsOpen(true)}
           showChevron
         />
         <SettingRow
-          icon={<Globe size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Globe size={20} color={c.accent} strokeWidth={1.8} />}
           label="Language"
           value={LANG_LABEL[language]}
           onPress={() => setLangOpen(true)}
           showChevron
         />
         <SettingRow
-          icon={<Brain size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Brain size={20} color={c.accent} strokeWidth={1.8} />}
           label="Coach Memory"
           description="What Filo remembers about you"
           onPress={() => router.push('/settings/coach-memory' as any)}
@@ -325,14 +325,14 @@ export default function SettingsScreen() {
       <SectionHeader eyebrow="Downloads" />
       <SettingGroup>
         <SettingRow
-          icon={<Download size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Download size={20} color={c.accent} strokeWidth={1.8} />}
           label="Download on Wi-Fi"
           description="Save workout videos for offline use"
           switchValue={videoDownloads}
           onSwitchChange={handleToggleDownloads}
         />
         <SettingRow
-          icon={<Trash2 size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Trash2 size={20} color={c.accent} strokeWidth={1.8} />}
           label="Offline videos"
           value={cacheBytes > 0 ? `${(cacheBytes / (1024 * 1024)).toFixed(0)} MB` : 'None'}
           description="Clear downloaded videos"
@@ -347,7 +347,7 @@ export default function SettingsScreen() {
           <SectionHeader eyebrow="Health" />
           <SettingGroup>
             <SettingRow
-              icon={<Activity size={20} color={c.primary} strokeWidth={1.8} />}
+              icon={<Activity size={20} color={c.accent} strokeWidth={1.8} />}
               label={`Sync to ${healthBackend.platformLabel}`}
               description="Save your Roams, workouts and weight to the health app"
               switchValue={healthSync}
@@ -361,25 +361,25 @@ export default function SettingsScreen() {
       <SectionHeader eyebrow="Support" />
       <SettingGroup>
         <SettingRow
-          icon={<HelpCircle size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<HelpCircle size={20} color={c.accent} strokeWidth={1.8} />}
           label="Help & FAQ"
           onPress={() => Linking.openURL('https://fitnyx.in/help')}
           showChevron
         />
         <SettingRow
-          icon={<Mail size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Mail size={20} color={c.accent} strokeWidth={1.8} />}
           label="Contact Support"
           onPress={handleContact}
           showChevron
         />
         <SettingRow
-          icon={<Star size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Star size={20} color={c.accent} strokeWidth={1.8} />}
           label="Rate the App"
           onPress={handleRate}
           showChevron
         />
         <SettingRow
-          icon={<Share2 size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Share2 size={20} color={c.accent} strokeWidth={1.8} />}
           label="Share FitNyx"
           onPress={handleShare}
           showChevron
@@ -390,13 +390,13 @@ export default function SettingsScreen() {
       <SectionHeader eyebrow="Legal" />
       <SettingGroup>
         <SettingRow
-          icon={<FileText size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<FileText size={20} color={c.accent} strokeWidth={1.8} />}
           label="Terms of Service"
           onPress={() => router.push('/terms-of-service')}
           showChevron
         />
         <SettingRow
-          icon={<Shield size={20} color={c.primary} strokeWidth={1.8} />}
+          icon={<Shield size={20} color={c.accent} strokeWidth={1.8} />}
           label="Privacy Policy"
           onPress={() => router.push('/privacy-policy')}
           showChevron
@@ -569,7 +569,7 @@ function PickerSheet({
         <View style={styles.sheetHeader}>
           <Text style={[styles.sheetTitle, { color: c.text }]}>{title}</Text>
           <Pressable onPress={onClose}>
-            <Text style={[styles.sheetDone, { color: c.primary }]}>Done</Text>
+            <Text style={[styles.sheetDone, { color: c.accent }]}>Done</Text>
           </Pressable>
         </View>
         <View style={{ marginTop: spacing.lg }}>{children}</View>

@@ -81,7 +81,7 @@ export default function DeleteAccountScreen() {
 
       <Card style={{ gap: 12, marginTop: 16 }}>
         <View style={styles.sectionWrap}>
-          <Text style={[styles.sectionTitle, { color: palette.primary }]}>Signed up with Facebook?</Text>
+          <Text style={[styles.sectionTitle, { color: palette.accent }]}>Signed up with Facebook?</Text>
           <Text style={[styles.sectionBody, { color: palette.mutedText }]}>
             You can also remove FitNyx from Facebook Settings → Apps and Websites to revoke its access.
           </Text>
@@ -93,7 +93,7 @@ export default function DeleteAccountScreen() {
         </View>
 
         <View style={styles.sectionWrap}>
-          <Text style={[styles.sectionTitle, { color: palette.primary }]}>Need help?</Text>
+          <Text style={[styles.sectionTitle, { color: palette.accent }]}>Need help?</Text>
           <Text style={[styles.sectionBody, { color: palette.mutedText }]}>
             Email support@fitnyx.in if you have trouble deleting your account or want a copy of your data first.
           </Text>

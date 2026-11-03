@@ -3,7 +3,7 @@ import type { DietDayTotals, DietLog } from '@/src/lib/api/diet';
 import { analyzeDays } from '@/src/features/diet/insights';
 import {
   addDays, dayStatus, dietGoalBase, goalsFromPlan, grams, lastDays, loggedPlanMeals, macroSplit, nextMealIndex, planLogItem, planMeals,
-  planProteinShortfall, signed, slotForHour, slotForMeal, sumLogs, withDietGoals,
+  planCalorieGap, planProteinShortfall, signed, slotForHour, slotForMeal, sumLogs, withDietGoals,
 } from '@/src/features/diet/model';
 
 const plan = {
@@ -80,6 +80,14 @@ describe('diet plan model', () => {
   it('flags a plan that falls short on protein', () => {
     expect(planProteinShortfall(planMeals(plan), goalsFromPlan(plan))).toBe(24);
     expect(planProteinShortfall(planMeals(plan), { kcal: 2000, protein: 120, carbs: 0, fat: 0 })).toBeNull();
+  });
+
+  it('explains a menu made for a different calorie goal', () => {
+    const meals = planMeals(plan); // 1,925 kcal
+    expect(planCalorieGap(meals, { kcal: 2000, protein: 0, carbs: 0, fat: 0 })).toBeNull();
+    expect(planCalorieGap(meals, { kcal: 2630, protein: 0, carbs: 0, fat: 0 })).toBe(-705);
+    expect(planCalorieGap(meals, { kcal: 1700, protein: 0, carbs: 0, fat: 0 })).toBe(225);
+    expect(planCalorieGap(meals, null)).toBeNull();
   });
 
   it('formats and splits numbers', () => {

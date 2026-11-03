@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Plus, Repeat } from 'lucide-react-native';
+import { Check, ChevronRight, Repeat } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -27,7 +27,8 @@ export function MealCard({ meal, log, next, onToggle, onOpen }: {
         {!next ? <Pressable onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked: eaten }}
           accessibilityLabel={eaten ? `Undo: ${meal.label} not eaten` : `Mark ${meal.label} as eaten`}
           style={({ pressed }) => [styles.check, { backgroundColor: eaten ? c.accentSoft : c.surface, borderColor: c.border }, pressed && { opacity: 0.7 }]}>
-          {eaten ? <Check size={20} color={c.accent} strokeWidth={2.5} /> : <Plus size={20} color={c.text} />}
+          {/* A muted tick, not "+": "+" read as "add food", not "I ate this". */}
+          <Check size={20} color={eaten ? c.accent : c.mutedText} strokeWidth={eaten ? 2.5 : 2} />
         </Pressable> : null}
       </View>
       <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`${meal.label}${meal.time ? ` at ${meal.time}` : ''}: ${swapped ? log?.name : meal.title}, ${Math.round(shown.kcal)} kcal${eaten ? ', eaten' : next ? ', up next' : ''}. Open details`}

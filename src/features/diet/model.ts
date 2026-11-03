@@ -217,6 +217,16 @@ export function planProteinShortfall(meals: PlanMeal[], goal: Macros | null): nu
   return short >= 10 ? short : null;
 }
 
+/**
+ * How far the menu's calories are from the goal (+ over, − under), once that's
+ * worth explaining (≥ 10 % and ≥ 150 kcal) — e.g. a menu made for an older goal.
+ */
+export function planCalorieGap(meals: PlanMeal[], goal: Macros | null): number | null {
+  if (!goal || goal.kcal <= 0 || meals.every((m) => m.macros.kcal === 0)) return null;
+  const gap = Math.round(meals.reduce((t, m) => t + m.macros.kcal, 0) - goal.kcal);
+  return Math.abs(gap) >= Math.max(150, goal.kcal * 0.1) ? gap : null;
+}
+
 export function signed(n: number): string {
   const r = Math.round(n);
   return r > 0 ? `+${r}` : r < 0 ? `−${Math.abs(r)}` : '±0';

@@ -16,7 +16,7 @@ import { Skeleton } from '@/src/components/ui/Skeleton';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 import { usePlan } from '@/src/features/plan/data';
 import { useDietDay, useDietPlan, useDietSummary } from '../data/useDiet';
-import { dateFromKey, dayStatus, dietGoalBase, fmt, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
+import { dateFromKey, dayStatus, dietGoalBase, fmt, lastDays, loggedPlanMeals, nextMealIndex, planCalorieGap, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
 import { InsightsPanel } from '../insights/InsightsPanel';
 import { DietSetup } from '../setup/DietSetup';
 import { SectionTitle } from '../ui/bits';
@@ -25,7 +25,7 @@ import { MealCard } from './MealCard';
 import { OtherLogs } from './OtherLogs';
 import { SummaryCard } from './SummaryCard';
 import { DietGoalsSheet } from './DietGoalsSheet';
-import { CoachTip, WaterCard } from './TodayCards';
+import { CoachTip, MenuGapNote, WaterCard } from './TodayCards';
 import { WeekStrip } from './WeekStrip';
 
 const shortDate = (d: string) => dateFromKey(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -59,6 +59,7 @@ export function DietTodayScreen() {
   const eaten = sumLogs(day.logs);
   const next = date === today ? nextMealIndex(meals, logged) : null;
   const shortG = date === today && !tipHidden ? planProteinShortfall(meals, goal) : null;
+  const kcalGap = date === today ? planCalorieGap(meals, goal) : null;
   const stripDays = week.map((d) => {
     const t = summary.summary?.days.find((s) => s.date === d);
     return { date: d, status: dayStatus(t?.kcal ?? 0, t?.meals ?? 0, goal?.kcal ?? 0) };
@@ -122,6 +123,7 @@ export function DietTodayScreen() {
           <SummaryCard eaten={eaten} goal={goal} burned={activity.loaded ? activity.day.kcal : null}
             onEditGoals={userGoals.data ? () => setEditingGoals(true) : undefined} />
           <SectionTitle title="On your menu" note={`${logged.size} / ${meals.length} logged`} />
+          {kcalGap !== null && goal ? <MenuGapNote gap={kcalGap} goalKcal={goal.kcal} onNewMenu={() => router.push('/diet/setup')} /> : null}
           {[...meals].sort((a, b) => Number(b.index === next) - Number(a.index === next)).map((m) => (
             <MealCard key={m.index} meal={m} log={logged.get(m.index)} next={next === m.index} onToggle={() => toggle(m)} onOpen={() => openMeal(m)} />
           ))}
