@@ -88,6 +88,20 @@ export async function addOfflineLog(sessionId: string, log: OfflineExerciseLog):
   await saveOfflineLogs(sessionId, logs);
 }
 
+/**
+ * Keeps the crash-recovery copy in step with a set the server just saved or
+ * changed. Without it, a set logged online before the network dropped was
+ * missing after an offline restart, and editing it offline failed (2026-11-04).
+ */
+export async function upsertOfflineLog(sessionId: string, log: ExerciseLog): Promise<void> {
+  const logs = await getOfflineLogs(sessionId);
+  const next = { ...log, _offline: false };
+  const idx = logs.findIndex((l) => l.id === log.id);
+  if (idx === -1) logs.push(next);
+  else logs[idx] = next;
+  await saveOfflineLogs(sessionId, logs);
+}
+
 export async function updateOfflineLog(
   sessionId: string,
   logId: string,

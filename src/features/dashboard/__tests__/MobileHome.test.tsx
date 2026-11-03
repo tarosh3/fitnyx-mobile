@@ -165,11 +165,11 @@ describe('MobileHome actions and data states', () => {
     expect(mockSendMessage).not.toHaveBeenCalled();
   });
 
-  it('puts the workout action before shortcuts and detailed stats', () => {
+  it('leads with Roam and Nutrition (their only way in), then the workout, then detailed stats', () => {
     const screen = render(<MobileHome user={user} />);
     const actions = screen.getAllByRole('button').map((button) => button.props.testID);
-    expect(actions.indexOf('home-workout-card')).toBeLessThan(actions.indexOf('home-roam'));
-    expect(actions.indexOf('home-workout-card')).toBeLessThan(actions.indexOf('home-nutrition'));
+    expect(actions.indexOf('home-roam')).toBeLessThan(actions.indexOf('home-workout-card'));
+    expect(actions.indexOf('home-nutrition')).toBeLessThan(actions.indexOf('home-workout-card'));
     expect(actions.indexOf('home-workout-card')).toBeLessThan(actions.indexOf('home-view-stats'));
   });
 

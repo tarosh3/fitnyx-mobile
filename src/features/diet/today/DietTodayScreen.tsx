@@ -59,7 +59,8 @@ export function DietTodayScreen() {
   const eaten = sumLogs(day.logs);
   const next = date === today ? nextMealIndex(meals, logged) : null;
   const shortG = date === today && !tipHidden ? planProteinShortfall(meals, goal) : null;
-  const kcalGap = date === today ? planCalorieGap(meals, goal) : null;
+  // Making a new menu needs a connection, so the offer waits until there is one.
+  const kcalGap = date === today && !day.offline ? planCalorieGap(meals, goal) : null;
   const stripDays = week.map((d) => {
     const t = summary.summary?.days.find((s) => s.date === d);
     return { date: d, status: dayStatus(t?.kcal ?? 0, t?.meals ?? 0, goal?.kcal ?? 0) };

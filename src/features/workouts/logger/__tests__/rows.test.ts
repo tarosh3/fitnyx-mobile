@@ -1,4 +1,4 @@
-import { blockDone, type Block, nextSetNumber, pendingCount, pendingRows } from '../rows';
+import { beatsBest, blockDone, type Block, extraRowsAfterLog, nextSetNumber, pendingCount, pendingRows } from '../rows';
 
 const bench = { uuid: 'bench', title: 'Bench Press', tracking_type: 'weight_reps' } as never;
 const tread = { uuid: 'tread', title: 'Treadmill Run', tracking_type: 'cardio' } as never;
@@ -31,6 +31,25 @@ describe('logger rows', () => {
   it('adds and removes rows', () => {
     expect(pendingCount(block({ extraRows: 1 }))).toBe(4);
     expect(pendingCount(block({ logs: [log(1, 60, 10)], extraRows: -2 }))).toBe(0);
+  });
+
+  it('uses up an added row when it is logged, so no new empty row appears', () => {
+    // Planned 3 sets, all logged, then "+ Add set": one row. Ticking it leaves none.
+    const before = block({ logs: [log(1, 60, 10), log(2, 60, 10), log(3, 65, 10)], extraRows: 1 });
+    expect(pendingCount(before)).toBe(1);
+    const after = { ...before, logs: [...before.logs, log(4, 65, 10)], extraRows: extraRowsAfterLog(before) };
+    expect(pendingCount(after)).toBe(0);
+    // Within the target the planned rows count down on their own.
+    const early = block({ logs: [log(1, 60, 10)], extraRows: 1 });
+    expect(extraRowsAfterLog(early)).toBe(1);
+    expect(extraRowsAfterLog(block({ planned: null, extraRows: 2 }))).toBe(1);
+  });
+
+  it('calls a set a record only above a known all-time best', () => {
+    expect(beatsBest({ bestKg: 42.5 }, 45)).toBe(true);
+    expect(beatsBest({ bestKg: 45 }, 45)).toBe(false);
+    expect(beatsBest({ bestKg: null }, 45)).toBe(false);
+    expect(beatsBest({ bestKg: 42.5 }, null)).toBe(false);
   });
 
   it('gives exercises added mid-workout their own rows', () => {
