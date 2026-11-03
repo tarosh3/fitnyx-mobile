@@ -32,7 +32,7 @@ export function StatTile({ label, value, unit, delta, accent }: Props) {
       <Text style={[styles.label, { color: c.mutedText }]}>{label}</Text>
       <View style={styles.valueRow}>
         <Text style={[styles.value, { color: c.text }]}>{value}</Text>
-        {unit ? <Text style={[styles.unit, { color: c.primary }]}>{unit}</Text> : null}
+        {unit ? <Text style={[styles.unit, { color: c.accent }]}>{unit}</Text> : null}
       </View>
       {delta ? (
         <Text style={[styles.delta, { color: deltaColor }]}>{delta.text}</Text>

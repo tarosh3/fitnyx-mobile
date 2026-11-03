@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   headline: { color: palette.text, fontFamily: type.display.fontFamily, fontSize: 48, lineHeight: 57, letterSpacing: -0.4 },
   headlineCompact: { fontSize: 41, lineHeight: 50 },
-  accent: { color: palette.primary },
+  accent: { color: palette.accent },
   description: { color: palette.mutedText, fontFamily: type.weight.regular, fontSize: 14, lineHeight: 22, marginTop: spacing.base },
   actions: { marginTop: 'auto', gap: spacing.xs },
   primary: {

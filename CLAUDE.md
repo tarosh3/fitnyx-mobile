@@ -184,6 +184,7 @@ Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, Ba
 
 - `fetchWithAuth()` for every API call — never raw fetch
 - `useThemeColors()` for every color — never hardcode hex values
+- Green **text and icons** use `c.accent`, never `c.primary` — `primary` (#5fc793) is a fill colour (buttons, bars, map lines, switch tracks) and is too light on light mode's white cards. Both are the same green in dark mode, so the mistake only shows in light mode (Roam XP, Settings icons, water icons were pale until 2026-11-03).
 - Named exports only — never default exports
 - Cache keys in `src/lib/cache/keys.ts` — never inline strings
 - Cached data fetching in components: `cacheGet` → fetch on miss → `cacheSet` (no `useCachedQuery` hook exists)

@@ -7,6 +7,7 @@ import { usePlan } from '@/src/features/plan/data';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useWaterToday } from '@/src/lib/water';
 import { radii, spacing, type } from '@/src/styles/tokens';
+import { fmt } from '../model';
 
 const GLASS_ML = 250;
 
@@ -30,6 +31,21 @@ export function CoachTip({ shortG, onAction, onDismiss }: { shortG: number; onAc
           </Pressable>
         </View>
       </View>
+    </View>
+  );
+}
+
+/** The menu was made for another calorie goal (e.g. before the plan's targets changed): say so, offer a new one. */
+export function MenuGapNote({ gap, goalKcal, onNewMenu }: { gap: number; goalKcal: number; onNewMenu: () => void }) {
+  const c = useThemeColors();
+  return (
+    <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+      <Text style={[styles.tipText, { color: c.text }]}>
+        This menu adds up to {fmt(goalKcal + gap)} kcal, {fmt(Math.abs(gap))} {gap < 0 ? 'under' : 'over'} your {fmt(goalKcal)} kcal goal.
+      </Text>
+      <Pressable onPress={onNewMenu} accessibilityRole="button" style={({ pressed }) => [styles.tipBtn, styles.gapBtn, { backgroundColor: c.accentSoft }, pressed && { opacity: 0.8 }]}>
+        <Text style={[styles.tipBtnText, { color: c.accent }]}>Make a menu for this goal</Text>
+      </Pressable>
     </View>
   );
 }
@@ -79,6 +95,7 @@ const styles = StyleSheet.create({
   tipActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tipBtn: { minHeight: 44, paddingHorizontal: 14, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   tipBtnText: { fontFamily: type.weight.semibold, fontSize: 14 },
+  gapBtn: { alignSelf: 'flex-start' },
   card: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, padding: spacing.base, gap: spacing.md },
   cardTitle: { fontFamily: type.weight.bold, fontSize: 16, flex: 1 },
   muted: { fontFamily: type.weight.regular, fontSize: 14 },

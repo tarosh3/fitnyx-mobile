@@ -167,7 +167,7 @@ export default function RoamDetailScreen() {
         <ActivityStats activity={activity} />
         <SplitsList splits={activity.splits} distanceM={activity.distance_m} movingSec={activity.moving_time_sec} />
         {error ? <Text style={[styles.note, { color: palette.destructive }]}>{error}</Text> : null}
-        <Button title="DELETE ROAM" variant="ghost" onPress={() => setConfirmDelete(true)} loading={deleting} />
+        <Button title="DELETE ROAM" variant="ghost" textStyle={{ color: palette.destructive }} onPress={() => setConfirmDelete(true)} loading={deleting} />
       </View>
       <ShareCardSheet visible={sharing} data={sharing ? roamCardData(activity) : null} onClose={() => setSharing(false)} />
       <RenameRoamSheet

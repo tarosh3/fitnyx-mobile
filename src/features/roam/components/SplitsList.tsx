@@ -44,8 +44,8 @@ export function SplitsList({ splits, distanceM, movingSec }: Props) {
               />
             </View>
             <View style={styles.pace}>
-              {best ? <Zap size={12} color={palette.primary} fill={palette.primary} /> : null}
-              <UnitText value={rate(s.sec)} color={best ? palette.primary : palette.text} />
+              {best ? <Zap size={12} color={palette.accent} fill={palette.accent} /> : null}
+              <UnitText value={rate(s.sec)} color={best ? palette.accent : palette.text} />
             </View>
           </View>
         );

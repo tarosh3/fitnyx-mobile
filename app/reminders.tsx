@@ -188,7 +188,7 @@ export default function RemindersScreen() {
       {items.length === 0 ? (
         <View style={[styles.emptyCard, { backgroundColor: c.card, borderColor: c.border }]}>
           <View style={[styles.emptyIcon, { backgroundColor: `${c.primary}1A` }]}>
-            <Bell size={28} color={c.primary} strokeWidth={1.8} />
+            <Bell size={28} color={c.accent} strokeWidth={1.8} />
           </View>
           <Text style={[styles.emptyTitle, { color: c.text }]}>No reminders yet</Text>
           <Text style={[styles.emptyText, { color: c.mutedText }]}>
@@ -200,11 +200,11 @@ export default function RemindersScreen() {
         <>
           <View style={[styles.summaryCard, { backgroundColor: c.card, borderColor: c.border }]}>
             <View style={[styles.summaryIcon, { backgroundColor: `${c.primary}1A` }]}>
-              <Bell size={18} color={c.primary} strokeWidth={1.8} />
+              <Bell size={18} color={c.accent} strokeWidth={1.8} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.summaryTitle, { color: c.text }]}>
-                <Text style={{ color: c.primary }}>{activeCount} active</Text>
+                <Text style={{ color: c.accent }}>{activeCount} active</Text>
                 {pausedCount > 0 ? `  ·  ${pausedCount} paused` : ''}
               </Text>
               <Text style={[styles.summarySub, { color: c.mutedText }]}>
@@ -529,8 +529,8 @@ function ReminderEditor({
                 onPress={addTimeSlot}
                 style={[styles.addTimeBtn, { borderColor: c.border }]}
               >
-                <Plus size={16} color={c.primary} />
-                <Text style={[styles.addTimeText, { color: c.primary }]}>Add another time</Text>
+                <Plus size={16} color={c.accent} />
+                <Text style={[styles.addTimeText, { color: c.accent }]}>Add another time</Text>
               </Pressable>
             </View>
           )}

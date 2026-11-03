@@ -85,7 +85,7 @@ export default function CoachMemoryScreen() {
     return (
       <Screen contentContainerStyle={styles.screenContent}>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={palette.primary} />
+          <ActivityIndicator size="large" color={palette.accent} />
         </View>
       </Screen>
     );
@@ -107,7 +107,7 @@ export default function CoachMemoryScreen() {
       </View>
 
       <View style={styles.infoCard}>
-        <Brain color={palette.primary} size={20} />
+        <Brain color={palette.accent} size={20} />
         <Text style={styles.infoText}>
           This note helps Filo remember things about you across conversations — like injuries,
           dietary preferences, schedule constraints, or personal goals. Keep it concise.

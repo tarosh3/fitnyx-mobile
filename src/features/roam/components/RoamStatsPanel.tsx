@@ -85,7 +85,7 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
           accessibilityLabel="What do these stats mean?"
           style={[styles.infoBtn, explain && { backgroundColor: palette.surface }]}
         >
-          <Info size={16} color={explain ? palette.primary : palette.mutedText} />
+          <Info size={16} color={explain ? palette.accent : palette.mutedText} />
         </Pressable>
       </View>
 
