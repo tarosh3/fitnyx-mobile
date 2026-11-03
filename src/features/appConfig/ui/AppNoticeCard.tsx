@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     borderRadius: radii.md, borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.base, paddingVertical: spacing.md, marginVertical: spacing.xs,
+    paddingHorizontal: spacing.base, paddingVertical: spacing.md,
   },
   message: { flex: 1, fontFamily: type.weight.medium, fontSize: type.size.sm, lineHeight: 20 },
   action: { fontFamily: type.weight.bold, fontSize: type.size.sm },

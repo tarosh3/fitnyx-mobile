@@ -157,12 +157,13 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
           <Text style={styles.sectionTitle}>Move. Eat. Feel good.</Text>
         </View>
 
-        <AppNoticeCard />
         <MilestoneNotice storageKey={`milestone:level:${user.id}`} scope="level" value={metrics.level}
           ready={!metrics.loading && !metrics.error} message={`Level ${metrics.level} reached. Keep it going!`} />
         {/* One gap between every section (styles.sections); sections never set their own outer margins.
             Before 2026-11-04 each had its own, and the Recovery card touched the Roam card. */}
         <View style={styles.sections}>
+        {/* Update available / banner rows: renders nothing when there is no notice. */}
+        <AppNoticeCard />
         {/* Roam + Nutrition have no other way in, so they lead; a workout already running stays first. */}
         {metrics.activeSession ? <Entrance>{workoutSection}</Entrance> : null}
         <Entrance delay={30}><HomeEntryTiles /></Entrance>
