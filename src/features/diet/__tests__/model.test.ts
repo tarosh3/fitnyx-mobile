@@ -2,7 +2,7 @@ import type { DietPlan } from '@/src/lib/api';
 import type { DietDayTotals, DietLog } from '@/src/lib/api/diet';
 import { analyzeDays } from '@/src/features/diet/insights';
 import {
-  addDays, dayStatus, goalsFromPlan, grams, lastDays, loggedPlanMeals, macroSplit, nextMealIndex, planLogItem, planMeals,
+  addDays, dayStatus, dietGoalBase, goalsFromPlan, grams, lastDays, loggedPlanMeals, macroSplit, nextMealIndex, planLogItem, planMeals,
   planProteinShortfall, signed, slotForHour, slotForMeal, sumLogs, withDietGoals,
 } from '@/src/features/diet/model';
 
@@ -136,5 +136,16 @@ describe('your own diet goals', () => {
 
   it('can set only protein', () => {
     expect(withDietGoals(base, goals(null, 170))).toMatchObject({ kcal: 2000, protein: 170 });
+  });
+});
+
+describe('dietGoalBase', () => {
+  const targets = { bmr: 1700, tdee: 2390, calories: 2630, adjustment_kcal: 240, protein_g: 134, carbs_g: 346, fat_g: 79, water_ml: 2600, burn_per_session_kcal: 230, burn_weekly_kcal: 690 };
+  it('uses the plan targets over an older meal plan', () => {
+    expect(dietGoalBase(targets, plan)).toEqual({ kcal: 2630, protein: 134, carbs: 346, fat: 79 });
+  });
+  it('falls back to the meal plan without targets', () => {
+    expect(dietGoalBase(null, plan)).toEqual(goalsFromPlan(plan));
+    expect(dietGoalBase({ ...targets, calories: 0 }, plan)).toEqual(goalsFromPlan(plan));
   });
 });

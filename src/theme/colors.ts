@@ -25,6 +25,8 @@ export const colors = {
     surface: '#141414',
     card: '#1B1B1B',
     border: '#2A2A2A',
+    /** Off track of a Switch: border is too faint against a card. */
+    switchTrack: '#3A3A3C',
     text: '#F5F5F5',
     mutedText: '#A1A1AA',
     primary: '#5fc793',
@@ -84,6 +86,7 @@ export const colors = {
     surface: '#FFFFFF',
     card: '#FFFFFF',
     border: '#E4E4E7',
+    switchTrack: '#C7C7CC',
     text: '#111111',
     mutedText: '#52525B',
     primary: '#5fc793',

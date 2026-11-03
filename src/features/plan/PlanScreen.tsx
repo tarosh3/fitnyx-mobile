@@ -10,7 +10,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { spacing, type } from '@/src/styles/tokens';
 import { usePlan, useStartStarterProgram } from './data';
 import { GuidanceCard } from './GuidanceCard';
-import { goalLabel } from './model';
+import { goalLabel, isTrainingDay } from './model';
 import { ProgramPreview } from './ProgramPreview';
 import { ScheduleCard } from './ScheduleCard';
 import { TargetsCard } from './TargetsCard';
@@ -93,7 +93,7 @@ export function PlanScreen() {
           {LOCATION_LABELS[data.profile.location] ? <Pill>{LOCATION_LABELS[data.profile.location]}</Pill> : null}
         </View>
         <TargetsCard targets={data.targets} missing={data.missing} />
-        <ScheduleCard schedule={data.schedule} todayTraining={first ? undefined : data.today.training_day} />
+        <ScheduleCard schedule={data.schedule} todayTraining={first ? undefined : isTrainingDay(data.schedule)} />
         {days ? <ProgramPreview program={data.starter_program} /> : null}
         <GuidanceCard guidance={data.guidance} />
       </ScrollView>

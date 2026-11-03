@@ -43,6 +43,7 @@ export function RouteHeatmap({ lines, style }: { lines: HeatmapLine[]; style?: S
         mapStyle={basemap.style}
         logo={false}
         compass={false}
+        tintColor={palette.accent}
         onDidFailLoadingMap={basemap.onLoadFailed}
       >
         {bounds ? <Camera bounds={bounds} padding={{ top: 48, right: 48, bottom: 48, left: 48 }} duration={0} /> : null}

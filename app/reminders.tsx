@@ -240,7 +240,7 @@ export default function RemindersScreen() {
                     <Switch
                       value={r.enabled}
                       onValueChange={(v) => handleToggle(r, v)}
-                      trackColor={{ false: c.border, true: c.primary }}
+                      trackColor={{ false: c.switchTrack, true: c.primary }} ios_backgroundColor={c.switchTrack}
                       thumbColor="#fff"
                     />
                     <Pressable onPress={() => handleDelete(r)} hitSlop={10}>
@@ -582,7 +582,7 @@ function ReminderEditor({
             <Switch
               value={enabled}
               onValueChange={setEnabled}
-              trackColor={{ false: c.border, true: c.primary }}
+              trackColor={{ false: c.switchTrack, true: c.primary }} ios_backgroundColor={c.switchTrack}
               thumbColor="#fff"
             />
           </View>

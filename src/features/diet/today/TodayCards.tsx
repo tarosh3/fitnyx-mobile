@@ -3,6 +3,7 @@ import { ArrowUpRight, Droplet, Minus, Plus, Sparkles } from 'lucide-react-nativ
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { usePlan } from '@/src/features/plan/data';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { useWaterToday } from '@/src/lib/water';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -37,7 +38,7 @@ export function CoachTip({ shortG, onAction, onDismiss }: { shortG: number; onAc
 export function WaterCard() {
   const c = useThemeColors();
   const router = useRouter();
-  const { day, goalMl, totalMl, add, remove } = useWaterToday();
+  const { day, goalMl, totalMl, add, remove } = useWaterToday(usePlan().data?.targets?.water_ml);
   const glasses = Math.min(12, Math.max(1, Math.round(goalMl / GLASS_ML)));
   const filled = Math.min(glasses, Math.floor(totalMl / GLASS_ML));
   const last = day.entries[day.entries.length - 1];
