@@ -23,9 +23,19 @@ export interface Block {
 
 export const defaultSetsFor = (ex: Exercise | null) => (trackingOf(ex) === 'cardio' ? 1 : 3);
 
+const targetSets = (b: Pick<Block, 'planned' | 'exercise'>) => (b.planned ? b.planned.target_sets ?? defaultSetsFor(b.exercise) : 0);
+
 export function pendingCount(b: Pick<Block, 'planned' | 'logs' | 'extraRows' | 'exercise'>): number {
-  const target = b.planned ? b.planned.target_sets ?? defaultSetsFor(b.exercise) : 0;
-  return Math.max(0, Math.max(0, target - b.logs.length) + b.extraRows);
+  return Math.max(0, Math.max(0, targetSets(b) - b.logs.length) + b.extraRows);
+}
+
+/**
+ * `extraRows` once one more row is logged (`b` is the block before it). A row
+ * past the target is an extra row, so logging it uses one up — keeping it made
+ * each ticked "+ Add set" row on a planned exercise spawn another (2026-11-04).
+ */
+export function extraRowsAfterLog(b: Pick<Block, 'planned' | 'logs' | 'extraRows' | 'exercise'>): number {
+  return b.logs.length < targetSets(b) ? b.extraRows : Math.max(0, b.extraRows - 1);
 }
 
 /**

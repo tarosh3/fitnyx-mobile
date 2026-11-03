@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type DraftSet, draftToLog, trackingOf } from '@/src/features/workouts/model';
-import { type Block, defaultSetsFor, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
+import { type Block, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
 import { moveItem } from '@/src/features/workouts/ui/dragOrder';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
@@ -136,7 +136,7 @@ export function useWorkoutLogger(sessionId: string) {
       const drafts: Record<number, typeof row> = {};
       Object.entries(x.drafts).forEach(([k, v]) => { const n = Number(k); if (n > pi) drafts[n - 1] = v; else if (n < pi) drafts[n] = v; });
       const bestKg = created.is_pr && created.weight_kg ? Math.max(x.bestKg ?? 0, created.weight_kg) : x.bestKg;
-      return { ...x, logs: [...x.logs, created], drafts, bestKg, extraRows: x.planned ? x.extraRows : Math.max(0, x.extraRows - 1) };
+      return { ...x, logs: [...x.logs, created], drafts, bestKg, extraRows: extraRowsAfterLog(x) };
     });
     const restSec = t === 'cardio' ? null : b.planned?.rest_seconds && b.planned.rest_seconds > 0 ? b.planned.rest_seconds : 90;
     return { log: created, pr: !!created.is_pr, restSec };
