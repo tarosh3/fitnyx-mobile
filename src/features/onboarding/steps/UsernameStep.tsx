@@ -146,28 +146,15 @@ export function UsernameStep({ data, onNext, saving }: OnboardingStepProps) {
   const canContinue = status === 'available' && isLocked && !saving;
 
   const indicator = (() => {
-    if (status === 'checking') return <BrandLoader size="small" color={palette.mutedText} />;
+    if (resolving || status === 'checking') return <BrandLoader size="small" color={palette.mutedText} />;
     if (status === 'available') return <Check size={18} color={palette.success} />;
     if (status === 'taken' || status === 'invalid') return <X size={18} color={palette.destructive} />;
     return null;
   })();
 
-  if (resolving) {
-    return (
-      <StepScaffold
-        title="Choose your username"
-        subtitle="This is how others will find you on FitNyx."
-        onContinue={() => {}}
-        disabled
-      >
-        <View style={styles.loadingWrap}>
-          <BrandLoader size="large" color={palette.primary} />
-          <Text style={[styles.loadingText, { color: palette.mutedText }]}>Finding the perfect username for you…</Text>
-        </View>
-      </StepScaffold>
-    );
-  }
-
+  // While a suggestion is being found the same form shows with the field
+  // waiting — a separate full-screen loader here flashed a different screen
+  // before the form (reported 2026-11-01).
   return (
     <StepScaffold
       title="Choose your username"
@@ -187,7 +174,8 @@ export function UsernameStep({ data, onNext, saving }: OnboardingStepProps) {
           autoCapitalize="none"
           autoCorrect={false}
           maxLength={30}
-          placeholder="username"
+          editable={!resolving}
+          placeholder={resolving ? 'Finding a username for you…' : 'username'}
           style={styles.input}
         />
         <View style={styles.rightIndicator}>{indicator}</View>
@@ -273,15 +261,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 6,
     padding: 12,
-  },
-  loadingWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

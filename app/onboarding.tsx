@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { getOnboardingStatus } from '@/src/lib/api/onboarding';
 import { OnboardingFlow } from '@/src/features/onboarding/OnboardingFlow';
@@ -11,43 +12,33 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const palette = useThemeColors();
   const { user, loading: authLoading } = useAuth();
-  const [checking, setChecking] = useState(true);
 
+  // The flow renders straight away; this only sends an already-onboarded user
+  // home. Blocking on it put an extra spinner screen between sign-in and the
+  // first step (a flash of a different screen, reported 2026-11-01).
   useEffect(() => {
-    const checkStatus = async () => {
-      if (!user) {
-        router.replace('/');
-        return;
-      }
-
-      try {
-        const status = await getOnboardingStatus();
-        if (status.onboarding_complete) {
-          router.replace('/');
-          return;
-        }
-      } catch {
-        // continue to onboarding
-      }
-
-      setChecking(false);
-    };
-
-    if (!authLoading) {
-      checkStatus();
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/');
+      return;
     }
-  }, [authLoading, user, router]);
+    let cancelled = false;
+    getOnboardingStatus()
+      .then((status) => {
+        if (!cancelled && status.onboarding_complete) router.replace('/');
+      })
+      .catch(() => undefined); // continue to onboarding
+    return () => { cancelled = true; };
+  }, [authLoading, user?.id, router]);
 
-  if (authLoading || checking) {
+  // Keep the flow mounted once there is a user: a SIGNED_IN / TOKEN_REFRESHED
+  // flips authLoading, and unmounting here would drop the answers on screen.
+  if (!user) {
     return (
       <View style={{ alignItems: 'center', backgroundColor: palette.background, flex: 1, justifyContent: 'center' }}>
-        <ActivityIndicator color={palette.primary} size="large" />
+        {authLoading ? <BrandLoader color={palette.accent} size="large" /> : null}
       </View>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   return <OnboardingFlow />;
