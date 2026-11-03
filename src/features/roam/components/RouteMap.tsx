@@ -150,6 +150,8 @@ export const RouteMap = React.memo(function RouteMap({
           mapStyle={basemap.style}
           logo={false}
           compass={false}
+          // Tints the attribution (i) button (iOS default blue was off-theme).
+          tintColor={palette.accent}
           onDidFailLoadingMap={basemap.onLoadFailed}
         >
           {follow ? (

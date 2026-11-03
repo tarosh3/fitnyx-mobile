@@ -321,7 +321,7 @@ export default function ProfileScreen() {
           justifyContent: 'center',
         }}
       >
-        <ActivityIndicator size="large" color={c.primary} />
+        <ActivityIndicator size="large" color={c.accent} />
       </View>
     );
   }
@@ -389,14 +389,14 @@ export default function ProfileScreen() {
                 <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
               ) : (
                 <View style={[styles.avatarFallback, { backgroundColor: c.surface }]}>
-                  <Camera size={32} color={c.primary} strokeWidth={1.6} />
+                  <Camera size={32} color={c.accent} strokeWidth={1.6} />
                 </View>
               )}
               <View style={[styles.cameraBadge, { backgroundColor: c.primary }]}>
                 <Camera size={14} color={c.primaryText} strokeWidth={2} />
               </View>
             </Pressable>
-            <Text style={[styles.changePhotoText, { color: c.primary }]}>
+            <Text style={[styles.changePhotoText, { color: c.accent }]}>
               {uploading ? 'Uploading…' : 'Tap to change photo'}
             </Text>
           </View>
@@ -460,7 +460,7 @@ export default function ProfileScreen() {
                     onPress={() => setUsername(s)}
                     style={[styles.suggestChip, { borderColor: c.primary, backgroundColor: `${c.primary}1A` }]}
                   >
-                    <Text style={[styles.suggestChipText, { color: c.primary }]}>{s}</Text>
+                    <Text style={[styles.suggestChipText, { color: c.accent }]}>{s}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -504,7 +504,7 @@ export default function ProfileScreen() {
               ) : null}
               {Platform.OS === 'ios' && showDatePicker ? (
                 <Pressable onPress={() => setShowDatePicker(false)} style={{ alignSelf: 'flex-end' }}>
-                  <Text style={[styles.fieldLabel, { color: c.primary }]}>DONE</Text>
+                  <Text style={[styles.fieldLabel, { color: c.accent }]}>DONE</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -593,7 +593,7 @@ export default function ProfileScreen() {
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: c.text }]}>Select Country</Text>
             <Pressable onPress={() => setShowCountry(false)}>
-              <Text style={[styles.sheetDone, { color: c.primary }]}>Done</Text>
+              <Text style={[styles.sheetDone, { color: c.accent }]}>Done</Text>
             </Pressable>
           </View>
           <Picker

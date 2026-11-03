@@ -21,6 +21,7 @@ import {
   getOfflineLogs,
   addOfflineLog,
   updateOfflineLog,
+  upsertOfflineLog,
   deleteOfflineLog,
   setActiveOfflineSessionId,
   persistSessionState,
@@ -146,6 +147,8 @@ export async function offlineLogSet(requestedId: string, data: LogExerciseInput)
   if (online && !isOfflineId(sessionId) && !(await isExerciseQueued(data.exercise_uuid))) {
     try {
       const log = await logExerciseSet(sessionId, data);
+      // Saved, so a failed local write must not fail the tick.
+      await upsertOfflineLog(sessionId, log).catch(() => undefined);
       return log;
     } catch (error: any) {
       if (error?.status) throw error;
@@ -198,6 +201,11 @@ export async function offlineLogSet(requestedId: string, data: LogExerciseInput)
   return offlineLog;
 }
 
+/** Marks a queued set as a record in the crash-recovery copy, so the summary counts it. */
+export async function markOfflineLogPr(requestedSessionId: string, logId: string): Promise<void> {
+  await updateOfflineLog(await resolveId(requestedSessionId), logId, { is_pr: true });
+}
+
 // --- Update Log ---
 
 export async function offlineUpdateLog(
@@ -212,7 +220,9 @@ export async function offlineUpdateLog(
 
   if (online && !isOfflineId(logId)) {
     try {
-      return await updateExerciseLog(logId, data);
+      const log = await updateExerciseLog(logId, data);
+      await upsertOfflineLog(sessionId, log).catch(() => undefined);
+      return log;
     } catch (error: any) {
       if (error?.status) throw error;
     }

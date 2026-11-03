@@ -289,7 +289,7 @@ export const AuthForm = forwardRef<AuthFormHandle, AuthFormProps>(function AuthF
     return (
       <View style={styles.confirmation} testID="auth-confirmation">
         <View style={styles.confirmIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <MailCheck color={palette.primary} size={32} strokeWidth={1.6} />
+          <MailCheck color={palette.accent} size={32} strokeWidth={1.6} />
         </View>
         <View style={styles.heading}>
           <Text accessibilityRole="header" style={styles.title}>Check your inbox.</Text>

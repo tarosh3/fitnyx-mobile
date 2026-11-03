@@ -44,10 +44,11 @@ export function ymd(d: Date = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
-export async function getGoalMl(): Promise<number> {
+/** The user's own goal; without one, `fallbackMl` (the plan's water target) or 2.5 L. */
+export async function getGoalMl(fallbackMl: number = DEFAULT_GOAL_ML): Promise<number> {
   const raw = await AsyncStorage.getItem(GOAL_KEY);
-  const n = raw ? Number(raw) : NaN;
-  if (!Number.isFinite(n) || n <= 0) return DEFAULT_GOAL_ML;
+  const stored = raw ? Number(raw) : NaN;
+  const n = Number.isFinite(stored) && stored > 0 ? stored : fallbackMl > 0 ? fallbackMl : DEFAULT_GOAL_ML;
   // Clamp on read too, so a pre-existing out-of-range value can't slip through.
   return Math.min(WATER_LIMITS.MAX_GOAL_ML, Math.max(WATER_LIMITS.MIN_GOAL_ML, Math.round(n)));
 }
@@ -150,17 +151,19 @@ export async function getMonthTotals(
 
 // ----- hooks -----
 
-export function useWaterToday() {
+/** `planGoalMl`: the plan's water target, used until the user sets a goal of their own. */
+export function useWaterToday(planGoalMl?: number) {
+  const fallback = planGoalMl && planGoalMl > 0 ? planGoalMl : DEFAULT_GOAL_ML;
   const [day, setDay] = useState<DayLog>({ date: ymd(), entries: [] });
-  const [goalMl, setGoalState] = useState<number>(DEFAULT_GOAL_ML);
+  const [goalMl, setGoalState] = useState<number>(fallback);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [d, g] = await Promise.all([getDay(ymd()), getGoalMl()]);
+    const [d, g] = await Promise.all([getDay(ymd()), getGoalMl(fallback)]);
     setDay(d);
     setGoalState(g);
     setLoading(false);
-  }, []);
+  }, [fallback]);
 
   useEffect(() => {
     refresh();
@@ -184,8 +187,8 @@ export function useWaterToday() {
 
   const setGoal = useCallback(async (ml: number) => {
     await setGoalMl(ml);
-    setGoalState(await getGoalMl());
-  }, []);
+    setGoalState(await getGoalMl(fallback));
+  }, [fallback]);
 
   return { day, goalMl, totalMl: sumMl(day), loading, refresh, add, remove, clearAll, setGoal } as const;
 }

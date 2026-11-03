@@ -5,6 +5,8 @@ import { ChevronRight } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { usePlan } from '@/src/features/plan/data';
+import { isTrainingDay } from '@/src/features/plan/model';
 import { fmtVolume, plural } from '@/src/features/workouts/model';
 import { ProgramCard } from '@/src/features/workouts/programs/ProgramCard';
 import { startWorkout } from '@/src/features/workouts/start';
@@ -30,6 +32,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
   const metrics = useRetentionMetrics(userId);
   const routines = useRoutines();
   const programs = usePrograms();
+  const schedule = usePlan().data?.schedule;
   const { activeSession, setActiveSession } = useWorkout();
   const [cardioOpen, setCardioOpen] = useState(false);
 
@@ -66,6 +69,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
             planId: metrics.activePlan.id, dayId: metrics.currentDay.id, title: metrics.activePlan.title,
             dayName: metrics.currentDay.day_name || `Day ${metrics.currentDay.day_index}`, exercises: metrics.currentDay.exercise_count,
           } : null}
+          restDay={schedule ? !isTrainingDay(schedule) : false}
           onError={toast}
         />
       </Entrance>

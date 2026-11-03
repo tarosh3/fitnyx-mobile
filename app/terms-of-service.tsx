@@ -47,7 +47,7 @@ export default function TermsOfServiceScreen() {
       <Card style={{ gap: 10 }}>
         {TERMS.map((section) => (
           <View key={section.title} style={styles.sectionWrap}>
-            <Text style={[styles.sectionTitle, { color: palette.primary }]}>{section.title}</Text>
+            <Text style={[styles.sectionTitle, { color: palette.accent }]}>{section.title}</Text>
             <Text style={[styles.sectionBody, { color: palette.mutedText }]}>{section.body}</Text>
           </View>
         ))}

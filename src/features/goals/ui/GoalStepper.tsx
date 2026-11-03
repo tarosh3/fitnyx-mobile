@@ -45,7 +45,7 @@ export function GoalStepper({ label, hint, icon, color, value, onChange, step, m
         </View>
         {required ? null : (
           <Switch value={on} onValueChange={(next) => { haptic.selection(); onChange(next ? initial : null); }}
-            accessibilityLabel={`${label} goal`} trackColor={{ true: color, false: c.border }} thumbColor={c.surface} />
+            accessibilityLabel={`${label} goal`} trackColor={{ true: color, false: c.switchTrack }} ios_backgroundColor={c.switchTrack} thumbColor={c.surface} />
         )}
       </View>
       {on ? (

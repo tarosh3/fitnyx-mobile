@@ -14,8 +14,9 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { useToast } from '@/src/features/workouts/ui/Toast';
+import { usePlan } from '@/src/features/plan/data';
 import { useDietDay, useDietPlan, useDietSummary } from '../data/useDiet';
-import { dateFromKey, dayStatus, fmt, goalsFromPlan, lastDays, loggedPlanMeals, nextMealIndex, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
+import { dateFromKey, dayStatus, dietGoalBase, fmt, lastDays, loggedPlanMeals, nextMealIndex, planCalorieGap, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
 import { InsightsPanel } from '../insights/InsightsPanel';
 import { DietSetup } from '../setup/DietSetup';
 import { SectionTitle } from '../ui/bits';
@@ -24,7 +25,7 @@ import { MealCard } from './MealCard';
 import { OtherLogs } from './OtherLogs';
 import { SummaryCard } from './SummaryCard';
 import { DietGoalsSheet } from './DietGoalsSheet';
-import { CoachTip, WaterCard } from './TodayCards';
+import { CoachTip, MenuGapNote, WaterCard } from './TodayCards';
 import { WeekStrip } from './WeekStrip';
 
 const shortDate = (d: string) => dateFromKey(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -47,16 +48,19 @@ export function DietTodayScreen() {
   const week = lastDays(today, 7);
   const summary = useDietSummary(user?.id, week[0], today);
   const userGoals = useGoals();
+  const targets = usePlan().data?.targets;
   const activity = useDayActivity(date);
   const [editingGoals, setEditingGoals] = useState(false);
 
   const meals = useMemo(() => planMeals(plan), [plan]);
-  const planGoal = goalsFromPlan(plan);
+  const planGoal = dietGoalBase(targets, plan);
   const goal = withDietGoals(planGoal, userGoals.data);
   const logged = loggedPlanMeals(day.logs);
   const eaten = sumLogs(day.logs);
   const next = date === today ? nextMealIndex(meals, logged) : null;
   const shortG = date === today && !tipHidden ? planProteinShortfall(meals, goal) : null;
+  // Making a new menu needs a connection, so the offer waits until there is one.
+  const kcalGap = date === today && !day.offline ? planCalorieGap(meals, goal) : null;
   const stripDays = week.map((d) => {
     const t = summary.summary?.days.find((s) => s.date === d);
     return { date: d, status: dayStatus(t?.kcal ?? 0, t?.meals ?? 0, goal?.kcal ?? 0) };
@@ -120,6 +124,7 @@ export function DietTodayScreen() {
           <SummaryCard eaten={eaten} goal={goal} burned={activity.loaded ? activity.day.kcal : null}
             onEditGoals={userGoals.data ? () => setEditingGoals(true) : undefined} />
           <SectionTitle title="On your menu" note={`${logged.size} / ${meals.length} logged`} />
+          {kcalGap !== null && goal ? <MenuGapNote gap={kcalGap} goalKcal={goal.kcal} onNewMenu={() => router.push('/diet/setup')} /> : null}
           {[...meals].sort((a, b) => Number(b.index === next) - Number(a.index === next)).map((m) => (
             <MealCard key={m.index} meal={m} log={logged.get(m.index)} next={next === m.index} onToggle={() => toggle(m)} onOpen={() => openMeal(m)} />
           ))}

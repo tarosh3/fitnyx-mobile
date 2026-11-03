@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { usePlan } from '@/src/features/plan/data';
-import { thousands } from '@/src/features/plan/model';
+import { isTrainingDay, thousands } from '@/src/features/plan/model';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -31,17 +31,18 @@ export function PlanTodayCard() {
   }, [user]);
 
   if (!plan?.targets) return null;
-  const { targets, today, schedule } = plan;
+  const { targets, schedule } = plan;
+  const training = isTrainingDay(schedule);
   const dismiss = () => {
     setIntroOpen(false);
     // A year: the dismissal is a per-device convenience, read back stale.
     if (user) cacheSet(cacheKeys.planIntroDismissed(user.id), true, cacheTTL.DAY * 365).catch(() => undefined);
   };
-  const train = today.training_day ? `${schedule.session_min} min workout` : 'Rest day';
+  const train = training ? `${schedule.session_min} min workout` : 'Rest day';
   const stats = [
     { label: 'Eat', value: `${thousands(targets.calories)} kcal` },
     { label: 'Protein', value: `${targets.protein_g} g` },
-    { label: today.training_day ? 'Burn' : 'Train', value: today.training_day ? `~${thousands(targets.burn_per_session_kcal)} kcal` : 'Recover' },
+    { label: training ? 'Burn' : 'Train', value: training ? `~${thousands(targets.burn_per_session_kcal)} kcal` : 'Recover' },
   ];
 
   return (
@@ -74,7 +75,7 @@ export function PlanTodayCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: spacing.md, paddingTop: spacing.md, paddingHorizontal: spacing.xs, gap: spacing.xs },
+  card: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.md, paddingHorizontal: spacing.xs, gap: spacing.xs },
   pressed: { opacity: 0.88 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 32 },
   close: { flexShrink: 0, minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },

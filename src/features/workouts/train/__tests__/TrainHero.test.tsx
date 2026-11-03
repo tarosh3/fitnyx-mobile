@@ -49,3 +49,9 @@ it('suggests the least recently trained routine and preserves its day ID', async
     { planId: 'untried', dayId: 'untried-day' }, expect.objectContaining({ setActiveSession: mockSetSession }),
   ));
 });
+
+it('calls the program day "Up next" on a plan rest day', () => {
+  const screen = render(<TrainHero {...defaults} program={program} restDay />);
+  expect(screen.getByText(`Up next · ${program.title}`)).toBeTruthy();
+  expect(screen.queryByText(`Today · ${program.title}`)).toBeNull();
+});

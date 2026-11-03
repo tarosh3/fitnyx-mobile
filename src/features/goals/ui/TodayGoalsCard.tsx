@@ -29,7 +29,7 @@ export function TodayGoalsCard() {
   return (
     <View testID="home-goals-card" style={styles.card}>
       <View style={styles.head}>
-        <Text style={[styles.eyebrow, { color: c.accent }]}>TODAY’S GOALS</Text>
+        <Text accessibilityRole="header" style={[styles.heading, { color: c.text }]}>Today’s goals</Text>
         {list.length ? (
           <Pressable testID="home-goals-edit" onPress={() => setEditing(true)} hitSlop={12} accessibilityRole="button"
             accessibilityLabel="Edit daily goals" style={styles.edit}>
@@ -59,7 +59,7 @@ export function TodayGoalsCard() {
           <View style={[styles.emptyIcon, { backgroundColor: c.accentSoft }]}><Target size={22} color={c.accent} /></View>
           <View style={styles.emptyCopy}>
             <Text style={[styles.title, { color: c.text }]}>Set a daily goal</Text>
-            <Text style={[styles.body, { color: c.mutedText }]}>Track distance, calories or steps on every Roam.</Text>
+            <Text style={[styles.body, { color: c.mutedText }]}>Track distance, calories or steps each day.</Text>
           </View>
           <ArrowRight size={18} color={c.mutedText} />
         </Pressable>
@@ -71,9 +71,10 @@ export function TodayGoalsCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { paddingVertical: spacing.lg, gap: spacing.md },
+  card: { gap: spacing.md },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 },
-  eyebrow: { fontFamily: type.weight.semibold, fontSize: type.size.micro, letterSpacing: type.tracking.eyebrow },
+  // Same as Home's other section titles (Last 7 days, Your progress).
+  heading: { fontFamily: type.weight.semibold, fontSize: 21, lineHeight: 28, letterSpacing: -0.6 },
   edit: { minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },
   title: { fontFamily: type.weight.semibold, fontSize: 17 },
   body: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18 },

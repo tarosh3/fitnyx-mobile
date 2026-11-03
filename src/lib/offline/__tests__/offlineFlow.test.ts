@@ -140,3 +140,27 @@ it('deletes a set removed while it was syncing', async () => {
   expect(mockApi.deleteExerciseLog).toHaveBeenCalledWith('srv-log-y');
   expect(await getOfflineLogs('srv-session')).toHaveLength(0);
 });
+
+it('keeps a set saved online when the network drops and the app restarts offline', async () => {
+  const running = {
+    id: 'srv-drop', user_id: 'u1', status: 'in_progress' as const, total_duration_sec: 0,
+    started_at: new Date().toISOString(), last_resumed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(), workout_date: '2026-11-04',
+  };
+  // Opened online with no sets yet: the crash-recovery copy is empty.
+  await persistSessionState(running, []);
+  setOnline(true);
+  mockApi.logExerciseSet.mockImplementationOnce(async () => ({ id: 'srv-log-online', set_index: 1, reps: 8, weight_kg: 60 }) as never);
+  await offlineLogSet(running.id, set(1));
+
+  // The network goes; the next set is queued.
+  setOnline(false);
+  await offlineLogSet(running.id, set(2));
+  const logs = await getOfflineLogs(running.id);
+  expect(logs.map((l) => l.id)).toEqual(['srv-log-online', expect.stringMatching(/^offline-/)]);
+
+  // Editing the online set while offline works and queues the change.
+  const edited = await offlineUpdateLog(running.id, 'srv-log-online', { actual_reps: 10 });
+  expect(edited.reps).toBe(10);
+  expect((await getOfflineQueue()).map((m) => m.type)).toEqual(['LOG_SET', 'UPDATE_SET']);
+});

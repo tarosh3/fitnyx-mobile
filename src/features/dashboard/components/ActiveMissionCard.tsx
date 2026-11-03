@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, ChevronRight, Dumbbell, Play } from 'lucide-react-native';
+import { ArrowRight, ChevronRight, Dumbbell, Play } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -105,7 +105,7 @@ export function ActiveMissionCard({
           <Text style={[styles.subtitle, { color: c.mutedText }]}>{subtitle}</Text>
           <View style={styles.footer}>
             {metadata ? <Text style={[styles.metadata, { color: c.mutedText }]}>{metadata}</Text> : null}
-            <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>{busy ? 'Preparing workout…' : action}</Text>{busy ? <ActivityIndicator size="small" color={c.accent} /> : <ArrowUpRight size={16} color={c.accent} />}</View>
+            <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>{busy ? 'Preparing workout…' : action}</Text>{busy ? <ActivityIndicator size="small" color={c.accent} /> : <ArrowRight size={16} color={c.accent} />}</View>
           </View>
         </View>
       </HomePressable>
@@ -120,7 +120,7 @@ export function ActiveMissionCard({
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, borderRadius: radii.lg, padding: spacing.base },
+  card: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, borderRadius: radii['2xl'], padding: spacing.lg },
   icon: { width: 36, height: 36, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, minWidth: 0, gap: 4 },
   eyebrow: { fontFamily: type.weight.semibold, fontSize: type.size.micro, lineHeight: 16, letterSpacing: 1.1 },
@@ -129,6 +129,6 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm, marginTop: 3 },
   metadata: { fontFamily: type.weight.medium, fontSize: type.size.xs, lineHeight: 18 },
   action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionText: { fontFamily: type.weight.semibold, fontSize: 13, lineHeight: 20, flexShrink: 1 },
+  actionText: { fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 20, flexShrink: 1 },
   planLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingHorizontal: spacing.base, marginTop: spacing.sm, borderRadius: radii.md },
 });
