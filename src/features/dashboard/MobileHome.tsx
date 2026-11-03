@@ -25,7 +25,7 @@ import { MilestoneNotice } from '@/src/components/ui/MilestoneNotice';
 import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { Entrance, StreakPulse } from '@/src/components/ui/Motion';
 import { FiloMark } from '@/src/components/ai/FiloMark';
-import { HomeShortcuts } from './components/HomeShortcuts';
+import { HomeEntryTiles, HomeShortcuts } from './components/HomeShortcuts';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
 import { ActivityHeatmap } from './components/ActivityHeatmap';
 import { HomeLevelProgress, HomeWeekSummary } from './components/HomeProgress';
@@ -158,13 +158,18 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
 
         <MilestoneNotice storageKey={`milestone:level:${user.id}`} scope="level" value={metrics.level}
           ready={!metrics.loading && !metrics.error} message={`Level ${metrics.level} reached. Keep it going!`} />
-        <Entrance style={styles.resumeSection}>{workoutSection}</Entrance>
-        <Entrance delay={60}><ReadinessCard /></Entrance>
+        {/* One gap between every section (styles.sections); sections never set their own outer margins.
+            Before 2026-11-04 each had its own, and the Recovery card touched the Roam card. */}
+        <View style={styles.sections}>
+        {/* Roam + Nutrition have no other way in, so they lead; a workout already running stays first. */}
+        {metrics.activeSession ? <Entrance>{workoutSection}</Entrance> : null}
+        <Entrance delay={30}><HomeEntryTiles /></Entrance>
+        {metrics.activeSession ? null : <Entrance delay={60}>{workoutSection}</Entrance>}
+        {/* Not in an Entrance: its wrapper would keep a gap when the card renders nothing. */}
+        <ReadinessCard />
         <Entrance delay={70}><HomeShortcuts><PlanTodayCard /></HomeShortcuts></Entrance>
 
-        <View testID="home-today-section">
-          <TodayGoalsCard />
-        </View>
+        <TodayGoalsCard />
 
         <View testID="home-coach-section" style={styles.coachSection}>
           <View style={styles.coachHeader}>
@@ -207,7 +212,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
           <>
             <View style={styles.section}>
               <View style={styles.todayRow}>
-                <Text style={styles.consistencyLabel}>Your progress</Text>
+                <Text accessibilityRole="header" style={styles.sectionTitle}>Your progress</Text>
                 <View accessible style={styles.streak} accessibilityLabel={`${metrics.streakDays} day workout streak`}>
                   <StreakPulse active={metrics.streakDays > 0}><Flame size={17} color={styles.accent.color} /></StreakPulse>
                   <Text style={styles.streakText}>{metrics.streakDays > 0 ? `${metrics.streakDays}-day workout streak` : 'A fresh start'}</Text>
@@ -238,6 +243,7 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
           </>
         )}
         <ArenaHomeCard />
+        </View>
       </View>
     </ScrollView>
     <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
@@ -264,12 +270,11 @@ const getStyles = (palette: ReturnType<typeof useThemeColors>) => {
     sectionTitle: { fontFamily: type.weight.semibold, fontSize: 21, lineHeight: 28, letterSpacing: -0.7, color: palette.text },
     streak: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
     streakText: { fontFamily: type.weight.medium, fontSize: type.size.xs, lineHeight: 18, color: accent },
-    resumeSection: { marginBottom: spacing.base },
-    momentumSection: { marginTop: spacing['2xl'], gap: spacing.md },
-    consistencyLabel: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: 12, lineHeight: 18 },
-    section: { marginTop: spacing.xl },
+    sections: { gap: spacing.lg },
+    momentumSection: { gap: spacing.md },
+    section: {},
     pressed: { opacity: 0.75 },
-    coachSection: { marginTop: spacing['2xl'], padding: spacing.lg, borderRadius: radii.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: palette.border, backgroundColor: palette.surface },
+    coachSection: { padding: spacing.lg, borderRadius: radii['2xl'], backgroundColor: palette.card },
     coachHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
     coachTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
     coachIdentity: { flex: 1, gap: 3 },
@@ -281,10 +286,10 @@ const getStyles = (palette: ReturnType<typeof useThemeColors>) => {
     readMore: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 32 },
     readMoreText: { color: palette.mutedText, fontFamily: type.weight.medium, fontSize: type.size.xs },
     chevronOpen: { transform: [{ rotate: '180deg' }] },
-    historyButton: { marginTop: spacing.lg, paddingVertical: spacing.base, flexDirection: 'row', alignItems: 'center', gap: spacing.base, borderTopWidth: 1, borderTopColor: palette.border },
+    historyButton: { paddingVertical: spacing.base, flexDirection: 'row', alignItems: 'center', gap: spacing.base, borderTopWidth: 1, borderTopColor: palette.border },
     historyCopy: { flex: 1, gap: spacing.xs },
     historyTitle: { fontFamily: type.weight.semibold, fontSize: 15, lineHeight: 23, color: palette.text },
-    history: { paddingTop: spacing.base },
+    history: {},
     historyNote: { fontFamily: type.weight.regular, fontSize: 11, color: palette.mutedText, lineHeight: 18 },
     secondaryText: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 21, color: palette.mutedText },
     stateCard: { borderRadius: radii.lg, backgroundColor: palette.surface, padding: spacing.base, gap: spacing.sm },

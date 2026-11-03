@@ -52,7 +52,7 @@ export function ReadinessCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.base, borderRadius: radii['2xl'], padding: spacing.base },
+  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.base, borderRadius: radii['2xl'], padding: spacing.lg },
   pressed: { opacity: 0.85 },
   score: { fontFamily: type.weight.extrabold, fontSize: 20, fontVariant: ['tabular-nums'] },
   content: { flex: 1, gap: 3 },

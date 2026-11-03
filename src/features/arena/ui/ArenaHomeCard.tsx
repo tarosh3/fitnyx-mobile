@@ -44,7 +44,7 @@ export function ArenaHomeCard() {
               ))}
             </View>
           ) : null}
-          <ArrowRight size={18} color={c.mutedText} />
+          <View style={styles.cta}><Text style={[styles.ctaText, { color: c.accent }]}>Open Arena</Text><ArrowRight size={16} color={c.accent} /></View>
         </View>
       </View>
     </Pressable>
@@ -52,7 +52,7 @@ export function ArenaHomeCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: spacing['2xl'], borderRadius: radii.lg, padding: spacing.lg, gap: spacing.base, flexDirection: 'row', alignItems: 'center' },
+  card: { borderRadius: radii['2xl'], padding: spacing.lg, gap: spacing.base, flexDirection: 'row', alignItems: 'center' },
   content: { flex: 1, gap: spacing.sm },
   emblem: { width: 48, height: 64, borderWidth: 1, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.85 },
@@ -61,7 +61,9 @@ const styles = StyleSheet.create({
   body: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   copy: { width: '100%', gap: spacing.xs },
   title: { fontFamily: type.weight.semibold, fontSize: 17 },
-  sub: { fontFamily: type.weight.regular, fontSize: 11, lineHeight: 17 },
+  sub: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 19 },
+  cta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto', minHeight: 32 },
+  ctaText: { fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 20 },
   faces: { flexDirection: 'row' },
   face: { borderWidth: 2 },
 });

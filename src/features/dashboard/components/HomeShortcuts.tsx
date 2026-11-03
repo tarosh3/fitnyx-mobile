@@ -1,6 +1,6 @@
 import { ContourArt } from '@/src/components/art/ContourArt';
 import { useRouter } from 'expo-router';
-import { ArrowRight, ArrowUpRight, Droplets } from 'lucide-react-native';
+import { ArrowRight, Droplets } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, G, Path } from 'react-native-svg';
@@ -26,40 +26,43 @@ function TrailArtwork() {
   );
 }
 
-export function HomeShortcuts({ children }: { children?: React.ReactNode }) {
+/**
+ * Home's first block: the only ways into Roam and Nutrition, so they sit at the
+ * top as two tiles, each with one line on what it does and a clear action.
+ * Large text or a narrow screen stacks them.
+ */
+export function HomeEntryTiles() {
   const c = useThemeColors();
   const router = useRouter();
   const { width, fontScale } = useWindowDimensions();
-  const largeText = fontScale > 1.2;
-  const compact = width < 360;
+  const stacked = fontScale > 1.3 || width < 340;
   return (
-    <View testID="home-essentials" style={styles.group}>
-      <HomePressable testID="home-roam" accessibilityRole="button" accessibilityLabel="Open Roam: walk, run or cycle"
-        onPress={() => router.push('/roam')} style={[styles.feature, { backgroundColor: c.card }]}>
-        <View style={styles.featureCopy}>
-          <Text style={[styles.eyebrow, { color: c.accent }]}>ROAM</Text>
-          <Text style={[styles.featureTitle, compact && styles.compactTitle, { color: c.text }]}>Find your{ '\n' }own pace.</Text>
-          <Text style={[styles.description, { color: c.mutedText }]}>Walk, run or ride.</Text>
-          <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>Open ROAM</Text><ArrowUpRight size={17} color={c.accent} /></View>
-        </View>
-        <View pointerEvents="none" style={[styles.artwork, largeText && styles.smallArtwork]}><TrailArtwork /></View>
+    <View testID="home-essentials" style={[styles.tiles, stacked && styles.tilesStacked]}>
+      <HomePressable testID="home-roam" accessibilityRole="button" accessibilityLabel="Roam: track a run, walk or ride. Start a Roam"
+        onPress={() => router.push('/roam')} style={[styles.tile, { backgroundColor: c.card }]}>
+        <View pointerEvents="none" style={styles.tileArt}><TrailArtwork /></View>
+        <Text style={[styles.tileTitle, { color: c.text }]}>Roam</Text>
+        <Text style={[styles.tileText, { color: c.mutedText }]}>Track a run, walk or ride on a map.</Text>
+        <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>Start a Roam</Text><ArrowRight size={16} color={c.accent} /></View>
       </HomePressable>
+      <HomePressable testID="home-nutrition" accessibilityRole="button" accessibilityLabel="Nutrition: your meal plan, macros and food log. Log meals"
+        onPress={() => router.push('/diet')} style={[styles.tile, { backgroundColor: c.card }]}>
+        <View pointerEvents="none" style={styles.tileArt}><ContourArt subject="nutrition" width="100%" height={56} /></View>
+        <Text style={[styles.tileTitle, { color: c.text }]}>Nutrition</Text>
+        <Text style={[styles.tileText, { color: c.mutedText }]}>Your meal plan, macros and food log.</Text>
+        <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>Log meals</Text><ArrowRight size={16} color={c.accent} /></View>
+      </HomePressable>
+    </View>
+  );
+}
 
-      <View style={styles.nutritionSection}>
-        <HomePressable testID="home-nutrition" accessibilityRole="button" accessibilityLabel="Open Nutrition: plan and log your meals"
-          onPress={() => router.push('/diet')} style={[styles.feature, { backgroundColor: c.card }]}>
-          <View pointerEvents="none" style={[styles.foodArtwork, compact && styles.compactFoodArtwork, largeText && styles.smallArtwork]}><ContourArt subject="nutrition" width="100%" height={largeText ? 100 : 148} /></View>
-          <View style={[styles.featureCopy, styles.nutritionCopy]}>
-            <Text style={[styles.eyebrow, { color: c.accent }]}>NUTRITION</Text>
-            <Text style={[styles.featureTitle, compact && styles.compactTitle, { color: c.text }]}>Eat well.{ '\n' }Feel your best.</Text>
-            <Text style={[styles.description, { color: c.mutedText }]}>Meals, macros & daily fuel.</Text>
-            <View style={styles.action}><Text style={[styles.actionText, { color: c.accent }]}>Plan & log meals</Text><ArrowUpRight size={17} color={c.accent} /></View>
-          </View>
-        </HomePressable>
-
-        {children}
-      </View>
-
+/** Today's plan targets (eat · burn · train) and the water row. */
+export function HomeShortcuts({ children }: { children?: React.ReactNode }) {
+  const c = useThemeColors();
+  const router = useRouter();
+  return (
+    <View style={styles.group}>
+      {children}
       <HomePressable testID="home-water" accessibilityRole="button" accessibilityLabel="Open Water: stay hydrated"
         onPress={() => router.push('/water')} style={[styles.water, { borderTopColor: c.border }]}>
         <Droplets size={21} strokeWidth={1.7} color={c.diet.water} />
@@ -71,21 +74,16 @@ export function HomeShortcuts({ children }: { children?: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  group: { gap: spacing.lg },
-  feature: { flexDirection: 'row', alignItems: 'center', borderRadius: radii['2xl'], overflow: 'hidden', minHeight: 184, paddingHorizontal: spacing.lg, paddingVertical: spacing.base },
-  nutritionSection: { paddingTop: spacing.sm },
-  featureCopy: { flex: 1, gap: 5 },
-  eyebrow: { fontFamily: type.weight.semibold, fontSize: type.size.micro, lineHeight: 15, letterSpacing: 1.5 },
-  featureTitle: { fontFamily: type.weight.bold, fontSize: 25, lineHeight: 28, letterSpacing: -0.8 },
-  compactTitle: { fontSize: 22, lineHeight: 26 },
-  description: { fontFamily: type.weight.regular, fontSize: type.size.xs, lineHeight: 18 },
-  action: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  actionText: { flexShrink: 1, fontFamily: type.weight.semibold, fontSize: 12, lineHeight: 18 },
-  artwork: { width: '41%', height: 144 },
-  nutritionCopy: { paddingLeft: spacing.md },
-  foodArtwork: { width: '36%', height: 158 },
-  compactFoodArtwork: { width: '35%', height: 136 },
-  smallArtwork: { width: '26%', height: 100 },
+  tiles: { flexDirection: 'row', gap: spacing.md },
+  tilesStacked: { flexDirection: 'column' },
+  tile: { flex: 1, minHeight: 188, borderRadius: radii['2xl'], padding: spacing.base, gap: spacing.xs },
+  tileArt: { width: 72, height: 56, marginBottom: spacing.sm },
+  tileTitle: { fontFamily: type.weight.bold, fontSize: 19, lineHeight: 24, letterSpacing: -0.4 },
+  tileText: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 18 },
+  // Pinned to the tile's bottom so both actions line up whatever the copy wraps to.
+  action: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 'auto', paddingTop: spacing.sm, minHeight: 32 },
+  actionText: { flexShrink: 1, fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 20 },
+  group: { gap: spacing.md },
   water: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xs, minHeight: 52, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth },
   waterCopy: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: spacing.sm, rowGap: 2 },
   waterTitle: { fontFamily: type.weight.medium, fontSize: 13, lineHeight: 19 },
