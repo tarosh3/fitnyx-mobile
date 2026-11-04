@@ -307,8 +307,8 @@ export default function FitnessProfileScreen() {
                         },
                       ]}
                     >
-                      <Icon size={20} color={active ? c.primary : c.text} strokeWidth={1.8} />
-                      <Text style={[styles.goalLabel, { color: active ? c.primary : c.text }]}>
+                      <Icon size={20} color={active ? c.accent : c.text} strokeWidth={1.8} />
+                      <Text style={[styles.goalLabel, { color: active ? c.accent : c.text }]}>
                         {g.label}
                       </Text>
                     </PressableScale>
@@ -399,8 +399,8 @@ export default function FitnessProfileScreen() {
                           },
                         ]}
                       >
-                        <Icon size={14} color={active ? c.primary : c.mutedText} strokeWidth={2} />
-                        <Text style={[styles.chipText, { color: active ? c.primary : c.text }]}>
+                        <Icon size={14} color={active ? c.accent : c.mutedText} strokeWidth={2} />
+                        <Text style={[styles.chipText, { color: active ? c.accent : c.text }]}>
                           {w.label}
                         </Text>
                       </PressableScale>
@@ -492,8 +492,8 @@ export default function FitnessProfileScreen() {
                           },
                         ]}
                       >
-                        <Icon size={18} color={active ? c.primary : c.text} strokeWidth={1.8} />
-                        <Text style={[styles.timeLabel, { color: active ? c.primary : c.text }]}>
+                        <Icon size={18} color={active ? c.accent : c.text} strokeWidth={1.8} />
+                        <Text style={[styles.timeLabel, { color: active ? c.accent : c.text }]}>
                           {ts.label}
                         </Text>
                       </PressableScale>
@@ -519,7 +519,7 @@ export default function FitnessProfileScreen() {
                           },
                         ]}
                       >
-                        <Text style={[styles.chipText, { color: active ? c.primary : c.text }]}>
+                        <Text style={[styles.chipText, { color: active ? c.accent : c.text }]}>
                           {eq.label}
                         </Text>
                       </PressableScale>
@@ -549,8 +549,8 @@ export default function FitnessProfileScreen() {
                           },
                         ]}
                       >
-                        <Salad size={14} color={active ? c.primary : c.mutedText} strokeWidth={2} />
-                        <Text style={[styles.chipText, { color: active ? c.primary : c.text }]}>{d}</Text>
+                        <Salad size={14} color={active ? c.accent : c.mutedText} strokeWidth={2} />
+                        <Text style={[styles.chipText, { color: active ? c.accent : c.text }]}>{d}</Text>
                       </PressableScale>
                     );
                   })}

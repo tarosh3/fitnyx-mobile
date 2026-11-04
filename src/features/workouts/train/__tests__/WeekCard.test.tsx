@@ -23,3 +23,9 @@ it('shows real progress after the first session and preserves history navigation
   fireEvent.press(screen.getByRole('button', { name: '29, trained. Open this workout' }));
   expect(mockPush).toHaveBeenCalledWith('/workouts/history/first');
 });
+
+it('counts every finished workout, the same as Home, and skips discarded ones', () => {
+  const s = (id: string, status: string) => ({ id, workout_date: '2026-10-29', total_duration_sec: 600, total_sets: 4, status });
+  const screen = render(<WeekCard sessions={[s('a', 'completed'), s('b', 'completed'), s('c', 'abandoned')]} />);
+  expect(screen.getByLabelText('This week: Workouts 2/4, Minutes 20/150, Sets 8/60')).toBeOnTheScreen();
+});

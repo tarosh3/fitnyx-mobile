@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Check, ChevronLeft, Droplet, Minus, Plus, Settings2, Trash2 } from 'lucide-react-native';
+import { Check, ChevronLeft, Clock, Droplet, Minus, Plus, Settings2, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
@@ -27,7 +27,7 @@ import { Screen } from '@/src/components/ui/Screen';
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
 import { usePlan } from '@/src/features/plan/data';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { getMonthTotals, useWaterToday, WATER_LIMITS, ymd } from '@/src/lib/water';
+import { getMonthTotals, useWaterToday, WATER_LIMITS, waterPace, ymd } from '@/src/lib/water';
 import { radii, spacing, type as t } from '@/src/styles/tokens';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 
@@ -115,6 +115,8 @@ export default function WaterScreen() {
   const goalLabel = `${(goalMl / 1000).toFixed(1)} L`;
   const pctLabel = `${Math.round(pct * 100)}%`;
   const goalReached = pct >= 1;
+  const pace = waterPace(totalMl, goalMl);
+  const paceColor = pace === 'reached' ? c.success : pace === 'on_track' ? c.accent : c.warning;
   const loggedDays = monthData.filter((d) => d.total > 0);
   const avgMl = loggedDays.length
     ? loggedDays.reduce((sum, d) => sum + d.total, 0) / loggedDays.length
@@ -200,14 +202,14 @@ export default function WaterScreen() {
               style={[
                 styles.statusBadge,
                 {
-                  backgroundColor: `${goalReached ? c.success : c.primary}1A`,
-                  borderColor: `${goalReached ? c.success : c.primary}55`,
+                  backgroundColor: `${paceColor}1A`,
+                  borderColor: `${paceColor}55`,
                 },
               ]}
             >
-              <Check size={12} color={goalReached ? c.success : c.primary} />
-              <Text style={[styles.statusBadgeText, { color: goalReached ? c.success : c.primary }]}>
-                {goalReached ? 'Goal reached' : 'On track'}
+              {pace === 'behind' ? <Clock size={12} color={paceColor} /> : <Check size={12} color={paceColor} />}
+              <Text style={[styles.statusBadgeText, { color: paceColor }]}>
+                {pace === 'reached' ? 'Goal reached' : pace === 'on_track' ? 'On track' : 'Behind pace'}
               </Text>
             </View>
           ) : undefined
@@ -539,13 +541,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     paddingHorizontal: spacing.base,
-    flexWrap: 'wrap',
   },
   presetBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.base,
+    paddingHorizontal: spacing.xs,
     paddingVertical: spacing.sm + 2,
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,

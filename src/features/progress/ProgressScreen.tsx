@@ -1,3 +1,4 @@
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
 import React, { useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -138,6 +139,7 @@ export function ProgressScreen() {
 
       <CustomRangeSheet visible={sheet} initial={range} today={today} onClose={() => setSheet(false)}
         onApply={(r) => { pick({ custom: r }); setSheet(false); }} />
+      <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import { ArrowUpRight, Pencil } from 'lucide-react-native';
+import { ArrowRight, Pencil } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -50,7 +50,7 @@ export function ProfileHero({ name, username, bio, avatarUrl, level, loading, on
         </View>
         <Pressable testID="edit-profile" accessibilityRole="button" accessibilityLabel="Edit profile" onPress={onEdit}
           style={({ pressed }) => [styles.edit, { backgroundColor: pressed ? c.border : c.card, borderColor: c.border }]}>
-          <Text style={[styles.editText, { color: c.text }]}>Edit profile</Text><ArrowUpRight size={15} color={c.mutedText} />
+          <Text style={[styles.editText, { color: c.text }]}>Edit profile</Text><ArrowRight size={15} color={c.mutedText} />
         </Pressable>
       </View>
     </View>

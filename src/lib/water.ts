@@ -149,6 +149,23 @@ export async function getMonthTotals(
   });
 }
 
+// ----- pace -----
+
+export type WaterPace = 'reached' | 'on_track' | 'behind';
+
+const PACE_START_HOUR = 7;
+const PACE_END_HOUR = 22;
+/** How far under the steady pace still counts as on track. */
+const PACE_SLACK = 0.75;
+
+/** Today's water against a steady pace from 7 am to 10 pm. */
+export function waterPace(totalMl: number, goalMl: number, now: Date = new Date()): WaterPace {
+  if (totalMl >= goalMl) return 'reached';
+  const hour = now.getHours() + now.getMinutes() / 60;
+  const share = Math.min(1, Math.max(0, (hour - PACE_START_HOUR) / (PACE_END_HOUR - PACE_START_HOUR)));
+  return totalMl >= goalMl * share * PACE_SLACK ? 'on_track' : 'behind';
+}
+
 // ----- hooks -----
 
 /** `planGoalMl`: the plan's water target, used until the user sets a goal of their own. */

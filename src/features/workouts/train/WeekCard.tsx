@@ -14,6 +14,7 @@ export interface WeekSession {
   workout_date: string;
   total_duration_sec: number;
   total_sets: number;
+  status?: string;
 }
 
 export const WEEKLY_GOAL = { workouts: 4, minutes: 150, sets: 60 };
@@ -37,11 +38,12 @@ export function WeekCard({ sessions }: { sessions: WeekSession[] }) {
   const today = localDateKey(new Date());
 
   const week = useMemo(() => {
-    const inWeek = sessions.filter((s) => days.includes(s.workout_date));
+    // Finished workouts only, the same rule as Home's "Last 7 days".
+    const inWeek = sessions.filter((s) => days.includes(s.workout_date) && (s.status ?? 'completed') === 'completed');
     const byDay = new Map<string, string>();
     inWeek.forEach((s) => { if (!byDay.has(s.workout_date)) byDay.set(s.workout_date, s.id); });
     return {
-      workouts: byDay.size,
+      workouts: inWeek.length,
       minutes: Math.round(inWeek.reduce((n, s) => n + s.total_duration_sec, 0) / 60),
       sets: inWeek.reduce((n, s) => n + s.total_sets, 0),
       byDay,

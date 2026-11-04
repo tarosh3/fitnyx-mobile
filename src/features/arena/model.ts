@@ -5,7 +5,7 @@ export const PERIOD_LABEL: Record<ArenaPeriod, string> = { today: 'Today', week:
 
 /** One line under the filters: how the board is scored. */
 export const BOARD_HINT: Record<ArenaBoardKind, string> = {
-  grit: 'Points for every set, hard set and personal best — effort, not weight.',
+  grit: 'Points for every set, hard set and personal best. Workouts need 10+ minutes to score.',
   stride: 'Kilometres you run or walk. Vehicle travel never counts.',
   ride: 'Kilometres you ride. Vehicle travel never counts.',
 };

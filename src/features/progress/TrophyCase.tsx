@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { Card } from '@/src/components/ui/Card';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { localDateKey } from '@/src/lib/api/workoutSessions';
@@ -77,6 +78,7 @@ export function TrophyCase() {
   ];
 
   return (
+    <>
     <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.base, paddingBottom: insets.bottom + spacing['2xl'] }]}>
       <View style={styles.header}>
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/me' as never))} accessibilityRole="button" accessibilityLabel="Back"
@@ -118,6 +120,8 @@ export function TrophyCase() {
         </View>
       )}
     </ScrollView>
+    <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
+    </>
   );
 }
 

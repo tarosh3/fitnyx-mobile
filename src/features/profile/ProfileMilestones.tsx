@@ -1,4 +1,4 @@
-import { ArrowUpRight, LockKeyhole } from 'lucide-react-native';
+import { ArrowRight, LockKeyhole } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -20,7 +20,7 @@ export function ProfileMilestones({ badges, onOpen }: { badges: Badge[]; onOpen:
       <Pressable accessibilityRole="button" accessibilityLabel={`View all milestones, ${earned.length} of ${badges.length} earned`}
         onPress={onOpen} style={({ pressed }) => [styles.heading, { opacity: pressed ? 0.65 : 1 }]}>
         <View style={styles.flex}><Text style={[styles.title, { color: c.text }]}>Milestones</Text><Text style={[styles.subtitle, { color: c.mutedText }]}>{earned.length} of {badges.length} earned</Text></View>
-        <View style={styles.open}><Text style={[styles.openText, { color: c.mutedText }]}>View all</Text><ArrowUpRight size={17} color={c.mutedText} /></View>
+        <View style={styles.open}><Text style={[styles.openText, { color: c.mutedText }]}>View all</Text><ArrowRight size={17} color={c.mutedText} /></View>
       </Pressable>
       <View style={styles.shelf}>
         {featured.map((badge) => <Pressable key={badge.id} onPress={onOpen} accessibilityRole="button"

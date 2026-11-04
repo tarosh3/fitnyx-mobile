@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
 import { BAND_LABEL, type ReadinessDriver } from '@/src/features/readiness/readiness';
@@ -51,6 +52,7 @@ export default function ReadinessScreen() {
   const maxHrv = hrvs.length ? Math.max(...hrvs) : 1;
 
   return (
+    <>
     <ScrollView style={{ backgroundColor: c.background }}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.base, paddingBottom: insets.bottom + spacing['2xl'] }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.primary} />}>
@@ -103,6 +105,8 @@ export default function ReadinessScreen() {
           : 'Readiness compares last night against your own 28-day baseline. It’s guidance, not medical advice.'}
       </Text>
     </ScrollView>
+    <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
+    </>
   );
 }
 

@@ -88,7 +88,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
         <>
           <QuickStart onEmpty={() => (activeSession ? router.push(`/workouts/session/${activeSession.id}`) : start())} onCardio={() => setCardioOpen(true)} />
           <Challenges
-            monthWorkouts={new Set(sessions.filter((s) => s.workout_date.startsWith(month)).map((s) => s.workout_date)).size}
+            monthWorkouts={sessions.filter((s) => s.workout_date.startsWith(month) && s.status === 'completed').length}
             streak={metrics.streakDays}
             level={metrics.level}
             levelProgress={metrics.levelProgress}

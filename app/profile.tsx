@@ -28,6 +28,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { Button } from '@/src/components/ui/Button';
 import { Field } from '@/src/components/ui/Field';
 import { PressableScale } from '@/src/components/ui/PressableScale';
@@ -612,6 +613,7 @@ export default function ProfileScreen() {
           </Picker>
         </View>
       </Modal>
+      <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
     </View>
   );
 }

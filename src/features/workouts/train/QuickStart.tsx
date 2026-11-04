@@ -1,4 +1,4 @@
-import { ArrowUpRight, HeartPulse, Plus } from 'lucide-react-native';
+import { ArrowRight, HeartPulse, Plus } from 'lucide-react-native';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -22,7 +22,7 @@ export function QuickStart({ onEmpty, onCardio }: { onEmpty: () => void; onCardi
             <View style={styles.art} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <View style={[styles.orbit, { borderColor: tone.fg }]} />
               <Image source={source} style={styles.equipment} resizeMode="contain" />
-              <View style={[styles.arrow, { backgroundColor: c.card }]}><ArrowUpRight size={15} color={tone.fg} /></View>
+              <View style={[styles.arrow, { backgroundColor: c.card }]}><ArrowRight size={15} color={tone.fg} /></View>
             </View>
             <View style={styles.copy}>
               <View style={styles.label}><Icon size={14} color={tone.fg} /><Text style={[styles.kind, { color: tone.fg }]}>{id === 'quick-empty' ? 'Freestyle' : 'Conditioning'}</Text></View>

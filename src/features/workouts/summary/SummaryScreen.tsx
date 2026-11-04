@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { useRoutines, useWorkoutHistory } from '@/src/features/workouts/hooks';
 import type { ShareCardData } from '@/src/features/share/cardData';
 import { Skeleton } from '@/src/components/ui/Skeleton';
@@ -182,6 +183,7 @@ export function SummaryScreen() {
         <Button testID="summary-done" title="Done" onPress={done} />
       </BottomBar>
       <ShareCardSheet visible={card !== null} data={card} onClose={() => setCard(null)} />
+      <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
     </View>
   );
 }
