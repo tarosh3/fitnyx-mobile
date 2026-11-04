@@ -5,6 +5,7 @@ import { getDefaultWorkoutPlans, type WorkoutPlanWithDays } from '@/src/lib/api/
 import { listRoutines, type Routine } from '@/src/lib/api/routines';
 import { getSessionsHistory, type HistorySession } from '@/src/lib/api/workoutSessions';
 import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { cacheDayExercises } from '@/src/lib/db';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 interface Resource<T> {
@@ -71,9 +72,16 @@ export function useCachedResource<T>(key: string | null, fetcher: () => Promise<
   return { data, loading: loading && data == null, failed, refresh, setData };
 }
 
+/** The routines, with each one's exercises saved so it can also be started with no connection. */
+async function listRoutinesForOffline(): Promise<Routine[]> {
+  const routines = await listRoutines();
+  routines.forEach((r) => { cacheDayExercises(r.day_id, r.exercises ?? []).catch(() => undefined); });
+  return routines;
+}
+
 export function useRoutines() {
   const { user } = useAuth();
-  return useCachedResource<Routine[]>(user ? cacheKeys.routines(user.id) : null, listRoutines, cacheTTL.LONG);
+  return useCachedResource<Routine[]>(user ? cacheKeys.routines(user.id) : null, listRoutinesForOffline, cacheTTL.LONG);
 }
 
 export function useWorkoutHistory(limit = 50) {

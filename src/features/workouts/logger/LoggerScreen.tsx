@@ -1,7 +1,7 @@
 import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { useWorkoutDetails, updateWorkoutDetails, loadWorkoutDetails } from '@/src/lib/workoutActivityDetails';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Plus, Timer } from 'lucide-react-native';
+import { Plus, Timer, WifiOff } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -265,7 +265,17 @@ export function LoggerScreen() {
         onBack={leave} onStart={() => startTimer(true)} onPause={pauseTimer} onFinish={() => setFinishOpen(true)} onJump={jump} />
 
       <Animated.ScrollView {...drag.scrollProps} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + (restEnd ? 200 : spacing['2xl']) }]}>
-        {state === 'ready' ? (
+        {lg.plannedMissing ? (
+          <View testID="logger-planned-missing" style={[styles.missing, { backgroundColor: c.card }]}>
+            <View style={styles.missingHead}>
+              <WifiOff size={22} color={c.warning} />
+              <Text style={[styles.readyTitle, styles.flex, { color: c.text }]}>Couldn’t load your exercises</Text>
+            </View>
+            <Text style={[styles.p, { color: c.mutedText }]}>This workout isn’t saved on your phone yet. Your plan is safe. Try again when you have signal, or add exercises yourself for now.</Text>
+            <Button title="Try again" variant="secondary" onPress={lg.reload} style={styles.missingRetry} />
+          </View>
+        ) : null}
+        {state === 'ready' && !(lg.plannedMissing && !blocks.length) ? (
           <View style={[styles.ready, { backgroundColor: c.accentSoft }]}>
             <Timer size={24} color={c.accent} />
             <View style={styles.flex}>
@@ -370,6 +380,9 @@ const styles = StyleSheet.create({
   list: { padding: spacing.base, gap: spacing.md },
   ready: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.base, borderRadius: radii.lg },
   readyTitle: { fontFamily: type.weight.bold, fontSize: 17 },
+  missing: { gap: spacing.sm, padding: spacing.base, borderRadius: radii.lg },
+  missingHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  missingRetry: { flexGrow: 0, marginTop: spacing.xs },
   h: { fontFamily: type.weight.bold, fontSize: 20 },
   p: { fontFamily: type.weight.regular, fontSize: 15, lineHeight: 21 },
   addBtn: { flexGrow: 0, marginTop: spacing.sm },

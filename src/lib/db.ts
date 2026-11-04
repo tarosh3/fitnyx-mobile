@@ -52,10 +52,17 @@ export async function getCachedPlanDays(planId: string): Promise<WorkoutPlanDay[
   return allDays[planId] ?? null;
 }
 
-export async function cacheDayExercises(dayId: string, exercises: WorkoutDayExercise[]): Promise<void> {
-  const allExercises = await readJson<ExercisesStore>(KEYS.exercises, {});
-  allExercises[dayId] = exercises;
-  await writeJson(KEYS.exercises, allExercises);
+// One read-modify-write at a time: the logger, Home and the routines list can all save at once.
+let exercisesWrite: Promise<unknown> = Promise.resolve();
+
+export function cacheDayExercises(dayId: string, exercises: WorkoutDayExercise[]): Promise<void> {
+  const run = exercisesWrite.then(async () => {
+    const allExercises = await readJson<ExercisesStore>(KEYS.exercises, {});
+    allExercises[dayId] = exercises;
+    await writeJson(KEYS.exercises, allExercises);
+  });
+  exercisesWrite = run.catch(() => undefined);
+  return run;
 }
 
 export async function getCachedDayExercises(dayId: string): Promise<WorkoutDayExercise[] | null> {
