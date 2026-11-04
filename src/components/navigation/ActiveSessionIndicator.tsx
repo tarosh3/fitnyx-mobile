@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Keyboard, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
-import { ArrowUpRight, Pause, Play } from 'lucide-react-native';
+import { ArrowRight, Pause, Play } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
@@ -103,7 +103,7 @@ export function ActiveSessionIndicator() {
           <View style={styles.copy}>
             <View style={styles.titleRow}>
               <Text style={[styles.title, { color: palette.hero.muted }]}>Workout{isOffline ? ' · Offline' : ''}</Text>
-              <ArrowUpRight size={14} color={palette.hero.muted} accessible={false} />
+              <ArrowRight size={14} color={palette.hero.muted} accessible={false} />
             </View>
             <View style={styles.timerRow}>
               <Text testID="active-session-time" style={[styles.time, { color: palette.hero.text }]}>{time}</Text>

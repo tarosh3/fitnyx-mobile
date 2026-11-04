@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, Play } from 'lucide-react-native';
+import { ArrowRight, Play } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -83,7 +83,7 @@ export function TrainHero({ routines, trainedToday, program, firstVisit, restDay
       <Hero recovered eyebrow="Today, accomplished" title={"Great work.\nRecovery counts."} subtitle="Take a breath. Come back stronger tomorrow.">
         <Pressable testID="hero-start-another" onPress={() => go()} disabled={busy} accessibilityRole="button"
           style={({ pressed }) => [styles.secondary, { borderColor: c.hero.line, backgroundColor: c.hero.line }, pressed && styles.pressed]}>
-          {busy ? <ActivityIndicator color={c.hero.text} /> : <><Text style={[styles.primaryText, { color: c.hero.text }]}>Start another workout</Text><ArrowUpRight size={20} color={c.hero.accent} /></>}
+          {busy ? <ActivityIndicator color={c.hero.text} /> : <><Text style={[styles.primaryText, { color: c.hero.text }]}>Start another workout</Text><ArrowRight size={20} color={c.hero.accent} /></>}
         </Pressable>
       </Hero>
     );

@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, ChevronRight, Dumbbell, Footprints, Settings2, Target, Trophy } from 'lucide-react-native';
+import { ArrowRight, ChevronRight, Dumbbell, Footprints, Settings2, Target, Trophy } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { bottomNavClearance } from '@/src/components/navigation/bottomNavLayout';
 import { ArenaButton } from '@/src/features/arena/ui/ArenaButton';
 import { FriendsButton } from '@/src/features/friends/ui/FriendsButton';
@@ -66,6 +67,7 @@ export function ProfileScreen() {
   const trainingMeta = [humanize(fitness?.experience_level), humanize(fitness?.workout_location)].filter(Boolean).join(' · ');
 
   return (
+    <>
     <ScrollView testID="profile-scroll" style={{ backgroundColor: c.background }} showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.accent} colors={[c.accent]} />}
       contentContainerStyle={{ paddingTop: insets.top + spacing.sm, paddingBottom: bottomNavClearance(insets.bottom) + spacing.xl + workoutInset,
@@ -110,7 +112,7 @@ export function ProfileScreen() {
           <View style={[styles.featureColumn, spacious && { flex: 1 }]}>
             <Pressable testID="open-fitness-profile" accessibilityRole="button" accessibilityLabel="Edit fitness profile" onPress={() => router.push('/fitness-profile')}
               style={({ pressed }) => [styles.training, { backgroundColor: c.surface, borderColor: c.border, opacity: pressed ? 0.7 : 1 }]}>
-              <View style={styles.trainingHeading}><Target size={19} color={c.accent} strokeWidth={1.7} /><Text style={[styles.eyebrow, styles.flex, { color: c.mutedText }]}>TRAINING FOCUS</Text><ArrowUpRight size={18} color={c.mutedText} /></View>
+              <View style={styles.trainingHeading}><Target size={19} color={c.accent} strokeWidth={1.7} /><Text style={[styles.eyebrow, styles.flex, { color: c.mutedText }]}>TRAINING FOCUS</Text><ArrowRight size={18} color={c.mutedText} /></View>
               <View style={styles.trainingBody}>
                 <View style={[styles.flex, styles.trainingCopy]}>
                   <Text style={[styles.goal, { color: c.text }]}>{humanize(fitness?.primary_goal) || 'Your goals. Your pace.'}</Text>
@@ -152,6 +154,8 @@ export function ProfileScreen() {
         </View>
       </View>
     </ScrollView>
+    <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
+    </>
   );
 }
 
@@ -159,7 +163,7 @@ function SectionHeading({ title, action, onPress }: { title: string; action?: st
   const c = useThemeColors();
   return <View style={styles.sectionHeading}>
     <Text accessibilityRole="header" style={[styles.sectionTitle, { color: c.text }]}>{title}</Text>
-    {action && onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={action} style={styles.sectionAction}><Text style={[styles.link, { color: c.mutedText }]}>{action}</Text><ArrowUpRight size={15} color={c.mutedText} /></Pressable> : null}
+    {action && onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={action} style={styles.sectionAction}><Text style={[styles.link, { color: c.mutedText }]}>{action}</Text><ArrowRight size={15} color={c.mutedText} /></Pressable> : null}
   </View>;
 }
 

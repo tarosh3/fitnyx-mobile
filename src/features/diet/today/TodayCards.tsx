@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, Droplet, Minus, Plus, Sparkles } from 'lucide-react-native';
+import { ArrowRight, Droplet, Minus, Plus, Sparkles } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -65,7 +65,7 @@ export function WaterCard() {
         <Droplet size={20} color={c.diet.water} />
         <Text style={[styles.cardTitle, { color: c.text }]}>Hydration</Text>
         <Text style={[styles.muted, { color: c.mutedText }]}>{litres(totalMl)} / {litres(goalMl)} L</Text>
-        <ArrowUpRight size={18} color={c.mutedText} />
+        <ArrowRight size={18} color={c.mutedText} />
       </Pressable>
       <View style={styles.glasses} accessible={false}>
         {Array.from({ length: glasses }, (_, i) => (

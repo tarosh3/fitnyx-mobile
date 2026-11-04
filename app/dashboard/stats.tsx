@@ -35,6 +35,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { Button } from '@/src/components/ui/Button';
 import { Field } from '@/src/components/ui/Field';
 import { PressableScale } from '@/src/components/ui/PressableScale';
@@ -967,7 +968,7 @@ export default function StatsScreen() {
                         },
                       ]}
                     >
-                      <Text style={[styles.bodyTypeLabel, { color: active ? c.primary : c.text }]}>
+                      <Text style={[styles.bodyTypeLabel, { color: active ? c.accent : c.text }]}>
                         {bt.label}
                       </Text>
                       <Text style={[styles.bodyTypeTag, { color: c.mutedText }]}>{bt.tagline}</Text>
@@ -1052,6 +1053,7 @@ export default function StatsScreen() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}
       />
+      <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
     </View>
   );
 }

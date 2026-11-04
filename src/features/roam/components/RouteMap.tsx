@@ -151,7 +151,9 @@ export const RouteMap = React.memo(function RouteMap({
           logo={false}
           compass={false}
           // Tints the attribution (i) button (iOS default blue was off-theme).
-          tintColor={palette.accent}
+          // tintColor colours the ⓘ button, but on Android it also paints the live
+          // GPS puck solid, hiding its direction arrow. Saved Roams have no puck.
+          tintColor={live && Platform.OS === 'android' ? undefined : palette.accent}
           onDidFailLoadingMap={basemap.onLoadFailed}
         >
           {follow ? (

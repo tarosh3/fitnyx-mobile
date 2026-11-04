@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowUpRight, Check } from 'lucide-react-native';
+import { ArrowRight, Check } from 'lucide-react-native';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -71,7 +71,7 @@ export function ProgramCard({ program, active }: { program: WorkoutPlanWithDays;
         <View style={styles.footer}>
           <Text style={[styles.action, { color: c.text }]}>View program</Text>
           <View style={[styles.arrow, { backgroundColor: tone.bg }]}>
-            <ArrowUpRight size={22} color={tone.fg} strokeWidth={1.8} />
+            <ArrowRight size={22} color={tone.fg} strokeWidth={1.8} />
           </View>
         </View>
       </View>
