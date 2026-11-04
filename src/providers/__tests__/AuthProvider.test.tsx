@@ -138,6 +138,54 @@ describe('AuthProvider offline launch', () => {
   });
 });
 
+describe('AuthProvider launch on a hanging connection', () => {
+  afterEach(() => jest.useRealTimers());
+
+  function renderUserProbe() {
+    const state: { user: { id: string } | null; loading: boolean } = { user: null, loading: true };
+    function UserProbe() {
+      const auth = useAuth();
+      state.user = auth.user as { id: string } | null;
+      state.loading = auth.loading;
+      return null;
+    }
+    render(
+      <AuthProvider>
+        <UserProbe />
+      </AuthProvider>,
+    );
+    return state;
+  }
+
+  it('opens for the stored user when getSession never answers', async () => {
+    jest.useFakeTimers();
+    const { getStoredUser } = jest.requireMock('@/src/lib/supabase') as { getStoredUser: jest.Mock };
+    getStoredUser.mockResolvedValueOnce(user);
+    (supabase.auth.getSession as jest.Mock).mockReturnValueOnce(new Promise(() => {}));
+
+    const state = renderUserProbe();
+    await act(async () => { await jest.advanceTimersByTimeAsync(7_000); });
+    expect(state.loading).toBe(true);
+    await act(async () => { await jest.advanceTimersByTimeAsync(1_000); });
+
+    expect(state.loading).toBe(false);
+    expect(state.user).toEqual(user);
+  });
+
+  it('opens for the stored user when the refresh of an expired token never answers', async () => {
+    jest.useFakeTimers();
+    const expired = { access_token: 't', expires_at: Math.floor(Date.now() / 1000) - 60, user };
+    (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({ data: { session: expired }, error: null });
+    (supabase.auth as unknown as { refreshSession: jest.Mock }).refreshSession = jest.fn(() => new Promise(() => {}));
+
+    const state = renderUserProbe();
+    await act(async () => { await jest.advanceTimersByTimeAsync(8_000); });
+
+    expect(state.loading).toBe(false);
+    expect(state.user).toEqual(user);
+  });
+});
+
 describe('AuthProvider offline launch (no connection)', () => {
   it('opens from the stored session without waiting on Supabase', async () => {
     const NetInfo = jest.requireMock('@react-native-community/netinfo') as { fetch: jest.Mock };

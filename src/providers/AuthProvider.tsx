@@ -17,6 +17,7 @@ import { clearAllReminders } from '@/src/lib/reminders';
 import { clearAllWaterData } from '@/src/lib/water';
 import { processOfflineQueue } from '@/src/lib/offline/syncEngine';
 import { syncCatalog } from '@/src/lib/offline/catalogCache';
+import { AUTH_DEADLINE_MS, DEADLINE, withDeadline } from '@/src/lib/deadline';
 import { isDefinitelyOffline } from '@/src/lib/network';
 import { getStoredSession, getStoredUser, supabase } from '@/src/lib/supabase';
 
@@ -314,10 +315,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        // Connected but hanging (weak signal, DNS down): open from the stored
+        // session after a few seconds. The pending refresh still finishes when
+        // the network recovers, and a dead session then signs out as usual.
+        const lookup = await withDeadline(supabase.auth.getSession(), AUTH_DEADLINE_MS);
+        if (lookup === DEADLINE) {
+          await startOffline(await getStoredUser());
+          return;
+        }
         const {
           data: { session: storedSession },
           error: getError,
-        } = await supabase.auth.getSession();
+        } = lookup;
 
         if (isAuthRetryableFetchError(getError)) {
           await startOffline(await getStoredUser());
@@ -346,8 +355,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const accessExpired = storedSession.expires_at ? storedSession.expires_at - nowSec < 60 : true;
         let workingSession = storedSession;
         if (accessExpired) {
-          const { data: { session: refreshed }, error: refreshErr } =
-            await supabase.auth.refreshSession();
+          const refresh = await withDeadline(supabase.auth.refreshSession(), AUTH_DEADLINE_MS);
+          if (refresh === DEADLINE) {
+            await startOffline(storedSession.user);
+            return;
+          }
+          const { data: { session: refreshed }, error: refreshErr } = refresh;
           if (isAuthRetryableFetchError(refreshErr)) {
             await startOffline(storedSession.user);
             return;

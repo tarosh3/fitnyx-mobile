@@ -1,5 +1,6 @@
 import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 
+import { AUTH_DEADLINE_MS, DEADLINE, withDeadline } from '@/src/lib/deadline';
 import { isDefinitelyOffline } from '@/src/lib/network';
 import { getStoredSession, supabase } from '@/src/lib/supabase';
 import { idbGet, idbGetStale, idbSet } from '@/src/lib/cache/indexeddb';
@@ -160,7 +161,11 @@ async function getAccessToken(): Promise<string | null> {
         }
         throw new NetworkUnavailableError();
       }
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // A connection that hangs (weak signal, DNS down) isn't "definitely offline",
+      // and Supabase retries a refresh for 30+ s. Take the offline path instead.
+      const lookup = await withDeadline(supabase.auth.getSession(), AUTH_DEADLINE_MS);
+      if (lookup === DEADLINE) throw new NetworkUnavailableError();
+      const { data: { session }, error: sessionError } = lookup;
       if (session?.access_token) {
         cachedAccessToken = session.access_token;
         cachedAccessTokenExpiresAt = (session.expires_at ?? 0) * 1000;

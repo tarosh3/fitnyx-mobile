@@ -107,6 +107,20 @@ describe('fetchWithAuth', () => {
     await expect(fetchWithAuth('/test')).resolves.toEqual({ ok: true });
   });
 
+  it('takes the offline path when the session lookup hangs (connected, but nothing resolves)', async () => {
+    jest.useFakeTimers();
+    try {
+      (supabase.auth.getSession as jest.Mock).mockReturnValueOnce(new Promise(() => {}));
+      const result = fetchWithAuth('/test').catch((e: unknown) => e);
+      await jest.advanceTimersByTimeAsync(8_000);
+      const error = await result;
+      expect((error as Error).name).toBe('NetworkUnavailableError');
+      expect(isAuthError(error)).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   describe('offline (device reports no connection)', () => {
     const NetInfo = jest.requireMock('@react-native-community/netinfo') as { fetch: jest.Mock };
     const { getStoredSession } = jest.requireMock('@/src/lib/supabase') as { getStoredSession: jest.Mock };

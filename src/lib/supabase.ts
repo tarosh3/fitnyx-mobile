@@ -4,6 +4,7 @@ import '@/src/lib/cryptoPolyfill'; // before createClient: PKCE needs crypto.sub
 import { AppState } from 'react-native';
 import { createClient, type Session, type User } from '@supabase/supabase-js';
 
+import { fetchWithTimeout } from '@/src/lib/deadline';
 import { secureStorage } from '@/src/lib/secureStorage';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -38,6 +39,7 @@ const ssrSafeStorage = {
 };
 
 export const supabase = createClient(resolvedUrl, resolvedAnonKey, {
+  global: { fetch: fetchWithTimeout },
   auth: {
     storage: isServer ? ssrSafeStorage : secureStorage,
     autoRefreshToken: !isServer,
