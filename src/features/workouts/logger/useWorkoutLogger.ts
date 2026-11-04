@@ -10,7 +10,7 @@ import { getDayExercises, type WorkoutDayExercise } from '@/src/lib/api/workoutP
 import type { ExerciseLog, WorkoutSession } from '@/src/lib/api/workoutSessions';
 import { idbGet, idbSet } from '@/src/lib/cache/indexeddb';
 import { cacheKeys, cacheTTL } from '@/src/lib/cache/keys';
-import { getCachedDayExercises } from '@/src/lib/db';
+import { cacheDayExercises, getCachedDayExercises } from '@/src/lib/db';
 import { cacheExercisesForDay, fetchExerciseWithCache } from '@/src/lib/offline/exerciseCache';
 import { markOfflineLogPr, offlineDeleteLog, offlineGetSession, offlineLogSet, offlineUpdateLog } from '@/src/lib/offline/offlineApi';
 import { getIdMapping, isOfflineId } from '@/src/lib/offline/offlineStore';
@@ -60,6 +60,8 @@ export function useWorkoutLogger(sessionId: string) {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** A planned workout whose exercises couldn't load and aren't saved on this phone. */
+  const [plannedMissing, setPlannedMissing] = useState(false);
   const blocksRef = useRef(blocks);
   blocksRef.current = blocks;
 
@@ -81,13 +83,19 @@ export function useWorkoutLogger(sessionId: string) {
       (res.exercise_logs ?? []).forEach((l) => byExercise.set(l.exercise_uuid, [...(byExercise.get(l.exercise_uuid) ?? []), l]));
 
       let planned: WorkoutDayExercise[] = [];
+      let missing = false;
       if (res.session.day_id) {
         try {
           planned = (await getDayExercises(res.session.day_id)).data ?? [];
-        } catch {
-          planned = (await getCachedDayExercises(res.session.day_id)) ?? [];
+          cacheDayExercises(res.session.day_id, planned).catch(() => undefined);
+        } catch (e: any) {
+          const cached = await getCachedDayExercises(res.session.day_id);
+          planned = cached ?? [];
+          // No status = the network failed; an HTTP error is the server's real answer.
+          missing = !cached && !e?.status;
         }
       }
+      setPlannedMissing(missing);
       const plannedIds = new Set(planned.map((p) => p.exercise_uuid));
       const adHoc = Array.from(byExercise.keys()).filter((u) => !plannedIds.has(u));
       const next = await Promise.all([
@@ -185,7 +193,7 @@ export function useWorkoutLogger(sessionId: string) {
   };
 
   return {
-    session, setSession, blocks, loading, error, reload: load,
+    session, setSession, blocks, loading, error, plannedMissing, reload: load,
     logPending, setDraft, updateLog, deleteLog, addSet, removePending, addExercises, removeBlock, moveBlock, swapBlock,
   };
 }

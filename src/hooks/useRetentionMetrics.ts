@@ -2,9 +2,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { WorkoutSession } from '@/src/lib/api/workoutSessions';
-import { WorkoutPlanDay } from '@/src/lib/api/workoutPlans';
+import { getDayExercises, WorkoutPlanDay } from '@/src/lib/api/workoutPlans';
 import { getDashboard, DashboardSession, DashboardPlan, DashboardPlanDay } from '@/src/lib/api/dashboard';
 import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
+import { cacheDayExercises } from '@/src/lib/db';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 
 type MetricsPayload = Omit<RetentionMetrics, 'loading' | 'activeSession'>;
@@ -56,6 +57,12 @@ const DEFAULTS: RetentionMetrics = {
 async function fetchRetentionMetrics(userId?: string): Promise<MetricsPayload> {
   // Single server request replaces the previous 3-5 waterfall calls
   const dashboard = await getDashboard();
+
+  // Save today's program day, so "Start workout" also works with no connection.
+  const dayId = dashboard.current_day?.id;
+  if (dayId && dashboard.current_day?.exercise_count) {
+    getDayExercises(dayId).then((res) => cacheDayExercises(dayId, res.data ?? [])).catch(() => undefined);
+  }
 
   const sessions = dashboard.sessions || [];
   const stats = calculateStats(sessions);
