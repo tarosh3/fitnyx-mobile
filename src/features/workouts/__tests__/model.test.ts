@@ -2,6 +2,7 @@ import {
   describeSet,
   describeTarget,
   draftToLog,
+  draftToUpdate,
   beatLastHint,
   fmtClock,
   logToDraft,
@@ -149,6 +150,21 @@ describe('assisted, weighted-hold and carry sets', () => {
 
   it('assistance survives the round trip from a logged set', () => {
     expect(logToDraft({ reps: 8, assist_kg: 12.5 })).toMatchObject({ assistKg: 12.5, weightKg: 0 });
+  });
+});
+
+describe('draftToUpdate', () => {
+  const d = { reps: 8, weightKg: 0, assistKg: 20, durationSec: 60, distanceM: 30 };
+
+  it('sends the new assistance when an assisted set is edited', () => {
+    expect(draftToUpdate('assisted_reps', d)).toMatchObject({ actual_reps: 8, actual_assist_kg: 20 });
+    expect(draftToUpdate('assisted_reps', { ...d, assistKg: 0 }).actual_assist_kg).toBe(0);
+  });
+
+  it('clears a weight taken off, and leaves alone what a type does not measure', () => {
+    expect(draftToUpdate('duration', d)).toMatchObject({ actual_weight_kg: 0, actual_duration_sec: 60, actual_assist_kg: undefined });
+    expect(draftToUpdate('weight_reps', { ...d, weightKg: 60 }, 8)).toMatchObject({ actual_weight_kg: 60, actual_duration_sec: undefined, rpe: 8 });
+    expect(draftToUpdate('weight_distance', { ...d, weightKg: 40 })).toMatchObject({ actual_weight_kg: 40, actual_distance_m: 30 });
   });
 });
 

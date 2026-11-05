@@ -7,13 +7,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type Machine, machineForExercise, MACHINES } from '@/src/features/cardio/machines';
 import { type Goal, GOALS, LENGTHS, minutesOf, type Program, type ProgramLength, phasesOf, PROGRAMS, suggestedGoal } from '@/src/features/cardio/programs';
 import { beginRun } from '@/src/features/cardio/start';
-import { comfortFor, lastMachine, loadComfort, loadHistory, loadRun, type RunRecord, type RunState, timesDone } from '@/src/features/cardio/store';
+import { runIsOrphaned } from '@/src/features/cardio/finish';
+import { clearRun, comfortFor, lastMachine, loadComfort, loadHistory, loadRun, type RunRecord, type RunState, timesDone } from '@/src/features/cardio/store';
 import { PhaseGraph } from '@/src/features/cardio/ui/PhaseGraph';
 import { usePlan } from '@/src/features/plan/data';
 import { startWorkout } from '@/src/features/workouts/start';
 import { TopBar } from '@/src/features/workouts/ui/Chrome';
 import { StepperSheet, type StepField } from '@/src/features/workouts/ui/StepperSheet';
 import { useToast } from '@/src/features/workouts/ui/Toast';
+import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { fetchExerciseWithCache } from '@/src/lib/offline/exerciseCache';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -36,7 +38,8 @@ export function CardioScreen() {
   const { user } = useAuth();
   const userId = user?.id ?? '';
   const params = useLocalSearchParams<{ exercise?: string; sets?: string }>();
-  const { activeSession, setActiveSession, resumeActiveSession } = useWorkout();
+  const { activeSession, loading: workoutLoading, setActiveSession, resumeActiveSession } = useWorkout();
+  const { isOffline } = useOfflineAware();
   const profileGoal = usePlan().data?.profile?.goal;
 
   const [comfort, setComfort] = useState<ComfortStore>({ byMachine: {} });
@@ -80,7 +83,20 @@ export function CardioScreen() {
   const list = useMemo(() => PROGRAMS.filter((p) => p.goal === goal && (!p.treadmillOnly || machine.id === 'treadmill')), [goal, machine.id]);
   const saved = comfortFor(comfort, machine);
 
+  // Its workout was finished from somewhere else (a notification): nothing left to save it to.
+  useEffect(() => {
+    if (!userId || !runIsOrphaned(resume, { hasOpenWorkout: inWorkout, workoutLoading, offline: isOffline })) return;
+    setResume(null);
+    clearRun(userId).catch(() => undefined);
+  }, [userId, resume, inWorkout, workoutLoading, isOffline]);
+
   const open = (p: Program) => {
+    // One run at a time: starting another would throw this one away.
+    if (resume) {
+      toast(`${resume.programTitle} is still going. Finish it first`);
+      router.push('/cardio/live');
+      return;
+    }
     setLength('standard');
     setDecline(saved.decline);
     setSetup(p);

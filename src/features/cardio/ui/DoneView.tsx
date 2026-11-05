@@ -3,14 +3,12 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MIN_SAVE_SEC } from '@/src/features/cardio/finish';
 import { fmtClock } from '@/src/features/workouts/model';
 import { Button } from '@/src/features/workouts/ui/Chrome';
 import { StepperSheet, stepFieldsFor } from '@/src/features/workouts/ui/StepperSheet';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
-
-/** Below this a run isn't worth a set in the log. */
-export const MIN_SAVE_SEC = 30;
 
 interface Props {
   title: string;

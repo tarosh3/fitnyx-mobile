@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { type DraftSet, draftToLog, trackingOf } from '@/src/features/workouts/model';
+import { type DraftSet, draftToLog, draftToUpdate, trackingOf } from '@/src/features/workouts/model';
 import { type Block, beatsBest, beatsBestAssist, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
 import { moveItem } from '@/src/features/workouts/ui/dragOrder';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
@@ -162,15 +162,7 @@ export function useWorkoutLogger(sessionId: string) {
 
   const updateLog = async (bi: number, logId: string, d: DraftSet, rpe?: number | null) => {
     const t = trackingOf(blocksRef.current[bi]?.exercise);
-    const f = draftToLog(t, d);
-    const updated = await offlineUpdateLog(sessionId, logId, {
-      actual_reps: f.actual_reps,
-      actual_weight_kg: 'actual_weight_kg' in f ? f.actual_weight_kg ?? 0 : undefined,
-      actual_assist_kg: 'actual_assist_kg' in f ? f.actual_assist_kg : undefined,
-      actual_duration_sec: 'actual_duration_sec' in f ? f.actual_duration_sec : undefined,
-      actual_distance_m: 'actual_distance_m' in f ? f.actual_distance_m : undefined,
-      rpe: rpe ?? undefined,
-    });
+    const updated = await offlineUpdateLog(sessionId, logId, draftToUpdate(t, d, rpe));
     patch(bi, (b) => ({ ...b, logs: b.logs.map((l) => (l.id === logId ? { ...l, ...updated } : l)) }));
   };
 

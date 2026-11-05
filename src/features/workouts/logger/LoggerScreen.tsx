@@ -8,7 +8,8 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { machineForExercise } from '@/src/features/cardio/machines';
-import { loadRun, type RunState, takeFinishedLog } from '@/src/features/cardio/store';
+import { logRun, MIN_SAVE_SEC, runResult } from '@/src/features/cardio/finish';
+import { clearRun, loadRun, type RunState, takeFinishedLog } from '@/src/features/cardio/store';
 import { useRoutines } from '@/src/features/workouts/hooks';
 import { BlockMenuSheet } from '@/src/features/workouts/logger/BlockMenuSheet';
 import { ExerciseBlock } from '@/src/features/workouts/logger/ExerciseBlock';
@@ -207,6 +208,12 @@ export function LoggerScreen() {
         }
       }
       leaving.current = true;
+      // A guided run still going belongs to this workout: what it did so far goes in with it.
+      const run = user ? await loadRun(user.id) : null;
+      if (user && run && isActive) {
+        if (runResult(run, Date.now()).activeSec >= MIN_SAVE_SEC) await logRun(user.id, run);
+        else await clearRun(user.id);
+      }
       if (isActive) await finishActiveSession();
       else await offlineFinishSession(sessionId);
       haptic.success();
@@ -224,6 +231,7 @@ export function LoggerScreen() {
     setBusy(true);
     try {
       leaving.current = true;
+      if (user && isActive) await clearRun(user.id).catch(() => undefined);
       if (isActive) await abandonActiveSession();
       else await offlineAbandonSession(sessionId);
       setFinishOpen(false);

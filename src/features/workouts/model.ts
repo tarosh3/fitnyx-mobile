@@ -191,6 +191,23 @@ export function draftToLog(t: TrackingType, d: DraftSet) {
   return { actual_reps: d.reps, actual_weight_kg: d.weightKg > 0 ? d.weightKg : undefined };
 }
 
+/**
+ * The API fields to change a logged set. The one place this is worked out: the logger
+ * and the history screen each had their own copy, and history's forgot assistance.
+ */
+export function draftToUpdate(t: TrackingType, d: DraftSet, rpe?: number | null) {
+  const f = draftToLog(t, d);
+  return {
+    actual_reps: f.actual_reps,
+    // 0 clears a weight that was set (bodyweight).
+    actual_weight_kg: 'actual_weight_kg' in f ? f.actual_weight_kg ?? 0 : undefined,
+    actual_assist_kg: 'actual_assist_kg' in f ? f.actual_assist_kg : undefined,
+    actual_duration_sec: 'actual_duration_sec' in f ? f.actual_duration_sec : undefined,
+    actual_distance_m: 'actual_distance_m' in f ? f.actual_distance_m : undefined,
+    rpe: rpe ?? undefined,
+  };
+}
+
 export function logToDraft(l: Pick<ExerciseLog, 'reps' | 'weight_kg' | 'duration_sec' | 'distance_m'> & { assist_kg?: number | null }): DraftSet {
   return { reps: l.reps, weightKg: l.weight_kg ?? 0, assistKg: l.assist_kg ?? 0, durationSec: l.duration_sec ?? 0, distanceM: l.distance_m ?? 0 };
 }

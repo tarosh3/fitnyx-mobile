@@ -10,7 +10,7 @@ export function howToSteps(text: string | undefined | null): string[] {
   return text.replace(/([.!?])\s*(?=[A-Z])/g, '$1\n').split('\n').map((s) => s.trim()).filter(Boolean);
 }
 
-export const asLog = (s: ExerciseHistorySet) => ({ reps: s.reps, weight_kg: s.weight_kg ?? undefined, duration_sec: s.duration_sec ?? undefined, distance_m: s.distance_m ?? undefined });
+export const asLog = (s: ExerciseHistorySet) => ({ reps: s.reps, weight_kg: s.weight_kg ?? undefined, assist_kg: s.assist_kg, duration_sec: s.duration_sec ?? undefined, distance_m: s.distance_m ?? undefined });
 
 export function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);

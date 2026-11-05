@@ -8,17 +8,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { learnedComfort, ZONE_LABELS, zoneOf } from '@/src/features/cardio/engine';
 import { finishLine } from '@/src/features/cardio/messages';
 import { phasesOf } from '@/src/features/cardio/programs';
-import { addHistory, bestBefore, clearRun, loadHistory, type RunState, saveComfort, setFinishedLog, timesDone } from '@/src/features/cardio/store';
+import { logRun, MIN_SAVE_SEC } from '@/src/features/cardio/finish';
+import { bestBefore, clearRun, loadHistory, type RunState, setFinishedLog, timesDone } from '@/src/features/cardio/store';
 import { DialCard } from '@/src/features/cardio/ui/DialCard';
-import { DoneView, MIN_SAVE_SEC } from '@/src/features/cardio/ui/DoneView';
+import { DoneView } from '@/src/features/cardio/ui/DoneView';
 import { PhaseGraph } from '@/src/features/cardio/ui/PhaseGraph';
 import { useCardioRun } from '@/src/features/cardio/useCardioRun';
-import { nextSetNumber } from '@/src/features/workouts/logger/rows';
 import { fmtClock } from '@/src/features/workouts/model';
 import { Button } from '@/src/features/workouts/ui/Chrome';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { offlineGetSession, offlineLogSet } from '@/src/lib/offline/offlineApi';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
@@ -66,27 +65,13 @@ export function LiveScreen({ userId, initial }: { userId: string; initial: RunSt
     else { r.pause(); pauseActiveSession().catch(() => undefined); }
   };
 
-  /** Logs the run as one cardio set, remembers the settings, then closes the run. */
-  const save = async () => {
-    const res = await offlineGetSession(r.run.sessionId);
-    const done = (res.exercise_logs ?? []).filter((l) => l.exercise_uuid === r.run.exerciseUuid);
-    const log = await offlineLogSet(r.run.sessionId, {
-      exercise_uuid: r.run.exerciseUuid, set_number: nextSetNumber(done), actual_reps: 0,
-      actual_duration_sec: Math.round(r.activeSec), actual_distance_m: r.distanceM > 0 ? Math.round(r.distanceM) : undefined,
-    });
-    await saveComfort(userId, r.machine.id, learnedComfort(r.machine, r.run.comfort, r.run.adjust)).catch(() => undefined);
-    await addHistory(userId, { programId: r.run.programId, at: Date.now(), sec: Math.round(r.activeSec), distanceM: Math.round(r.distanceM) }).catch(() => undefined);
-    await clearRun(userId).catch(() => undefined);
-    return log;
-  };
-
   const finish = async () => {
     if (leaving.current) return;
     leaving.current = true;
     setBusy(true);
     setError(null);
     try {
-      await save();
+      await logRun(userId, r.run);
       await finishActiveSession();
       router.replace(`/workouts/summary/${r.run.sessionId}`);
     } catch {
@@ -103,7 +88,7 @@ export function LiveScreen({ userId, initial }: { userId: string; initial: RunSt
     setBusy(true);
     setError(null);
     try {
-      setFinishedLog(await save());
+      setFinishedLog(await logRun(userId, r.run));
       if (activeSession?.status === 'paused') await resumeActiveSession().catch(() => undefined);
       router.dismissTo(`/workouts/session/${r.run.sessionId}`);
     } catch {
