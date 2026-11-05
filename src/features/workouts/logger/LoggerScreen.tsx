@@ -142,10 +142,15 @@ export function LoggerScreen() {
     if (!b || logging.current.has(rowKey)) return;
     logging.current.add(rowKey);
     haptic.light();
-    if (hold.hold?.bi === bi && hold.hold.pi === pi) hold.stop(0);
+    // ✓ while the cardio stopwatch runs: the time on it is the set, not the pre-filled 20 min.
+    let actual: Partial<DraftSet> | undefined;
+    if (hold.hold?.bi === bi && hold.hold.pi === pi) {
+      const held = hold.stop(0);
+      if (trackingOf(b.exercise) === 'cardio' && held > 0) actual = { durationSec: held };
+    }
     if (state !== 'running') startTimer(false).catch(() => undefined);
     try {
-      const res = await lg.logPending(bi, pi);
+      const res = await lg.logPending(bi, pi, actual);
       if (!res) return;
       if (res.pr) {
         haptic.success();

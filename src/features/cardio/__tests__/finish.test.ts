@@ -1,5 +1,5 @@
 import { buildTimeline } from '@/src/features/cardio/engine';
-import { logRun, MIN_SAVE_SEC, runIsOrphaned, runResult } from '@/src/features/cardio/finish';
+import { logRun, MIN_SAVE_SEC, runIsOrphaned, runResult, workoutHasSets } from '@/src/features/cardio/finish';
 import { machineById } from '@/src/features/cardio/machines';
 import { programById } from '@/src/features/cardio/programs';
 import type { RunState } from '@/src/features/cardio/store';
@@ -22,7 +22,7 @@ jest.mock('@/src/features/cardio/store', () => ({
 const comfort = { primary: 10, secondary: 1, decline: false };
 const run: RunState = {
   programId: 'fat-burn', programTitle: 'Fat Burn Zone', machineId: 'treadmill', exerciseUuid: 'tread', length: 'short', comfort, adjust: { primary: 1, secondary: 0 },
-  startedAtMs: 0, pausedTotalMs: 0, pausedAtMs: null, skippedSec: 0, distanceM: 0, countedSec: 0, sessionId: 's1', ownsSession: true, voice: true, finished: false,
+  startedAtMs: 0, pausedTotalMs: 0, pausedAtMs: null, skippedSec: 0, distanceM: 0, countedSec: 0, sessionId: 's1', ownsSession: true, wasReady: false, voice: true, finished: false,
 };
 
 describe('runResult', () => {
@@ -36,7 +36,15 @@ describe('runResult', () => {
   });
 
   it('keeps what was banked if the program is gone', () => {
-    expect(runResult({ ...run, programId: 'nope', distanceM: 500 }, 60_000).distanceM).toBe(500);
+    const r = runResult({ ...run, programId: 'nope', distanceM: 500, countedSec: 120 }, 9 * 3600 * 1000);
+    expect(r.distanceM).toBe(500);
+    expect(r.activeSec).toBe(120);
+  });
+
+  it('a run nobody came back to counts for the program, not the hours since', () => {
+    const total = buildTimeline(programById('fat-burn')!, 'short', machineById('treadmill'), comfort).totalSec;
+    expect(runResult(run, 9 * 3600 * 1000).activeSec).toBe(total);
+    expect(runResult({ ...run, skippedSec: 100 }, 9 * 3600 * 1000).activeSec).toBe(total - 100);
   });
 });
 
@@ -67,6 +75,24 @@ describe('logRun', () => {
 
   it('has a floor below which a run is not worth saving', () => {
     expect(MIN_SAVE_SEC).toBe(30);
+  });
+});
+
+describe('workoutHasSets', () => {
+  beforeEach(() => mockGet.mockReset());
+
+  it('reads the workout', async () => {
+    mockGet.mockResolvedValue({ exercise_logs: [{ id: 'a' }] });
+    await expect(workoutHasSets('s1')).resolves.toBe(true);
+    mockGet.mockResolvedValue({ exercise_logs: [] });
+    await expect(workoutHasSets('s1')).resolves.toBe(false);
+    mockGet.mockResolvedValue({});
+    await expect(workoutHasSets('s1')).resolves.toBe(false);
+  });
+
+  it('assumes it has sets when it can’t tell, so nothing is thrown away', async () => {
+    mockGet.mockRejectedValue(new Error('offline'));
+    await expect(workoutHasSets('s1')).resolves.toBe(true);
   });
 });
 

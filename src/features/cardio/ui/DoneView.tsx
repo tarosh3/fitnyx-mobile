@@ -76,7 +76,7 @@ export function DoneView({ title, line, activeSec, distanceM, estimated, record,
             <Button testID="cardio-continue" title="Back to my workout" loading={busy} onPress={onContinue} style={styles.btn} />
           )
         ) : null}
-        <Button testID="cardio-discard" variant={canSave ? 'quiet' : 'secondary'} title={owns ? 'Discard' : canSave ? 'Don’t save this run' : 'Back to my workout'} disabled={busy} onPress={onDiscard} style={styles.btn} />
+        <Button testID="cardio-discard" variant={canSave ? 'quiet' : 'secondary'} title={canSave ? 'Don’t save this run' : owns ? 'Close' : 'Back to my workout'} disabled={busy} onPress={onDiscard} style={styles.btn} />
       </View>
       <StepperSheet visible={editing} title="Distance" subtitle="What the machine’s screen says" fields={[stepFieldsFor.km(km)]} saveLabel="Save"
         onClose={() => setEditing(false)} onSave={(v) => { setEditing(false); onDistance(Math.round((v.km ?? 0) * 1000)); }} />

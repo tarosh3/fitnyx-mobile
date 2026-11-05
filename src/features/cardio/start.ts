@@ -2,6 +2,7 @@ import type { Comfort } from '@/src/features/cardio/engine';
 import type { Machine } from '@/src/features/cardio/machines';
 import type { Program, ProgramLength } from '@/src/features/cardio/programs';
 import { type RunState, saveComfort, saveRun } from '@/src/features/cardio/store';
+import { isReady } from '@/src/features/workouts/start';
 import type { WorkoutSession } from '@/src/lib/api/workoutSessions';
 import { offlineStartSession } from '@/src/lib/offline';
 
@@ -28,8 +29,10 @@ interface BeginInput {
 export async function beginRun(i: BeginInput): Promise<RunState> {
   let sessionId: string;
   let ownsSession = false;
+  let wasReady = false;
   if (i.activeSession && ['in_progress', 'paused'].includes(i.activeSession.status)) {
     sessionId = i.activeSession.id;
+    wasReady = isReady(i.activeSession);
     if (i.activeSession.status !== 'in_progress') await i.resumeActiveSession().catch(() => undefined);
   } else {
     try {
@@ -47,7 +50,7 @@ export async function beginRun(i: BeginInput): Promise<RunState> {
   const run: RunState = {
     programId: i.program.id, programTitle: i.program.title, machineId: i.machine.id, exerciseUuid: i.exerciseUuid, length: i.length,
     comfort: i.comfort, adjust: { primary: 0, secondary: 0 }, startedAtMs: Date.now() + COUNTDOWN_SEC * 1000, pausedTotalMs: 0, pausedAtMs: null,
-    skippedSec: 0, distanceM: 0, countedSec: 0, sessionId, ownsSession, voice: i.voice, finished: false,
+    skippedSec: 0, distanceM: 0, countedSec: 0, sessionId, ownsSession, wasReady, voice: i.voice, finished: false,
   };
   await saveRun(i.userId, run);
   saveComfort(i.userId, i.machine.id, i.comfort).catch(() => undefined);

@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { learnedComfort, ZONE_LABELS, zoneOf } from '@/src/features/cardio/engine';
 import { finishLine } from '@/src/features/cardio/messages';
 import { phasesOf } from '@/src/features/cardio/programs';
-import { logRun, MIN_SAVE_SEC } from '@/src/features/cardio/finish';
+import { logRun, MIN_SAVE_SEC, workoutHasSets } from '@/src/features/cardio/finish';
 import { bestBefore, clearRun, loadHistory, type RunState, setFinishedLog, timesDone } from '@/src/features/cardio/store';
 import { DialCard } from '@/src/features/cardio/ui/DialCard';
 import { DoneView } from '@/src/features/cardio/ui/DoneView';
@@ -103,15 +103,22 @@ export function LiveScreen({ userId, initial }: { userId: string; initial: RunSt
     if (leaving.current) return;
     leaving.current = true;
     setBusy(true);
-    await clearRun(userId).catch(() => undefined);
     try {
-      if (r.run.ownsSession) {
+      // Only the run goes. A workout the run opened ends with it only if nothing else was logged.
+      const hasSets = await workoutHasSets(r.run.sessionId);
+      await clearRun(userId).catch(() => undefined);
+      if (r.run.ownsSession && !hasSets) {
         await abandonActiveSession().catch(() => undefined);
         router.dismissTo('/cardio');
-      } else {
-        if (activeSession?.status === 'paused') await resumeActiveSession().catch(() => undefined);
-        router.dismissTo(`/workouts/session/${r.run.sessionId}`);
+        return;
       }
+      if (r.run.wasReady && !hasSets) {
+        // The workout hadn't started before this run: its clock stops again.
+        if (activeSession?.status === 'in_progress') await pauseActiveSession().catch(() => undefined);
+      } else if (activeSession?.status === 'paused') {
+        await resumeActiveSession().catch(() => undefined);
+      }
+      router.dismissTo(`/workouts/session/${r.run.sessionId}`);
     } finally {
       setBusy(false);
     }

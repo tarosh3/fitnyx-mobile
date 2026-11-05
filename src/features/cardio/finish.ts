@@ -15,8 +15,22 @@ export function runResult(run: RunState, nowMs: number): { activeSec: number; di
   const program = programById(run.programId);
   const machine = machineById(run.machineId);
   const activeSec = activeSecOf(run, nowMs);
-  if (!program) return { activeSec, distanceM: run.distanceM };
-  return { activeSec, distanceM: distanceOf(run, buildTimeline(program, run.length, machine, run.comfort), machine, nowMs) };
+  if (!program) return { activeSec: Math.min(activeSec, Math.max(0, run.countedSec - run.skippedSec)), distanceM: run.distanceM };
+  const timeline = buildTimeline(program, run.length, machine, run.comfort);
+  // A run nobody came back to can't have trained for longer than the program lasts.
+  return { activeSec: Math.min(activeSec, Math.max(0, timeline.totalSec - run.skippedSec)), distanceM: distanceOf(run, timeline, machine, nowMs) };
+}
+
+/**
+ * Whether a run's workout has sets of its own. If it can't be told, assume it does:
+ * the answer decides whether a whole workout gets thrown away.
+ */
+export async function workoutHasSets(sessionId: string): Promise<boolean> {
+  try {
+    return ((await offlineGetSession(sessionId)).exercise_logs ?? []).length > 0;
+  } catch {
+    return true;
+  }
 }
 
 /** Logs a run as one cardio set, remembers its settings, then closes it. */

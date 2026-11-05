@@ -1,5 +1,5 @@
 import { buildTimeline, changesBetween, changeText, distanceOver, learnedComfort, positionAt, spokenChange, targetsFor, warnBefore, zoneOf } from '@/src/features/cardio/engine';
-import { activeSecOf, banked, distanceOf, paused, resumed, skipped, timelineSecOf } from '@/src/features/cardio/clock';
+import { activeSecOf, banked, completed, distanceOf, paused, resumed, skipped, timelineSecOf } from '@/src/features/cardio/clock';
 import { machineById, machineForExercise, MACHINES } from '@/src/features/cardio/machines';
 import { finishLine, messageAt } from '@/src/features/cardio/messages';
 import { type Program, minutesOf, phasesOf, PROGRAMS, suggestedGoal } from '@/src/features/cardio/programs';
@@ -167,7 +167,7 @@ describe('run clock', () => {
   const t = buildTimeline(program, 'short', treadmill, comfort);
   const run = {
     programId: 't', programTitle: 'T', machineId: 'treadmill' as const, exerciseUuid: 'u', length: 'short' as const, comfort, adjust: noAdjust,
-    startedAtMs: 1000, pausedTotalMs: 0, pausedAtMs: null, skippedSec: 0, distanceM: 0, countedSec: 0, sessionId: 's', ownsSession: true, voice: true, finished: false,
+    startedAtMs: 1000, pausedTotalMs: 0, pausedAtMs: null, skippedSec: 0, distanceM: 0, countedSec: 0, sessionId: 's', ownsSession: true, wasReady: false, voice: true, finished: false,
   };
 
   it('does not start before the 3-2-1 is over', () => {
@@ -191,6 +191,25 @@ describe('run clock', () => {
     expect(distanceOf(s, t, treadmill, 11000)).toBeCloseTo(16.67, 1);
     // 10 s later, now on the 13 km/h phase: 36 m more.
     expect(distanceOf(s, t, treadmill, 21000)).toBeCloseTo(16.67 + 36.11, 1);
+  });
+
+  it('a program ending stops the clock at its end, however late someone comes back', () => {
+    const hoursLater = 1000 + 9 * 3600 * 1000;
+    const done = completed(run, t, treadmill, hoursLater);
+    expect(done.finished).toBe(true);
+    expect(activeSecOf(done, hoursLater + 5000)).toBe(t.totalSec);
+    expect(distanceOf(done, t, treadmill, hoursLater)).toBeCloseTo(distanceOf(run, t, treadmill, 1000 + t.totalSec * 1000), 1);
+  });
+
+  it('skipped steps and earlier pauses shorten that end', () => {
+    const hoursLater = 9 * 3600 * 1000;
+    expect(activeSecOf(completed({ ...run, skippedSec: 50 }, t, treadmill, hoursLater), hoursLater)).toBe(t.totalSec - 50);
+    expect(activeSecOf(completed({ ...run, pausedTotalMs: 60_000 }, t, treadmill, hoursLater), hoursLater)).toBe(t.totalSec);
+  });
+
+  it('a run already paused before the end keeps its time', () => {
+    const p = paused(run, t, treadmill, 11000);
+    expect(activeSecOf(completed(p, t, treadmill, 99_000_000), 99_000_000)).toBe(10);
   });
 
   it('a speed change only affects distance from then on', () => {

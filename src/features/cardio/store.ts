@@ -32,6 +32,8 @@ export interface RunState {
   sessionId: string;
   /** This run opened the workout, so it may also finish or discard it. */
   ownsSession: boolean;
+  /** Joined a workout whose clock hadn't started: dropping the run must not leave it running. */
+  wasReady: boolean;
   voice: boolean;
   /** The program ended or the user chose to stop: the clock is frozen, showing the summary. */
   finished: boolean;

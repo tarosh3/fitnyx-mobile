@@ -134,10 +134,11 @@ export function useWorkoutLogger(sessionId: string) {
 
   const patch = (bi: number, fn: (b: Block) => Block) => setBlocks((prev) => prev.map((b, i) => (i === bi ? fn(b) : b)));
 
-  const logPending = async (bi: number, pi: number): Promise<LoggedResult | null> => {
+  /** `actual`: what was really done, when it differs from the row (a timer ran on it). */
+  const logPending = async (bi: number, pi: number, actual?: Partial<DraftSet>): Promise<LoggedResult | null> => {
     const b = blocksRef.current[bi];
     if (!b) return null;
-    const row = pendingRows(b)[pi];
+    const row = { ...pendingRows(b)[pi], ...actual };
     const t = trackingOf(b.exercise);
     let created = await offlineLogSet(sessionId, { exercise_uuid: b.uuid, set_number: nextSetNumber(b.logs), ...draftToLog(t, row) });
     // The server flags records; a set queued offline has no flag until it syncs, so

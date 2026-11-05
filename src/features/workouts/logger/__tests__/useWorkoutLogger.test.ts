@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 const mockGetDayExercises = jest.fn();
 jest.mock('@/src/lib/api/workoutPlans', () => ({ getDayExercises: (id: string) => mockGetDayExercises(id) }));
@@ -55,5 +55,31 @@ describe('planned exercises with a bad connection', () => {
     mockGetDayExercises.mockRejectedValueOnce(Object.assign(new Error('Not found'), { status: 404 }));
     const result = await load();
     expect(result.current.plannedMissing).toBe(false);
+  });
+});
+
+describe('logging a set a timer ran on', () => {
+  const treadmill = { id: 'e2', exercise_uuid: 'tread', target_sets: 1, target_duration_sec: 1200, exercise: { uuid: 'tread', title: 'Treadmill Run', tracking_type: 'cardio' } };
+
+  it('logs the time on the timer, not the planned time', async () => {
+    const { offlineLogSet } = jest.requireMock('@/src/lib/offline/offlineApi') as { offlineLogSet: jest.Mock };
+    offlineLogSet.mockReset();
+    offlineLogSet.mockResolvedValue({ id: 'l1', set_index: 1, exercise_uuid: 'tread', reps: 0, duration_sec: 420 });
+    mockGetDayExercises.mockResolvedValueOnce({ data: [treadmill] });
+    const result = await load();
+
+    await act(async () => { await result.current.logPending(0, 0, { durationSec: 420 }); });
+    expect(offlineLogSet).toHaveBeenCalledWith('s1', expect.objectContaining({ exercise_uuid: 'tread', actual_duration_sec: 420 }));
+  });
+
+  it('logs the planned time when no timer ran', async () => {
+    const { offlineLogSet } = jest.requireMock('@/src/lib/offline/offlineApi') as { offlineLogSet: jest.Mock };
+    offlineLogSet.mockReset();
+    offlineLogSet.mockResolvedValue({ id: 'l1', set_index: 1, exercise_uuid: 'tread', reps: 0, duration_sec: 1200 });
+    mockGetDayExercises.mockResolvedValueOnce({ data: [treadmill] });
+    const result = await load();
+
+    await act(async () => { await result.current.logPending(0, 0); });
+    expect(offlineLogSet).toHaveBeenCalledWith('s1', expect.objectContaining({ actual_duration_sec: 1200 }));
   });
 });

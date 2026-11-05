@@ -25,6 +25,16 @@ export function paused(run: RunState, t: Timeline, machine: Machine, nowMs: numb
   return run.pausedAtMs != null ? run : { ...banked(run, t, machine, nowMs), pausedAtMs: nowMs };
 }
 
+/**
+ * The program has ended. The clock stops at its end, not at "now": someone who comes
+ * back hours later trained for the program's length, not for all that time.
+ */
+export function completed(run: RunState, t: Timeline, machine: Machine, nowMs: number): RunState {
+  const atEnd = run.startedAtMs + run.pausedTotalMs + Math.max(0, t.totalSec - run.skippedSec) * 1000;
+  const next = run.pausedAtMs != null ? run : banked(run, t, machine, nowMs);
+  return { ...next, pausedAtMs: Math.min(run.pausedAtMs ?? nowMs, atEnd), finished: true };
+}
+
 export function resumed(run: RunState, nowMs: number): RunState {
   return run.pausedAtMs == null ? run : { ...run, pausedTotalMs: run.pausedTotalMs + (nowMs - run.pausedAtMs), pausedAtMs: null };
 }

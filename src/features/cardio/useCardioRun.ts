@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { activeSecOf, banked, distanceOf, paused, resumed, skipped, timelineSecOf } from '@/src/features/cardio/clock';
+import { activeSecOf, banked, completed, distanceOf, paused, resumed, skipped, timelineSecOf } from '@/src/features/cardio/clock';
 import { type Adjust, buildTimeline, changesBetween, changeText, positionAt, spokenChange, targetsFor, warnBefore } from '@/src/features/cardio/engine';
 import { machineById } from '@/src/features/cardio/machines';
 import { messageAt } from '@/src/features/cardio/messages';
@@ -115,7 +115,7 @@ export function useCardioRun(userId: string, initial: RunState) {
     if (!pos.done || run.finished) return;
     haptic.success();
     speak('Program complete. Brilliant work.');
-    commit({ ...paused(run, timeline, machine, Date.now()), finished: true });
+    commit(completed(run, timeline, machine, Date.now()));
   }, [pos.done, run.finished]);
 
   // Bank the distance from time to time for a crash.
