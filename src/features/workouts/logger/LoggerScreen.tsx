@@ -142,11 +142,11 @@ export function LoggerScreen() {
     if (!b || logging.current.has(rowKey)) return;
     logging.current.add(rowKey);
     haptic.light();
-    // ✓ while the cardio stopwatch runs: the time on it is the set, not the pre-filled 20 min.
+    // ✓ while a row's timer runs: the time on it is the set, not the pre-filled target.
     let actual: Partial<DraftSet> | undefined;
     if (hold.hold?.bi === bi && hold.hold.pi === pi) {
-      const held = hold.stop(0);
-      if (trackingOf(b.exercise) === 'cardio' && held > 0) actual = { durationSec: held };
+      const held = hold.stop(pendingRows(b)[pi]?.durationSec ?? 0);
+      if (held > 0) actual = { durationSec: held };
     }
     if (state !== 'running') startTimer(false).catch(() => undefined);
     try {
@@ -179,7 +179,12 @@ export function LoggerScreen() {
     const cardio = trackingOf(blocks[bi].exercise) === 'cardio';
     if (hold.hold && hold.hold.bi === bi && hold.hold.pi === pi) {
       const held = hold.stop(row.durationSec);
-      if (held > 0) lg.setDraft(bi, pi, { ...row, durationSec: held });
+      if (held > 0) {
+        // The row below keeps what it showed: an early stop is this set only.
+        const below = pendingRows(blocks[bi])[pi + 1];
+        if (below) lg.setDraft(bi, pi + 1, below);
+        lg.setDraft(bi, pi, { ...row, durationSec: held });
+      }
       // Cardio: read the distance off the machine now, while it's still on its screen.
       if (cardio) setEditor({ bi, kind: 'pending', pi });
       else toast('Stopped — tick ✓ to log it');

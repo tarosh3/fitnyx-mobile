@@ -139,6 +139,9 @@ export function useWorkoutLogger(sessionId: string) {
     const b = blocksRef.current[bi];
     if (!b) return null;
     const row = { ...pendingRows(b)[pi], ...actual };
+    // A timer cut short is this set only: the row below keeps what it showed, or
+    // every later set would follow the early stop down.
+    const nextRow = actual ? pendingRows(b)[pi + 1] : undefined;
     const t = trackingOf(b.exercise);
     let created = await offlineLogSet(sessionId, { exercise_uuid: b.uuid, set_number: nextSetNumber(b.logs), ...draftToLog(t, row) });
     // The server flags records; a set queued offline has no flag until it syncs, so
@@ -151,6 +154,7 @@ export function useWorkoutLogger(sessionId: string) {
       // Later drafts shift up one row; this row's draft is used up.
       const drafts: Record<number, typeof row> = {};
       Object.entries(x.drafts).forEach(([k, v]) => { const n = Number(k); if (n > pi) drafts[n - 1] = v; else if (n < pi) drafts[n] = v; });
+      if (nextRow && !drafts[pi]) drafts[pi] = nextRow;
       const bestKg = created.is_pr && created.weight_kg ? Math.max(x.bestKg ?? 0, created.weight_kg) : x.bestKg;
       const bestAssistKg = created.is_pr && created.assist_kg != null ? Math.min(x.bestAssistKg ?? created.assist_kg, created.assist_kg) : x.bestAssistKg;
       return { ...x, logs: [...x.logs, created], drafts, bestKg, bestAssistKg, extraRows: extraRowsAfterLog(x) };

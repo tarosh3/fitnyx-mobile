@@ -15,6 +15,7 @@ jest.mock('@/src/providers/WorkoutProvider', () => ({ useWorkout: () => ({ activ
 jest.mock('@/src/hooks/useOfflineAware', () => ({ useOfflineAware: () => ({ isOffline: false }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ setParams: jest.fn() }) }));
 
+import { pendingRows } from '../rows';
 import { useWorkoutLogger } from '../useWorkoutLogger';
 
 const bench = { id: 'e1', exercise_uuid: 'bench', target_sets: 3, exercise: { uuid: 'bench', title: 'Bench Press' } };
@@ -70,6 +71,19 @@ describe('logging a set a timer ran on', () => {
 
     await act(async () => { await result.current.logPending(0, 0, { durationSec: 420 }); });
     expect(offlineLogSet).toHaveBeenCalledWith('s1', expect.objectContaining({ exercise_uuid: 'tread', actual_duration_sec: 420 }));
+  });
+
+  it('an early stop is that set only: later sets keep their target', async () => {
+    const plank = { id: 'e3', exercise_uuid: 'plank', target_sets: 3, target_duration_sec: 60, exercise: { uuid: 'plank', title: 'Plank', tracking_type: 'duration' } };
+    const { offlineLogSet } = jest.requireMock('@/src/lib/offline/offlineApi') as { offlineLogSet: jest.Mock };
+    offlineLogSet.mockReset();
+    offlineLogSet.mockResolvedValue({ id: 'l1', set_index: 1, exercise_uuid: 'plank', reps: 0, duration_sec: 19 });
+    mockGetDayExercises.mockResolvedValueOnce({ data: [plank] });
+    const result = await load();
+
+    await act(async () => { await result.current.logPending(0, 0, { durationSec: 19 }); });
+    expect(offlineLogSet).toHaveBeenCalledWith('s1', expect.objectContaining({ actual_duration_sec: 19 }));
+    expect(pendingRows(result.current.blocks[0]).map((r) => r.durationSec)).toEqual([60, 60]);
   });
 
   it('logs the planned time when no timer ran', async () => {
