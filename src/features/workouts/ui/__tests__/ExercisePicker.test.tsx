@@ -99,17 +99,53 @@ describe('ExercisePicker — suggested next', () => {
     mockFetch.mockReset();
     mockFetch.mockResolvedValue({ data: [], meta: { total: 0 } } as never);
     mockSuggest.mockReset();
-    mockSuggest.mockResolvedValue([] as never);
+    mockSuggest.mockResolvedValue({ exercises: [], focus: null } as never);
   });
 
-  it('shows co-occurrence suggestions mid-workout', async () => {
-    mockSuggest.mockResolvedValueOnce([
-      { uuid: 'tri1', title: 'Triceps Pushdown', primary_muscles: [{ name: 'Triceps', image: '', description: '' }], equipment: [{ name: 'Cable', description: '' }] },
-    ] as never);
+  const tri = { uuid: 'tri1', title: 'Triceps Pushdown', primary_muscles: [{ name: 'Triceps', image: '', description: '' }], equipment: [{ name: 'Cable', description: '' }] };
+  const legs = { primary_muscles: [{ name: 'Quads', image: '', description: '' }], tracking_type: 'weight_reps' as const };
+
+  it('shows the suggestions mid-workout', async () => {
+    mockSuggest.mockResolvedValueOnce({ exercises: [tri], focus: null } as never);
     render(<ExercisePicker {...props} mode="multi" addedUuids={['chest1']} onConfirm={jest.fn()} />);
     expect(await screen.findByText('SUGGESTED NEXT')).toBeOnTheScreen();
     expect(screen.getByText('Triceps Pushdown')).toBeOnTheScreen();
     expect(mockSuggest).toHaveBeenCalledWith(['chest1']);
+  });
+
+  it('a leg workout opens on legs, even before the server answers', async () => {
+    mockSuggest.mockReturnValueOnce(new Promise(() => undefined));
+    render(<ExercisePicker {...props} mode="multi" addedUuids={['squat']} currentExercises={[legs]} onConfirm={jest.fn()} />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.objectContaining({ muscle: 'legs' })));
+  });
+
+  it('follows the user’s own habit, says why, and lets them stay', async () => {
+    mockSuggest.mockResolvedValueOnce({ exercises: [{ ...tri, uuid: 'plank', title: 'Plank' }], focus: { current_part: 'legs', streak: 3, part: 'core', switched: true, seen: 4, of: 5 } } as never);
+    render(<ExercisePicker {...props} mode="multi" addedUuids={['a', 'b', 'c']} currentExercises={[legs, legs, legs]} onConfirm={jest.fn()} />);
+    expect(await screen.findByText('You usually move to core after 3 leg exercises (4 of 5 times)')).toBeOnTheScreen();
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.objectContaining({ muscle: 'core' })));
+    expect(screen.getByText('Plank')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByTestId('picker-stay'));
+    await waitFor(() => expect(mockFetch).toHaveBeenLastCalledWith(expect.objectContaining({ muscle: 'legs' })));
+    expect(screen.queryByText('SUGGESTED NEXT')).not.toBeOnTheScreen();
+  });
+
+  it('a part the user picked stays picked when the answer arrives late', async () => {
+    let answer: (v: never) => void = () => undefined;
+    mockSuggest.mockReturnValueOnce(new Promise<never>((r) => { answer = r; }));
+    render(<ExercisePicker {...props} mode="multi" addedUuids={['a']} currentExercises={[legs]} onConfirm={jest.fn()} />);
+    fireEvent.press(screen.getByLabelText('Body part: Back'));
+    await waitFor(() => expect(mockFetch).toHaveBeenLastCalledWith(expect.objectContaining({ muscle: 'back' })));
+    answer({ exercises: [], focus: { current_part: 'legs', streak: 1, part: 'core', switched: true, seen: 2, of: 2 } } as never);
+    await waitFor(() => expect(screen.queryByText(/You usually move/)).not.toBeOnTheScreen());
+    expect(mockFetch).toHaveBeenLastCalledWith(expect.objectContaining({ muscle: 'back' }));
+  });
+
+  it('a swap stays on the exercise’s own part and asks nothing', async () => {
+    render(<ExercisePicker {...props} addedUuids={['a']} initialPart="legs" onConfirm={jest.fn()} />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.objectContaining({ muscle: 'legs' })));
+    expect(mockSuggest).not.toHaveBeenCalled();
   });
 
   it('shows no suggestions when the workout is empty', async () => {

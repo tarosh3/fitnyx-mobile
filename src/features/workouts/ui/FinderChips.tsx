@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { EQUIPMENT_CHIPS, type EquipmentKey, MUSCLES_BY_PART } from '@/src/features/workouts/finder';
@@ -12,13 +12,24 @@ function ChipRow<T extends string>({ options, value, onChange, allLabel, label, 
   options: Option<T>[]; value: T | null; onChange: (v: T | null) => void; allLabel: string; label: string; testID: string;
 }) {
   const c = useThemeColors();
+  // A part chosen for the user (a leg workout opens on Legs) can be off to the side: bring it into view.
+  const scroll = useRef<ScrollView>(null);
+  const xs = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (value && xs.current[value] != null) scroll.current?.scrollTo({ x: Math.max(0, xs.current[value] - 16), animated: true });
+  }, [value]);
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.row}
+    <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.row}
       keyboardShouldPersistTaps="handled" testID={testID} accessibilityLabel={label}>
       {[{ key: null, label: allLabel } as Option<T | null>, ...options].map((o) => {
         const on = value === o.key;
         return (
           <Pressable key={o.key ?? 'all'} onPress={() => onChange(o.key)} accessibilityRole="button" accessibilityState={{ selected: on }}
+            onLayout={(e) => {
+              if (!o.key) return;
+              xs.current[o.key] = e.nativeEvent.layout.x;
+              if (on) scroll.current?.scrollTo({ x: Math.max(0, e.nativeEvent.layout.x - 16), animated: false });
+            }}
             accessibilityLabel={`${label}: ${o.label}`}
             style={[styles.chip, { borderColor: on ? c.text : c.border, backgroundColor: on ? c.text : c.card }]}>
             <Text style={[styles.chipText, { color: on ? c.background : c.text }]}>{o.label}</Text>

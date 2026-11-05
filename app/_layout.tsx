@@ -291,6 +291,8 @@ function ThemedStack() {
       <Stack.Screen name="workouts/routine/[id]" />
       <Stack.Screen name="workouts/routine/edit" />
       <Stack.Screen name="workouts/session/[id]" />
+      <Stack.Screen name="cardio/index" />
+      <Stack.Screen name="cardio/live" options={{ gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="workouts/summary/[id]" options={{ gestureEnabled: false, animation: 'fade' }} />
       <Stack.Screen name="workouts/history/index" />
       <Stack.Screen name="workouts/history/[id]" />

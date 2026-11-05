@@ -1,11 +1,11 @@
-import { Check, ChevronDown, MoreHorizontal, Plus } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronRight, MoreHorizontal, Plus, TrendingUp, Zap } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, type GestureType } from 'react-native-gesture-handler';
 
 import { type Block, blockDone, pendingRows } from '@/src/features/workouts/logger/rows';
-import { lastText, SetHeader, SetRow } from '@/src/features/workouts/logger/SetRow';
-import { describeTarget, fmtKg, logToDraft, plural, trackingOf } from '@/src/features/workouts/model';
+import { hasTimer, lastText, SetHeader, SetRow } from '@/src/features/workouts/logger/SetRow';
+import { beatLastHint, describeTarget, fmtKg, logToDraft, plural, trackingOf } from '@/src/features/workouts/model';
 import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -29,12 +29,14 @@ interface Props {
   onEditLog: (logId: string) => void;
   onHoldTimer: (pi: number) => void;
   onAddSet: () => void;
+  /** Cardio only: run this machine as a guided program. */
+  onGuided?: () => void;
   /** Hold-and-drag on the header to reorder (from `DragItem`). */
   dragGesture?: GestureType;
 }
 
 /** One exercise in the live workout: collapsed to a line, or its set rows. */
-export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenExercise, onMenu, onEditPending, onCheckPending, onEditLog, onHoldTimer, onAddSet, dragGesture }: Props) {
+export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenExercise, onMenu, onEditPending, onCheckPending, onEditLog, onHoldTimer, onAddSet, onGuided, dragGesture }: Props) {
   const c = useThemeColors();
   const t = trackingOf(b.exercise);
   const name = b.exercise?.title ?? 'Exercise';
@@ -43,8 +45,10 @@ export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenEx
   const total = b.logs.length + pending.length;
   const meta = [
     b.bestKg && t === 'weight_reps' ? `Best ${fmtKg(b.bestKg)} kg` : null,
+    b.bestAssistKg != null && t === 'assisted_reps' ? (b.bestAssistKg > 0 ? `Least help ${fmtKg(b.bestAssistKg)} kg` : 'Done with no help') : null,
     b.last ? `Last ${lastText(t, b.last)}` : null,
   ].filter(Boolean).join(' · ');
+  const toBeat = !b.logs.length ? beatLastHint(t, b.last) : null;
   const summary = done ? `${plural(b.logs.length, 'set')} done` : b.planned ? describeTarget(t, b.planned) : `${b.logs.length} of ${plural(total, 'set')}`;
 
   const head = (
@@ -81,6 +85,23 @@ export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenEx
 
       {expanded ? (
         <View style={styles.sets}>
+          {toBeat ? (
+            <View testID={`beat-${bi}`} style={styles.beat}>
+              <TrendingUp size={16} color={c.accent} />
+              <Text style={[styles.beatText, { color: c.mutedText }]} numberOfLines={1}>Beat last time: <Text style={{ color: c.accent, fontFamily: type.weight.bold }}>{toBeat}</Text></Text>
+            </View>
+          ) : null}
+          {t === 'cardio' && onGuided && !done ? (
+            <Pressable testID={`guided-${bi}`} onPress={onGuided} accessibilityRole="button" accessibilityLabel={`Follow a guided program on ${name}`}
+              style={({ pressed }) => [styles.guided, { backgroundColor: c.accentSoft }, pressed && { opacity: 0.7 }]}>
+              <Zap size={18} color={c.accent} />
+              <View style={styles.titles}>
+                <Text style={[styles.guidedTitle, { color: c.text }]}>Follow a guided program</Text>
+                <Text style={[styles.guidedSub, { color: c.mutedText }]} numberOfLines={1}>Speed and incline, called out live</Text>
+              </View>
+              <ChevronRight size={20} color={c.accent} />
+            </Pressable>
+          ) : null}
           <SetHeader t={t} />
           {b.logs.map((l, i) => (
             <SetRow key={l.id} index={i} t={t} name={name} value={logToDraft(l)} done pr={!!l.is_pr} last={i === 0 ? lastText(t, b.last) : ''}
@@ -91,7 +112,7 @@ export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenEx
               last={b.logs.length + pi === 0 ? lastText(t, b.last) : ''}
               runningLeft={hold && hold.bi === bi && hold.pi === pi ? hold.left : null}
               onEdit={() => onEditPending(pi)} onCheck={() => onCheckPending(pi)}
-              onTimer={t === 'duration' ? () => onHoldTimer(pi) : undefined} />
+              onTimer={hasTimer(t) ? () => onHoldTimer(pi) : undefined} />
           ))}
           <Pressable testID={`add-set-${bi}`} onPress={onAddSet} accessibilityRole="button" accessibilityLabel={`Add a set to ${name}`}
             style={({ pressed }) => [styles.addSet, { borderColor: c.border }, pressed && { opacity: 0.7 }]}>
@@ -114,6 +135,11 @@ const styles = StyleSheet.create({
   meta: { fontFamily: type.weight.medium, fontSize: 14, marginTop: 2 },
   icon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   sets: { gap: spacing.sm },
+  beat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  beatText: { flexShrink: 1, fontFamily: type.weight.medium, fontSize: 14 },
+  guided: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radii.md, minHeight: 56 },
+  guidedTitle: { fontFamily: type.weight.bold, fontSize: 15 },
+  guidedSub: { fontFamily: type.weight.regular, fontSize: 13 },
   addSet: { minHeight: 48, borderRadius: radii.md, borderWidth: 1, borderStyle: 'dashed', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addText: { fontFamily: type.weight.semibold, fontSize: 15 },
 });

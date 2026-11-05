@@ -32,6 +32,8 @@ export function RestBar({ seconds, next, onDone, endTimestamp, onAdjust }: Props
   const [height, setHeight] = useState(0);
   useToastLift(height ? height + spacing.md : 0);
   const buzzed = useRef(false);
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
 
   useEffect(() => {
     if (endTimestamp !== undefined) {
@@ -50,9 +52,11 @@ export function RestBar({ seconds, next, onDone, endTimestamp, onAdjust }: Props
   useEffect(() => {
     if (left > 0) { buzzed.current = false; return; }
     if (!buzzed.current) { buzzed.current = true; haptic.success(); }
-    const id = setTimeout(onDone, 1500);
+    // Through a ref: the logger re-renders every second with a new onDone, and restarting
+    // the timer each time meant "Rest done" never left on its own.
+    const id = setTimeout(() => doneRef.current(), 1500);
     return () => clearTimeout(id);
-  }, [left, onDone]);
+  }, [left]);
 
   const adjust = (d: number) => {
     endAt.current = Math.max(Date.now() + 1000, endAt.current + d * 1000);

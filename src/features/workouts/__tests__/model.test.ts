@@ -2,7 +2,9 @@ import {
   describeSet,
   describeTarget,
   draftToLog,
+  beatLastHint,
   fmtClock,
+  logToDraft,
   movementOf,
   partOf,
   partOfMuscle,
@@ -103,12 +105,69 @@ describe('prefill', () => {
 });
 
 describe('draftToLog', () => {
-  const d = { reps: 10, weightKg: 0, durationSec: 1200, distanceM: 3000 };
+  const d = { reps: 10, weightKg: 0, assistKg: 0, durationSec: 1200, distanceM: 3000 };
   it('sends only what each type measures', () => {
     expect(draftToLog('weight_reps', { ...d, weightKg: 60 })).toEqual({ actual_reps: 10, actual_weight_kg: 60 });
     expect(draftToLog('reps', d)).toEqual({ actual_reps: 10, actual_weight_kg: undefined });
-    expect(draftToLog('duration', d)).toEqual({ actual_reps: 0, actual_duration_sec: 1200 });
+    expect(draftToLog('duration', d)).toEqual({ actual_reps: 0, actual_duration_sec: 1200, actual_weight_kg: undefined });
+    expect(draftToLog('duration', { ...d, weightKg: 10 })).toEqual({ actual_reps: 0, actual_duration_sec: 1200, actual_weight_kg: 10 });
+    expect(draftToLog('assisted_reps', { ...d, assistKg: 25 })).toEqual({ actual_reps: 10, actual_assist_kg: 25 });
+    expect(draftToLog('assisted_reps', d)).toEqual({ actual_reps: 10, actual_assist_kg: 0 });
+    expect(draftToLog('weight_distance', { ...d, weightKg: 40 })).toEqual({ actual_reps: 0, actual_weight_kg: 40, actual_distance_m: 3000 });
     expect(draftToLog('cardio', d)).toEqual({ actual_reps: 0, actual_duration_sec: 1200, actual_distance_m: 3000 });
+  });
+});
+
+describe('assisted, weighted-hold and carry sets', () => {
+  it('assistance fills from the last set, the target, last time, then a default; 0 is a real value', () => {
+    expect(prefill('assisted_reps', null, null, null)).toMatchObject({ assistKg: 20, reps: 8, weightKg: 0 });
+    expect(prefill('assisted_reps', null, null, { reps: 6, assistKg: 15 })).toMatchObject({ assistKg: 15, reps: 6 });
+    expect(prefill('assisted_reps', { target_weight_kg: 30 }, null, { assistKg: 15 })).toMatchObject({ assistKg: 30, weightKg: 0 });
+    expect(prefill('assisted_reps', null, { assistKg: 0, reps: 5 }, { assistKg: 15 })).toMatchObject({ assistKg: 0, reps: 5 });
+  });
+
+  it('other types carry no assistance', () => {
+    expect(prefill('weight_reps', null, null, { assistKg: 15 }).assistKg).toBe(0);
+  });
+
+  it('a carry starts from a weight and a distance', () => {
+    expect(prefill('weight_distance', null, null, null)).toMatchObject({ weightKg: 20, distanceM: 20 });
+  });
+
+  it('describes each in words', () => {
+    const s = { reps: 8, weight_kg: undefined, duration_sec: undefined, distance_m: undefined };
+    expect(describeSet('assisted_reps', { ...s, assist_kg: 25 })).toBe('25 kg help × 8');
+    expect(describeSet('assisted_reps', { ...s, assist_kg: 0 })).toBe('No help × 8');
+    expect(describeSet('duration', { ...s, duration_sec: 60, weight_kg: 10 })).toBe('1:00 hold · +10 kg');
+    expect(describeSet('duration', { ...s, duration_sec: 60 })).toBe('1:00 hold');
+    expect(describeSet('weight_distance', { ...s, weight_kg: 40, distance_m: 30 })).toBe('40 kg · 30 m');
+    expect(describeSet('cardio', { ...s, duration_sec: 1295, distance_m: 3100 })).toBe('21:35 · 3.1 km');
+    expect(describeSet('cardio', { ...s, duration_sec: 1200 })).toBe('20 min');
+    expect(describeTarget('assisted_reps', { target_sets: 3, target_reps: 8, target_weight_kg: 20 })).toBe('3 × 8 · 20 kg help');
+    expect(describeTarget('weight_distance', { target_sets: 3, target_distance_m: 20, target_weight_kg: 40 })).toBe('3 × 20 m · 40 kg');
+  });
+
+  it('assistance survives the round trip from a logged set', () => {
+    expect(logToDraft({ reps: 8, assist_kg: 12.5 })).toMatchObject({ assistKg: 12.5, weightKg: 0 });
+  });
+});
+
+describe('beatLastHint', () => {
+  it('asks for the smallest step up, in each type’s terms', () => {
+    expect(beatLastHint('weight_reps', { weightKg: 60, reps: 10 })).toBe('60 kg × 11');
+    expect(beatLastHint('reps', { reps: 12 })).toBe('13 reps');
+    expect(beatLastHint('assisted_reps', { assistKg: 25, reps: 8 })).toBe('22.5 kg help × 8');
+    expect(beatLastHint('assisted_reps', { assistKg: 0, reps: 8 })).toBe('No help × 9');
+    expect(beatLastHint('duration', { durationSec: 60, weightKg: 10 })).toBe('1:05 hold · +10 kg');
+    expect(beatLastHint('cardio', { durationSec: 1200, distanceM: 3000 })).toBe('3.1 km');
+    expect(beatLastHint('cardio', { durationSec: 1200 })).toBe('21 min');
+    expect(beatLastHint('weight_distance', { weightKg: 40, distanceM: 30 })).toBe('40 kg · 35 m');
+  });
+
+  it('says nothing with nothing to beat', () => {
+    expect(beatLastHint('weight_reps', null)).toBeNull();
+    expect(beatLastHint('weight_reps', { reps: 0, weightKg: 0 })).toBeNull();
+    expect(beatLastHint('duration', { durationSec: 0 })).toBeNull();
   });
 });
 

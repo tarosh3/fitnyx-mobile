@@ -19,11 +19,18 @@ export interface Block {
   last: Partial<DraftSet> | null;
   /** All-time best weight (kg), for "Best 80 kg". */
   bestKg: number | null;
+  /** Least help ever taken on an assisted exercise (kg). */
+  bestAssistKg?: number | null;
 }
 
 export const defaultSetsFor = (ex: Exercise | null) => (trackingOf(ex) === 'cardio' ? 1 : 3);
 
 const targetSets = (b: Pick<Block, 'planned' | 'exercise'>) => (b.planned ? b.planned.target_sets ?? defaultSetsFor(b.exercise) : 0);
+
+/** Less help than ever on an assisted exercise. Unknown best = no claim. */
+export function beatsBestAssist(b: Pick<Block, 'bestAssistKg'>, assistKg: number | null | undefined): boolean {
+  return b.bestAssistKg != null && assistKg != null && assistKg < b.bestAssistKg;
+}
 
 /** A weight above the all-time best (known from history). Unknown best = no claim. */
 export function beatsBest(b: Pick<Block, 'bestKg'>, weightKg: number | null | undefined): boolean {

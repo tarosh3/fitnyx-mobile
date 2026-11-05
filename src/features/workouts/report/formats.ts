@@ -78,7 +78,9 @@ function profileHtml(p: ReportProfile): string {
 
 function setText(t: string, s: ReportData['sessions'][number]['sets'][number]): string {
   if (t === 'cardio') return [s.duration_sec ? fmtDuration(s.duration_sec) : '', s.distance_m ? `${num(s.distance_m / 1000, 2)} km` : ''].filter(Boolean).join(' · ');
-  if (t === 'duration') return s.duration_sec ? fmtDuration(s.duration_sec) : '';
+  if (t === 'duration') return s.duration_sec ? `${fmtDuration(s.duration_sec)}${s.weight_kg ? ` · +${num(s.weight_kg, 2)} kg` : ''}` : '';
+  if (t === 'assisted_reps') return `${s.reps} reps${s.assist_kg ? ` · ${num(s.assist_kg, 2)} kg help` : ''}`;
+  if (t === 'weight_distance') return `${num(s.weight_kg ?? 0, 2)} kg · ${Math.round(s.distance_m ?? 0)} m`;
   return s.weight_kg ? `${num(s.weight_kg, 2)} kg × ${s.reps}` : `${s.reps} reps`;
 }
 

@@ -10,7 +10,7 @@ export function QuickStart({ onEmpty, onCardio }: { onEmpty: () => void; onCardi
   const c = useThemeColors();
   const choices = [
     { label: 'Build a workout', sub: 'Start with a blank slate', tone: c.parts.core, Icon: Plus, source: require('../../../../assets/images/workouts/strength-equipment.png'), onPress: onEmpty, id: 'quick-empty' },
-    { label: 'Cardio', sub: 'Treadmill, bike & more', tone: c.parts.cardio, Icon: HeartPulse, source: require('../../../../assets/images/workouts/cardio-shoe.png'), onPress: onCardio, id: 'quick-cardio' },
+    { label: 'Cardio', sub: 'Guided programs, live', tone: c.parts.cardio, Icon: HeartPulse, source: require('../../../../assets/images/workouts/cardio-shoe.png'), onPress: onCardio, id: 'quick-cardio' },
   ];
   return (
     <View style={styles.section}>

@@ -95,6 +95,16 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - **Sheet keyboard handling: pad by `Keyboard` event height, not `KeyboardAvoidingView`.** Inside a `Modal`, KAV left ~the home-indicator height of the sheet behind the keyboard, and the old `position: absolute` sheet wasn't lifted at all. The sheet sits in normal flow inside a view padded by the keyboard height, so its `maxHeight: '90%'` is of the visible space.
 - **Chrome `Button` uses `flexGrow: 1, flexShrink: 1`, never `flex: 1`.** `flex: 1` is basis 0, so a column (Sheet footer) measured the button as 0 pt tall and tall content ran under it. To keep a button content-sized in a row, override with `flexGrow: 0` — `flex: 0` no longer works because an explicit `flexGrow` beats the `flex` shorthand. Full-screen workout flows hide the bottom nav (`bottomNavLayout.ts`) because they have their own `BottomBar`.
 
+**Guided cardio (`src/features/cardio/`, routes `app/cardio/`)** — 2026-11-06. Train → Cardio tile, or "Follow a guided program" on a cardio block in the logger:
+- `programs.ts` = data only (15 programs by goal; effort is relative: `pace` 1 = comfortable, `climb` = % above comfortable). `machines.ts` maps effort to the console's dials (treadmill speed/incline, bike resistance/cadence…). `engine.ts`, `clock.ts`, `messages.ts` are pure and tested; `useCardioRun.ts` does the cues.
+- The clock is worked out from timestamps in `RunState` (`store.ts`, saved on every change), so sleep, background and a killed app all resume correctly. Never count seconds in React state. Skip moves `skippedSec` (the program), not time trained.
+- `LiveScreen` holds `useKeepAwake`. A run logs one cardio set at the end. It joins the open workout if there is one; otherwise it opens one (`ownsSession`) so the workout's clock covers it. Back in the logger, `takeFinishedLog` + `lg.attachLog` show the set without reloading (a reload would drop unlogged ad-hoc rows).
+- Comfort settings and run history are device-local. Live −/+ carries over as next time's comfort (`learnedComfort`). Voice = `voice.ts`; it checks `requireOptionalNativeModule('ExpoSpeech')` first, because in dev even a caught failed `require` of a native module logs a red error.
+
+**Set types (`TrackingType`)** — 2026-11-06: `weight_reps`, `reps` (+kg), `duration` (+kg, weighted plank), `cardio` (time + distance + count-up timer), `assisted_reps`, `weight_distance`. Assistance has its own column (`assist_kg`): **less is better**, so it stays out of `weight_kg`, volume, e1RM and heaviest-weight records; the record is the lowest value ever (`prLogIDs`, `MinAssistByUserAndExercise`, `beatsBestAssist`). 0 = no help and is a real value, so never treat it as empty. On a routine row, `target_weight_kg` of an assisted exercise is the target assistance. Grit doesn't yet reward less assistance (reps only).
+
+**What to suggest next (backend `internal/nextup`, pure + tested)** — 2026-11-06. `GET /exercises/suggestions?current=…` returns `{ data, focus }`. Default: more of the part being trained. A switch needs a habit: at least 2 sightings, ≥ 50% of the times the user carried on from exactly this point (same part, same run length), and more than staying. Workouts that ended there don't count against it; cardio never extends or breaks a run. The picker opens on `localFocusPart` at once (also the offline answer), then follows `focus` unless the user touched a part chip. A swap passes `initialPart` and asks nothing.
+
 **Diet (`src/features/diet/`, screens `app/diet/`)** — Today · meal detail · log food · insights (`/dashboard/diet` redirects):
 - Goals come from the AI plan (`GET /diet`, cached 24 h on the device); what was eaten is `diet_meal_logs` (`/diet/logs`, `/diet/summary`, `/diet/foods`). Pure logic lives in `model.ts` / `insights.ts`.
 - A logged plan meal = `source: 'plan'` + `plan_meal_index` (a swap logs the alternative under the same index). Food search uses the curated `foods` table (backend `seed_foods.sql`); quick add = `source: 'quick'`.
@@ -175,7 +185,7 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 ## Feature modules (`src/features/`)
 
-`appConfig` · `arena` · `auth` · `dashboard` · `diet` · `friends` · `goals` · `notifications` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
+`appConfig` · `arena` · `auth` · `cardio` · `dashboard` · `diet` · `friends` · `goals` · `notifications` · `onboarding` · `plan` · `profile` · `progress` · `roam` · `share` · `workouts`
 
 ## UI primitives (`src/components/ui/`)
 
@@ -350,6 +360,11 @@ _Claude updates this section automatically when corrections are made._
 - **Unlogged rows of exercises added mid-workout live only in memory** — a reload/reopen rebuilds ad-hoc blocks from logged sets only. Planned (routine/program) rows always come back.
 
 ### Local full-stack testing (2026-10-14)
+
+- **An `iOS` dev client crashes (`-[ReanimatedModule installTurboModule]` assert, Abort trap) when a burst of edits forces a full reload** — it looks like the app quit to the home screen mid-test. Debug only. Don't edit JS files the running app imports while someone is typing in it (a sign-in, found 2026-11-06); relaunch with `xcrun simctl launch`. New files nothing imports yet are safe.
+- **In a script run through Bash, never leave a bare `cat` that reads stdin** (`cat >> /dev/null`): it hangs until the 7-minute timeout, and the commands after it never run, so tests look slow rather than skipped (2026-11-06).
+- **`npx expo export --platform web` writes everything, prints `Exported:`, then never exits on this Mac** (same on a clean `main`, with or without `CI=1`, found 2026-11-06). Treat the `Exported:` line as the pass and stop the process; don't wait on its exit code locally.
+- **An inline callback in a `useEffect` dep restarts its timer on every parent render.** The logger re-renders each second, so `RestBar`'s 1.5 s "Rest done" timeout never fired and the bar stayed forever (found 2026-11-06). Keep the callback in a ref.
 
 - **`EXPO_PUBLIC_*` set on the command line does NOT beat `.env`, and Metro caches the inlined values.** To point a dev build at another backend, write a temporary `.env.local` (gitignored, higher priority) and start Metro with `--clear`; delete it afterwards. Confirm where the app really connects with `lsof -nP -iTCP:<port>` — the backend's request log only prints non-2xx responses, so a quiet log proves nothing.
 - **A 401 from production does not prove a route is deployed.** `https://fitnyx.onrender.com/api/v1/<anything>` returns 401 without a token, even for paths that don't exist (2026-10-19: a "deploy check" polling for 401 passed instantly, before Render had deployed). Check a new endpoint from the app instead (a range or screen the device has never cached, so `cacheGetStale` can't fake it) or with an authenticated request.

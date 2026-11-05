@@ -88,6 +88,7 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
         set_number: payload.setNumber,
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
+        actual_assist_kg: payload.assistKg,
         actual_duration_sec: payload.durationSec,
         actual_distance_m: payload.distanceM,
         rpe: payload.rpe,
@@ -107,18 +108,20 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       } else if (
         now.payload.reps !== payload.reps ||
         now.payload.weightKg !== payload.weightKg ||
+        now.payload.assistKg !== payload.assistKg ||
         now.payload.durationSec !== payload.durationSec ||
         now.payload.distanceM !== payload.distanceM ||
         now.payload.rpe !== payload.rpe
       ) {
         // weight 0 = bodyweight (clears a weight that was set)
         const edit = {
-          reps: now.payload.reps, weightKg: now.payload.weightKg ?? 0,
+          reps: now.payload.reps, weightKg: now.payload.weightKg ?? 0, assistKg: now.payload.assistKg,
           durationSec: now.payload.durationSec, distanceM: now.payload.distanceM, rpe: now.payload.rpe,
         };
         await updateExerciseLog(log.id, {
           actual_reps: edit.reps,
           actual_weight_kg: edit.weightKg,
+          actual_assist_kg: edit.assistKg,
           actual_duration_sec: edit.durationSec,
           actual_distance_m: edit.distanceM,
           rpe: edit.rpe,
@@ -137,6 +140,7 @@ async function processMutation(mutation: OfflineMutation): Promise<void> {
       await updateExerciseLog(logId, {
         actual_reps: payload.reps,
         actual_weight_kg: payload.weightKg,
+        actual_assist_kg: payload.assistKg,
         actual_duration_sec: payload.durationSec,
         actual_distance_m: payload.distanceM,
         rpe: payload.rpe,

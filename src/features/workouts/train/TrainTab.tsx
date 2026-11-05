@@ -2,7 +2,7 @@ import { ContentSkeleton } from '@/src/components/ui/ContentSkeleton';
 import { Entrance } from '@/src/components/ui/Motion';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { usePlan } from '@/src/features/plan/data';
@@ -15,7 +15,6 @@ import { Challenges, FirstVisitChoices, QuickStart, RecentRow, RoutineList } fro
 import { StarterCard } from '@/src/features/workouts/train/StarterCard';
 import { WeekCard } from '@/src/features/workouts/train/WeekCard';
 import { SectionHead } from '@/src/features/workouts/ui/bits';
-import { ExercisePicker } from '@/src/features/workouts/ui/ExercisePicker';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 import { usePrograms, useRoutines } from '@/src/features/workouts/hooks';
 import { useRetentionMetrics } from '@/src/hooks/useRetentionMetrics';
@@ -34,7 +33,6 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
   const programs = usePrograms();
   const schedule = usePlan().data?.schedule;
   const { activeSession, setActiveSession } = useWorkout();
-  const [cardioOpen, setCardioOpen] = useState(false);
 
   const sessions = metrics.sessions ?? [];
   const today = localDateKey(new Date());
@@ -86,7 +84,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
         <FirstVisitChoices onEmpty={() => start()} />
       ) : (
         <>
-          <QuickStart onEmpty={() => (activeSession ? router.push(`/workouts/session/${activeSession.id}`) : start())} onCardio={() => setCardioOpen(true)} />
+          <QuickStart onEmpty={() => (activeSession ? router.push(`/workouts/session/${activeSession.id}`) : start())} onCardio={() => router.push('/cardio')} />
           <Challenges
             monthWorkouts={sessions.filter((s) => s.workout_date.startsWith(month) && s.status === 'completed').length}
             streak={metrics.streakDays}
@@ -125,22 +123,6 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
         </>
       )}
 
-      <ExercisePicker
-        visible={cardioOpen}
-        onClose={() => setCardioOpen(false)}
-        mode="single"
-        title="Choose your cardio"
-        subtitle="Running or walking outside? Use Roam on Home."
-        initialPart="cardio"
-        emptyLabel="Tap a machine to choose it"
-        confirmLabel={(p) => `Start ${p[0].title}`}
-        onConfirm={(p) => {
-          setCardioOpen(false);
-          // Starts an empty workout; the logger opens with the picked machine added.
-          startWorkout({}, { router, setActiveSession }, { addExerciseUuid: p[0].uuid })
-            .catch(() => toast('We couldn’t start the workout. Check your connection and try again.', 'error'));
-        }}
-      />
     </View>
   );
 }

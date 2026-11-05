@@ -90,9 +90,9 @@ export function TrainHero({ routines, trainedToday, program, firstVisit, restDay
   }
   if (program) {
     return (
-      <Hero eyebrow={`${restDay ? 'Up next' : 'Today'} · ${program.title}`} title={program.dayName} subtitle={plural(program.exercises, 'exercise')}>
-        {primary('Start workout', () => go(program.planId, program.dayId), 'hero-start-program')}
-        {quiet('See the exercises first', () => router.push(`/workouts/programs/${program.planId}`))}
+      <Hero eyebrow={`${restDay ? 'Up next' : 'Today'} · ${program.title}`} title={program.dayName} subtitle={program.exercises ? plural(program.exercises, 'exercise') : 'Nothing planned yet. Add exercises as you go.'}>
+        {primary(program.exercises ? 'Start workout' : 'Start and add exercises', () => go(program.planId, program.dayId), 'hero-start-program')}
+        {quiet(program.exercises ? 'See the exercises first' : 'Open the plan', () => router.push(`/workouts/programs/${program.planId}`))}
       </Hero>
     );
   }
