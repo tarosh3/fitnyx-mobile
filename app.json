@@ -87,6 +87,7 @@
       "expo-video",
       "expo-dev-client",
       "./plugins/withNotifeeRepo",
+      "./plugins/withQuietAndroidBlur",
       "./plugins/withNotifIcon",
       "expo-live-activity",
       "./plugins/withWorkoutLiveActivity",
