@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, PlayCircle, Repeat, Trash2 } from 'lucide-react-native';
+import { ArrowDown, ArrowLeftRight, ArrowUp, PlayCircle, Repeat, Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -13,6 +13,7 @@ interface Props {
   canMoveUp: boolean;
   canMoveDown: boolean;
   onHowTo: () => void;
+  onMachineTaken: () => void;
   onSwap: () => void;
   onMove: (d: -1 | 1) => void;
   onRemove: () => void;
@@ -20,7 +21,7 @@ interface Props {
 }
 
 /** ⋯ on an exercise: everything secondary lives here, never in the main path. */
-export function BlockMenuSheet({ visible, name, setsLogged, canMoveUp, canMoveDown, onHowTo, onSwap, onMove, onRemove, onClose }: Props) {
+export function BlockMenuSheet({ visible, name, setsLogged, canMoveUp, canMoveDown, onHowTo, onMachineTaken, onSwap, onMove, onRemove, onClose }: Props) {
   const c = useThemeColors();
   const item = (Icon: typeof PlayCircle, label: string, hint: string | null, onPress: () => void, opts: { danger?: boolean; disabled?: boolean } = {}) => (
     <Pressable onPress={onPress} disabled={opts.disabled} accessibilityRole="button" accessibilityState={{ disabled: !!opts.disabled }}
@@ -37,6 +38,7 @@ export function BlockMenuSheet({ visible, name, setsLogged, canMoveUp, canMoveDo
     <Sheet visible={visible} title={name} onClose={onClose} testID="block-menu">
       <View style={styles.list}>
         {item(PlayCircle, 'How to do it', 'Video and steps', onHowTo)}
+        {item(ArrowLeftRight, 'Machine taken?', setsLogged ? 'Only before you log a set' : 'Same muscles, something else', onMachineTaken, { disabled: setsLogged > 0 })}
         {item(Repeat, 'Swap exercise', setsLogged ? 'Only before you log a set' : 'Pick a different one', onSwap, { disabled: setsLogged > 0 })}
         {item(ArrowUp, 'Move up', 'Or hold the exercise and drag it', () => onMove(-1), { disabled: !canMoveUp })}
         {item(ArrowDown, 'Move down', null, () => onMove(1), { disabled: !canMoveDown })}

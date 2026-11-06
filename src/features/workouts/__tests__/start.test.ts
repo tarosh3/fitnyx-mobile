@@ -33,3 +33,21 @@ it('allows a new start once the previous one failed', async () => {
   expect(offlineStartSession).toHaveBeenCalledTimes(2);
   expect(deps.router.push).toHaveBeenCalledTimes(1);
 });
+
+it('runs beforeOpen for a new workout, before the logger opens', async () => {
+  (offlineStartSession as jest.Mock).mockReset().mockResolvedValueOnce(session);
+  (offlinePauseSession as jest.Mock).mockResolvedValue(session);
+  const order: string[] = [];
+  const deps = { router: { push: jest.fn(() => { order.push('open'); }) } as any, setActiveSession: jest.fn() };
+  await startWorkout({}, deps, { beforeOpen: async (s) => { order.push(`save ${s.id}`); } });
+  expect(order).toEqual(['save s1', 'open']);
+});
+
+it('does not run beforeOpen when joining a workout already open', async () => {
+  (offlineStartSession as jest.Mock).mockReset().mockRejectedValueOnce({ status: 409, data: { session } });
+  const beforeOpen = jest.fn(async () => {});
+  const deps = { router: { push: jest.fn() } as any, setActiveSession: jest.fn() };
+  await startWorkout({}, deps, { beforeOpen });
+  expect(beforeOpen).not.toHaveBeenCalled();
+  expect(deps.router.push).toHaveBeenCalledWith('/workouts/session/s1');
+});

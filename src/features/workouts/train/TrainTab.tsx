@@ -10,6 +10,7 @@ import { isTrainingDay } from '@/src/features/plan/model';
 import { fmtVolume, plural } from '@/src/features/workouts/model';
 import { ProgramCard } from '@/src/features/workouts/programs/ProgramCard';
 import { startWorkout } from '@/src/features/workouts/start';
+import { TodayPickCard } from '@/src/features/workouts/today/TodayPickCard';
 import { TrainHero } from '@/src/features/workouts/train/TrainHero';
 import { Challenges, FirstVisitChoices, QuickStart, RecentRow, RoutineList } from '@/src/features/workouts/train/TrainSections';
 import { StarterCard } from '@/src/features/workouts/train/StarterCard';
@@ -71,6 +72,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
           onError={toast}
         />
       </Entrance>
+      {activeSession ? null : <View style={styles.gapTop}><TodayPickCard testID="train-today-pick" /></View>}
       <View style={styles.gapTop}>
         <WeekCard sessions={sessions} />
       </View>

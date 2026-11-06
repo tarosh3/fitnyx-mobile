@@ -24,6 +24,9 @@ export const cacheKeys = {
   workoutHistory: (userId: string) => `workouts:history:${userId}`,
   workoutSession: (sessionId: string) => `workouts:session:${sessionId}`,
   programs: 'workouts:programs',
+  // What to train today, per local day; the targets of the one started from it.
+  todayWorkout: (userId: string, date: string) => `workouts:today:${userId}:${date}`,
+  todayRun: 'workouts:today-run',
   workoutLiveActivity: 'workouts:live-activity',
   workoutNotificationOpen: 'workouts:notification-open',
   roamActivity: (userId: string, id: string) => `roam:activity:${userId}:${id}`,

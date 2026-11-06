@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type DraftSet, draftToLog, draftToUpdate, trackingOf } from '@/src/features/workouts/model';
 import { type Block, beatsBest, beatsBestAssist, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
+import { plannedForSwap } from '@/src/features/workouts/today/model';
+import { loadTodayRun, saveTodayRun, type TodayRun } from '@/src/features/workouts/today/store';
 import { moveItem } from '@/src/features/workouts/ui/dragOrder';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
@@ -65,6 +67,9 @@ export function useWorkoutLogger(sessionId: string) {
   const [plannedMissing, setPlannedMissing] = useState(false);
   const blocksRef = useRef(blocks);
   blocksRef.current = blocks;
+  /** Started from Today's workout: its targets live on this phone. */
+  const todayRun = useRef<TodayRun | null>(null);
+  const [planTitle, setPlanTitle] = useState<string | null>(null);
 
   const enrich = useCallback((uuid: string) => {
     lastAndBest(uuid)
@@ -95,6 +100,10 @@ export function useWorkoutLogger(sessionId: string) {
           // No status = the network failed; an HTTP error is the server's real answer.
           missing = !cached && !e?.status;
         }
+      } else {
+        todayRun.current = await loadTodayRun(sessionId).catch(() => null);
+        planned = todayRun.current?.items ?? [];
+        setPlanTitle(todayRun.current?.title ?? null);
       }
       setPlannedMissing(missing);
       const plannedIds = new Set(planned.map((p) => p.exercise_uuid));
@@ -131,6 +140,14 @@ export function useWorkoutLogger(sessionId: string) {
     if (!sessionId || !isOfflineId(sessionId) || !liveId || isOfflineId(liveId)) return;
     getIdMapping(sessionId).then((real) => { if (real === liveId) router.setParams({ id: real }); }).catch(() => undefined);
   }, [activeSession?.id, sessionId]);
+
+  // A swap, removal or move has to survive reopening the workout.
+  const plannedOrder = blocks.map((b) => b.planned?.exercise_uuid ?? '').join();
+  useEffect(() => {
+    if (loading || !todayRun.current) return;
+    todayRun.current = { ...todayRun.current, items: blocksRef.current.flatMap((b) => (b.planned ? [b.planned] : [])) };
+    saveTodayRun(todayRun.current).catch(() => undefined);
+  }, [plannedOrder, loading]);
 
   const patch = (bi: number, fn: (b: Block) => Block) => setBlocks((prev) => prev.map((b, i) => (i === bi ? fn(b) : b)));
 
@@ -199,13 +216,17 @@ export function useWorkoutLogger(sessionId: string) {
 
   const removeBlock = (bi: number) => setBlocks((prev) => prev.filter((_, i) => i !== bi));
   const moveBlock = (from: number, to: number) => setBlocks((prev) => moveItem(prev, from, to));
-  const swapBlock = (bi: number, e: Exercise) => {
-    patch(bi, (b) => ({ ...newBlock(e.uuid, null, e, [], bi), key: `${e.uuid}-swap-${b.key}` }));
+  /** `planned` = targets to carry (a suggested replacement). */
+  const swapBlock = (bi: number, e: Exercise, planned?: WorkoutDayExercise) => {
+    patch(bi, (b) => {
+      const row = planned ?? (todayRun.current && b.planned ? plannedForSwap(e, b.planned) : null);
+      return { ...newBlock(e.uuid, row, e, [], bi), key: `${e.uuid}-swap-${b.key}` };
+    });
     enrich(e.uuid);
   };
 
   return {
-    session, setSession, blocks, loading, error, plannedMissing, reload: load,
+    session, setSession, blocks, loading, error, plannedMissing, planTitle, reload: load,
     logPending, setDraft, updateLog, deleteLog, attachLog, addSet, removePending, addExercises, removeBlock, moveBlock, swapBlock,
   };
 }
