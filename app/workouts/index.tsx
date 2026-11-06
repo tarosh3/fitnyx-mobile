@@ -111,14 +111,12 @@ export default function WorkoutsScreen() {
       )}
       {/* Content scrolls under the status bar: fade it out like Home does. */}
       <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
-      <View pointerEvents="none" style={[styles.safeFloor, { height: insets.bottom, backgroundColor: c.background }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  safeFloor: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   grow: { flex: 1, minWidth: 170 },
   largeTitle: { flexBasis: '100%' },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: spacing.md },
