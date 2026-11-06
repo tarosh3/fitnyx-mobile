@@ -1,17 +1,17 @@
-import { Check, Plus, Search } from 'lucide-react-native';
+import { Check, Plus, Search, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { type EquipmentKey, finderMeta } from '@/src/features/workouts/finder';
-import { type Part } from '@/src/features/workouts/model';
+import { type Part, partLabel } from '@/src/features/workouts/model';
 import { CreateExerciseForm } from '@/src/features/workouts/ui/CreateExerciseForm';
 import { ExercisePreview } from '@/src/features/workouts/ui/ExercisePreview';
 import { ExerciseThumb } from '@/src/features/workouts/ui/ExerciseThumb';
 import { FinderChips } from '@/src/features/workouts/ui/FinderChips';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
-import { rankUsage, sortAlphabetical, type UsageSort } from '@/src/features/workouts/usageRank';
+import { focusReason, localFocusPart, rankUsage, sortAlphabetical, type UsageSort } from '@/src/features/workouts/usageRank';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
-import { fetchExercises, fetchExerciseSuggestions, fetchExerciseUsage, type ExerciseUsage } from '@/src/lib/api/exercises';
+import { fetchExercises, fetchExerciseSuggestions, fetchExerciseUsage, type ExerciseUsage, type NextFocus } from '@/src/lib/api/exercises';
 import { cacheGet, cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
 import { useAuth } from '@/src/providers/AuthProvider';
 import type { Exercise } from '@/src/types/exercise';
@@ -30,18 +30,27 @@ interface Props {
   initialPart?: Part | null;
   /** Already in the workout/routine: shown as "Added", not selectable. */
   addedUuids?: string[];
+  /**
+   * What's already in the workout, in order. A leg workout opens on Legs right away;
+   * the server's answer (the user's own habits) can then move it on. Left out when
+   * the picker isn't adding to a workout, or when `initialPart` already decides it (swap).
+   */
+  currentExercises?: Pick<Exercise, 'primary_muscles' | 'tracking_type'>[];
   confirmLabel: (picked: Exercise[]) => string;
   emptyLabel: string;
   onConfirm: (picked: Exercise[]) => void;
 }
 
-export function ExercisePicker({ visible, onClose, mode, title, subtitle, initialPart = null, addedUuids = [], confirmLabel, emptyLabel, onConfirm }: Props) {
+export function ExercisePicker({ visible, onClose, mode, title, subtitle, initialPart = null, addedUuids = [], currentExercises, confirmLabel, emptyLabel, onConfirm }: Props) {
   const c = useThemeColors();
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<UsageSort>('frequent');
   const [usage, setUsage] = useState<ExerciseUsage[]>([]);
   const [suggestions, setSuggestions] = useState<Exercise[]>([]);
+  const [focus, setFocus] = useState<NextFocus | null>(null);
+  // The user picked a part: the suggestion must not take the list away from them.
+  const partTouched = useRef(false);
   const [part, setPart] = useState<Part | null>(initialPart);
   // A muscle within the part (backend muscle-name term) and an equipment group.
   const [muscle, setMuscle] = useState<string | null>(null);
@@ -59,7 +68,9 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     setPicked([]);
     setQuery('');
     setSort('frequent');
-    setPart(initialPart);
+    setPart(initialPart ?? (currentExercises ? localFocusPart(currentExercises) : null));
+    setFocus(null);
+    partTouched.current = false;
     setMuscle(null);
     setEquipment(null);
     setPreview(null);
@@ -93,17 +104,22 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
     };
   }, [visible, user]);
 
-  // "Suggested next": exercises the user usually does alongside what's already
-  // in this workout. Only meaningful mid-workout (addedUuids present).
+  // "Suggested next": the part this workout should move to and the user's exercises
+  // for it. Only meaningful mid-workout (addedUuids present). A swap says the part itself.
   const addedKey = addedUuids.join(',');
   useEffect(() => {
-    if (!visible || !addedUuids.length) {
+    if (!visible || !addedUuids.length || initialPart) {
       setSuggestions([]);
       return;
     }
     let alive = true;
     fetchExerciseSuggestions(addedUuids)
-      .then((s) => { if (alive) setSuggestions(s); })
+      .then((s) => {
+        if (!alive) return;
+        setSuggestions(s.exercises);
+        setFocus(s.focus);
+        if (s.focus && !partTouched.current) { setPart(s.focus.part as Part); setMuscle(null); }
+      })
       .catch(() => { if (alive) setSuggestions([]); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,18 +158,19 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
   // search fall back to the catalog order. Equipment/search narrow explicitly,
   // so usage isn't prepended then.
   // The "Suggested next" strip shows while browsing (no search/filter) mid-workout.
-  const suggestOn = suggestions.length > 0 && !query.trim() && !part && !equipment;
+  const suggestOn = suggestions.length > 0 && !query.trim() && !equipment && !muscle && (!part || part === focus?.part);
+  const reason = focus && !query.trim() && !equipment && part === focus.part ? focusReason(focus, (p) => partLabel(p as Part)) : null;
   const displayed = useMemo<Exercise[]>(() => {
     const suggestIds = suggestOn ? new Set(suggestions.map((e) => e.uuid)) : null;
     const strip = (list: Exercise[]) => (suggestIds ? list.filter((e) => !suggestIds.has(e.uuid)) : list);
-    if (sort === 'frequent' && !query.trim() && !equipment) {
+    if (sort === 'frequent' && !query.trim() && !equipment && !muscle) {
       const ranked = rankUsage(usage, part).map((i) => i.exercise);
       const seen = new Set(ranked.map((e) => e.uuid));
       return strip([...ranked, ...items.filter((e) => !seen.has(e.uuid))]);
     }
     if (sort === 'az') return strip(sortAlphabetical(items));
     return strip(items);
-  }, [sort, query, equipment, usage, part, items, suggestOn, suggestions]);
+  }, [sort, query, equipment, muscle, usage, part, items, suggestOn, suggestions]);
   const toggle = (ex: Exercise) => {
     if (mode === 'single') return setPicked((p) => (p[0]?.uuid === ex.uuid ? [] : [ex]));
     setPicked((p) => (p.some((x) => x.uuid === ex.uuid) ? p.filter((x) => x.uuid !== ex.uuid) : [...p, ex]));
@@ -216,7 +233,7 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
         <TextInput defaultValue={query} onChangeText={setQuery} placeholder="Search by name, muscle or equipment" placeholderTextColor={c.mutedText}
           style={[styles.input, { color: c.text }]} accessibilityLabel="Search exercises" returnKeyType="search" autoCorrect={false} />
       </View>
-      <FinderChips part={part} muscle={muscle} equipment={equipment} onPart={setPart} onMuscle={setMuscle} onEquipment={setEquipment} />
+      <FinderChips part={part} muscle={muscle} equipment={equipment} onPart={(p) => { partTouched.current = true; setPart(p); }} onMuscle={setMuscle} onEquipment={setEquipment} />
       <View style={styles.sortRow}>
         <Text style={[styles.sortLabel, { color: c.mutedText }]}>SORT</Text>
         {(['frequent', 'az'] as UsageSort[]).map((s) => (
@@ -227,6 +244,18 @@ export function ExercisePicker({ visible, onClose, mode, title, subtitle, initia
           </Pressable>
         ))}
       </View>
+      {reason ? (
+        <View testID="picker-reason" style={[styles.reason, { backgroundColor: c.accentSoft }]}>
+          <Sparkles size={16} color={c.accent} />
+          <Text style={[styles.reasonText, { color: c.text }]}>{reason}</Text>
+          {focus?.switched ? (
+            <Pressable testID="picker-stay" onPress={() => { partTouched.current = true; setPart(focus.current_part as Part); setMuscle(null); }} hitSlop={8} accessibilityRole="button"
+              accessibilityLabel={`Stay on ${partLabel(focus.current_part as Part)}`}>
+              <Text style={[styles.stay, { color: c.accent }]}>Stay on {partLabel(focus.current_part as Part).toLowerCase()}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {suggestOn ? (
         <View style={styles.suggestBlock}>
           <Text style={[styles.suggestLabel, { color: c.accent }]}>SUGGESTED NEXT</Text>
@@ -275,6 +304,9 @@ const styles = StyleSheet.create({
   sortLabel: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 1, marginRight: 2 },
   sortChip: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth, minHeight: 34, justifyContent: 'center' },
   sortChipText: { fontFamily: type.weight.semibold, fontSize: 13 },
+  reason: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radii.md, marginTop: spacing.sm },
+  reasonText: { flex: 1, minWidth: 180, fontFamily: type.weight.medium, fontSize: 14, lineHeight: 19 },
+  stay: { fontFamily: type.weight.bold, fontSize: 14, minHeight: 24 },
   suggestBlock: { paddingTop: spacing.sm },
   suggestLabel: { fontFamily: type.weight.bold, fontSize: type.size.micro, letterSpacing: 1, paddingBottom: 2 },
   suggestDivider: { height: StyleSheet.hairlineWidth, marginTop: spacing.sm },

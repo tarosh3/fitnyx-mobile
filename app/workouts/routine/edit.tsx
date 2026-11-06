@@ -26,6 +26,8 @@ function defaultsFor(ex: Exercise): RoutineExerciseInput {
   if (t === 'cardio') return { exercise_uuid: ex.uuid, target_sets: 1, target_duration_sec: 1200 };
   if (t === 'duration') return { exercise_uuid: ex.uuid, target_sets: 3, target_duration_sec: 45 };
   if (t === 'reps') return { exercise_uuid: ex.uuid, target_sets: 3, target_reps: 12 };
+  if (t === 'assisted_reps') return { exercise_uuid: ex.uuid, target_sets: 3, target_reps: 8, target_weight_kg: 20 };
+  if (t === 'weight_distance') return { exercise_uuid: ex.uuid, target_sets: 3, target_distance_m: 20, target_weight_kg: 20 };
   return { exercise_uuid: ex.uuid, target_sets: 3, target_reps: 10, target_weight_kg: 20 };
 }
 
@@ -102,9 +104,13 @@ export default function RoutineEditor() {
   const fields: StepField[] = !current ? [] : t === 'cardio'
     ? [stepFieldsFor.minutes(Math.round((current.target_duration_sec ?? 1200) / 60)), stepFieldsFor.km((current.target_distance_m ?? 0) / 1000)]
     : t === 'duration'
-      ? [stepFieldsFor.sets(current.target_sets ?? 3), stepFieldsFor.holdSec(current.target_duration_sec ?? 45)]
+      ? [stepFieldsFor.sets(current.target_sets ?? 3), stepFieldsFor.holdSec(current.target_duration_sec ?? 45), stepFieldsFor.addKg(current.target_weight_kg ?? 0)]
       : t === 'reps'
         ? [stepFieldsFor.sets(current.target_sets ?? 3), stepFieldsFor.reps(current.target_reps ?? 12), stepFieldsFor.addKg(current.target_weight_kg ?? 0)]
+        : t === 'assisted_reps'
+        ? [stepFieldsFor.sets(current.target_sets ?? 3), stepFieldsFor.reps(current.target_reps ?? 8), stepFieldsFor.assistKg(current.target_weight_kg ?? 20)]
+        : t === 'weight_distance'
+        ? [stepFieldsFor.sets(current.target_sets ?? 3), stepFieldsFor.kg(current.target_weight_kg ?? 20), stepFieldsFor.metres(current.target_distance_m ?? 20)]
         : [stepFieldsFor.sets(current.target_sets ?? 3), stepFieldsFor.reps(current.target_reps ?? 10), stepFieldsFor.kg(current.target_weight_kg ?? 20)];
 
   return (
@@ -175,7 +181,7 @@ export default function RoutineEditor() {
       </BottomBar>
 
       <ExercisePicker visible={pickerOpen} onClose={() => setPickerOpen(false)} mode="multi" title="Add exercises"
-        addedUuids={items.map((i) => i.exercise_uuid)} emptyLabel="Tick the exercises you want"
+        addedUuids={items.map((i) => i.exercise_uuid)} currentExercises={items.flatMap((i) => (i.exercise ? [i.exercise] : []))} emptyLabel="Tick the exercises you want"
         confirmLabel={(p) => `Add ${p.length} exercise${p.length === 1 ? '' : 's'}`}
         onConfirm={(picked) => {
           setItems((p) => [...p, ...picked.slice(0, MAX - p.length).map((ex) => ({ ...defaultsFor(ex), exercise: ex }))]);
@@ -189,9 +195,10 @@ export default function RoutineEditor() {
             ...it,
             target_sets: v.sets ?? it.target_sets,
             target_reps: v.reps ?? it.target_reps,
-            target_weight_kg: v.kg != null ? (v.kg > 0 ? Number(fmtKg(v.kg)) : undefined) : it.target_weight_kg,
+            // An assisted exercise's target weight is its target assistance.
+            target_weight_kg: v.assist != null ? v.assist || undefined : v.kg != null ? (v.kg > 0 ? Number(fmtKg(v.kg)) : undefined) : it.target_weight_kg,
             target_duration_sec: v.sec ?? (v.min != null ? Math.round(v.min * 60) : it.target_duration_sec),
-            target_distance_m: v.km != null ? (v.km > 0 ? Math.round(v.km * 1000) : undefined) : it.target_distance_m,
+            target_distance_m: v.m != null ? Math.round(v.m) : v.km != null ? (v.km > 0 ? Math.round(v.km * 1000) : undefined) : it.target_distance_m,
           })));
           setEditing(null);
         }} />

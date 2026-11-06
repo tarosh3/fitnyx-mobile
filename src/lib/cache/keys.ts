@@ -58,6 +58,10 @@ export const cacheKeys = {
   appNoticeDismissed: (notice: string) => `app-notice:dismissed:${notice}`,
 
   exerciseUsage: (userId: string) => `exercise:usage:${userId}`,
+  // Guided cardio: the run in progress, comfortable settings per machine, past runs.
+  cardioRun: (userId: string) => `cardio:run:${userId}`,
+  cardioComfort: (userId: string) => `cardio:comfort:${userId}`,
+  cardioHistory: (userId: string) => `cardio:history:${userId}`,
   readinessSeries: (userId: string) => `readiness:series:${userId}`,
 } as const;
 

@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { type DraftSet, draftToLog, trackingOf } from '@/src/features/workouts/model';
-import { type Block, beatsBest, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
+import { type DraftSet, draftToLog, draftToUpdate, trackingOf } from '@/src/features/workouts/model';
+import { type Block, beatsBest, beatsBestAssist, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
 import { moveItem } from '@/src/features/workouts/ui/dragOrder';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { fetchExerciseHistory, type ExerciseHistory } from '@/src/lib/api/exercises';
@@ -25,7 +25,7 @@ export interface LoggedResult {
 }
 
 /** Top set of the most recent day and the all-time best, from the history endpoint (cached). */
-async function lastAndBest(uuid: string): Promise<{ last: Partial<DraftSet> | null; bestKg: number | null }> {
+async function lastAndBest(uuid: string): Promise<{ last: Partial<DraftSet> | null; bestKg: number | null; bestAssistKg: number | null }> {
   const key = cacheKeys.exerciseHistory(uuid);
   let hist = await idbGet<ExerciseHistory>(key);
   if (!hist) {
@@ -35,10 +35,11 @@ async function lastAndBest(uuid: string): Promise<{ last: Partial<DraftSet> | nu
   const day = hist?.days?.[hist.days.length - 1];
   let last: Partial<DraftSet> | null = null;
   if (day?.sets?.length) {
-    const top = [...day.sets].sort((a, b) => (b.weight_kg ?? 0) - (a.weight_kg ?? 0) || (b.duration_sec ?? 0) - (a.duration_sec ?? 0) || b.reps - a.reps)[0];
-    last = { reps: top.reps, weightKg: top.weight_kg ?? 0, durationSec: top.duration_sec ?? 0, distanceM: top.distance_m ?? 0 };
+    // The top set: heaviest, or least help on an assisted exercise (assist_kg is only set there).
+    const top = [...day.sets].sort((a, b) => (a.assist_kg ?? 0) - (b.assist_kg ?? 0) || (b.weight_kg ?? 0) - (a.weight_kg ?? 0) || (b.duration_sec ?? 0) - (a.duration_sec ?? 0) || b.reps - a.reps)[0];
+    last = { reps: top.reps, weightKg: top.weight_kg ?? 0, assistKg: top.assist_kg ?? undefined, durationSec: top.duration_sec ?? 0, distanceM: top.distance_m ?? 0 };
   }
-  return { last, bestKg: hist?.summary?.best_weight_kg ?? null };
+  return { last, bestKg: hist?.summary?.best_weight_kg ?? null, bestAssistKg: hist?.summary?.best_assist_kg ?? null };
 }
 
 function newBlock(uuid: string, planned: WorkoutDayExercise | null, exercise: Exercise | null, logs: ExerciseLog[], order: number): Block {
@@ -67,7 +68,7 @@ export function useWorkoutLogger(sessionId: string) {
 
   const enrich = useCallback((uuid: string) => {
     lastAndBest(uuid)
-      .then(({ last, bestKg }) => setBlocks((prev) => prev.map((b) => (b.uuid === uuid ? { ...b, last, bestKg } : b))))
+      .then(({ last, bestKg, bestAssistKg }) => setBlocks((prev) => prev.map((b) => (b.uuid === uuid ? { ...b, last, bestKg, bestAssistKg } : b))))
       .catch(() => undefined);
   }, []);
 
@@ -133,15 +134,19 @@ export function useWorkoutLogger(sessionId: string) {
 
   const patch = (bi: number, fn: (b: Block) => Block) => setBlocks((prev) => prev.map((b, i) => (i === bi ? fn(b) : b)));
 
-  const logPending = async (bi: number, pi: number): Promise<LoggedResult | null> => {
+  /** `actual`: what was really done, when it differs from the row (a timer ran on it). */
+  const logPending = async (bi: number, pi: number, actual?: Partial<DraftSet>): Promise<LoggedResult | null> => {
     const b = blocksRef.current[bi];
     if (!b) return null;
-    const row = pendingRows(b)[pi];
+    const row = { ...pendingRows(b)[pi], ...actual };
+    // A timer cut short is this set only: the row below keeps what it showed, or
+    // every later set would follow the early stop down.
+    const nextRow = actual ? pendingRows(b)[pi + 1] : undefined;
     const t = trackingOf(b.exercise);
     let created = await offlineLogSet(sessionId, { exercise_uuid: b.uuid, set_number: nextSetNumber(b.logs), ...draftToLog(t, row) });
     // The server flags records; a set queued offline has no flag until it syncs, so
     // "New best!" never showed offline. Judge it here; the server rechecks on sync.
-    if (isOfflineId(created.id) && beatsBest(b, created.weight_kg)) {
+    if (isOfflineId(created.id) && (beatsBest(b, created.weight_kg) || beatsBestAssist(b, created.assist_kg))) {
       created = { ...created, is_pr: true };
       markOfflineLogPr(sessionId, created.id).catch(() => undefined);
     }
@@ -149,8 +154,10 @@ export function useWorkoutLogger(sessionId: string) {
       // Later drafts shift up one row; this row's draft is used up.
       const drafts: Record<number, typeof row> = {};
       Object.entries(x.drafts).forEach(([k, v]) => { const n = Number(k); if (n > pi) drafts[n - 1] = v; else if (n < pi) drafts[n] = v; });
+      if (nextRow && !drafts[pi]) drafts[pi] = nextRow;
       const bestKg = created.is_pr && created.weight_kg ? Math.max(x.bestKg ?? 0, created.weight_kg) : x.bestKg;
-      return { ...x, logs: [...x.logs, created], drafts, bestKg, extraRows: extraRowsAfterLog(x) };
+      const bestAssistKg = created.is_pr && created.assist_kg != null ? Math.min(x.bestAssistKg ?? created.assist_kg, created.assist_kg) : x.bestAssistKg;
+      return { ...x, logs: [...x.logs, created], drafts, bestKg, bestAssistKg, extraRows: extraRowsAfterLog(x) };
     });
     const restSec = t === 'cardio' ? null : b.planned?.rest_seconds && b.planned.rest_seconds > 0 ? b.planned.rest_seconds : 90;
     return { log: created, pr: !!created.is_pr, restSec };
@@ -160,20 +167,25 @@ export function useWorkoutLogger(sessionId: string) {
 
   const updateLog = async (bi: number, logId: string, d: DraftSet, rpe?: number | null) => {
     const t = trackingOf(blocksRef.current[bi]?.exercise);
-    const f = draftToLog(t, d);
-    const updated = await offlineUpdateLog(sessionId, logId, {
-      actual_reps: f.actual_reps,
-      actual_weight_kg: 'actual_weight_kg' in f ? f.actual_weight_kg ?? 0 : undefined,
-      actual_duration_sec: 'actual_duration_sec' in f ? f.actual_duration_sec : undefined,
-      actual_distance_m: 'actual_distance_m' in f ? f.actual_distance_m : undefined,
-      rpe: rpe ?? undefined,
-    });
+    const updated = await offlineUpdateLog(sessionId, logId, draftToUpdate(t, d, rpe));
     patch(bi, (b) => ({ ...b, logs: b.logs.map((l) => (l.id === logId ? { ...l, ...updated } : l)) }));
   };
 
   const deleteLog = async (bi: number, logId: string) => {
     await offlineDeleteLog(sessionId, logId);
     patch(bi, (b) => ({ ...b, logs: b.logs.filter((l) => l.id !== logId) }));
+  };
+
+  /** A guided cardio run logged its set elsewhere: show it on its block (added if new). */
+  const attachLog = async (uuid: string, log: ExerciseLog) => {
+    const known = blocksRef.current.some((b) => b.uuid === uuid);
+    const exercise = known ? null : await fetchExerciseWithCache(uuid).catch(() => null);
+    setBlocks((prev) => {
+      const i = prev.findIndex((b) => b.uuid === uuid);
+      if (i < 0) return [...prev, newBlock(uuid, null, exercise, [log], prev.length)];
+      if (prev[i].logs.some((l) => l.id === log.id)) return prev;
+      return prev.map((b, j) => (j !== i ? b : { ...b, logs: [...b.logs, log], extraRows: extraRowsAfterLog(b) }));
+    });
   };
 
   const addSet = (bi: number) => patch(bi, (b) => ({ ...b, extraRows: b.extraRows + 1 }));
@@ -194,6 +206,6 @@ export function useWorkoutLogger(sessionId: string) {
 
   return {
     session, setSession, blocks, loading, error, plannedMissing, reload: load,
-    logPending, setDraft, updateLog, deleteLog, addSet, removePending, addExercises, removeBlock, moveBlock, swapBlock,
+    logPending, setDraft, updateLog, deleteLog, attachLog, addSet, removePending, addExercises, removeBlock, moveBlock, swapBlock,
   };
 }

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 const mockGetDayExercises = jest.fn();
 jest.mock('@/src/lib/api/workoutPlans', () => ({ getDayExercises: (id: string) => mockGetDayExercises(id) }));
@@ -15,6 +15,7 @@ jest.mock('@/src/providers/WorkoutProvider', () => ({ useWorkout: () => ({ activ
 jest.mock('@/src/hooks/useOfflineAware', () => ({ useOfflineAware: () => ({ isOffline: false }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ setParams: jest.fn() }) }));
 
+import { pendingRows } from '../rows';
 import { useWorkoutLogger } from '../useWorkoutLogger';
 
 const bench = { id: 'e1', exercise_uuid: 'bench', target_sets: 3, exercise: { uuid: 'bench', title: 'Bench Press' } };
@@ -55,5 +56,44 @@ describe('planned exercises with a bad connection', () => {
     mockGetDayExercises.mockRejectedValueOnce(Object.assign(new Error('Not found'), { status: 404 }));
     const result = await load();
     expect(result.current.plannedMissing).toBe(false);
+  });
+});
+
+describe('logging a set a timer ran on', () => {
+  const treadmill = { id: 'e2', exercise_uuid: 'tread', target_sets: 1, target_duration_sec: 1200, exercise: { uuid: 'tread', title: 'Treadmill Run', tracking_type: 'cardio' } };
+
+  it('logs the time on the timer, not the planned time', async () => {
+    const { offlineLogSet } = jest.requireMock('@/src/lib/offline/offlineApi') as { offlineLogSet: jest.Mock };
+    offlineLogSet.mockReset();
+    offlineLogSet.mockResolvedValue({ id: 'l1', set_index: 1, exercise_uuid: 'tread', reps: 0, duration_sec: 420 });
+    mockGetDayExercises.mockResolvedValueOnce({ data: [treadmill] });
+    const result = await load();
+
+    await act(async () => { await result.current.logPending(0, 0, { durationSec: 420 }); });
+    expect(offlineLogSet).toHaveBeenCalledWith('s1', expect.objectContaining({ exercise_uuid: 'tread', actual_duration_sec: 420 }));
+  });
+
+  it('an early stop is that set only: later sets keep their target', async () => {
+    const plank = { id: 'e3', exercise_uuid: 'plank', target_sets: 3, target_duration_sec: 60, exercise: { uuid: 'plank', title: 'Plank', tracking_type: 'duration' } };
+    const { offlineLogSet } = jest.requireMock('@/src/lib/offline/offlineApi') as { offlineLogSet: jest.Mock };
+    offlineLogSet.mockReset();
+    offlineLogSet.mockResolvedValue({ id: 'l1', set_index: 1, exercise_uuid: 'plank', reps: 0, duration_sec: 19 });
+    mockGetDayExercises.mockResolvedValueOnce({ data: [plank] });
+    const result = await load();
+
+    await act(async () => { await result.current.logPending(0, 0, { durationSec: 19 }); });
+    expect(offlineLogSet).toHaveBeenCalledWith('s1', expect.objectContaining({ actual_duration_sec: 19 }));
+    expect(pendingRows(result.current.blocks[0]).map((r) => r.durationSec)).toEqual([60, 60]);
+  });
+
+  it('logs the planned time when no timer ran', async () => {
+    const { offlineLogSet } = jest.requireMock('@/src/lib/offline/offlineApi') as { offlineLogSet: jest.Mock };
+    offlineLogSet.mockReset();
+    offlineLogSet.mockResolvedValue({ id: 'l1', set_index: 1, exercise_uuid: 'tread', reps: 0, duration_sec: 1200 });
+    mockGetDayExercises.mockResolvedValueOnce({ data: [treadmill] });
+    const result = await load();
+
+    await act(async () => { await result.current.logPending(0, 0); });
+    expect(offlineLogSet).toHaveBeenCalledWith('s1', expect.objectContaining({ actual_duration_sec: 1200 }));
   });
 });

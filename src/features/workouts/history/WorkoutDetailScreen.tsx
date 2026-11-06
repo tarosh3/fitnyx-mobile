@@ -11,7 +11,7 @@ import { sessionCardData } from '@/src/features/workouts/history/workoutCard';
 import { useRoutines, useWorkoutHistory } from '@/src/features/workouts/hooks';
 import { nextSetNumber } from '@/src/features/workouts/logger/rows';
 import { SetEditorSheet } from '@/src/features/workouts/logger/SetEditorSheet';
-import { type DraftSet, draftToLog, fmtClock, fmtKm, fmtVolume, logToDraft, plural, prefill, trackingOf } from '@/src/features/workouts/model';
+import { type DraftSet, draftToLog, draftToUpdate, fmtClock, fmtKm, fmtVolume, logToDraft, plural, prefill, trackingOf } from '@/src/features/workouts/model';
 import { startWorkout } from '@/src/features/workouts/start';
 import { BottomBar, Button, IconButton, TopBar, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
 import { ExercisePicker } from '@/src/features/workouts/ui/ExercisePicker';
@@ -72,14 +72,7 @@ export function WorkoutDetailScreen() {
     if (!ed) return;
     try {
       if (ed.kind === 'log') {
-        const f = draftToLog(etype, v);
-        const updated = await offlineUpdateLog(sessionId, ed.logId, {
-          actual_reps: f.actual_reps,
-          actual_weight_kg: 'actual_weight_kg' in f ? f.actual_weight_kg ?? 0 : undefined,
-          actual_duration_sec: 'actual_duration_sec' in f ? f.actual_duration_sec : undefined,
-          actual_distance_m: 'actual_distance_m' in f ? f.actual_distance_m : undefined,
-          rpe: rpe ?? undefined,
-        });
+        const updated = await offlineUpdateLog(sessionId, ed.logId, draftToUpdate(etype, v, rpe));
         d.setLogs((prev) => prev.map((l) => (l.id === ed.logId ? { ...l, ...updated } : l)));
         toast('Set updated');
       } else {

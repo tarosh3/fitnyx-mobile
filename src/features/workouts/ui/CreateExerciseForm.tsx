@@ -14,6 +14,8 @@ const TRACKING: { value: TrackingType; label: string }[] = [
   { value: 'weight_reps', label: 'Weight × reps' },
   { value: 'reps', label: 'Reps only' },
   { value: 'duration', label: 'Time' },
+  { value: 'assisted_reps', label: 'Assisted × reps' },
+  { value: 'weight_distance', label: 'Weight × distance' },
   { value: 'cardio', label: 'Cardio' },
 ];
 

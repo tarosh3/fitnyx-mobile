@@ -27,10 +27,11 @@ export function targetsFromBlock(b: Block): RoutineExerciseInput {
   return {
     exercise_uuid: b.uuid,
     target_sets: b.logs.length,
-    target_reps: t === 'weight_reps' || t === 'reps' ? first.reps : undefined,
-    target_weight_kg: first.weightKg > 0 ? first.weightKg : undefined,
+    target_reps: t === 'weight_reps' || t === 'reps' || t === 'assisted_reps' ? first.reps : undefined,
+    // An assisted exercise's target weight is its target assistance.
+    target_weight_kg: t === 'assisted_reps' ? first.assistKg || undefined : first.weightKg > 0 ? first.weightKg : undefined,
     target_duration_sec: t === 'duration' || t === 'cardio' ? first.durationSec : undefined,
-    target_distance_m: t === 'cardio' && first.distanceM > 0 ? first.distanceM : undefined,
+    target_distance_m: (t === 'cardio' || t === 'weight_distance') && first.distanceM > 0 ? first.distanceM : undefined,
   };
 }
 

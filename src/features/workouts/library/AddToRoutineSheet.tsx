@@ -18,7 +18,8 @@ export function defaultTargets(ex: Exercise): RoutineExerciseInput {
   const t = trackingOf(ex);
   if (t === 'cardio') return { exercise_uuid: ex.uuid, target_sets: 1, target_duration_sec: 20 * 60 };
   if (t === 'duration') return { exercise_uuid: ex.uuid, target_sets: 3, target_duration_sec: 45 };
-  return { exercise_uuid: ex.uuid, target_sets: 3, target_reps: t === 'reps' ? 12 : 10 };
+  if (t === 'weight_distance') return { exercise_uuid: ex.uuid, target_sets: 3, target_distance_m: 20 };
+  return { exercise_uuid: ex.uuid, target_sets: 3, target_reps: t === 'reps' ? 12 : t === 'assisted_reps' ? 8 : 10 };
 }
 
 export function AddToRoutineSheet({ visible, exercise, onStart, onClose }: { visible: boolean; exercise: Exercise; onStart: () => void; onClose: () => void }) {

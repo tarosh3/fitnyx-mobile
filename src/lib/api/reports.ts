@@ -9,6 +9,7 @@ export interface ReportSet {
   set_index: number;
   reps: number;
   weight_kg: number | null;
+  assist_kg?: number | null;
   duration_sec: number | null;
   distance_m: number | null;
   rest_sec: number | null;

@@ -1,4 +1,4 @@
-import { fmtClock, fmtKg, fmtKm } from '@/src/features/workouts/model';
+import { fmtClock, fmtKg, fmtKm, fmtMetres } from '@/src/features/workouts/model';
 import type { ExerciseHistory, ExerciseHistorySet } from '@/src/lib/api/exercises';
 import type { TrackingType } from '@/src/types/exercise';
 
@@ -10,7 +10,7 @@ export function howToSteps(text: string | undefined | null): string[] {
   return text.replace(/([.!?])\s*(?=[A-Z])/g, '$1\n').split('\n').map((s) => s.trim()).filter(Boolean);
 }
 
-export const asLog = (s: ExerciseHistorySet) => ({ reps: s.reps, weight_kg: s.weight_kg ?? undefined, duration_sec: s.duration_sec ?? undefined, distance_m: s.distance_m ?? undefined });
+export const asLog = (s: ExerciseHistorySet) => ({ reps: s.reps, weight_kg: s.weight_kg ?? undefined, assist_kg: s.assist_kg, duration_sec: s.duration_sec ?? undefined, distance_m: s.distance_m ?? undefined });
 
 export function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
@@ -23,7 +23,15 @@ export function progressStats(t: TrackingType, h: ExerciseHistory): { label: str
   const max = (f: (s: ExerciseHistorySet) => number) => sets.reduce((m, s) => Math.max(m, f(s)), 0);
   const sessions = { label: 'Workouts', value: String(h.summary.total_sessions || h.days.length) };
   if (t === 'cardio') return [{ label: 'Longest', value: `${Math.round(max((s) => s.duration_sec ?? 0) / 60)} min` }, { label: 'Farthest', value: `${fmtKm(max((s) => s.distance_m ?? 0))} km` }, sessions];
-  if (t === 'duration') return [{ label: 'Longest hold', value: fmtClock(max((s) => s.duration_sec ?? 0)) }, sessions];
+  if (t === 'duration') {
+    const heaviest = max((s) => s.weight_kg ?? 0);
+    return [{ label: 'Longest hold', value: fmtClock(max((s) => s.duration_sec ?? 0)) }, ...(heaviest ? [{ label: 'Most weight', value: `${fmtKg(heaviest)} kg` }] : []), sessions];
+  }
+  if (t === 'assisted_reps') {
+    const least = h.summary.best_assist_kg;
+    return [{ label: 'Least help', value: least != null ? `${fmtKg(least)} kg` : '—' }, { label: 'Most reps', value: String(max((s) => s.reps)) }, sessions];
+  }
+  if (t === 'weight_distance') return [{ label: 'Best', value: h.summary.best_weight_kg != null ? `${fmtKg(h.summary.best_weight_kg)} kg` : '—' }, { label: 'Farthest', value: fmtMetres(max((s) => s.distance_m ?? 0)) }, sessions];
   if (t === 'reps') return [{ label: 'Most reps', value: String(max((s) => s.reps)) }, sessions];
   return [
     { label: 'Best', value: h.summary.best_weight_kg != null ? `${fmtKg(h.summary.best_weight_kg)} kg` : '—' },

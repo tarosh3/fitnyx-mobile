@@ -47,12 +47,31 @@ export async function fetchExerciseUsage(): Promise<ExerciseUsage[]> {
   return res?.data ?? [];
 }
 
-/** Exercises the user usually does alongside the given ones, most-paired first. */
-export async function fetchExerciseSuggestions(current: string[]): Promise<Exercise[]> {
-  if (!current.length) return [];
+/** The body part to train next, learned from the order of the user's own workouts (backend `nextup.Focus`). */
+export interface NextFocus {
+  /** Part being trained now, and how many exercises of it in a row so far. */
+  current_part: string;
+  streak: number;
+  /** Part to suggest; differs from current_part only on a learned habit. */
+  part: string;
+  switched: boolean;
+  /** `seen` of `of` past workouts that carried on from this point did this. */
+  seen: number;
+  of: number;
+}
+
+export interface NextSuggestions {
+  exercises: Exercise[];
+  /** Null when the workout has no strength exercise yet. */
+  focus: NextFocus | null;
+}
+
+/** What to do after the given exercises (in workout order). */
+export async function fetchExerciseSuggestions(current: string[]): Promise<NextSuggestions> {
+  if (!current.length) return { exercises: [], focus: null };
   const q = new URLSearchParams({ current: current.join(',') });
-  const res = (await fetchWithAuth(`/exercises/suggestions?${q.toString()}`)) as { data?: Exercise[] };
-  return res?.data ?? [];
+  const res = (await fetchWithAuth(`/exercises/suggestions?${q.toString()}`)) as { data?: Exercise[]; focus?: NextFocus | null };
+  return { exercises: res?.data ?? [], focus: res?.focus ?? null };
 }
 
 // --- Custom exercises (one user's own; backend caps active ones at MAX_CUSTOM_EXERCISES) ---
@@ -89,6 +108,7 @@ export interface ExerciseHistorySet {
   set_index: number;
   reps: number;
   weight_kg: number | null;
+  assist_kg?: number | null;
   rpe?: number | null;
   /** Timed holds and cardio (servers from 2026-10-14 on). */
   duration_sec?: number | null;
@@ -106,6 +126,8 @@ export interface ExerciseHistoryDay {
 
 export interface ExerciseHistorySummary {
   best_weight_kg: number | null;
+  /** Least help ever taken on an assisted exercise. */
+  best_assist_kg?: number | null;
   best_est_1rm_kg: number | null;
   total_sessions: number;
   last_performed: string;

@@ -100,6 +100,11 @@ export function fmtKm(metres: number): string {
   return (Math.round(metres / 100) / 10).toString();
 }
 
+/** Metres for a carry or sled set: 40 → "40 m", 1250 → "1.25 km". */
+export function fmtMetres(metres: number): string {
+  return metres >= 1000 ? `${Math.round(metres / 10) / 100} km` : `${Math.round(metres)} m`;
+}
+
 export function fmtVolume(kg: number): string {
   return Math.round(kg).toLocaleString('en-US');
 }
@@ -114,19 +119,27 @@ export function describeTarget(t: TrackingType, it: Pick<WorkoutDayExercise, 'ta
     const parts = [min ? `${min} min` : null, it.target_distance_m ? `${fmtKm(it.target_distance_m)} km` : null].filter(Boolean);
     return parts.length ? parts.join(' · ') : 'Your pace';
   }
-  if (t === 'duration') return `${sets} × ${fmtClock(it.target_duration_sec ?? 45)}`;
+  if (t === 'duration') return `${sets} × ${fmtClock(it.target_duration_sec ?? 45)}${it.target_weight_kg ? ` · +${fmtKg(it.target_weight_kg)} kg` : ''}`;
+  if (t === 'weight_distance') return `${sets} × ${fmtMetres(it.target_distance_m ?? 20)}${it.target_weight_kg ? ` · ${fmtKg(it.target_weight_kg)} kg` : ''}`;
   const reps = it.target_reps ?? 10;
+  if (t === 'assisted_reps') return `${sets} × ${reps}${it.target_weight_kg ? ` · ${fmtKg(it.target_weight_kg)} kg help` : ''}`;
   if (t === 'reps') return `${sets} × ${reps}${it.target_weight_kg ? ` · +${fmtKg(it.target_weight_kg)} kg` : ''}`;
   return `${sets} × ${reps}${it.target_weight_kg ? ` · ${fmtKg(it.target_weight_kg)} kg` : ''}`;
 }
 
-/** One logged set in words: "60 kg × 10", "20 reps", "0:45", "20 min · 3.1 km". */
-export function describeSet(t: TrackingType, s: Pick<ExerciseLog, 'reps' | 'weight_kg' | 'duration_sec' | 'distance_m'>): string {
+/** Minutes when whole ("20 min"), else the clock ("21:35") — a guided run rarely ends on the minute. */
+export function fmtCardioTime(sec: number): string {
+  return sec % 60 === 0 ? `${sec / 60} min` : fmtClock(sec);
+}
+
+/** One logged set in words: "60 kg × 10", "20 reps", "0:45 hold · +10 kg", "20 min · 3.1 km", "30 kg help × 8". */
+export function describeSet(t: TrackingType, s: Pick<ExerciseLog, 'reps' | 'weight_kg' | 'duration_sec' | 'distance_m'> & { assist_kg?: number | null }): string {
   if (t === 'cardio') {
-    const min = Math.round((s.duration_sec ?? 0) / 60);
-    return [`${min} min`, s.distance_m ? `${fmtKm(s.distance_m)} km` : null].filter(Boolean).join(' · ');
+    return [fmtCardioTime(s.duration_sec ?? 0), s.distance_m ? `${fmtKm(s.distance_m)} km` : null].filter(Boolean).join(' · ');
   }
-  if (t === 'duration') return `${fmtClock(s.duration_sec ?? 0)} hold`;
+  if (t === 'duration') return `${fmtClock(s.duration_sec ?? 0)} hold${s.weight_kg ? ` · +${fmtKg(s.weight_kg)} kg` : ''}`;
+  if (t === 'assisted_reps') return s.assist_kg ? `${fmtKg(s.assist_kg)} kg help × ${s.reps}` : `No help × ${s.reps}`;
+  if (t === 'weight_distance') return `${fmtKg(s.weight_kg ?? 0)} kg · ${fmtMetres(s.distance_m ?? 0)}`;
   if (t === 'reps') return `${s.reps} reps${s.weight_kg ? ` · +${fmtKg(s.weight_kg)} kg` : ''}`;
   return `${fmtKg(s.weight_kg ?? 0)} kg × ${s.reps}`;
 }
@@ -137,6 +150,8 @@ export function describeSet(t: TrackingType, s: Pick<ExerciseLog, 'reps' | 'weig
 export interface DraftSet {
   reps: number;
   weightKg: number; // 0 = bodyweight / no load
+  /** Help on an assisted exercise (kg); 0 = no help. Other types ignore it. */
+  assistKg: number;
   durationSec: number;
   distanceM: number;
 }
@@ -155,23 +170,65 @@ export function prefill(
   const pick = <T,>(...v: (T | null | undefined)[]) => v.find((x) => x != null && (typeof x !== 'number' || x > 0)) as T | undefined;
   const base = previousThisWorkout ?? {};
   const last = lastTime ?? {};
+  // 0 is a real assistance value (no help), so it isn't skipped like an empty weight.
+  // A routine's target weight on an assisted exercise is its target assistance.
+  const assistKg = base.assistKg ?? (t === 'assisted_reps' && target?.target_weight_kg ? target.target_weight_kg : null) ?? last.assistKg ?? 20;
   return {
-    reps: pick(base.reps, target?.target_reps, last.reps) ?? (t === 'reps' ? 12 : 10),
-    weightKg: pick(base.weightKg, target?.target_weight_kg, last.weightKg) ?? (t === 'weight_reps' ? 20 : 0),
+    reps: pick(base.reps, target?.target_reps, last.reps) ?? (t === 'reps' ? 12 : t === 'assisted_reps' ? 8 : 10),
+    weightKg: t === 'assisted_reps' ? 0 : pick(base.weightKg, target?.target_weight_kg, last.weightKg) ?? (t === 'weight_reps' || t === 'weight_distance' ? 20 : 0),
+    assistKg: t === 'assisted_reps' ? assistKg : 0,
     durationSec: pick(base.durationSec, target?.target_duration_sec, last.durationSec) ?? (t === 'cardio' ? 20 * 60 : 45),
-    distanceM: pick(base.distanceM, target?.target_distance_m, last.distanceM) ?? 0,
+    distanceM: pick(base.distanceM, target?.target_distance_m, last.distanceM) ?? (t === 'weight_distance' ? 20 : 0),
   };
 }
 
 /** Converts a draft into the logging API fields for its tracking type. */
 export function draftToLog(t: TrackingType, d: DraftSet) {
   if (t === 'cardio') return { actual_reps: 0, actual_duration_sec: d.durationSec, actual_distance_m: d.distanceM || undefined };
-  if (t === 'duration') return { actual_reps: 0, actual_duration_sec: d.durationSec };
+  if (t === 'duration') return { actual_reps: 0, actual_duration_sec: d.durationSec, actual_weight_kg: d.weightKg > 0 ? d.weightKg : undefined };
+  if (t === 'assisted_reps') return { actual_reps: d.reps, actual_assist_kg: d.assistKg };
+  if (t === 'weight_distance') return { actual_reps: 0, actual_weight_kg: d.weightKg > 0 ? d.weightKg : undefined, actual_distance_m: d.distanceM || undefined };
   return { actual_reps: d.reps, actual_weight_kg: d.weightKg > 0 ? d.weightKg : undefined };
 }
 
-export function logToDraft(l: Pick<ExerciseLog, 'reps' | 'weight_kg' | 'duration_sec' | 'distance_m'>): DraftSet {
-  return { reps: l.reps, weightKg: l.weight_kg ?? 0, durationSec: l.duration_sec ?? 0, distanceM: l.distance_m ?? 0 };
+/**
+ * The API fields to change a logged set. The one place this is worked out: the logger
+ * and the history screen each had their own copy, and history's forgot assistance.
+ */
+export function draftToUpdate(t: TrackingType, d: DraftSet, rpe?: number | null) {
+  const f = draftToLog(t, d);
+  return {
+    actual_reps: f.actual_reps,
+    // 0 clears a weight that was set (bodyweight).
+    actual_weight_kg: 'actual_weight_kg' in f ? f.actual_weight_kg ?? 0 : undefined,
+    actual_assist_kg: 'actual_assist_kg' in f ? f.actual_assist_kg : undefined,
+    actual_duration_sec: 'actual_duration_sec' in f ? f.actual_duration_sec : undefined,
+    actual_distance_m: 'actual_distance_m' in f ? f.actual_distance_m : undefined,
+    rpe: rpe ?? undefined,
+  };
+}
+
+export function logToDraft(l: Pick<ExerciseLog, 'reps' | 'weight_kg' | 'duration_sec' | 'distance_m'> & { assist_kg?: number | null }): DraftSet {
+  return { reps: l.reps, weightKg: l.weight_kg ?? 0, assistKg: l.assist_kg ?? 0, durationSec: l.duration_sec ?? 0, distanceM: l.distance_m ?? 0 };
+}
+
+/**
+ * The smallest step up from last time, as something to aim for today: one more rep,
+ * a little less help, a few more seconds. Null with nothing to beat.
+ */
+export function beatLastHint(t: TrackingType, last: Partial<DraftSet> | null): string | null {
+  if (!last) return null;
+  const { reps = 0, weightKg = 0, durationSec = 0, distanceM = 0 } = last;
+  if (t === 'cardio') return distanceM > 0 ? `${fmtKm(distanceM + 100)} km` : durationSec > 0 ? `${Math.round(durationSec / 60) + 1} min` : null;
+  if (t === 'duration') return durationSec > 0 ? `${fmtClock(durationSec + 5)} hold${weightKg ? ` · +${fmtKg(weightKg)} kg` : ''}` : null;
+  if (t === 'weight_distance') return distanceM > 0 ? `${fmtKg(weightKg)} kg · ${fmtMetres(distanceM + 5)}` : null;
+  if (t === 'assisted_reps') {
+    if (!reps) return null;
+    return last.assistKg ? `${fmtKg(Math.max(0, last.assistKg - 2.5))} kg help × ${reps}` : `No help × ${reps + 1}`;
+  }
+  if (!reps) return null;
+  if (t === 'reps') return `${reps + 1} reps${weightKg ? ` · +${fmtKg(weightKg)} kg` : ''}`;
+  return weightKg > 0 ? `${fmtKg(weightKg)} kg × ${reps + 1}` : null;
 }
 
 // ---------- workout summary ----------

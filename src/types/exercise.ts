@@ -17,7 +17,13 @@ export interface RelatedExercise {
 }
 
 /** How a set of this exercise is measured (backend `exercises.tracking_type`). */
-export type TrackingType = 'weight_reps' | 'reps' | 'duration' | 'cardio';
+export type TrackingType =
+  | 'weight_reps'
+  | 'reps' // bodyweight, optional extra weight
+  | 'duration' // timed hold, optional extra weight (weighted plank)
+  | 'cardio' // time + distance
+  | 'assisted_reps' // assistance kg + reps; less help is better
+  | 'weight_distance'; // kg + metres (sled, carries)
 
 export interface Exercise {
   id: number;

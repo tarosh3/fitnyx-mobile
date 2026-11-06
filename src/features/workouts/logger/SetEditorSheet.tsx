@@ -19,14 +19,22 @@ const EFFORT = [
 
 export function fieldsFor(t: TrackingType, d: DraftSet): StepField[] {
   if (t === 'cardio') return [stepFieldsFor.minutes(Math.max(1, Math.round(d.durationSec / 60))), stepFieldsFor.km(Math.round(d.distanceM / 100) / 10)];
-  if (t === 'duration') return [{ ...stepFieldsFor.holdSec(d.durationSec || 45), display: (v) => `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, '0')}` }];
+  if (t === 'duration') return [{ ...stepFieldsFor.holdSec(d.durationSec || 45), display: (v) => `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, '0')}` }, stepFieldsFor.addKg(d.weightKg)];
+  if (t === 'assisted_reps') return [stepFieldsFor.assistKg(d.assistKg), stepFieldsFor.reps(d.reps)];
+  if (t === 'weight_distance') return [stepFieldsFor.kg(d.weightKg), stepFieldsFor.metres(d.distanceM || 20)];
   if (t === 'reps') return [stepFieldsFor.reps(d.reps), stepFieldsFor.addKg(d.weightKg)];
   return [stepFieldsFor.kg(d.weightKg), stepFieldsFor.reps(d.reps)];
 }
 
 export function draftFrom(t: TrackingType, base: DraftSet, v: Record<string, number>): DraftSet {
-  if (t === 'cardio') return { ...base, durationSec: Math.round((v.min ?? 0) * 60), distanceM: Math.round((v.km ?? 0) * 1000) };
-  if (t === 'duration') return { ...base, durationSec: Math.round(v.sec ?? base.durationSec) };
+  if (t === 'cardio') {
+    // The field is whole minutes: leave a timed 21:35 alone unless the minutes were changed.
+    const sameMinutes = Math.round(v.min ?? 0) === Math.max(1, Math.round(base.durationSec / 60));
+    return { ...base, durationSec: sameMinutes ? base.durationSec : Math.round((v.min ?? 0) * 60), distanceM: Math.round((v.km ?? 0) * 1000) };
+  }
+  if (t === 'duration') return { ...base, durationSec: Math.round(v.sec ?? base.durationSec), weightKg: v.kg ?? base.weightKg };
+  if (t === 'assisted_reps') return { ...base, reps: Math.round(v.reps ?? base.reps), assistKg: v.assist ?? base.assistKg };
+  if (t === 'weight_distance') return { ...base, weightKg: v.kg ?? base.weightKg, distanceM: Math.round(v.m ?? base.distanceM) };
   return { ...base, reps: Math.round(v.reps ?? base.reps), weightKg: v.kg ?? base.weightKg };
 }
 
@@ -41,19 +49,20 @@ interface Props {
   rpe?: number | null;
   /** False for a brand-new set: the sheet then has only Save (and ✕). */
   canDelete?: boolean;
+  saveLabel?: string;
   onSave: (d: DraftSet, rpe: number | null) => void;
   onDelete: () => void;
   onClose: () => void;
 }
 
-export function SetEditorSheet({ visible, title, subtitle, t, value, logged, rpe: initialRpe, canDelete = true, onSave, onDelete, onClose }: Props) {
+export function SetEditorSheet({ visible, title, subtitle, t, value, logged, rpe: initialRpe, canDelete = true, saveLabel, onSave, onDelete, onClose }: Props) {
   const c = useThemeColors();
   const [rpe, setRpe] = useState<number | null>(initialRpe ?? null);
   useEffect(() => { if (visible) setRpe(initialRpe ?? null); }, [visible]);
 
   return (
     <StepperSheet visible={visible} title={title} subtitle={subtitle} fields={fieldsFor(t, value)}
-      saveLabel={logged ? 'Save changes' : 'Done'} onClose={onClose}
+      saveLabel={saveLabel ?? (logged ? 'Save changes' : 'Done')} onClose={onClose}
       onSave={(v) => onSave(draftFrom(t, value, v), rpe)}
       secondary={canDelete ? <Button variant="danger" title={logged ? 'Delete this set' : 'Remove a set'} onPress={onDelete} /> : undefined}>
       {logged ? (

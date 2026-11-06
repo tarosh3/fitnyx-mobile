@@ -44,6 +44,8 @@ export interface ExerciseLog {
   set_index: number;
   reps: number;
   weight_kg?: number;
+  /** Help taken on an assisted exercise (0 = none). Less is better; never counts as volume. */
+  assist_kg?: number;
   /** Length of a timed hold or cardio set. (Before 2026-10 this held rest time.) */
   duration_sec?: number;
   rest_sec?: number;
@@ -71,6 +73,7 @@ export interface LogExerciseInput {
   set_number: number;
   actual_reps: number;
   actual_weight_kg?: number;
+  actual_assist_kg?: number;
   actual_rest_seconds?: number;
   /** Timed hold / cardio set length. */
   actual_duration_sec?: number;

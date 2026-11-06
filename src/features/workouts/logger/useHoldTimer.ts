@@ -4,18 +4,24 @@ import type { HoldTimer } from '@/src/features/workouts/logger/ExerciseBlock';
 import { haptic } from '@/src/lib/haptics';
 
 /**
- * Countdown for a timed hold (plank…) on one set row. Runs from an end time,
- * so it stays right if the screen sleeps. Calls onFinish(bi, pi) at 0.
+ * Clock on one set row, worked out from the wall clock so it stays right if the
+ * screen sleeps. A hold (plank…) counts down and calls onFinish(bi, pi) at 0.
+ * With `up` (cardio) it counts up until stopped: `left` is then the seconds so far.
  */
 export function useHoldTimer(onFinish: (bi: number, pi: number) => void) {
   const [hold, setHold] = useState<HoldTimer | null>(null);
   const endAt = useRef(0);
+  const up = useRef(false);
   const finishRef = useRef(onFinish);
   finishRef.current = onFinish;
 
   useEffect(() => {
     if (!hold) return;
     const id = setInterval(() => {
+      if (up.current) {
+        setHold((h) => (h ? { ...h, left: Math.floor((Date.now() - endAt.current) / 1000) } : h));
+        return;
+      }
       const left = Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000));
       if (left === 0) {
         clearInterval(id);
@@ -29,15 +35,16 @@ export function useHoldTimer(onFinish: (bi: number, pi: number) => void) {
     return () => clearInterval(id);
   }, [hold?.bi, hold?.pi]);
 
-  const start = (bi: number, pi: number, seconds: number) => {
-    endAt.current = Date.now() + seconds * 1000;
+  const start = (bi: number, pi: number, seconds: number, opts?: { up?: boolean }) => {
+    up.current = !!opts?.up;
+    endAt.current = up.current ? Date.now() : Date.now() + seconds * 1000;
     haptic.medium();
-    setHold({ bi, pi, left: seconds });
+    setHold({ bi, pi, left: up.current ? 0 : seconds });
   };
 
   /** Stops early; returns the seconds held so far. */
   const stop = (total: number): number => {
-    const held = hold ? total - hold.left : 0;
+    const held = !hold ? 0 : up.current ? hold.left : total - hold.left;
     setHold(null);
     return Math.max(0, held);
   };

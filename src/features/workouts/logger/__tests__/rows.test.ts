@@ -24,7 +24,7 @@ describe('logger rows', () => {
   });
 
   it('carries an edited row down to the rows below it', () => {
-    const rows = pendingRows(block({ drafts: { 0: { reps: 12, weightKg: 50, durationSec: 0, distanceM: 0 } } }));
+    const rows = pendingRows(block({ drafts: { 0: { reps: 12, weightKg: 50, assistKg: 0, durationSec: 0, distanceM: 0 } } }));
     expect(rows[1]).toMatchObject({ reps: 12, weightKg: 50 });
   });
 

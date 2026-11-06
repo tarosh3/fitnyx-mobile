@@ -1,12 +1,15 @@
 import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { useWorkoutDetails, updateWorkoutDetails, loadWorkoutDetails } from '@/src/lib/workoutActivityDetails';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Plus, Timer, WifiOff } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Plus, Timer, WifiOff, Zap } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { machineForExercise } from '@/src/features/cardio/machines';
+import { logRun, MIN_SAVE_SEC, runResult } from '@/src/features/cardio/finish';
+import { clearRun, loadRun, type RunState, takeFinishedLog } from '@/src/features/cardio/store';
 import { useRoutines } from '@/src/features/workouts/hooks';
 import { BlockMenuSheet } from '@/src/features/workouts/logger/BlockMenuSheet';
 import { ExerciseBlock } from '@/src/features/workouts/logger/ExerciseBlock';
@@ -20,7 +23,7 @@ import { SetEditorSheet } from '@/src/features/workouts/logger/SetEditorSheet';
 import { useHoldTimer } from '@/src/features/workouts/logger/useHoldTimer';
 import { useWorkoutLogger } from '@/src/features/workouts/logger/useWorkoutLogger';
 import { useNotificationWorkoutAction } from '@/src/features/workouts/logger/useNotificationWorkoutAction';
-import { type DraftSet, describeSet, logToDraft, trackingOf } from '@/src/features/workouts/model';
+import { type DraftSet, describeSet, fmtClock, logToDraft, partOf, trackingOf } from '@/src/features/workouts/model';
 import { isReady } from '@/src/features/workouts/start';
 import { Button } from '@/src/features/workouts/ui/Chrome';
 import { DragItem, useDragList } from '@/src/features/workouts/ui/DragList';
@@ -33,12 +36,14 @@ import { haptic } from '@/src/lib/haptics';
 import { updateRoutine } from '@/src/lib/api/routines';
 import { fetchExerciseWithCache } from '@/src/lib/offline/exerciseCache';
 import { offlineAbandonSession, offlineFinishSession } from '@/src/lib/offline/offlineApi';
+import { useAuth } from '@/src/providers/AuthProvider';
 import { useWorkout, useWorkoutTimer } from '@/src/providers/WorkoutProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
-type Editor = { bi: number; kind: 'pending'; pi: number } | { bi: number; kind: 'log'; logId: string };
+/** `logOnSave`: the row was ticked with its stopwatch running; saving the distance logs the set. */
+type Editor = { bi: number; kind: 'pending'; pi: number; logOnSave?: boolean } | { bi: number; kind: 'log'; logId: string };
 
-const asLog = (d: DraftSet) => ({ reps: d.reps, weight_kg: d.weightKg, duration_sec: d.durationSec, distance_m: d.distanceM });
+const asLog = (d: DraftSet) => ({ reps: d.reps, weight_kg: d.weightKg, assist_kg: d.assistKg, duration_sec: d.durationSec, distance_m: d.distanceM });
 
 /** The live workout: one exercise open at a time, ✓ to log a set. */
 export function LoggerScreen() {
@@ -49,6 +54,7 @@ export function LoggerScreen() {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const { isOffline } = useOfflineAware();
+  const { user } = useAuth();
   const { activeSession, pauseActiveSession, resumeActiveSession, finishActiveSession, abandonActiveSession } = useWorkout();
   const { elapsedTime } = useWorkoutTimer();
   const lg = useWorkoutLogger(sessionId);
@@ -69,6 +75,7 @@ export function LoggerScreen() {
   const [busy, setBusy] = useState(false);
   const logging = useRef(new Set<string>());
   const leaving = useRef(false);
+  const [runningCardio, setRunningCardio] = useState<RunState | null>(null);
   const positions = useRef<Record<number, number>>({});
 
   const live = activeSession && lg.session && activeSession.id === lg.session.id ? activeSession : lg.session;
@@ -92,6 +99,13 @@ export function LoggerScreen() {
   useEffect(() => {
     if (!leaving.current && live && ['completed', 'abandoned'].includes(live.status)) router.replace(`/workouts/history/${live.id}`);
   }, [live?.status]);
+
+  // Back from a guided run: show the set it logged, and whether one is still going.
+  useFocusEffect(useCallback(() => {
+    const done = takeFinishedLog();
+    if (done) lg.attachLog(done.exercise_uuid, done).catch(() => undefined);
+    if (user) loadRun(user.id).then(setRunningCardio).catch(() => undefined);
+  }, [user?.id]));
 
   // ?add=<exercise>: Quick start → Cardio, or "Add to current workout" on an exercise page.
   const handledAdd = useRef<string | null>(null);
@@ -123,16 +137,31 @@ export function LoggerScreen() {
     toast('Paused — tap ▶ to carry on');
   };
 
-  const checkPending = async (bi: number, pi: number) => {
+  /** `values`: what to log instead of the row's own values (they came from the editor just now). */
+  const checkPending = async (bi: number, pi: number, values?: DraftSet) => {
     const b = blocks[bi];
+    // ✓ on a running cardio stopwatch: the time is known, the distance isn't. Last
+    // time's distance would go in unseen (an 8-second run logged 3 km), so ask first.
+    if (b && hold.hold?.bi === bi && hold.hold.pi === pi && trackingOf(b.exercise) === 'cardio') {
+      const row = pendingRows(b)[pi];
+      const held = hold.stop(row.durationSec);
+      lg.setDraft(bi, pi, { ...row, durationSec: held > 0 ? held : row.durationSec, distanceM: 0 });
+      setEditor({ bi, kind: 'pending', pi, logOnSave: true });
+      return;
+    }
     const rowKey = `${b?.key}:${b?.logs.length}:${pi}`;
     if (!b || logging.current.has(rowKey)) return;
     logging.current.add(rowKey);
     haptic.light();
-    if (hold.hold?.bi === bi && hold.hold.pi === pi) hold.stop(0);
+    // ✓ while a row's timer runs: the time on it is the set, not the pre-filled target.
+    let actual: Partial<DraftSet> | undefined = values;
+    if (hold.hold?.bi === bi && hold.hold.pi === pi) {
+      const held = hold.stop(pendingRows(b)[pi]?.durationSec ?? 0);
+      if (held > 0) actual = { durationSec: held };
+    }
     if (state !== 'running') startTimer(false).catch(() => undefined);
     try {
-      const res = await lg.logPending(bi, pi);
+      const res = await lg.logPending(bi, pi, actual);
       if (!res) return;
       if (res.pr) {
         haptic.success();
@@ -158,14 +187,23 @@ export function LoggerScreen() {
 
   const toggleHold = (bi: number, pi: number) => {
     const row = pendingRows(blocks[bi])[pi];
+    const cardio = trackingOf(blocks[bi].exercise) === 'cardio';
     if (hold.hold && hold.hold.bi === bi && hold.hold.pi === pi) {
       const held = hold.stop(row.durationSec);
-      if (held > 0) lg.setDraft(bi, pi, { ...row, durationSec: held });
-      toast('Stopped — tick ✓ to log it');
+      if (held > 0) {
+        // The row below keeps what it showed: an early stop is this set only.
+        const below = pendingRows(blocks[bi])[pi + 1];
+        if (below) lg.setDraft(bi, pi + 1, below);
+        // Cardio's distance is read off the machine next; last time's isn't today's.
+        lg.setDraft(bi, pi, { ...row, durationSec: held, ...(cardio ? { distanceM: 0 } : null) });
+      }
+      // Cardio: read the distance off the machine now, while it's still on its screen.
+      if (cardio) setEditor({ bi, kind: 'pending', pi });
+      else toast('Stopped — tick ✓ to log it');
       return;
     }
     if (state !== 'running') startTimer(false).catch(() => undefined);
-    hold.start(bi, pi, row.durationSec);
+    hold.start(bi, pi, row.durationSec, { up: cardio });
   };
 
   const jump = (i: number) => {
@@ -192,6 +230,12 @@ export function LoggerScreen() {
         }
       }
       leaving.current = true;
+      // A guided run still going belongs to this workout: what it did so far goes in with it.
+      const run = user ? await loadRun(user.id) : null;
+      if (user && run && isActive) {
+        if (runResult(run, Date.now()).activeSec >= MIN_SAVE_SEC) await logRun(user.id, run);
+        else await clearRun(user.id);
+      }
       if (isActive) await finishActiveSession();
       else await offlineFinishSession(sessionId);
       haptic.success();
@@ -209,6 +253,7 @@ export function LoggerScreen() {
     setBusy(true);
     try {
       leaving.current = true;
+      if (user && isActive) await clearRun(user.id).catch(() => undefined);
       if (isActive) await abandonActiveSession();
       else await offlineAbandonSession(sessionId);
       setFinishOpen(false);
@@ -275,6 +320,16 @@ export function LoggerScreen() {
             <Button title="Try again" variant="secondary" onPress={lg.reload} style={styles.missingRetry} />
           </View>
         ) : null}
+        {runningCardio ? (
+          <Pressable testID="logger-cardio-running" onPress={() => router.push('/cardio/live')} accessibilityRole="button"
+            style={({ pressed }) => [styles.ready, { backgroundColor: c.accentSoft }, pressed && { opacity: 0.8 }]}>
+            <Zap size={24} color={c.accent} />
+            <View style={styles.flex}>
+              <Text style={[styles.readyTitle, { color: c.text }]} numberOfLines={1}>{runningCardio.programTitle}</Text>
+              <Text style={[styles.p, { color: c.mutedText }]}>{runningCardio.finished ? 'Finished. Tap to save it' : 'Still running. Tap to go back'}</Text>
+            </View>
+          </Pressable>
+        ) : null}
         {state === 'ready' && !(lg.plannedMissing && !blocks.length) ? (
           <View style={[styles.ready, { backgroundColor: c.accentSoft }]}>
             <Timer size={24} color={c.accent} />
@@ -297,7 +352,8 @@ export function LoggerScreen() {
               onCheckPending={(pi) => checkPending(bi, pi)}
               onEditLog={(logId) => setEditor({ bi, kind: 'log', logId })}
               onHoldTimer={(pi) => toggleHold(bi, pi)}
-              onAddSet={() => { lg.addSet(bi); haptic.light(); }} />}
+              onAddSet={() => { lg.addSet(bi); haptic.light(); }}
+              onGuided={machineForExercise(b.exercise) ? () => router.push(`/cardio?exercise=${b.uuid}&sets=${setsDone}`) : undefined} />}
           </DragItem>
         ))}
 
@@ -319,12 +375,15 @@ export function LoggerScreen() {
       {eb && evalue ? (
         <SetEditorSheet visible t={et} value={evalue} logged={editor?.kind === 'log'} rpe={elog?.rpe ?? null}
           title={`${eb.exercise?.title ?? 'Exercise'} · set ${esetNo}`}
-          subtitle={editor?.kind === 'log' ? 'Fix a set you logged' : 'Change it before you tick ✓'}
+          subtitle={editor?.kind === 'log' ? 'Fix a set you logged' : editor?.logOnSave ? `Time ${fmtClock(evalue.durationSec)}. Add the distance from the machine’s screen` : 'Change it before you tick ✓'}
+          saveLabel={editor?.kind === 'pending' && editor.logOnSave ? 'Log set' : undefined}
+          canDelete={!(editor?.kind === 'pending' && editor.logOnSave)}
           onClose={() => setEditor(null)}
           onSave={(d, rpe) => {
             const ed = editor!;
             setEditor(null);
-            if (ed.kind === 'pending') lg.setDraft(ed.bi, ed.pi, d);
+            if (ed.kind === 'pending' && ed.logOnSave) checkPending(ed.bi, ed.pi, d);
+            else if (ed.kind === 'pending') lg.setDraft(ed.bi, ed.pi, d);
             else lg.updateLog(ed.bi, ed.logId, d, rpe).then(() => toast('Set updated')).catch(() => toast('Couldn’t save the change', 'error'));
           }}
           onDelete={() => {
@@ -355,6 +414,9 @@ export function LoggerScreen() {
         title={picker?.swapBi != null ? 'Swap exercise' : 'Add exercises'}
         subtitle={picker?.swapBi != null ? `Instead of ${blocks[picker.swapBi]?.exercise?.title ?? 'this one'}` : 'Tick everything you want to do'}
         addedUuids={blocks.map((b) => b.uuid)}
+        // A swap stays on the exercise's own part; adding follows the workout.
+        initialPart={picker?.swapBi != null ? partOf(blocks[picker.swapBi]?.exercise) : null}
+        currentExercises={picker?.swapBi != null ? undefined : blocks.flatMap((b) => (b.exercise ? [b.exercise] : []))}
         emptyLabel={picker?.swapBi != null ? 'Pick one' : 'Pick exercises'}
         confirmLabel={(p) => (picker?.swapBi != null ? 'Swap' : `Add ${p.length} exercise${p.length === 1 ? '' : 's'}`)}
         onConfirm={(p) => {

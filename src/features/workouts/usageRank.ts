@@ -1,5 +1,6 @@
 import type { ExerciseUsage } from '@/src/lib/api/exercises';
-import type { Part } from '@/src/features/workouts/model';
+import { partOf, type Part } from '@/src/features/workouts/model';
+import type { Exercise } from '@/src/types/exercise';
 
 export type UsageSort = 'frequent' | 'az';
 
@@ -35,6 +36,28 @@ export function rankUsage(items: ExerciseUsage[], part: Part | null): ExerciseUs
     if (t !== 0) return t;
     return (a.exercise.title ?? '').localeCompare(b.exercise.title ?? '');
   });
+}
+
+/**
+ * The part to keep suggesting from the exercises in a workout, without the server
+ * (offline, or until its answer arrives): the part of the last strength exercise.
+ * A cardio warm-up says nothing about the muscle being trained.
+ */
+export function localFocusPart(exercises: Partial<Pick<Exercise, 'primary_muscles' | 'tracking_type'>>[]): Part | null {
+  for (let i = exercises.length - 1; i >= 0; i--) {
+    const p = partOf(exercises[i]);
+    if (p !== 'cardio') return p;
+  }
+  return null;
+}
+
+/** Why a part is being suggested, in the user's terms. Null when there's nothing to say. */
+export function focusReason(f: { current_part: string; part: string; streak: number; switched: boolean; seen: number; of: number }, label: (part: string) => string): string | null {
+  // "2 leg exercises", "leg days": the part as a word in front of a noun.
+  const before = (part: string) => label(part).toLowerCase().replace(/s$/, '');
+  if (!f.switched) return f.seen >= 2 ? `What you usually do next on ${before(f.part)} days` : null;
+  const after = `${f.streak} ${before(f.current_part)} exercise${f.streak === 1 ? '' : 's'}`;
+  return `You usually move to ${label(f.part).toLowerCase()} after ${after} (${f.seen} of ${f.of} times)`;
 }
 
 /** Order a plain exercise list alphabetically by title. */
