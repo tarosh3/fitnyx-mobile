@@ -67,7 +67,7 @@ export function RoamReplay({ activity }: { activity: ActivityDetail }) {
     }
   }, [follow, player.active, player.playing, at?.coord[0], at?.coord[1], at?.bearing]);
 
-  if (!tl || !at) return <RouteMap route={route} vehicleRanges={activity.vehicle_ranges} style={styles.map} />;
+  if (!tl || !at) return <RouteMap inScroll route={route} vehicleRanges={activity.vehicle_ranges} style={styles.map} />;
 
   const showHead = player.active && player.position < tl.duration;
   const speedColor = at.inVehicle ? c.mutedText : rampColor(tl, at.speedMps, c.routeRamp);
@@ -77,6 +77,7 @@ export function RoamReplay({ activity }: { activity: ActivityDetail }) {
     <View style={styles.wrap}>
       <View>
         <RouteMap
+          inScroll
           route={route}
           vehicleRanges={activity.vehicle_ranges}
           lineGradient={gradient}

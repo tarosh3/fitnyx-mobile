@@ -117,7 +117,8 @@ describe('BottomNav navigation and visibility', () => {
 
   it.each([
     ['workouts', '/exercises', '/workouts'],
-    ['home', '/roam/activity-1', '/'],
+    ['home', '/roam', '/'],
+    ['home', '/roam/heatmap', '/'],
     ['profile', '/settings', '/me'],
   ])('selects %s on %s while allowing return to its root', (tab, current, destination) => {
     mockPathname = current;
@@ -217,6 +218,8 @@ describe('BottomNav navigation and visibility', () => {
     '/workouts/programs/plan-1',
     '/workouts/session/session-1',
     '/roam/record',
+    '/roam/activity-1',
+    '/roam/activity-1/',
     '/privacy-policy',
     '/terms-of-service',
     '/delete-account',

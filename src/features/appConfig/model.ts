@@ -1,3 +1,5 @@
+import { parseCompletionArtwork, type CompletionArtworkCatalog } from '@/src/features/completion/artwork';
+
 // Mirrors backend internal/service/app_config_service.go (AppConfigResponse) — change both together.
 export interface AppConfig {
   min_version: string;
@@ -8,6 +10,7 @@ export interface AppConfig {
   banner_message: string | null;
   banner_level: 'info' | 'warning';
   features: Record<string, boolean>;
+  completion_artwork?: CompletionArtworkCatalog;
 }
 
 export type AppBlock =
@@ -52,6 +55,7 @@ export function parseAppConfig(raw: unknown): AppConfig | null {
     banner_message: text(r.banner_message),
     banner_level: r.banner_level === 'warning' ? 'warning' : 'info',
     features,
+    completion_artwork: parseCompletionArtwork(r.completion_artwork),
   };
 }
 

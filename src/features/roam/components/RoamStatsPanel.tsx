@@ -1,23 +1,19 @@
-import { Car, CirclePause, Info, Timer, type LucideIcon } from 'lucide-react-native';
+import { Car, CirclePause, Info, type LucideIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { type } from '@/src/styles/tokens';
 
-import { StatTile } from '@/src/features/roam/components/StatTile';
-import { formatDistance, formatDurationHuman, formatSpeed } from '@/src/features/roam/geo';
+import { StatTile, UnitText } from '@/src/features/roam/components/StatTile';
+import { formatDurationHuman, formatSpeed } from '@/src/features/roam/geo';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 
 export interface RoamStatsPanelProps {
-  distanceM: number;
   movingSec: number;
   /** Start to finish, including stops. */
   elapsedSec: number;
-  avgSpeedMps: number;
   maxSpeedMps: number;
   /** Vehicle time also falls outside moving time, so it isn't just "stopped". */
   vehicleDetected?: boolean;
-  /** Earned XP once saved; omitted on the pre-save review (the server decides it). */
-  xp?: { earned: number; eligible: boolean };
   /** Pedometer steps (runs and walks); null/omitted without them. */
   steps?: number | null;
   /** Estimated calories burned; null/omitted without a body weight. */
@@ -29,12 +25,7 @@ export interface RoamStatsPanelProps {
   maxHR?: number | null;
 }
 
-/**
- * The metrics of one Roam, shared by the post-run review and the saved Roam.
- * Hero distance, a 2×2 grid (speed in km/h for every Roam type), and a quiet
- * footer for the time breakdown. The "what does this
- * mean" copy sits behind the info button instead of always taking space.
- */
+/** Secondary metrics sit below the route; distance, time and average speed live in the overview. */
 export function RoamStatsPanel(p: RoamStatsPanelProps) {
   const palette = useThemeColors();
   const [explain, setExplain] = useState(false);
@@ -43,34 +34,26 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
 
   return (
     <View style={[styles.panel, { backgroundColor: palette.card, borderColor: palette.border }]}>
-      <StatTile big label="Distance" value={formatDistance(p.distanceM)} />
-      <View style={[styles.rule, { backgroundColor: palette.border }]} />
-      <View style={styles.row}>
-        <StatTile label="Moving time" value={formatDurationHuman(p.movingSec)} />
-        <StatTile label="Avg speed" value={formatSpeed(p.avgSpeedMps)} />
-      </View>
       <View style={styles.row}>
         <StatTile label="Top speed" value={formatSpeed(p.maxSpeedMps)} />
-        {p.xp ? (
-          <StatTile label="XP earned" value={p.xp.eligible ? `+${p.xp.earned}` : '—'} accent={p.xp.eligible} />
-        ) : (
-          <StatTile label="Elapsed" value={formatDurationHuman(p.elapsedSec)} />
-        )}
+        <StatTile label="Elapsed time" value={formatDurationHuman(p.elapsedSec)} />
       </View>
 
-      {extras.map((pair) => (
+      {extras.map((pair) => pair.length === 1 ? (
+        <View key={pair[0].label} style={styles.singleMetric}>
+          <Text style={[styles.singleLabel, { color: palette.mutedText }]}>{pair[0].label}</Text>
+          <UnitText value={pair[0].value} color={palette.text} size={20} />
+        </View>
+      ) : (
         <View key={pair[0].label} style={styles.row}>
           {pair.map((t) => (
             <StatTile key={t.label} label={t.label} value={t.value} />
           ))}
-          {pair.length === 1 ? <View style={styles.spacer} /> : null}
         </View>
       ))}
 
       <View style={[styles.footer, { borderTopColor: palette.border }]}>
         <View style={styles.metas}>
-          {/* Without an XP tile, elapsed already has its own tile. */}
-          {p.xp ? <Meta icon={Timer} text={`${formatDurationHuman(p.elapsedSec)} total`} /> : null}
           {notMovingSec >= 5 ? (
             <Meta
               icon={p.vehicleDetected ? Car : CirclePause}
@@ -83,6 +66,7 @@ export function RoamStatsPanel(p: RoamStatsPanelProps) {
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="What do these stats mean?"
+          accessibilityState={{ expanded: explain }}
           style={[styles.infoBtn, explain && { backgroundColor: palette.surface }]}
         >
           <Info size={16} color={explain ? palette.accent : palette.mutedText} />
@@ -139,10 +123,10 @@ function Explain({ term, text }: { term: string; text: string }) {
 }
 
 const styles = StyleSheet.create({
-  panel: { borderRadius: 20, borderWidth: 1, paddingTop: 16, paddingHorizontal: 8, paddingBottom: 6 },
-  rule: { height: StyleSheet.hairlineWidth, marginHorizontal: 16, marginTop: 10, marginBottom: 8 },
+  panel: { borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, paddingTop: 16, paddingHorizontal: 8, paddingBottom: 6 },
   row: { flexDirection: 'row', paddingVertical: 4 },
-  spacer: { flex: 1 },
+  singleMetric: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginHorizontal: 16, paddingVertical: 12 },
+  singleLabel: { flexShrink: 1, fontFamily: type.weight.medium, fontSize: 14 },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,7 +139,7 @@ const styles = StyleSheet.create({
   metas: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { fontSize: 12.5, fontFamily: type.weight.semibold, fontVariant: ['tabular-nums'] },
-  infoBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  infoBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   explainer: { borderRadius: 12, padding: 12, gap: 6, marginHorizontal: 8, marginTop: 8, marginBottom: 6 },
   explainText: { fontSize: 12.5, lineHeight: 18 },
 });

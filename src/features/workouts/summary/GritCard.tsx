@@ -1,6 +1,6 @@
-import { Sparkles } from 'lucide-react-native';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ChevronDown, Sparkles } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { WorkoutSession } from '@/src/lib/api/workoutSessions';
@@ -8,20 +8,23 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 import { GRIT, gritLines, gritNote } from '../grit';
 
 /** The workout's Grit and how it was earned. Nothing until the backend has scored it (e.g. a finish still queued offline). */
-export function GritCard({ session }: { session: Pick<WorkoutSession, 'grit' | 'grit_breakdown'> | null | undefined }) {
+export function GritCard({ session, compact = false }: { compact?: boolean; session: Pick<WorkoutSession, 'grit' | 'grit_breakdown'> | null | undefined }) {
   const c = useThemeColors();
+  const [expanded, setExpanded] = useState(false);
   const b = session?.grit_breakdown;
   if (session?.grit == null || !b) return null;
   const lines = gritLines(b);
   const note = gritNote(b);
   return (
     <View testID="grit-card" style={[styles.card, { backgroundColor: c.accentSoft }]}
-      accessible accessibilityLabel={`${session.grit} Grit earned${note ? `. ${note}` : ''}`}>
-      <View style={styles.head}>
+      accessibilityLabel={`${session.grit} Grit earned${note ? `. ${note}` : ''}`}>
+      <Pressable accessibilityRole={compact ? "button" : undefined} accessibilityLabel={`${session.grit} Grit earned. Points breakdown`} accessibilityState={compact ? { expanded } : undefined} onPress={compact ? () => setExpanded(!expanded) : undefined} style={[styles.head, compact && styles.compactHead]}>
         <Sparkles size={22} color={c.accent} />
-        <Text style={[styles.total, { color: c.text }]}>+{session.grit.toLocaleString('en-US')}</Text>
+        <Text style={[styles.total, compact && styles.compactTotal, { color: c.text }]}>+{session.grit.toLocaleString('en-US')}</Text>
         <Text style={[styles.unit, { color: c.accent }]}>Grit</Text>
-      </View>
+        {compact ? <ChevronDown size={18} color={c.mutedText} style={{ marginLeft: 'auto', transform: [{ rotate: expanded ? '180deg' : '0deg' }] }} /> : null}
+      </Pressable>
+      {!compact || expanded ? <>
       {lines.map((l) => (
         <View key={l.label} style={styles.line}>
           <Text style={[styles.label, { color: c.text }]}>{l.label}</Text>
@@ -32,6 +35,7 @@ export function GritCard({ session }: { session: Pick<WorkoutSession, 'grit' | '
       <Text style={[styles.note, { color: c.mutedText }]}>
         Grit rewards effort, not weight: +{GRIT.set} a set, +{GRIT.record} for beating your own best.
       </Text>
+      </> : null}
     </View>
   );
 }
@@ -39,6 +43,8 @@ export function GritCard({ session }: { session: Pick<WorkoutSession, 'grit' | '
 const styles = StyleSheet.create({
   card: { borderRadius: radii.lg, padding: spacing.base, gap: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  compactHead: { alignItems: 'center', minHeight: 44 },
+  compactTotal: { fontSize: 23 },
   total: { fontFamily: type.weight.extrabold, fontSize: 32, fontVariant: ['tabular-nums'], letterSpacing: -0.6 },
   unit: { fontFamily: type.weight.bold, fontSize: 17 },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
