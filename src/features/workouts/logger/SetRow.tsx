@@ -2,7 +2,7 @@ import { Check, Pause, Play } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { type DraftSet, fmtClock, fmtKg, fmtKm, fmtMetres } from '@/src/features/workouts/model';
+import { type DraftSet, fmtCardioTime, fmtClock, fmtKg, fmtKm, fmtMetres } from '@/src/features/workouts/model';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import type { TrackingType } from '@/src/types/exercise';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -18,7 +18,7 @@ export function columnsFor(t: TrackingType): [string, string] {
 
 export function lastText(t: TrackingType, last: Partial<DraftSet> | null): string {
   if (!last) return '—';
-  if (t === 'cardio') return last.durationSec ? `${Math.round(last.durationSec / 60)} min` : '—';
+  if (t === 'cardio') return last.durationSec ? fmtCardioTime(last.durationSec) : '—';
   if (t === 'duration') return last.durationSec ? `${fmtClock(last.durationSec)}${last.weightKg ? ` +${fmtKg(last.weightKg)}` : ''}` : '—';
   if (t === 'reps') return last.reps ? `× ${last.reps}` : '—';
   if (t === 'assisted_reps') return last.reps ? `${fmtKg(last.assistKg ?? 0)} help×${last.reps}` : '—';

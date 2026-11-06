@@ -84,11 +84,14 @@ export function useRoamRecording(): RoamRecording {
     };
   }, [reload]);
 
+  // On whether there's a recording, not on `meta`: every GPS batch loads a new `meta`,
+  // and restarting the timer that often kept the clock from ever ticking (63 m at 0:00).
+  const recording = !!meta;
   useEffect(() => {
-    if (!meta) return;
+    if (!recording) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [meta]);
+  }, [recording]);
 
   const stats = useMemo(() => (meta ? computeStats(points, meta.type) : null), [points, meta?.type]);
 

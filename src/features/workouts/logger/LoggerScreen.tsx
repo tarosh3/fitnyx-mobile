@@ -23,7 +23,7 @@ import { SetEditorSheet } from '@/src/features/workouts/logger/SetEditorSheet';
 import { useHoldTimer } from '@/src/features/workouts/logger/useHoldTimer';
 import { useWorkoutLogger } from '@/src/features/workouts/logger/useWorkoutLogger';
 import { useNotificationWorkoutAction } from '@/src/features/workouts/logger/useNotificationWorkoutAction';
-import { type DraftSet, describeSet, logToDraft, partOf, trackingOf } from '@/src/features/workouts/model';
+import { type DraftSet, describeSet, fmtClock, logToDraft, partOf, trackingOf } from '@/src/features/workouts/model';
 import { isReady } from '@/src/features/workouts/start';
 import { Button } from '@/src/features/workouts/ui/Chrome';
 import { DragItem, useDragList } from '@/src/features/workouts/ui/DragList';
@@ -40,7 +40,8 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { useWorkout, useWorkoutTimer } from '@/src/providers/WorkoutProvider';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
-type Editor = { bi: number; kind: 'pending'; pi: number } | { bi: number; kind: 'log'; logId: string };
+/** `logOnSave`: the row was ticked with its stopwatch running; saving the distance logs the set. */
+type Editor = { bi: number; kind: 'pending'; pi: number; logOnSave?: boolean } | { bi: number; kind: 'log'; logId: string };
 
 const asLog = (d: DraftSet) => ({ reps: d.reps, weight_kg: d.weightKg, assist_kg: d.assistKg, duration_sec: d.durationSec, distance_m: d.distanceM });
 
@@ -136,14 +137,24 @@ export function LoggerScreen() {
     toast('Paused — tap ▶ to carry on');
   };
 
-  const checkPending = async (bi: number, pi: number) => {
+  /** `values`: what to log instead of the row's own values (they came from the editor just now). */
+  const checkPending = async (bi: number, pi: number, values?: DraftSet) => {
     const b = blocks[bi];
+    // ✓ on a running cardio stopwatch: the time is known, the distance isn't. Last
+    // time's distance would go in unseen (an 8-second run logged 3 km), so ask first.
+    if (b && hold.hold?.bi === bi && hold.hold.pi === pi && trackingOf(b.exercise) === 'cardio') {
+      const row = pendingRows(b)[pi];
+      const held = hold.stop(row.durationSec);
+      lg.setDraft(bi, pi, { ...row, durationSec: held > 0 ? held : row.durationSec, distanceM: 0 });
+      setEditor({ bi, kind: 'pending', pi, logOnSave: true });
+      return;
+    }
     const rowKey = `${b?.key}:${b?.logs.length}:${pi}`;
     if (!b || logging.current.has(rowKey)) return;
     logging.current.add(rowKey);
     haptic.light();
     // ✓ while a row's timer runs: the time on it is the set, not the pre-filled target.
-    let actual: Partial<DraftSet> | undefined;
+    let actual: Partial<DraftSet> | undefined = values;
     if (hold.hold?.bi === bi && hold.hold.pi === pi) {
       const held = hold.stop(pendingRows(b)[pi]?.durationSec ?? 0);
       if (held > 0) actual = { durationSec: held };
@@ -183,7 +194,8 @@ export function LoggerScreen() {
         // The row below keeps what it showed: an early stop is this set only.
         const below = pendingRows(blocks[bi])[pi + 1];
         if (below) lg.setDraft(bi, pi + 1, below);
-        lg.setDraft(bi, pi, { ...row, durationSec: held });
+        // Cardio's distance is read off the machine next; last time's isn't today's.
+        lg.setDraft(bi, pi, { ...row, durationSec: held, ...(cardio ? { distanceM: 0 } : null) });
       }
       // Cardio: read the distance off the machine now, while it's still on its screen.
       if (cardio) setEditor({ bi, kind: 'pending', pi });
@@ -363,12 +375,15 @@ export function LoggerScreen() {
       {eb && evalue ? (
         <SetEditorSheet visible t={et} value={evalue} logged={editor?.kind === 'log'} rpe={elog?.rpe ?? null}
           title={`${eb.exercise?.title ?? 'Exercise'} · set ${esetNo}`}
-          subtitle={editor?.kind === 'log' ? 'Fix a set you logged' : 'Change it before you tick ✓'}
+          subtitle={editor?.kind === 'log' ? 'Fix a set you logged' : editor?.logOnSave ? `Time ${fmtClock(evalue.durationSec)}. Add the distance from the machine’s screen` : 'Change it before you tick ✓'}
+          saveLabel={editor?.kind === 'pending' && editor.logOnSave ? 'Log set' : undefined}
+          canDelete={!(editor?.kind === 'pending' && editor.logOnSave)}
           onClose={() => setEditor(null)}
           onSave={(d, rpe) => {
             const ed = editor!;
             setEditor(null);
-            if (ed.kind === 'pending') lg.setDraft(ed.bi, ed.pi, d);
+            if (ed.kind === 'pending' && ed.logOnSave) checkPending(ed.bi, ed.pi, d);
+            else if (ed.kind === 'pending') lg.setDraft(ed.bi, ed.pi, d);
             else lg.updateLog(ed.bi, ed.logId, d, rpe).then(() => toast('Set updated')).catch(() => toast('Couldn’t save the change', 'error'));
           }}
           onDelete={() => {

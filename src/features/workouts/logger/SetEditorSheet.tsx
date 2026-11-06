@@ -49,19 +49,20 @@ interface Props {
   rpe?: number | null;
   /** False for a brand-new set: the sheet then has only Save (and ✕). */
   canDelete?: boolean;
+  saveLabel?: string;
   onSave: (d: DraftSet, rpe: number | null) => void;
   onDelete: () => void;
   onClose: () => void;
 }
 
-export function SetEditorSheet({ visible, title, subtitle, t, value, logged, rpe: initialRpe, canDelete = true, onSave, onDelete, onClose }: Props) {
+export function SetEditorSheet({ visible, title, subtitle, t, value, logged, rpe: initialRpe, canDelete = true, saveLabel, onSave, onDelete, onClose }: Props) {
   const c = useThemeColors();
   const [rpe, setRpe] = useState<number | null>(initialRpe ?? null);
   useEffect(() => { if (visible) setRpe(initialRpe ?? null); }, [visible]);
 
   return (
     <StepperSheet visible={visible} title={title} subtitle={subtitle} fields={fieldsFor(t, value)}
-      saveLabel={logged ? 'Save changes' : 'Done'} onClose={onClose}
+      saveLabel={saveLabel ?? (logged ? 'Save changes' : 'Done')} onClose={onClose}
       onSave={(v) => onSave(draftFrom(t, value, v), rpe)}
       secondary={canDelete ? <Button variant="danger" title={logged ? 'Delete this set' : 'Remove a set'} onPress={onDelete} /> : undefined}>
       {logged ? (
