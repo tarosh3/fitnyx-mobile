@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
@@ -26,6 +27,7 @@ type Modal = 'finish' | 'discard' | 'queued' | 'too-short' | null;
 
 export default function RoamRecordScreen() {
   const palette = useThemeColors();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -107,7 +109,7 @@ export default function RoamRecordScreen() {
           () => undefined,
         );
       }
-      if (outcome.status === 'saved') router.replace(`/roam/${outcome.activity.id}`);
+      if (outcome.status === 'saved') router.replace(`/roam/${outcome.activity.id}?new=1`);
       else setModal('queued');
     } catch (e) {
       setError((e as Error).message || 'Could not save this Roam. Try again.');
@@ -133,9 +135,9 @@ export default function RoamRecordScreen() {
   const { meta } = recording;
   const stats = phase === 'live' ? recording.stats : reviewStats;
   return (
-    <Screen scroll={false} contentContainerStyle={styles.screen}>
+    <Screen scroll={false} style={phase === 'summary' ? { paddingHorizontal: 20 } : undefined} contentContainerStyle={[styles.screen, { paddingBottom: Math.max(insets.bottom, 16) }]}>
       <PageHeader
-        title={phase === 'live' ? `${ACTIVITY_LABEL[meta.type].toUpperCase()} IN PROGRESS` : 'REVIEW'}
+        title={phase === 'live' ? `${ACTIVITY_LABEL[meta.type].toUpperCase()} IN PROGRESS` : 'Review'}
         subtitle={phase === 'live' ? 'KEEPS RECORDING WITH THE SCREEN LOCKED' : undefined}
         backTo="/roam"
       />
@@ -143,6 +145,7 @@ export default function RoamRecordScreen() {
         <LiveRecordingView recording={recording} onFinish={() => setModal('finish')} />
       ) : (
         <RecordingSummaryView
+          artworkSeed={meta.clientId}
           type={meta.type}
           stats={stats}
           elapsedSec={recording.elapsedMs / 1000}

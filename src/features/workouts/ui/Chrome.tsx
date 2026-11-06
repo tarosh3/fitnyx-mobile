@@ -40,12 +40,13 @@ export function IconButton({ onPress, label, children, tone }: { onPress: () => 
   );
 }
 
-/** Action bar pinned to the bottom, always above the system navigation bar. */
-export function BottomBar({ children }: { children: React.ReactNode }) {
+/** Safe-area action bar. Use relative positioning beside a flex scroll view
+ * to reserve its actual height, including larger accessibility text. */
+export function BottomBar({ children, position = 'absolute' }: { children: React.ReactNode; position?: 'absolute' | 'relative' }) {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md, backgroundColor: c.background, borderColor: c.border }]}>{children}</View>
+    <View style={[styles.bottom, { position, flexShrink: 0, paddingBottom: insets.bottom + spacing.md, backgroundColor: c.background, borderColor: c.border }]}>{children}</View>
   );
 }
 

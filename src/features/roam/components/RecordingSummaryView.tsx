@@ -1,9 +1,10 @@
 import { Pencil } from 'lucide-react-native';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { type } from '@/src/styles/tokens';
 
-import { Button } from '@/src/components/ui/Button';
+import { RoamCompletionHero } from './RoamCompletionHero';
+import { Button } from '@/src/features/workouts/ui/Chrome';
 import { MAX_ACTIVITY_NAME } from '@/src/features/roam/activityName';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
 import { RouteMap } from '@/src/features/roam/components/RouteMap';
@@ -32,6 +33,7 @@ interface Props {
   onExportRaw?: () => void;
   /** Today's goals + body weight, from when the Roam started; null = none. */
   tracker?: GoalTracker | null;
+  artworkSeed?: string;
 }
 
 /** After Finish: review the Roam, then save or discard. Numbers are final once the server recomputes them. */
@@ -48,19 +50,20 @@ export function RecordingSummaryView({
   onDiscard,
   onExportRaw,
   tracker,
+  artworkSeed,
 }: Props) {
   const palette = useThemeColors();
   const roam = roamActivity(type, stats, tracker?.weightKg ?? null);
+  const nameInput = useRef<TextInput>(null);
   return (
     <View style={styles.wrap}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View>
-          <Text style={[styles.eyebrow, { color: palette.accent }]} onLongPress={onExportRaw} suppressHighlighting>
-            {ACTIVITY_LABEL[type].toUpperCase()} COMPLETE
-          </Text>
-          {/* The title reads as a heading but is editable in place. */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <RoamCompletionHero eyebrow={`${ACTIVITY_LABEL[type]} complete`} onLongPress={onExportRaw} seed={artworkSeed}
+          distanceM={stats.distanceM} movingSec={stats.movingTimeSec} avgSpeedMps={stats.avgSpeedMps}
+          title={
           <View style={[styles.nameRow, { borderBottomColor: palette.border }]}>
             <TextInput
+              ref={nameInput}
               testID="roam-name"
               accessibilityLabel="Roam name"
               value={name}
@@ -74,10 +77,16 @@ export function RecordingSummaryView({
               selectionColor={palette.primary}
               style={[styles.name, { color: palette.text }]}
             />
-            <Pencil size={18} color={palette.mutedText} />
+            <Pressable onPress={() => nameInput.current?.focus()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Rename this Roam" disabled={saving}>
+              <Pencil size={18} color={palette.accent} />
+            </Pressable>
           </View>
+          }
+        />
+        <View style={styles.routeCard}>
+          <Text style={[styles.sectionTitle, styles.routeTitle, { color: palette.text }]}>Your route</Text>
+          <RouteMap inScroll route={stats.route} vehicleRanges={stats.vehicleRanges} style={styles.map} />
         </View>
-        <RouteMap route={stats.route} vehicleRanges={stats.vehicleRanges} style={styles.map} />
 
         {stats.vehicleDetected ? (
           <VehicleBanner
@@ -89,11 +98,10 @@ export function RecordingSummaryView({
           />
         ) : null}
 
+        <Text style={[styles.sectionTitle, { color: palette.text }]}>The details</Text>
         <RoamStatsPanel
-          distanceM={stats.distanceM}
           movingSec={stats.movingTimeSec}
           elapsedSec={elapsedSec}
-          avgSpeedMps={stats.avgSpeedMps}
           maxSpeedMps={stats.maxSpeedMps}
           vehicleDetected={stats.vehicleDetected}
           steps={stats.steps}
@@ -114,8 +122,8 @@ export function RecordingSummaryView({
 
       {/* Pinned, so the next step is always on screen however long the stats get. */}
       <View style={[styles.footer, { borderTopColor: palette.border }]}>
-        <Button title="DISCARD" variant="ghost" onPress={onDiscard} disabled={saving} style={styles.discard} />
-        <Button title="SAVE ROAM" onPress={onSave} loading={saving} style={styles.save} />
+        <Button variant="secondary" title="Discard" onPress={onDiscard} disabled={saving} style={styles.discard} />
+        <Button title="Save Roam" onPress={onSave} loading={saving} />
       </View>
     </View>
   );
@@ -123,13 +131,14 @@ export function RecordingSummaryView({
 
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
-  content: { gap: 14, paddingBottom: 16 },
+  content: { gap: 20, paddingBottom: 24 },
   footer: { flexDirection: 'row', gap: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
-  discard: { flex: 1 },
-  save: { flex: 2 },
-  eyebrow: { fontSize: 12, fontFamily: type.weight.extrabold, letterSpacing: 1.5 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth },
-  name: { flex: 1, fontSize: 26, fontFamily: type.weight.extrabold, letterSpacing: -0.4, paddingVertical: 8 },
-  map: { height: 260 },
+  discard: { flexGrow: 0 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 42 },
+  name: { flex: 1, minWidth: 0, fontSize: 27, fontFamily: type.weight.extrabold, letterSpacing: -0.9, paddingVertical: 0, minHeight: 42 },
+  map: { height: 240, borderRadius: 18 },
+  routeCard: { gap: 12, backgroundColor: 'transparent' },
+  routeTitle: { marginBottom: 0 },
+  sectionTitle: { fontFamily: type.weight.bold, fontSize: 18, letterSpacing: -0.4, marginBottom: -8 },
   note: { fontSize: 12, textAlign: 'center' },
 });

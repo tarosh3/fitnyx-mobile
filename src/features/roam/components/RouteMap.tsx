@@ -51,6 +51,11 @@ export interface RouteMapProps {
   kmMarks?: FeatureCollection<Point>;
   /** Offline fallback: draw the route only up to this fraction (replay). */
   sketchProgress?: number;
+  /**
+   * The map sits in a scrolling page: a one-finger swipe scrolls the page, not the
+   * map (it trapped people on the map). A button turns dragging on for a closer look.
+   */
+  inScroll?: boolean;
   /** Hide the map buttons (e.g. while the replay's stats overlay the top). */
   controlsHidden?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -70,6 +75,7 @@ export const RouteMap = React.memo(function RouteMap({
   sketchProgress,
   controlsHidden = false,
   style,
+  inScroll = false,
 }: RouteMapProps) {
   const palette = useThemeColors();
   const { theme } = useTheme();
@@ -103,6 +109,7 @@ export const RouteMap = React.memo(function RouteMap({
   const [headingUp, setHeadingUp] = useState(false);
   // Shaded relief from open terrain data, on demand (an extra tile download).
   const [terrain, setTerrain] = useState(false);
+  const [dragOn, setDragOn] = useState(false);
 
   // 3D ⇄ flat: flyover and heading-up start tilted, overviews flat; the
   // button flips whichever view is showing.
@@ -150,6 +157,7 @@ export const RouteMap = React.memo(function RouteMap({
           mapStyle={basemap.style}
           logo={false}
           compass={false}
+          dragPan={!inScroll || dragOn}
           // Tints the attribution (i) button (iOS default blue was off-theme).
           // tintColor colours the ⓘ button, but on Android it also paints the live
           // GPS puck solid, hiding its direction arrow. Saved Roams have no puck.
@@ -358,6 +366,8 @@ export const RouteMap = React.memo(function RouteMap({
           onToggleTilt={() => void toggleTilt()}
           onZoomIn={() => void zoomBy(1)}
           onZoomOut={() => void zoomBy(-1)}
+          dragOn={inScroll ? dragOn : undefined}
+          onToggleDrag={inScroll ? () => setDragOn((v) => !v) : undefined}
         />
       ) : null}
       {showSketch ? (

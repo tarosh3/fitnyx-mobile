@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import React from 'react';
 
 jest.mock('@/src/providers/ThemeProvider', () => ({ useTheme: () => ({ theme: 'dark' }) }));
@@ -24,4 +24,15 @@ it('explains a workout that was too short', () => {
 it('renders nothing before the workout is scored', () => {
   render(<GritCard session={{ grit: null, grit_breakdown: null }} />);
   expect(screen.queryByTestId('grit-card')).not.toBeOnTheScreen();
+});
+
+
+it('keeps the reward visible while letting users expand its calculation', () => {
+  render(<GritCard compact session={{ grit: 125, grit_breakdown: breakdown }} />);
+  expect(screen.getByText('+125')).toBeOnTheScreen();
+  expect(screen.queryByText('6 sets done')).not.toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '125 Grit earned. Points breakdown' }));
+  expect(screen.getByText('6 sets done')).toBeOnTheScreen();
+  fireEvent.press(screen.getByRole('button', { name: '125 Grit earned. Points breakdown' }));
+  expect(screen.queryByText('6 sets done')).not.toBeOnTheScreen();
 });
