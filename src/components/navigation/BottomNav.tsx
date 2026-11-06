@@ -12,8 +12,9 @@ import { useAICoach } from '@/src/providers/AICoachProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { motion, type } from '@/src/styles/tokens';
+import { DockBackdrop } from './DockBackdrop';
 import { NavIcon, type NavIconName } from './NavIcon';
-import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_LIFT, bottomNavGap, isBottomNavRoute } from './bottomNavLayout';
+import { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_LIFT, bottomNavGap, dockBackdropHeight, isBottomNavRoute } from './bottomNavLayout';
 
 const destinations = [
   { key: 'home', label: 'Home', href: '/', match: (p: string) => p === '/' || p === '/roam' || p.startsWith('/roam/') || p === '/arena' || p === '/notifications' },
@@ -25,9 +26,8 @@ const destinations = [
 const SPRING = { damping: 20, stiffness: 320, mass: 0.7, reduceMotion: ReduceMotion.System };
 const DOCK_PADDING = 6;
 
-// The dock is a frosted-glass pill: content scrolled behind it shows through
-// blurred, while the area above and beside the pill is left untouched. Reduce
-// Transparency swaps the frost for the opaque nav surface.
+// The dock is a frosted-glass pill, with a light blur below it (DockBackdrop).
+// Reduce Transparency swaps the frost for the opaque nav surface.
 export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -83,9 +83,8 @@ export function BottomNav({ blurTarget }: { blurTarget?: RefObject<View | null> 
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { height: totalHeight + gap + 24 }]}>
-      {/* The dock floats: content scrolls freely behind and below it — visible
-          in the gap under the pill and in the margins beside it, and blurred
-          through the frosted pill itself. No background masks here. */}
+      {/* Content scrolled below the pill is softened; above and beside the pill it stays sharp. */}
+      <DockBackdrop height={dockBackdropHeight(insets.bottom)} blurTarget={blurTarget} reduceTransparency={reduceTransparency} />
       <View testID="bottom-nav" pointerEvents="box-none" style={[styles.dock, {
         bottom: gap, left: dockLeft, width: dockWidth, height: totalHeight,
         backgroundColor: reduceTransparency ? c.nav.surface : 'transparent',
