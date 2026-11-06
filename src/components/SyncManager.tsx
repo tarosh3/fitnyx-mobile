@@ -6,6 +6,7 @@ import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { getOfflineQueue, onOfflineQueueAdd } from '@/src/lib/cache/indexeddb';
 import { onOfflineSync, processOfflineQueue } from '@/src/lib/offline/syncEngine';
 import { prefetchWorkoutMedia } from '@/src/lib/offline/mediaPrefetch';
+import { useAuth } from '@/src/providers/AuthProvider';
 
 // While online with work still queued (server error, rate limit, a set waiting
 // on its session), retry on a backoff instead of waiting for the next reconnect.
@@ -19,6 +20,7 @@ const RETRY_DELAYS_MS = [15_000, 30_000, 60_000, 120_000, 300_000];
  * AuthProvider also triggers a sync on reconnect; runs are deduped.
  */
 export function SyncManager() {
+  const userId = useAuth().user?.id;
   const { isOnline } = useNetworkStatus();
   const queryClient = useQueryClient();
   const onlineRef = useRef(isOnline);
@@ -78,10 +80,12 @@ export function SyncManager() {
 
   // When online, warm the offline video cache for saved routines (Wi-Fi only,
   // respects the Downloads setting, single-flight and capped internally).
+  // Signed-in only: a call with no session counts as an expired one, which sent
+  // new users from Welcome to "Your session expired" a few seconds after launch.
   useEffect(() => {
-    if (!isOnline) return;
+    if (!isOnline || !userId) return;
     prefetchWorkoutMedia().catch(() => undefined);
-  }, [isOnline]);
+  }, [isOnline, userId]);
 
   return null;
 }

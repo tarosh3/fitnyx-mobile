@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Share2, Trophy, TrendingDown, TrendingUp } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { loadTodayRun } from '@/src/features/workouts/today/store';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -47,7 +48,12 @@ export function SummaryScreen() {
   const s = d.session;
   const routine = s?.plan_id ? routines.data?.find((r) => r.id === s.plan_id) : undefined;
   const self = history.data?.find((h) => h.id === s?.id);
-  const name = routine?.title ?? self?.plan_name ?? 'Workout';
+  // Today's workout has no plan on the server; its name is on this phone.
+  const [todayTitle, setTodayTitle] = useState<string | null>(null);
+  useEffect(() => {
+    if (sessionId) loadTodayRun(sessionId).then((run) => setTodayTitle(run?.title ?? null)).catch(() => undefined);
+  }, [sessionId]);
+  const name = routine?.title ?? todayTitle ?? self?.plan_name ?? 'Workout';
   const previous = s?.plan_id ? history.data?.find((h) => h.plan_id === s.plan_id && h.id !== s.id && h.status === 'completed' && h.started_at < s.started_at) : undefined;
   const t = d.totals;
   const change = previous && previous.total_volume_kg > 0 && t.volumeKg > 0 ? Math.round(((t.volumeKg - previous.total_volume_kg) / previous.total_volume_kg) * 100) : null;
