@@ -8,7 +8,7 @@ const hiddenRoutePrefixes = [
   '/onboarding', '/settings/coach-memory', '/reminders', '/water', '/profile',
   '/fitness-profile', '/dashboard/stats', '/dashboard/diet', '/diet', '/login', '/signup', '/workouts/summary',
   // Workouts flows with their own action bar (Start, Repeat, Add…).
-  '/workouts/session', '/workouts/routine', '/workouts/history', '/workouts/exercise', '/workouts/programs', '/workouts/report', '/roam/record', '/update-password', '/privacy-policy',
+  '/workouts/session', '/workouts/routine', '/workouts/history', '/workouts/exercise', '/workouts/programs', '/workouts/report', '/workouts/today', '/roam/record', '/update-password', '/privacy-policy',
   '/terms-of-service', '/delete-account', '/email-verified', '/verification-failed',
   '/invite', '/access-expired', '/trophies', '/readiness', '/cardio',
   // Has its own Start bar.

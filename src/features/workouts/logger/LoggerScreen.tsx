@@ -25,6 +25,8 @@ import { useWorkoutLogger } from '@/src/features/workouts/logger/useWorkoutLogge
 import { useNotificationWorkoutAction } from '@/src/features/workouts/logger/useNotificationWorkoutAction';
 import { type DraftSet, describeSet, fmtClock, logToDraft, partOf, trackingOf } from '@/src/features/workouts/model';
 import { isReady } from '@/src/features/workouts/start';
+import { AlternativesSheet } from '@/src/features/workouts/today/AlternativesSheet';
+import { toPlanned } from '@/src/features/workouts/today/model';
 import { Button } from '@/src/features/workouts/ui/Chrome';
 import { DragItem, useDragList } from '@/src/features/workouts/ui/DragList';
 import { ExercisePicker } from '@/src/features/workouts/ui/ExercisePicker';
@@ -67,6 +69,7 @@ export function LoggerScreen() {
   const [menuBi, setMenuBi] = useState<number | null>(null);
   const [removeBi, setRemoveBi] = useState<number | null>(null);
   const [picker, setPicker] = useState<{ swapBi: number | null } | null>(null);
+  const [takenBi, setTakenBi] = useState<number | null>(null);
   const activityDetails = useWorkoutDetails(sessionId);
   const restEnd = activityDetails.restEnd;
   useEffect(() => { void loadWorkoutDetails(sessionId); }, [sessionId]);
@@ -83,7 +86,7 @@ export function LoggerScreen() {
   const state: TimerState = !live || isReady(live) ? 'ready' : live.status === 'in_progress' ? 'running' : 'paused';
   const elapsed = isActive ? elapsedTime : live?.total_duration_sec ?? 0;
   const routine = live?.plan_id ? routines.data?.find((r) => r.id === live.plan_id) ?? null : null;
-  const title = routine?.title ?? (live?.plan_id ? 'Today’s workout' : 'Workout');
+  const title = routine?.title ?? lg.planTitle ?? (live?.plan_id ? 'Today’s workout' : 'Workout');
 
   const blocks = lg.blocks;
   const currentIdx = blocks.findIndex((b) => !blockDone(b));
@@ -398,6 +401,7 @@ export function LoggerScreen() {
         canMoveUp={(menuBi ?? 0) > 0} canMoveDown={menuBi != null && menuBi < blocks.length - 1}
         onClose={() => setMenuBi(null)}
         onHowTo={() => { setMenuBi(null); if (mb) router.push(`/workouts/exercise/${mb.uuid}`); }}
+        onMachineTaken={() => { setMenuBi(null); setTakenBi(menuBi); }}
         onSwap={() => { setMenuBi(null); setPicker({ swapBi: menuBi }); }}
         onMove={(d) => { if (menuBi != null) { lg.moveBlock(menuBi, menuBi + d); setOpen({ key: mb?.key ?? null }); setMenuBi(null); } }}
         onRemove={() => { const bi = menuBi; setMenuBi(null); if (bi == null) return; if (blocks[bi]?.logs.length) setRemoveBi(bi); else removeBlock(bi); }} />
@@ -409,6 +413,13 @@ export function LoggerScreen() {
         </>}>
         <Text style={[styles.p, { color: c.mutedText }]}>Its {rb?.logs.length} logged set{rb?.logs.length === 1 ? '' : 's'} will be deleted from this workout.</Text>
       </Sheet>
+
+      <AlternativesSheet exercise={takenBi != null ? blocks[takenBi]?.exercise ?? null : null} exclude={blocks.map((b) => b.uuid)} onClose={() => setTakenBi(null)}
+        onBrowse={() => { setPicker({ swapBi: takenBi }); setTakenBi(null); }}
+        onPick={(it) => {
+          if (takenBi != null) { lg.swapBlock(takenBi, it.exercise, toPlanned(it, takenBi)); toast(`Swapped to ${it.exercise.title}`); }
+          setTakenBi(null);
+        }} />
 
       <ExercisePicker visible={!!picker} mode={picker?.swapBi != null ? 'single' : 'multi'} onClose={() => setPicker(null)}
         title={picker?.swapBi != null ? 'Swap exercise' : 'Add exercises'}

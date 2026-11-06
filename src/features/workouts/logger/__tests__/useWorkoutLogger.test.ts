@@ -15,6 +15,7 @@ jest.mock('@/src/providers/WorkoutProvider', () => ({ useWorkout: () => ({ activ
 jest.mock('@/src/hooks/useOfflineAware', () => ({ useOfflineAware: () => ({ isOffline: false }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ setParams: jest.fn() }) }));
 
+import { loadTodayRun, saveTodayRun } from '@/src/features/workouts/today/store';
 import { pendingRows } from '../rows';
 import { useWorkoutLogger } from '../useWorkoutLogger';
 
@@ -96,4 +97,69 @@ describe('logging a set a timer ran on', () => {
     await act(async () => { await result.current.logPending(0, 0); });
     expect(offlineLogSet).toHaveBeenCalledWith('s1', expect.objectContaining({ actual_duration_sec: 1200 }));
   });
+});
+
+describe("a workout started from Today's workout", () => {
+  const { offlineGetSession } = jest.requireMock('@/src/lib/offline/offlineApi');
+  const row = (uuid: string, kg: number) => ({
+    id: `today-${uuid}`, day_id: '', exercise_uuid: uuid, exercise_order: 0, target_sets: 4, target_reps: 8, target_weight_kg: kg, rest_seconds: 75, created_at: '',
+    exercise: { uuid, title: uuid, tracking_type: 'weight_reps' },
+  });
+  const noDay = () => offlineGetSession.mockResolvedValue({ session: { id: 's1', status: 'paused' }, exercise_logs: [] });
+  afterEach(() => offlineGetSession.mockResolvedValue({ session: { id: 's1', status: 'paused', day_id: 'day-1' }, exercise_logs: [] }));
+
+  it('opens with its targets and title', async () => {
+    noDay();
+    await saveTodayRun({ sessionId: 's1', title: 'Legs', items: [row('squat', 62.5) as any] });
+    const result = await load();
+    expect(result.current.planTitle).toBe('Legs');
+    expect(result.current.blocks[0].planned?.target_sets).toBe(4);
+    expect(pendingRows(result.current.blocks[0])).toHaveLength(4);
+    expect(pendingRows(result.current.blocks[0])[0]).toMatchObject({ weightKg: 62.5, reps: 8 });
+  });
+
+  it("ignores another session's plan", async () => {
+    noDay();
+    await saveTodayRun({ sessionId: 'other', title: 'Legs', items: [row('squat', 62.5) as any] });
+    const result = await load();
+    expect(result.current.planTitle).toBeNull();
+    expect(result.current.blocks).toHaveLength(0);
+  });
+
+  it('keeps a swap when the workout is reopened', async () => {
+    noDay();
+    await saveTodayRun({ sessionId: 's1', title: 'Legs', items: [row('legpress', 100) as any, row('curl', 30) as any] });
+    const result = await load();
+    const goblet = { uuid: 'goblet', title: 'Goblet', tracking_type: 'weight_reps' } as any;
+    act(() => result.current.swapBlock(0, goblet, row('goblet', 24) as any));
+    await waitFor(async () => expect((await loadTodayRun('s1'))?.items.map((i) => i.exercise_uuid)).toEqual(['goblet', 'curl']));
+
+    const again = await load();
+    expect(again.current.blocks.map((b) => b.uuid)).toEqual(['goblet', 'curl']);
+    expect(pendingRows(again.current.blocks[0])[0].weightKg).toBe(24);
+  });
+
+  it('a swap from the full list keeps the sets and reps, with no made-up weight', async () => {
+    noDay();
+    await saveTodayRun({ sessionId: 's1', title: 'Legs', items: [row('legpress', 100) as any] });
+    const result = await load();
+    act(() => result.current.swapBlock(0, { uuid: 'hack', title: 'Hack', tracking_type: 'weight_reps' } as any));
+    expect(result.current.blocks[0].planned).toMatchObject({ exercise_uuid: 'hack', target_sets: 4, target_reps: 8 });
+    expect(result.current.blocks[0].planned?.target_weight_kg).toBeUndefined();
+  });
+
+  it('a removed exercise stays removed', async () => {
+    noDay();
+    await saveTodayRun({ sessionId: 's1', title: 'Legs', items: [row('legpress', 100) as any, row('curl', 30) as any] });
+    const result = await load();
+    act(() => result.current.removeBlock(0));
+    await waitFor(async () => expect((await loadTodayRun('s1'))?.items.map((i) => i.exercise_uuid)).toEqual(['curl']));
+  });
+});
+
+it('a plain routine swap stays an added exercise', async () => {
+  mockGetDayExercises.mockResolvedValueOnce({ data: [bench] });
+  const result = await load();
+  act(() => result.current.swapBlock(0, { uuid: 'fly', title: 'Fly' } as any));
+  expect(result.current.blocks[0].planned).toBeNull();
 });

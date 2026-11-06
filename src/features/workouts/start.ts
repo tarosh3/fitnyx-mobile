@@ -19,8 +19,12 @@ export function isReady(s: Pick<WorkoutSession, 'status' | 'total_duration_sec'>
 }
 
 type StartDeps = { router: Router; setActiveSession: (s: WorkoutSession | null) => void };
-/** Exercise to add as soon as the logger opens (Quick start → Cardio). */
-type StartOpts = { addExerciseUuid?: string };
+type StartOpts = {
+  /** Exercise to add as soon as the logger opens (Quick start → Cardio). */
+  addExerciseUuid?: string;
+  /** Runs only for a new workout, before the logger opens; not when joining an open one. */
+  beforeOpen?: (session: WorkoutSession) => Promise<void>;
+};
 
 let starting: Promise<void> | null = null;
 
@@ -56,6 +60,7 @@ async function start(target: StartTarget, deps: StartDeps, opts: StartOpts): Pro
   } catch {
     // Still usable running; the user can pause from the header.
   }
+  await opts.beforeOpen?.(session);
   deps.setActiveSession(session);
   open(session.id);
 }
