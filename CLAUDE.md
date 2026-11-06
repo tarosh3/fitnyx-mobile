@@ -242,6 +242,10 @@ Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, Ba
 3. **Plan**: multi-file or non-trivial change → list files + blast radius before editing; public API contract change → wait for user confirmation
 4. **Implement + verify**: task is incomplete until checks pass
 
+**Always build on the latest build and branch** (user rule, 2026-11-06)
+- Before new work: `git fetch`, and check this session's open PRs. Merge finished work first if the user agrees, or branch from the newest branch. Cutting `feat/todays-workout` from `main` while the dock blur sat in unmerged #79 took the blur off the simulator, and it was reported as broken.
+- Before testing or showing anything: confirm which branch Metro is serving. If something the user has already seen can't be in the build, say which thing, before they test.
+
 **Scope discipline**
 - Smallest change that solves the problem — no drive-by refactors, no speculative abstraction, no reformatting untouched lines, no placeholder TODOs
 - Fix needs a big change → state why before writing it
