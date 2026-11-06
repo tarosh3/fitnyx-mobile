@@ -1,9 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pencil } from 'lucide-react-native';
+import { Pencil, Share2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { RoamCompletionHero } from '@/src/features/roam/components/RoamCompletionHero';
+import { CompletionRewards } from '@/src/features/completion/CompletionRewards';
+import { BottomBar, Button as FooterButton } from '@/src/features/workouts/ui/Chrome';
+import { type } from '@/src/styles/tokens';
 import { Button } from '@/src/components/ui/Button';
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { PageHeader } from '@/src/components/ui/PageHeader';
@@ -36,7 +40,9 @@ export default function RoamDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `new`: just saved from the review screen. Opened later from a list, it isn't a finish line.
+  const { id, new: justSaved } = useLocalSearchParams<{ id: string; new?: string }>();
+  const fresh = justSaved === '1';
   const activityId = Array.isArray(id) ? id[0] : id;
   const [activity, setActivity] = useState<ActivityDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -139,9 +145,13 @@ export default function RoamDetailScreen() {
     weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
   });
   return (
-    <Screen>
-      <PageHeader title={ACTIVITY_LABEL[activity.activity_type].toUpperCase()} subtitle={date.toUpperCase()} backTo="/roam" />
+    <View style={{ flex: 1, backgroundColor: palette.background }}>
+    <Screen style={{ paddingHorizontal: 20 }} contentContainerStyle={{ paddingBottom: 20 }}>
+      <PageHeader title="Activity" backTo="/roam" />
       <View style={styles.content}>
+        <RoamCompletionHero eyebrow={fresh ? `${ACTIVITY_LABEL[activity.activity_type]} saved` : ACTIVITY_LABEL[activity.activity_type]} done={fresh} subtitle={date} seed={activity.id}
+          distanceM={activity.distance_m} movingSec={activity.moving_time_sec} avgSpeedMps={activity.avg_speed_mps}
+          title={
         <Pressable
           testID="roam-title"
           accessibilityRole="button"
@@ -155,20 +165,29 @@ export default function RoamDetailScreen() {
           <Text style={[styles.title, { color: palette.text }]} numberOfLines={2}>
             {activityTitle(activity)}
           </Text>
-          <Pencil size={18} color={palette.mutedText} />
+          <Pencil size={18} color={palette.accent} />
         </Pressable>
+          }
+        />
+        <CompletionRewards screen="roam" seed={activity.id} xp={activity.xp} eligible={activity.xp_eligible} />
+        <Text style={[styles.sectionTitle, { color: palette.text }]}>Your route</Text>
         <RoamReplay activity={activity} />
         {activity.vehicle_detected ? (
           <VehicleBanner
             message={`${formatDistance(activity.vehicle_distance_m)} was vehicle travel and isn't counted${activity.xp_eligible ? '' : ' — this Roam earned no XP'}.`}
           />
         ) : null}
-        <Button title="SHARE ACHIEVEMENT" onPress={() => setSharing(true)} />
+        <Text style={[styles.sectionTitle, { color: palette.text }]}>The details</Text>
         <ActivityStats activity={activity} />
         <SplitsList splits={activity.splits} distanceM={activity.distance_m} movingSec={activity.moving_time_sec} />
         {error ? <Text style={[styles.note, { color: palette.destructive }]}>{error}</Text> : null}
         <Button title="DELETE ROAM" variant="ghost" textStyle={{ color: palette.destructive }} onPress={() => setConfirmDelete(true)} loading={deleting} />
       </View>
+    </Screen>
+    <BottomBar position="relative">
+      <FooterButton variant="secondary" title="Share" icon={<Share2 size={18} color={palette.text} />} onPress={() => setSharing(true)} style={fresh ? { flexGrow: 0 } : undefined} />
+      {fresh ? <FooterButton title="Done" onPress={() => router.dismissTo('/roam')} /> : null}
+    </BottomBar>
       <ShareCardSheet visible={sharing} data={sharing ? roamCardData(activity) : null} onClose={() => setSharing(false)} />
       <RenameRoamSheet
         visible={renaming}
@@ -188,13 +207,14 @@ export default function RoamDetailScreen() {
         onConfirm={onDelete}
         onCancel={() => setConfirmDelete(false)}
       />
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { gap: 14, paddingBottom: 40 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { flex: 1, fontSize: 26, fontWeight: '800', letterSpacing: -0.4 },
+  content: { gap: 20 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
+  title: { flex: 1, fontSize: 27, fontFamily: type.weight.bold, letterSpacing: -0.9 },
+  sectionTitle: { fontFamily: type.weight.bold, fontSize: 18, letterSpacing: -0.4, marginBottom: -8 },
   note: { fontSize: 12, textAlign: 'center' },
 });

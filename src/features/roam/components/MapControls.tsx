@@ -1,4 +1,4 @@
-import { Minus, Mountain, Navigation, Plus } from 'lucide-react-native';
+import { Minus, Mountain, Move, Navigation, Plus } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { type } from '@/src/styles/tokens';
@@ -20,6 +20,9 @@ interface Props {
   onToggleTilt: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  /** Map in a scrolling page: dragging it is off until this is on. */
+  dragOn?: boolean;
+  onToggleDrag?: () => void;
 }
 
 /**
@@ -37,6 +40,13 @@ export function MapControls(p: Props) {
   );
   return (
     <>
+      {p.onToggleDrag && !p.topHidden ? (
+        <View style={styles.topLeft}>
+          <MapButton label={p.dragOn ? 'Stop moving the map' : 'Move the map'} selected={!!p.dragOn} onPress={p.onToggleDrag}>
+            <Move size={18} color={p.dragOn ? palette.accent : palette.text} />
+          </MapButton>
+        </View>
+      ) : null}
       {p.topHidden ? null : (
         <View style={styles.column}>
           {p.live ? (
@@ -91,6 +101,7 @@ function MapButton({ label, selected, onPress, children }: { label: string; sele
 
 const styles = StyleSheet.create({
   column: { position: 'absolute', top: 12, right: 12, gap: 10 },
+  topLeft: { position: 'absolute', top: 12, left: 12 },
   button: {
     width: 40,
     height: 40,

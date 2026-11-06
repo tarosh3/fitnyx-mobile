@@ -15,5 +15,10 @@ const hiddenRoutePrefixes = [
   '/plan',
 ];
 
-export const isBottomNavRoute = (pathname: string) =>
-  !hiddenRoutePrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+export const isBottomNavRoute = (pathname: string) => {
+  const [, root, child] = pathname.split('/');
+  // Recording and saved Roams own their action footer. Keep the dock on the
+  // Roam list and heatmap, which still use the main app navigation.
+  if (root === 'roam' && child && child !== 'heatmap') return false;
+  return !hiddenRoutePrefixes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+};
