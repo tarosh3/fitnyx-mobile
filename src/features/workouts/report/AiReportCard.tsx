@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Share, StyleSheet, Text, View } from 'react-native';
 
 import { reportFileName, sharePdf } from '@/src/features/workouts/report/exportFile';
-import { aiReportHtml } from '@/src/features/workouts/report/formats';
+import { aiReportHtml } from '@/src/features/workouts/report/pdf';
 import { MarkdownText } from '@/src/features/workouts/report/MarkdownText';
 import { useAiReport } from '@/src/features/workouts/report/useAiReport';
 import { Button } from '@/src/features/workouts/ui/Chrome';

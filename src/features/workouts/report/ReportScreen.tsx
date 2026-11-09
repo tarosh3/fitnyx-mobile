@@ -6,7 +6,8 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { AiReportCard } from '@/src/features/workouts/report/AiReportCard';
 import { reportFileName, shareCsv, sharePdf } from '@/src/features/workouts/report/exportFile';
-import { fmtDuration, reportCsv, reportHtml } from '@/src/features/workouts/report/formats';
+import { fmtDuration, reportCsv } from '@/src/features/workouts/report/formats';
+import { reportHtml } from '@/src/features/workouts/report/pdf';
 import { type RangeKind, reportRange, reportTotals } from '@/src/features/workouts/report/model';
 import { BottomBar, Button, TopBar, useBottomBarSpace } from '@/src/features/workouts/ui/Chrome';
 import { useToast } from '@/src/features/workouts/ui/Toast';
