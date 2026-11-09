@@ -65,7 +65,8 @@ if (dryRun) {
   process.exit(0);
 }
 
-run('npx', ['eas', 'update', '--channel', channel, '--message', message, '--skip-bundler', '--input-dir', outDir, '--non-interactive']);
+// eas-cli 18 requires --environment with --non-interactive; the EAS environments share the channel names.
+run('npx', ['eas', 'update', '--channel', channel, '--environment', channel, '--message', message, '--skip-bundler', '--input-dir', outDir, '--non-interactive']);
 
 // Readable stack traces for crashes in this update (needs the token EAS builds use).
 if (process.env.SENTRY_AUTH_TOKEN) {
