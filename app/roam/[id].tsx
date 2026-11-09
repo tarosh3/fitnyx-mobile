@@ -14,6 +14,7 @@ import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
 import { activityTitle, cleanActivityName, defaultActivityName } from '@/src/features/roam/activityName';
 import { useFeatureFlag } from '@/src/features/appConfig/store';
+import { useProGate } from '@/src/features/pro/gate';
 import { useProgressSummary } from '@/src/features/progress/data';
 import { ActivityStats } from '@/src/features/roam/components/ActivityStats';
 import { BestEfforts } from '@/src/features/roam/components/BestEfforts';
@@ -60,6 +61,7 @@ export default function RoamDetailScreen() {
   const [renameError, setRenameError] = useState<string | null>(null);
   const [race, setRace] = useState<RaceResult | null>(null);
   const racing = useFeatureFlag('roam_ghost', true);
+  const proGate = useProGate();
   const summary = useProgressSummary(user?.id);
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function RoamDetailScreen() {
   // Back to the Roam screen underneath with this Roam picked as the ghost.
   const raceThis = () => {
     if (!activity) return;
+    if (!proGate.isPro) return proGate.openPro();
     setPendingRace(buildGhost(activity, activityTitle(activity)));
     router.dismissTo('/roam');
   };
@@ -197,7 +200,7 @@ export default function RoamDetailScreen() {
         <Text style={[styles.sectionTitle, { color: palette.text }]}>Your route</Text>
         <RoamReplay activity={activity} />
         {racing && activity.distance_m >= 200 ? (
-          <FooterButton title="Race this Roam" variant="secondary" icon={<Ghost size={18} color={palette.text} />} onPress={raceThis} />
+          <FooterButton title={proGate.locked ? "Race this Roam · Pro" : "Race this Roam"} variant="secondary" icon={<Ghost size={18} color={palette.text} />} onPress={raceThis} />
         ) : null}
         {activity.vehicle_detected ? (
           <VehicleBanner

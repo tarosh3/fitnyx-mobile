@@ -43,6 +43,8 @@ export const cacheKeys = {
   // Plan from the onboarding answers (GET /plan) and the Home "plan ready" card's dismissal.
   plan: (userId: string) => `plan:${userId}`,
   planIntroDismissed: (userId: string) => `plan:intro-dismissed:${userId}`,
+  // Free / Pro (GET /me/entitlement): no expiry, so an offline Pro user stays Pro.
+  entitlement: (userId: string) => `entitlement:${userId}`,
   // Adaptive program (GET /programs/active) and a day's targets, for offline workouts.
   activeProgram: (userId: string) => `program:active:${userId}`,
   programTargets: (userId: string, dayId: string) => `program:targets:${userId}:${dayId}`,

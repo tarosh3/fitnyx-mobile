@@ -16,6 +16,8 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('@/src/hooks/useThemeColors', () => ({ useThemeColors: () => require('@/src/theme/colors').colors.light }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('@/src/features/appConfig/store', () => ({ useFeatureFlag: () => true }));
+let mockPro = true;
+jest.mock('@/src/features/pro/store', () => ({ useEntitlement: () => ({ isPro: mockPro, loaded: true, entitlement: null }) }));
 jest.mock('@/src/features/plan/data', () => ({ usePlan: () => ({ data: { schedule: { days_per_week: 4, session_min: 50 } } }) }));
 jest.mock('@/src/providers/WorkoutProvider', () => ({ useWorkout: () => ({ activeSession: null, setActiveSession: jest.fn() }) }));
 jest.mock('@/src/features/workouts/start', () => ({ startWorkout: (...a: unknown[]) => mockStart(...(a as [])) }));
@@ -50,6 +52,7 @@ const program = (over: Partial<Program> = {}): Program => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockPro = true;
   mockProgram = null;
   mockSeen = -1;
   mockTargets = null;
@@ -162,6 +165,17 @@ describe('ProgramScreen', () => {
     expect(screen.getByText('NEW · WEEK 2 REVIEW')).toBeOnTheScreen();
     expect(screen.getByText(checkin.note)).toBeOnTheScreen();
     expect(screen.getByText(/Row stalled for three weeks/)).toBeOnTheScreen();
+  });
+
+  it('free (a lapsed Pro): the program is paused, with no targets and no Start', () => {
+    mockPro = false;
+    mockProgram = program();
+    mockSeen = 1;
+    render(<ProgramScreen />);
+    expect(screen.getByTestId('program-paused')).toBeOnTheScreen();
+    expect(screen.queryByTestId('program-next')).toBeNull();
+    fireEvent.press(screen.getByTestId('program-paused-pro'));
+    expect(mockPush).toHaveBeenCalledWith('/pro');
   });
 
   it('shows what a finished block built', () => {

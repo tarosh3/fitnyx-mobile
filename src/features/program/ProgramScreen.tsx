@@ -10,6 +10,8 @@ import { BuildProgramSheet } from '@/src/features/program/BuildProgramSheet';
 import { CheckinCard } from '@/src/features/program/CheckinCard';
 import { useActiveProgram, useCheckinSeen } from '@/src/features/program/data';
 import { NextWorkout } from '@/src/features/program/NextWorkout';
+import { useProGate } from '@/src/features/pro/gate';
+import { ProPausedCard } from '@/src/features/pro/ProPausedCard';
 import { BlockHeader, Gains, WeekDays } from '@/src/features/program/ProgramParts';
 import { startWorkout } from '@/src/features/workouts/start';
 import { Button } from '@/src/features/workouts/ui/Chrome';
@@ -29,6 +31,7 @@ export function ProgramScreen() {
   const [freshWeek, setFreshWeek] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
   const [building, setBuilding] = useState(false);
+  const gate = useProGate();
 
   // A review the user hasn't opened shows highlighted once, then counts as seen.
   const lastWeek = program?.last_checkin?.calendar_week;
@@ -66,18 +69,18 @@ export function ProgramScreen() {
             {program.finished ? (
               <>
                 <Gains gains={program.gains} />
-                <Button testID="program-next-block" title="Build the next block" onPress={() => setBuilding(true)} />
+                <Button testID="program-next-block" title="Build the next block" onPress={() => gate.run(() => setBuilding(true))} />
               </>
             ) : (
               <>
-                {next ? <NextWorkout day={next} onStart={start} starting={starting} inProgress={!!activeSession} /> : null}
+                {gate.locked ? <ProPausedCard /> : next ? <NextWorkout day={next} onStart={start} starting={starting} inProgress={!!activeSession} /> : null}
                 <WeekDays program={program} />
               </>
             )}
             {program.last_checkin && freshWeek !== program.last_checkin.calendar_week
               ? <CheckinCard checkin={program.last_checkin} /> : null}
             {program.finished ? null : (
-              <Button variant="quiet" title="Start a different program" onPress={() => setBuilding(true)} />
+              <Button variant="quiet" title="Start a different program" onPress={() => gate.run(() => setBuilding(true))} />
             )}
           </>
         )}

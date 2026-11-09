@@ -3,6 +3,8 @@ import { Lock, Sparkles } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Share, StyleSheet, Text, View } from 'react-native';
 
+import { useProGate } from '@/src/features/pro/gate';
+import { ProTag } from '@/src/features/pro/ProTag';
 import { reportFileName, sharePdf } from '@/src/features/workouts/report/exportFile';
 import { aiReportHtml } from '@/src/features/workouts/report/pdf';
 import { MarkdownText } from '@/src/features/workouts/report/MarkdownText';
@@ -22,6 +24,9 @@ export function AiReportCard({ userId, firstName }: { userId?: string; firstName
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const report = status?.report?.content ? status.report : null;
+  // Reading a written report stays free; writing a new one is Pro.
+  const gate = useProGate();
+  const write = () => gate.run(() => void generate());
 
   const pdf = async () => {
     if (!report?.content) return;
@@ -71,7 +76,7 @@ export function AiReportCard({ userId, firstName }: { userId?: string; firstName
           {status?.next_available_at ? (
             <Text style={[styles.hint, { color: c.mutedText }]}>Your next report is ready to write on {day(status.next_available_at)}.</Text>
           ) : (
-            <Button variant="quiet" title="Write this week’s report" onPress={generate} style={styles.noFlex} />
+            <Button variant="quiet" title={gate.locked ? 'Write this week’s report · Pro' : 'Write this week’s report'} onPress={write} style={styles.noFlex} />
           )}
         </View>
       </>
@@ -80,14 +85,18 @@ export function AiReportCard({ userId, firstName }: { userId?: string; firstName
     body = (
       <>
         <Text style={[styles.body, { color: c.mutedText }]}>Your coach reviews your last 4 weeks and all-time progress, then tells you what to do next. One new report a week.</Text>
-        <Button testID="ai-report-generate" title="Write my report" onPress={generate} style={styles.noFlex} />
+        <Button testID="ai-report-generate" title={gate.locked ? 'See Pro' : 'Write my report'} onPress={write} style={styles.noFlex} />
       </>
     );
   }
 
   return (
     <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
-      <View style={styles.row}><Sparkles size={20} color={c.accent} /><Text style={[styles.heading, { color: c.text }]}>AI training report</Text></View>
+      <View style={styles.row}>
+        <Sparkles size={20} color={c.accent} />
+        <Text style={[styles.heading, { color: c.text }]}>AI training report</Text>
+        {gate.locked ? <ProTag /> : null}
+      </View>
       {body}
       {error ? <Text accessibilityLiveRegion="polite" style={[styles.hint, { color: c.destructive }]}>{error}</Text> : null}
     </View>

@@ -3,6 +3,7 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Avatar } from '@/src/components/ui/Avatar';
+import { PlanPill } from '@/src/features/pro/PlanPill';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
@@ -31,6 +32,7 @@ export function ProfileHero({ name, username, bio, avatarUrl, level, loading, on
         <View style={styles.nameBlock}>
           <Text accessibilityRole="header" style={[styles.name, { color: c.text }, compact && { fontSize: 24, lineHeight: 29 }]}>{name}</Text>
           {username ? <Text style={[styles.handle, { color: c.mutedText }]} numberOfLines={2}>@{username}</Text> : null}
+          <View style={styles.plan}><PlanPill /></View>
         </View>
       </View>
       {bio ? <Text style={[styles.bio, { color: c.mutedText }]}>{bio}</Text> : null}
@@ -58,6 +60,7 @@ export function ProfileHero({ name, username, bio, avatarUrl, level, loading, on
 }
 
 const styles = StyleSheet.create({
+  plan: { marginTop: 6 },
   wrap: { gap: spacing.base },
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.base },
   nameBlock: { flex: 1, minWidth: 0, gap: spacing.xs },

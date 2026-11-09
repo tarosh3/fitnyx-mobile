@@ -1,5 +1,6 @@
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { refreshEntitlement } from '@/src/features/pro/store';
 import {
   AIThread,
   archiveThread,
@@ -233,6 +234,8 @@ export function AICoachProvider({ children }: { children: ReactNode }) {
 
       // Write to the target thread's bucket — safe even if the user switched away
       setMessagesFor(targetThreadId, (prev) => [...prev, assistantMessage]);
+      // Free plan: one of today's messages is used.
+      void refreshEntitlement();
 
       // Refresh thread list from server (picks up title changes, ordering)
       try {
@@ -250,6 +253,15 @@ export function AICoachProvider({ children }: { children: ReactNode }) {
         );
       }
     } catch (error) {
+      // Free plan: today's messages are used (the server says 429 filo_daily_limit).
+      if ((error as { code?: string }).code === 'filo_daily_limit') {
+        void refreshEntitlement();
+        setMessagesFor(targetThreadId, (prev) => [
+          ...prev,
+          { role: 'assistant', content: "That's today's free messages. I'll be back tomorrow, or get FitNyx Pro for unlimited chats with me." },
+        ]);
+        return;
+      }
       console.error('Failed to send message', error);
       setMessagesFor(targetThreadId, (prev) => [
         ...prev,

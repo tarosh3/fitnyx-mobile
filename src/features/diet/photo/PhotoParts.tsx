@@ -21,11 +21,11 @@ export function ReadingCard() {
   );
 }
 
-export function PhotoError({ kind, onRetry, onBack }: { kind: PhotoErrorKind; onRetry: () => void; onBack: () => void }) {
+export function PhotoError({ kind, onRetry, onBack, onPro }: { kind: PhotoErrorKind; onRetry: () => void; onBack: () => void; onPro?: () => void }) {
   const c = useThemeColors();
   const { title, body } = PHOTO_ERRORS[kind];
   // A retry can't help once today's photos are used, or with the same foodless photo.
-  const canRetry = kind !== 'limit' && kind !== 'no_food';
+  const canRetry = kind !== 'limit' && kind !== 'no_food' && kind !== 'pro';
   return (
     <View style={[styles.card, styles.center, { backgroundColor: c.surface }]} accessibilityLiveRegion="polite">
       <CircleAlert size={28} color={c.destructive} />
@@ -33,7 +33,8 @@ export function PhotoError({ kind, onRetry, onBack }: { kind: PhotoErrorKind; on
       <Text style={[styles.body, { color: c.mutedText }]}>{body}</Text>
       <View style={styles.actions}>
         {canRetry ? <Pill label="Try again" onPress={onRetry} primary /> : null}
-        <Pill label={kind === 'no_food' ? 'Pick another photo' : 'Search instead'} onPress={onBack} primary={!canRetry} />
+        {kind === 'pro' && onPro ? <Pill label="See Pro" onPress={onPro} primary /> : null}
+        <Pill label={kind === 'no_food' ? 'Pick another photo' : 'Search instead'} onPress={onBack} primary={!canRetry && kind !== 'pro'} />
       </View>
     </View>
   );

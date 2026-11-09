@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react-native';
+import { Check, Crown } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -11,7 +11,7 @@ import { type } from '@/src/styles/tokens';
 export interface LookOption { value: ShareTemplate; label: string; design?: RemoteTemplate }
 
 /** Live thumbnails of every look (built-in and published) in the current format. */
-export function LookPicker({ looks, active, data, format, photoUri, disabled, onSelect }: {
+export function LookPicker({ looks, active, data, format, photoUri, disabled, onSelect, isLocked }: {
   looks: LookOption[];
   active: ShareTemplate;
   data: ShareCardData | null;
@@ -19,6 +19,8 @@ export function LookPicker({ looks, active, data, format, photoUri, disabled, on
   photoUri: string | null;
   disabled: boolean;
   onSelect: (value: ShareTemplate) => void;
+  /** A Pro look on the free plan: a crown on its thumbnail. */
+  isLocked?: (look: LookOption) => boolean;
 }) {
   const c = useThemeColors();
   const { width, height } = CARD_SIZE[format];
@@ -49,6 +51,11 @@ export function LookPicker({ looks, active, data, format, photoUri, disabled, on
                   </View>
                 ) : null}
               </View>
+              {isLocked?.(t) ? (
+                <View style={[styles.selected, { backgroundColor: c.accentSoft, borderWidth: 1, borderColor: c.primary }]} accessibilityLabel="Pro design">
+                  <Crown size={11} strokeWidth={2.5} color={c.accent} />
+                </View>
+              ) : null}
               {on ? (
                 <View style={[styles.selected, { backgroundColor: c.primary }]}>
                   <Check size={11} strokeWidth={3} color={c.primaryText} />

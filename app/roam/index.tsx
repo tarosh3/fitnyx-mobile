@@ -11,6 +11,7 @@ import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { useFeatureFlag } from '@/src/features/appConfig/store';
+import { useProGate } from '@/src/features/pro/gate';
 import { useGoals, useTodayActivity } from '@/src/features/goals/data';
 import { activityGoals } from '@/src/features/goals/model';
 import { ActivityGoalsSheet } from '@/src/features/goals/ui/ActivityGoalsSheet';
@@ -52,6 +53,7 @@ export default function RoamScreen() {
   const [editingGoals, setEditingGoals] = useState(false);
   // Race your past self: the Roam picked to run beside you as a ghost.
   const racing = useFeatureFlag('roam_ghost', true);
+  const proGate = useProGate();
   const [ghost, setGhost] = useState<GhostTarget | null>(null);
   const [raceOpen, setRaceOpen] = useState(false);
   const [raceLoading, setRaceLoading] = useState<string | null>(null);
@@ -132,7 +134,8 @@ export default function RoamScreen() {
           <>
             <SegmentedControl options={TYPES} value={type} onChange={changeType} />
             {racing ? (
-              <RaceRow ghost={ghost} onOpen={() => { setRaceError(null); setRaceOpen(true); }} onClear={() => setGhost(null)} />
+              <RaceRow ghost={ghost} locked={proGate.locked} onClear={() => setGhost(null)}
+                onOpen={() => proGate.run(() => { setRaceError(null); setRaceOpen(true); })} />
             ) : null}
             {goals.data ? <RoamGoalsRow goals={goals.data} day={today.day} onEdit={() => setEditingGoals(true)} /> : null}
             <Button title={`START ${TYPES.find((t) => t.value === type)?.label.toUpperCase()}`} onPress={onStart} loading={starting} />

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { isProNow, useEntitlement } from '@/src/features/pro/store';
 import { useCachedResource } from '@/src/features/workouts/hooks';
 import { retentionMetricsKey } from '@/src/hooks/queryKeys';
 import {
@@ -19,7 +20,9 @@ export function useActiveProgram() {
   const res = useCachedResource<Program | null>(user ? cacheKeys.activeProgram(user.id) : null, getActiveProgram, cacheTTL.LONG);
   const checking = useRef(false);
   const { refresh } = res;
-  const due = !!res.data?.checkin_due;
+  // The weekly review is Pro (the server answers 402 otherwise): don't ask on free.
+  const { isPro } = useEntitlement();
+  const due = !!res.data?.checkin_due && isPro;
   useEffect(() => {
     if (!due || checking.current) return;
     checking.current = true;
@@ -55,6 +58,8 @@ export function useBuildProgram() {
  * belongs to the active program on this phone: every other workout skips the call.
  */
 export async function loadProgramTargets(userId: string, dayId: string): Promise<DayTargets | null> {
+  // Free (a lapsed Pro): the day's saved targets stand; the server would answer 402.
+  if (!isProNow()) return null;
   const program = await cacheGetStale<Program | null>(cacheKeys.activeProgram(userId)).catch(() => null);
   if (!program?.days.some((d) => d.id === dayId)) return null;
   const key = cacheKeys.programTargets(userId, dayId);

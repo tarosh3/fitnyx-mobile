@@ -25,7 +25,7 @@ const REDEEM_MESSAGES: Record<string, string> = {
  * Raw fetch on purpose: there is no backend session yet, and fetchWithAuth's
  * invite latch would fast-fail the request.
  */
-export async function redeemInviteCode(code: string): Promise<{ access_expires_at: string }> {
+export async function redeemInviteCode(code: string): Promise<{ access_expires_at: string; duration_days?: number }> {
   const token = await getAuthToken();
   // Same 10s bound as fetchWithAuth — without it a stalled connection pins the
   // submit button in its loading state until the OS-level timeout.
@@ -46,7 +46,7 @@ export async function redeemInviteCode(code: string): Promise<{ access_expires_a
     clearTimeout(timeout);
   }
 
-  let body: { access_expires_at?: string; error?: string; code?: string } | null = null;
+  let body: { access_expires_at?: string; duration_days?: number; error?: string; code?: string } | null = null;
   const text = await response.text();
   if (text) {
     try {
@@ -66,5 +66,6 @@ export async function redeemInviteCode(code: string): Promise<{ access_expires_a
   if (!body?.access_expires_at) {
     throw new Error('Redemption returned no access window');
   }
-  return { access_expires_at: body.access_expires_at };
+  // Codes also grant Pro for duration_days (stacked); read the plan from /me/entitlement.
+  return { access_expires_at: body.access_expires_at, duration_days: body.duration_days };
 }

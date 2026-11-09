@@ -6,6 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { type Machine, machineForExercise, MACHINES } from '@/src/features/cardio/machines';
 import { type Goal, GOALS, LENGTHS, minutesOf, type Program, type ProgramLength, phasesOf, PROGRAMS, suggestedGoal } from '@/src/features/cardio/programs';
+import { useProGate } from '@/src/features/pro/gate';
+import { cardioIsFree } from '@/src/features/pro/model';
+import { ProTag } from '@/src/features/pro/ProTag';
 import { beginRun } from '@/src/features/cardio/start';
 import { runIsOrphaned } from '@/src/features/cardio/finish';
 import { clearRun, comfortFor, lastMachine, loadComfort, loadHistory, loadRun, type RunRecord, type RunState, timesDone } from '@/src/features/cardio/store';
@@ -82,6 +85,7 @@ export function CardioScreen() {
 
   const list = useMemo(() => PROGRAMS.filter((p) => p.goal === goal && (!p.treadmillOnly || machine.id === 'treadmill')), [goal, machine.id]);
   const saved = comfortFor(comfort, machine);
+  const proGate = useProGate();
 
   // Its workout was finished from somewhere else (a notification): nothing left to save it to.
   useEffect(() => {
@@ -91,6 +95,8 @@ export function CardioScreen() {
   }, [userId, resume, inWorkout, workoutLoading, isOffline]);
 
   const open = (p: Program) => {
+    // Three programs are free; the rest are Pro.
+    if (!cardioIsFree(p.id) && !proGate.isPro) return proGate.openPro();
     // One run at a time: starting another would throw this one away.
     if (resume) {
       toast(`${resume.programTitle} is still going. Finish it first`);
@@ -188,6 +194,7 @@ export function CardioScreen() {
                 style={({ pressed }) => [styles.card, { backgroundColor: c.card, borderColor: c.border }, pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] }]}>
                 <View style={styles.cardHead}>
                   <Text style={[styles.cardTitle, styles.grow, { color: c.text }]} numberOfLines={1}>{p.title}</Text>
+                  {proGate.locked && !cardioIsFree(p.id) ? <ProTag /> : null}
                   <ChevronRight size={20} color={c.mutedText} />
                 </View>
                 <Text style={[styles.blurb, { color: c.mutedText }]}>{p.blurb}</Text>

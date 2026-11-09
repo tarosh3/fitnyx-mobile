@@ -6,6 +6,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFeatureFlag } from '@/src/features/appConfig/store';
 import { BuildProgramSheet } from '@/src/features/program/BuildProgramSheet';
 import { useActiveProgram, useCheckinSeen } from '@/src/features/program/data';
+import { useProGate } from '@/src/features/pro/gate';
+import { ProTag } from '@/src/features/pro/ProTag';
 import { phaseLabel } from '@/src/features/program/model';
 import { WeekStrip } from '@/src/features/program/WeekStrip';
 import { Button } from '@/src/features/workouts/ui/Chrome';
@@ -23,6 +25,7 @@ export function AdaptiveProgramCard({ pitch = true }: { pitch?: boolean }) {
   const { data: program, loading } = useActiveProgram();
   const { seen } = useCheckinSeen(program?.id);
   const [building, setBuilding] = useState(false);
+  const gate = useProGate();
   if (!enabled || loading) return null;
 
   if (!program) {
@@ -37,7 +40,8 @@ export function AdaptiveProgramCard({ pitch = true }: { pitch?: boolean }) {
         <Text style={[styles.body, { color: c.mutedText }]}>
           4 to 12 weeks. Every workout's targets come from what you did last time, lighter weeks are built in, and Filo checks in each week.
         </Text>
-        <Button testID="program-pitch-build" title="Build my program" onPress={() => setBuilding(true)} />
+        {gate.locked ? <ProTag /> : null}
+        <Button testID="program-pitch-build" title={gate.locked ? 'See Pro' : 'Build my program'} onPress={() => gate.run(() => setBuilding(true))} />
         <BuildProgramSheet visible={building} onClose={() => setBuilding(false)}
           onBuilt={() => { setBuilding(false); router.push('/program'); }} />
       </View>
