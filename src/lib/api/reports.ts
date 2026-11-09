@@ -9,6 +9,7 @@ export interface ReportSet {
   set_index: number;
   reps: number;
   weight_kg: number | null;
+  /** Assisted exercises: help taken (less is better). Missing from servers before 2026-11-09. */
   assist_kg?: number | null;
   duration_sec: number | null;
   distance_m: number | null;
@@ -36,6 +37,8 @@ export interface ReportExercise {
 
 export interface ReportRoam {
   date: string;
+  /** ISO start time. Missing from servers before 2026-11-09. */
+  started_at?: string;
   type: 'run' | 'walk' | 'cycle';
   name: string | null;
   distance_m: number;
