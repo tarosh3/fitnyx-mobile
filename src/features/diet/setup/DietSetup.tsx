@@ -56,7 +56,7 @@ export function DietSetup({ userId, onCreated, onStepChange }: { userId: string;
   };
 
   // Making a plan is Pro (the server answers 402 otherwise): no wizard to fill in first.
-  if (gate.locked) return <ProUpsellCard testID="diet-plan-pro" title="AI meal plan" body="Filo builds a day of meals sized to your calories and protein, with swaps and recipes. Logging food stays free." />;
+  if (gate.locked) return <View style={styles.locked}><ProUpsellCard testID="diet-plan-pro" title="AI meal plan" body="Filo builds a day of meals sized to your calories and protein, with swaps and recipes. Logging food stays free." /></View>;
 
   if (generating) {
     return (
@@ -91,6 +91,7 @@ export function DietSetup({ userId, onCreated, onStepChange }: { userId: string;
 }
 
 const styles = StyleSheet.create({
+  locked: { marginTop: spacing.md },
   card: { marginTop: spacing.xl, borderRadius: radii['2xl'], borderWidth: StyleSheet.hairlineWidth, padding: spacing['2xl'], alignItems: 'center' },
   orb: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xl },
   lottie: { width: 80, height: 80 },
