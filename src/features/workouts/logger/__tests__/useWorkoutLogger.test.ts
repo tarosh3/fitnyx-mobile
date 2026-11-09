@@ -14,7 +14,10 @@ jest.mock('@/src/lib/offline/offlineStore', () => ({ getIdMapping: jest.fn(async
 jest.mock('@/src/providers/WorkoutProvider', () => ({ useWorkout: () => ({ activeSession: null, setActiveSession: jest.fn() }) }));
 jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 const mockLoadProgramTargets = jest.fn(async (_userId: string, _dayId: string): Promise<unknown> => null);
-jest.mock('@/src/features/program/data', () => ({ loadProgramTargets: (u: string, d: string) => mockLoadProgramTargets(u, d) }));
+jest.mock('@/src/features/program/data', () => ({
+  loadProgramTargets: (u: string, d: string) => mockLoadProgramTargets(u, d),
+  programDayLabel: async () => 'Full Body A · Week 3',
+}));
 jest.mock('@/src/hooks/useOfflineAware', () => ({ useOfflineAware: () => ({ isOffline: false }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ setParams: jest.fn() }) }));
 
@@ -72,7 +75,8 @@ describe('a day of the adaptive program', () => {
     });
     const result = await load();
     expect(mockLoadProgramTargets).toHaveBeenCalledWith('u1', 'day-1');
-    expect(result.current.blocks[0].planned).toMatchObject({ target_sets: 4, target_reps: 8, target_weight_kg: 62.5 });
+    expect(result.current.blocks[0].planned).toMatchObject({ target_sets: 4, target_reps: 8, target_weight_kg: 62.5, program_light: false });
+    expect(result.current.planTitle).toBe('Full Body A · Week 3');
   });
 });
 

@@ -67,6 +67,13 @@ export async function loadProgramTargets(userId: string, dayId: string): Promise
   }
 }
 
+/** "Full Body A · Week 4": the logger's title for a day of the active program. */
+export async function programDayLabel(userId: string, dayId: string): Promise<string | null> {
+  const program = await cacheGetStale<Program | null>(cacheKeys.activeProgram(userId)).catch(() => null);
+  const day = program?.days.find((d) => d.id === dayId);
+  return day ? `${day.title} · Week ${program!.week}` : null;
+}
+
 /** A day's targets for the preview on the program screen. */
 export function useDayTargets(dayId: string | null | undefined) {
   const { user } = useAuth();

@@ -91,8 +91,9 @@ describe('model', () => {
   });
 
   it('formats changes and targets', () => {
-    expect(formatChange({ exercise_uuid: '', title: '', from: 80, to: 83.33, unit: 'kg' })).toBe('Est. max 80 → 83.3 kg');
-    expect(formatChange({ exercise_uuid: '', title: '', from: 12, to: 15, unit: 'reps' })).toBe('12 → 15 reps');
+    expect(formatChange({ exercise_uuid: '', title: '', from: 30, to: 36.7, unit: 'kg' })).toBe('+22%');
+    expect(formatChange({ exercise_uuid: '', title: '', from: 12, to: 15, unit: 'reps' })).toBe('+25%');
+    expect(formatChange({ exercise_uuid: '', title: '', from: 100, to: 100.2, unit: 's' })).toBe('+1%');
     expect(formatChange({ exercise_uuid: '', title: '', from: 1, to: 2, unit: '' })).toBeNull();
     expect(targetLine({ sets: 3, reps: 8, weight_kg: 62.5 })).toBe('3 × 8 · 62.5 kg');
     expect(targetLine({ sets: 3, reps: 8, assist_kg: 20 })).toBe('3 × 8 · 20 kg help');
@@ -168,7 +169,7 @@ describe('ProgramScreen', () => {
     mockSeen = 1;
     render(<ProgramScreen />);
     expect(screen.getByText('BLOCK COMPLETE')).toBeOnTheScreen();
-    expect(screen.getByText('Est. max 80 → 92 kg')).toBeOnTheScreen();
+    expect(screen.getByText('+15%')).toBeOnTheScreen();
     expect(screen.getByText('Build the next block')).toBeOnTheScreen();
     expect(screen.queryByTestId('program-next')).toBeNull();
   });

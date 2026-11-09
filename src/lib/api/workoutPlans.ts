@@ -48,6 +48,8 @@ export interface WorkoutDayExercise {
   rir?: number;
   created_at: string;
   exercise?: Exercise;
+  /** Phone only: a lighter week of the adaptive program (no "beat last time" nudge). */
+  program_light?: boolean;
 }
 
 /** A plan with its days and each day's exercises (GET /workout-plans/:id, defaults). */
