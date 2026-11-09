@@ -12,6 +12,9 @@ jest.mock('@/src/lib/offline/exerciseCache', () => ({ cacheExercisesForDay: jest
 jest.mock('@/src/lib/offline/videoCache', () => ({ cacheWorkoutVideos: jest.fn(async () => {}) }));
 jest.mock('@/src/lib/offline/offlineStore', () => ({ getIdMapping: jest.fn(async () => null), isOfflineId: () => false }));
 jest.mock('@/src/providers/WorkoutProvider', () => ({ useWorkout: () => ({ activeSession: null, setActiveSession: jest.fn() }) }));
+jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
+const mockLoadProgramTargets = jest.fn(async (_userId: string, _dayId: string): Promise<unknown> => null);
+jest.mock('@/src/features/program/data', () => ({ loadProgramTargets: (u: string, d: string) => mockLoadProgramTargets(u, d) }));
 jest.mock('@/src/hooks/useOfflineAware', () => ({ useOfflineAware: () => ({ isOffline: false }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ setParams: jest.fn() }) }));
 
@@ -57,6 +60,19 @@ describe('planned exercises with a bad connection', () => {
     mockGetDayExercises.mockRejectedValueOnce(Object.assign(new Error('Not found'), { status: 404 }));
     const result = await load();
     expect(result.current.plannedMissing).toBe(false);
+  });
+});
+
+describe('a day of the adaptive program', () => {
+  it("uses today's targets from the program instead of the stored ones", async () => {
+    mockGetDayExercises.mockResolvedValueOnce({ data: [{ ...bench, target_reps: 10 }] });
+    mockLoadProgramTargets.mockResolvedValueOnce({
+      day_id: 'd1', week: 3, phase: { kind: 'build', extra_set: true },
+      items: [{ day_exercise_id: 'e1', exercise_uuid: 'bench', sets: 4, reps: 8, weight_kg: 62.5, kind: 'up', note: 'up 2.5 kg' }],
+    });
+    const result = await load();
+    expect(mockLoadProgramTargets).toHaveBeenCalledWith('u1', 'day-1');
+    expect(result.current.blocks[0].planned).toMatchObject({ target_sets: 4, target_reps: 8, target_weight_kg: 62.5 });
   });
 });
 

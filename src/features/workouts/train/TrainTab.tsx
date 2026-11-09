@@ -5,7 +5,9 @@ import { ChevronRight } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useFeatureFlag } from '@/src/features/appConfig/store';
 import { usePlan } from '@/src/features/plan/data';
+import { AdaptiveProgramCard } from '@/src/features/program/AdaptiveProgramCard';
 import { isTrainingDay } from '@/src/features/plan/model';
 import { fmtVolume, plural } from '@/src/features/workouts/model';
 import { ProgramCard } from '@/src/features/workouts/programs/ProgramCard';
@@ -34,6 +36,7 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
   const programs = usePrograms();
   const schedule = usePlan().data?.schedule;
   const { activeSession, setActiveSession } = useWorkout();
+  const adaptive = useFeatureFlag('adaptive_program', true);
 
   const sessions = metrics.sessions ?? [];
   const today = localDateKey(new Date());
@@ -76,7 +79,12 @@ export function TrainTab({ userId, onSeeHistory }: { userId: string; onSeeHistor
       <View style={styles.gapTop}>
         <WeekCard sessions={sessions} />
       </View>
-      {!metrics.loading && !metrics.activePlan ? (
+      {adaptive ? (
+        // Where you are in the block, or the offer to build one (it supersedes the starter card).
+        <View style={styles.gapTop}>
+          <AdaptiveProgramCard />
+        </View>
+      ) : !metrics.loading && !metrics.activePlan ? (
         <View style={styles.gapTop}>
           <StarterCard />
         </View>

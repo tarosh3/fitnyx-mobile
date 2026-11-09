@@ -43,6 +43,11 @@ export const cacheKeys = {
   // Plan from the onboarding answers (GET /plan) and the Home "plan ready" card's dismissal.
   plan: (userId: string) => `plan:${userId}`,
   planIntroDismissed: (userId: string) => `plan:intro-dismissed:${userId}`,
+  // Adaptive program (GET /programs/active) and a day's targets, for offline workouts.
+  activeProgram: (userId: string) => `program:active:${userId}`,
+  programTargets: (userId: string, dayId: string) => `program:targets:${userId}:${dayId}`,
+  // Check-in reviews the user has opened (calendar weeks), per program.
+  programCheckinSeen: (userId: string, programId: string) => `program:checkin-seen:${userId}:${programId}`,
   healthHintDismissed: (userId: string) => `health:hint-dismissed:${userId}`,
   // Daily activity + diet goals (GET /goals); a reached goal's notification, once per day.
   goals: (userId: string) => `goals:${userId}`,
