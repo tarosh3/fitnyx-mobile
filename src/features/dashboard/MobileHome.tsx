@@ -26,6 +26,7 @@ import { MilestoneNotice } from '@/src/components/ui/MilestoneNotice';
 import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { Entrance, StreakPulse } from '@/src/components/ui/Motion';
 import { FiloMark } from '@/src/components/ai/FiloMark';
+import { AdaptiveProgramCard } from '@/src/features/program/AdaptiveProgramCard';
 import { TodayPickCard } from '@/src/features/workouts/today/TodayPickCard';
 import { HomeEntryTiles, HomeShortcuts } from './components/HomeShortcuts';
 import { ActiveMissionCard } from './components/ActiveMissionCard';
@@ -170,6 +171,8 @@ export function MobileHome({ user, avatarUrl, userProfile }: MobileHomeProps) {
         <Entrance delay={30}><HomeEntryTiles /></Entrance>
         {metrics.activeSession ? null : <Entrance delay={60}>{workoutSection}</Entrance>}
         {metrics.activeSession ? null : <Entrance delay={65}><TodayPickCard testID="home-today-pick" /></Entrance>}
+        {/* Not in Entrance: it renders nothing without a program, and an empty wrapper keeps a gap. */}
+        <AdaptiveProgramCard pitch={false} />
         {/* Not in an Entrance: its wrapper would keep a gap when the card renders nothing. */}
         <ReadinessCard />
         <Entrance delay={70}><HomeShortcuts><PlanTodayCard /></HomeShortcuts></Entrance>

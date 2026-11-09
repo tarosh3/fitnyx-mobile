@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type DraftSet, draftToLog, draftToUpdate, trackingOf } from '@/src/features/workouts/model';
 import { type Block, beatsBest, beatsBestAssist, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
+import { loadProgramTargets } from '@/src/features/program/data';
+import { applyTargets } from '@/src/features/program/model';
 import { plannedForSwap } from '@/src/features/workouts/today/model';
 import { loadTodayRun, saveTodayRun, type TodayRun } from '@/src/features/workouts/today/store';
 import { moveItem } from '@/src/features/workouts/ui/dragOrder';
@@ -17,6 +19,7 @@ import { cacheExercisesForDay, fetchExerciseWithCache } from '@/src/lib/offline/
 import { markOfflineLogPr, offlineDeleteLog, offlineGetSession, offlineLogSet, offlineUpdateLog } from '@/src/lib/offline/offlineApi';
 import { getIdMapping, isOfflineId } from '@/src/lib/offline/offlineStore';
 import { cacheWorkoutVideos } from '@/src/lib/offline/videoCache';
+import { useAuth } from '@/src/providers/AuthProvider';
 import { useWorkout } from '@/src/providers/WorkoutProvider';
 import type { Exercise } from '@/src/types/exercise';
 
@@ -58,6 +61,8 @@ function newBlock(uuid: string, planned: WorkoutDayExercise | null, exercise: Ex
 export function useWorkoutLogger(sessionId: string) {
   const router = useRouter();
   const { activeSession, setActiveSession } = useWorkout();
+  const { user } = useAuth();
+  const userId = user?.id;
   const { isOffline } = useOfflineAware();
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -100,6 +105,8 @@ export function useWorkoutLogger(sessionId: string) {
           // No status = the network failed; an HTTP error is the server's real answer.
           missing = !cached && !e?.status;
         }
+        // A day of the adaptive program: today's targets (earned steps, the week's shape).
+        if (userId && planned.length) planned = applyTargets(planned, await loadProgramTargets(userId, res.session.day_id).catch(() => null));
       } else {
         todayRun.current = await loadTodayRun(sessionId).catch(() => null);
         planned = todayRun.current?.items ?? [];
@@ -124,7 +131,7 @@ export function useWorkoutLogger(sessionId: string) {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, isOffline, enrich, setActiveSession]);
+  }, [sessionId, isOffline, enrich, setActiveSession, userId]);
 
   useEffect(() => { load(); }, [sessionId]);
 
