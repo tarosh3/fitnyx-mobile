@@ -110,3 +110,36 @@ export async function fetchRecentFoods(date: string): Promise<RecentFood[]> {
   const res = await fetchWithAuth(`/diet/foods/recent?date=${encodeURIComponent(date)}`);
   return res?.foods ?? [];
 }
+
+// --- Meal photo (POST /diet/photo, backend diet_photo_handler.go + internal/foodphoto) ---
+
+/** One food the photo shows; kcal and macros are for the whole amount shown. */
+export interface PhotoMealItem {
+  /** Set when the backend matched a curated food and used its numbers. */
+  food_id: number | null;
+  name: string;
+  portion_label: string;
+  grams: number;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  is_veg: boolean | null;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface PhotoMealResult {
+  name: string;
+  items: PhotoMealItem[];
+  /** One sentence on what could change the numbers, or ''. */
+  note: string;
+}
+
+/**
+ * Reads a meal photo (base64 JPEG). Nothing is saved: the result is shown for
+ * editing and logged with createDietLog. Errors carry status 429 with code
+ * 'daily_limit' (today's scans used) or 422 'no_food'.
+ */
+export async function analyzeMealPhoto(imageBase64: string, hint: string): Promise<PhotoMealResult> {
+  return fetchWithAuth('/diet/photo', { method: 'POST', body: JSON.stringify({ image: imageBase64, hint }) });
+}
