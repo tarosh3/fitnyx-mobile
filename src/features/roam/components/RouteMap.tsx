@@ -58,6 +58,8 @@ export interface RouteMapProps {
   inScroll?: boolean;
   /** Hide the map buttons (e.g. while the replay's stats overlay the top). */
   controlsHidden?: boolean;
+  /** Live race: the ghost's route (faint) and where the ghost is now. */
+  ghost?: { coord: LngLatPair | null; path: LngLatPair[] } | null;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -76,6 +78,7 @@ export const RouteMap = React.memo(function RouteMap({
   controlsHidden = false,
   style,
   inScroll = false,
+  ghost,
 }: RouteMapProps) {
   const palette = useThemeColors();
   const { theme } = useTheme();
@@ -100,6 +103,16 @@ export const RouteMap = React.memo(function RouteMap({
         : [],
     }),
     [head],
+  );
+
+  const ghostPath = useMemo(() => (ghost ? routeLine(ghost.path) : null), [ghost?.path]);
+  const ghostCoord = ghost?.coord ?? null;
+  const ghostDot = useMemo<FeatureCollection<Point>>(
+    () => ({
+      type: 'FeatureCollection',
+      features: ghostCoord ? [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: ghostCoord } }] : [],
+    }),
+    [ghostCoord],
   );
 
   // OpenFreeMap → VersaTiles → the offline sketch (see useBasemap).
@@ -202,6 +215,19 @@ export const RouteMap = React.memo(function RouteMap({
           ) : null}
 
           <Images images={ROAM_ICONS} />
+
+          {ghostPath ? (
+            // Under your own line: the ghost's route, faint and dashed.
+            <GeoJSONSource id="roam-ghost-path" data={ghostPath}>
+              <Layer
+                key="roam-ghost-path-line"
+                type="line"
+                id="roam-ghost-path-line"
+                layout={ROUND}
+                paint={{ 'line-color': palette.text, 'line-opacity': 0.3, 'line-width': LINE_WIDTH, 'line-dasharray': [1, 2] }}
+              />
+            </GeoJSONSource>
+          ) : null}
 
           <GeoJSONSource id="roam-route" data={line} lineMetrics={Boolean(lineGradient)}>
             {/* A soft shadow and an outline lift the route off the roads beneath. */}
@@ -312,6 +338,24 @@ export const RouteMap = React.memo(function RouteMap({
                   'text-allow-overlap': true,
                 }}
                 paint={{ 'text-color': palette.text }}
+              />
+            </GeoJSONSource>
+          ) : null}
+
+          {ghostPath ? (
+            <GeoJSONSource id="roam-ghost" data={ghostDot}>
+              <Layer
+                key="roam-ghost-dot"
+                type="circle"
+                id="roam-ghost-dot"
+                paint={{
+                  'circle-radius': 9,
+                  'circle-color': colors.dark.text,
+                  'circle-opacity': 0.75,
+                  'circle-stroke-width': 3,
+                  'circle-stroke-color': palette.text,
+                  'circle-stroke-opacity': 0.6,
+                }}
               />
             </GeoJSONSource>
           ) : null}

@@ -34,6 +34,8 @@ interface Props {
   /** Today's goals + body weight, from when the Roam started; null = none. */
   tracker?: GoalTracker | null;
   artworkSeed?: string;
+  /** How a race against a past Roam went; null when not racing. */
+  race?: React.ReactNode;
 }
 
 /** After Finish: review the Roam, then save or discard. Numbers are final once the server recomputes them. */
@@ -51,6 +53,7 @@ export function RecordingSummaryView({
   onExportRaw,
   tracker,
   artworkSeed,
+  race,
 }: Props) {
   const palette = useThemeColors();
   const roam = roamActivity(type, stats, tracker?.weightKg ?? null);
@@ -83,6 +86,7 @@ export function RecordingSummaryView({
           </View>
           }
         />
+        {race}
         <View style={styles.routeCard}>
           <Text style={[styles.sectionTitle, styles.routeTitle, { color: palette.text }]}>Your route</Text>
           <RouteMap inScroll route={stats.route} vehicleRanges={stats.vehicleRanges} style={styles.map} />

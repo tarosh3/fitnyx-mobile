@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pencil, Share2 } from 'lucide-react-native';
+import { Ghost, Pencil, Share2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -13,13 +13,19 @@ import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
 import { activityTitle, cleanActivityName, defaultActivityName } from '@/src/features/roam/activityName';
+import { useFeatureFlag } from '@/src/features/appConfig/store';
+import { useProgressSummary } from '@/src/features/progress/data';
 import { ActivityStats } from '@/src/features/roam/components/ActivityStats';
+import { BestEfforts } from '@/src/features/roam/components/BestEfforts';
+import { RaceResultCard } from '@/src/features/roam/components/GhostCards';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
 import { RenameRoamSheet } from '@/src/features/roam/components/RenameRoamSheet';
 import { RoamReplay } from '@/src/features/roam/components/RoamReplay';
 import { SplitsList } from '@/src/features/roam/components/SplitsList';
 import { VehicleBanner } from '@/src/features/roam/components/VehicleBanner';
 import { formatDistance } from '@/src/features/roam/geo';
+import { buildGhost } from '@/src/features/roam/ghost';
+import { getRaceResult, setPendingRace, type RaceResult } from '@/src/features/roam/ghostStore';
 import { roamCardData } from '@/src/features/share/cardData';
 import { ShareCardSheet } from '@/src/features/share/ShareCardSheet';
 import { retentionMetricsKey } from '@/src/hooks/useRetentionMetrics';
@@ -52,6 +58,20 @@ export default function RoamDetailScreen() {
   const [renaming, setRenaming] = useState(false);
   const [renameSaving, setRenameSaving] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [race, setRace] = useState<RaceResult | null>(null);
+  const racing = useFeatureFlag('roam_ghost', true);
+  const summary = useProgressSummary(user?.id);
+
+  useEffect(() => {
+    if (activityId) getRaceResult(activityId).then(setRace);
+  }, [activityId]);
+
+  // Back to the Roam screen underneath with this Roam picked as the ghost.
+  const raceThis = () => {
+    if (!activity) return;
+    setPendingRace(buildGhost(activity, activityTitle(activity)));
+    router.dismissTo('/roam');
+  };
 
   useEffect(() => {
     if (!user?.id || !activityId) return;
@@ -170,8 +190,15 @@ export default function RoamDetailScreen() {
           }
         />
         <CompletionRewards screen="roam" seed={activity.id} xp={activity.xp} eligible={activity.xp_eligible} />
+        {race ? (
+          <RaceResultCard ghost={{ title: race.ghostTitle, startedAt: race.ghostStartedAt }} ghostDistanceM={race.ghostDistanceM}
+            myDistanceM={activity.distance_m} state={race.state} />
+        ) : null}
         <Text style={[styles.sectionTitle, { color: palette.text }]}>Your route</Text>
         <RoamReplay activity={activity} />
+        {racing && activity.distance_m >= 200 ? (
+          <FooterButton title="Race this Roam" variant="secondary" icon={<Ghost size={18} color={palette.text} />} onPress={raceThis} />
+        ) : null}
         {activity.vehicle_detected ? (
           <VehicleBanner
             message={`${formatDistance(activity.vehicle_distance_m)} was vehicle travel and isn't counted${activity.xp_eligible ? '' : ' — this Roam earned no XP'}.`}
@@ -179,6 +206,7 @@ export default function RoamDetailScreen() {
         ) : null}
         <Text style={[styles.sectionTitle, { color: palette.text }]}>The details</Text>
         <ActivityStats activity={activity} />
+        <BestEfforts activityId={activity.id} splits={activity.splits} records={summary.data?.records.efforts} />
         <SplitsList splits={activity.splits} distanceM={activity.distance_m} movingSec={activity.moving_time_sec} />
         {error ? <Text style={[styles.note, { color: palette.destructive }]}>{error}</Text> : null}
         <Button title="DELETE ROAM" variant="ghost" textStyle={{ color: palette.destructive }} onPress={() => setConfirmDelete(true)} loading={deleting} />

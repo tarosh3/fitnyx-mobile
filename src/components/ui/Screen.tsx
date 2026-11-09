@@ -12,9 +12,11 @@ interface ScreenProps {
   scroll?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
+  /** The scroll view, e.g. to return to the top. */
+  scrollRef?: React.Ref<ScrollView>;
 }
 
-export function Screen({ children, scroll = true, contentContainerStyle, style }: ScreenProps) {
+export function Screen({ children, scroll = true, contentContainerStyle, style, scrollRef }: ScreenProps) {
   const palette = useThemeColors();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
@@ -35,6 +37,7 @@ export function Screen({ children, scroll = true, contentContainerStyle, style }
     <View style={[containerStyle, style]}>
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[styles.scrollContainer, contentContainerStyle, navigationPadding]}
           showsVerticalScrollIndicator={false}
