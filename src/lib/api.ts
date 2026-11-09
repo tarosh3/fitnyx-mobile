@@ -13,7 +13,8 @@ const SESSION_ID_KEY = 'fitnyx-session-id';
 
 // Endpoints that talk to AI services and need a longer timeout than the default 10s.
 // '/activities': a Roam upload can carry a few hundred KB of GPS points.
-const LONG_TIMEOUT_ENDPOINTS = ['/agent/', '/diet/generate', '/activities'];
+// '/diet/photo': a vision model reads the photo (the backend gives it 40 s).
+const LONG_TIMEOUT_ENDPOINTS = ['/agent/', '/diet/generate', '/activities', '/diet/photo'];
 const DEFAULT_TIMEOUT_MS = 10_000;
 // Must sit ABOVE the backend's NVIDIA client timeout (180s) — otherwise the app
 // aborts mid-generation and cancels the backend's request context (a large diet

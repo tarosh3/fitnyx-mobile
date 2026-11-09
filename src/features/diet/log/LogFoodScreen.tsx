@@ -15,6 +15,7 @@ import { saveMealLog } from '../data/dietLogs';
 import { fmt, foodLogItem, itemsTotal, SLOT_LABELS, SLOTS, slotForHour } from '../model';
 import { SectionTitle } from '../ui/bits';
 import { Segments } from '../ui/Segments';
+import { PhotoEntry } from '../photo/PhotoEntry';
 import { FoodRow } from './FoodRow';
 import { QuickAdd } from './QuickAdd';
 import { useFoodSearch } from './useFoodSearch';
@@ -89,6 +90,7 @@ export function LogFoodScreen() {
             );
           })}
         </View>
+        <PhotoEntry onPicked={(uri) => router.push({ pathname: '/diet/photo', params: { uri, date, slot } })} />
         <View style={[styles.search, { backgroundColor: c.card, borderColor: c.border }]}>
           <Search size={20} color={c.mutedText} />
           <TextInput value={query} onChangeText={setQuery} placeholder="Find a food, e.g. dal or poha" placeholderTextColor={c.mutedText}
