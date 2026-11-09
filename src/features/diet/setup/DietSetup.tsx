@@ -4,6 +4,8 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { LoopingLottie } from '@/src/components/ui/LoopingLottie';
 import { DietWizard } from '@/src/features/diet/DietWizard';
+import { useProGate } from '@/src/features/pro/gate';
+import { ProUpsellCard } from '@/src/features/pro/ProUpsellCard';
 import { usePlan } from '@/src/features/plan/data';
 import { dietWizardDefaults, thousands } from '@/src/features/plan/model';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
@@ -27,6 +29,7 @@ export function DietSetup({ userId, onCreated, onStepChange }: { userId: string;
   const [error, setError] = useState<string | null>(null);
   const [tip, setTip] = useState(0);
   const plan = usePlan().data;
+  const gate = useProGate();
 
   useEffect(() => {
     if (!generating) return;
@@ -45,11 +48,15 @@ export function DietSetup({ userId, onCreated, onStepChange }: { userId: string;
       onCreated(await generateDietPlan(userId, preferences));
     } catch (e) {
       const status = (e as { status?: number }).status;
-      setError(status === 429 ? 'Filo is busy — try again in a minute.' : "Couldn't create your plan. Check your connection and try again.");
+      setError(status === 402 ? 'AI meal plans are part of FitNyx Pro.'
+        : status === 429 ? 'Filo is busy — try again in a minute.' : "Couldn't create your plan. Check your connection and try again.");
     } finally {
       setGenerating(false);
     }
   };
+
+  // Making a plan is Pro (the server answers 402 otherwise): no wizard to fill in first.
+  if (gate.locked) return <ProUpsellCard testID="diet-plan-pro" title="AI meal plan" body="Filo builds a day of meals sized to your calories and protein, with swaps and recipes. Logging food stays free." />;
 
   if (generating) {
     return (

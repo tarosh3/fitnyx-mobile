@@ -13,6 +13,13 @@ let mockOnline = true;
 let mockLoading = false;
 let mockHistoryOpen = false;
 let mockMessages: { role: 'user' | 'assistant'; content: string }[] = [];
+let mockEntitlement: unknown = { plan: 'pro', pro_until: null, filo: { daily_limit: 0, used_today: 0, resets_at: '' } };
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('@/src/features/pro/store', () => ({
+  useEntitlement: () => ({ entitlement: mockEntitlement, isPro: (mockEntitlement as { plan: string }).plan === 'pro', loaded: true }),
+  refreshEntitlement: jest.fn(),
+}));
 
 jest.mock('@/src/providers/AICoachProvider', () => ({
   useAICoach: () => ({
@@ -37,6 +44,30 @@ beforeEach(() => {
   mockHistoryOpen = false;
   mockMessages = [];
   mockSend.mockResolvedValue(undefined);
+  mockEntitlement = { plan: 'pro', pro_until: null, filo: { daily_limit: 0, used_today: 0, resets_at: '' } };
+});
+
+const free = (used: number) => ({ plan: 'free', pro_until: null, filo: { daily_limit: 5, used_today: used, resets_at: '2026-11-11T00:00:00Z' } });
+
+test('free plan: shows the messages left, then stops at zero and offers Pro', async () => {
+  mockEntitlement = free(3);
+  const screen = render(<AICoachChat />);
+  expect(screen.getByText('2 free messages left today')).toBeOnTheScreen();
+  expect(screen.getByText('Unlimited with Pro')).toBeOnTheScreen();
+
+  mockEntitlement = free(5);
+  screen.rerender(<AICoachChat />);
+  expect(screen.getByText("That's today's free messages")).toBeOnTheScreen();
+  fireEvent.changeText(screen.getByLabelText('Message Filo'), 'one more?');
+  expect(screen.getByLabelText('Send message')).toBeDisabled();
+  fireEvent.press(screen.getByText('Get Pro'));
+  expect(mockToggle).toHaveBeenCalled(); // the chat closes first: it's a Modal over the Pro screen
+  expect(mockPush).toHaveBeenCalledWith('/pro');
+});
+
+test('Pro: no allowance line', () => {
+  const screen = render(<AICoachChat />);
+  expect(screen.queryByTestId('filo-allowance')).toBeNull();
 });
 
 test('sends a trimmed draft and immediately prevents duplicate sends during thread creation', async () => {

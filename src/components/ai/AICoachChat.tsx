@@ -1,4 +1,8 @@
 import { BrandLoader } from '@/src/components/ui/BrandLoader';
+import { useRouter } from 'expo-router';
+import { FiloAllowance } from '@/src/features/pro/FiloAllowance';
+import { filoLeft } from '@/src/features/pro/model';
+import { useEntitlement } from '@/src/features/pro/store';
 import { Illustration } from '@/src/components/art/Illustration';
 import {
   Archive, ArrowUp, ArrowUpRight, ChartSpline, Check, ChevronDown,
@@ -44,7 +48,11 @@ export function AICoachChat() {
   const [inputFocused, setInputFocused] = useState(false);
   const [inputHeight, setInputHeight] = useState(44);
   const [showLatest, setShowLatest] = useState(false);
-  const canSend = isOnline && !isLoading && !isSending;
+  // Free plan: entitlement.FiloFreeDaily messages a day (the server enforces it too).
+  const { entitlement } = useEntitlement();
+  const freeLeft = filoLeft(entitlement);
+  const router = useRouter();
+  const canSend = isOnline && !isLoading && !isSending && freeLeft !== 0;
   const roomy = width >= 600;
   const compact = height < 740 || fontScale > 1.2;
 
@@ -238,7 +246,9 @@ export function AICoachChat() {
                   <ArrowUp size={22} strokeWidth={2.2} color={canSend && inputValue.trim() ? c.primaryText : c.mutedText} />
                 </Pressable>
               </View>
-              <Text style={[styles.composerHint, { color: c.mutedText }]}>A little support for your everyday progress.</Text>
+              {freeLeft !== null
+                ? <FiloAllowance left={freeLeft} onSeePro={() => { close(); router.push('/pro'); }} />
+                : <Text style={[styles.composerHint, { color: c.mutedText }]}>A little support for your everyday progress.</Text>}
             </View> : null}
           </View>
         </KeyboardAvoidingView>

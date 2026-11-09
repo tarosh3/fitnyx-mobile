@@ -9,6 +9,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { ArtCustomizer } from '@/src/features/share/ArtCustomizer';
 import { artworkChoices, artworkSubject, profileAppearance, type ArtworkSelection, type ArtworkSubject } from '@/src/features/share/artwork';
 import type { ShareCardData } from '@/src/features/share/cardData';
+import { useEntitlement } from '@/src/features/pro/store';
 import { LookPicker, type LookOption } from '@/src/features/share/LookPicker';
 import { useCardCatalog } from '@/src/features/share/remote/useCardCatalog';
 import { CARD_SIZE, ShareCard, TEMPLATES, type CardFormat, type BuiltinTemplate, type ShareTemplate } from '@/src/features/share/ShareCard';
@@ -53,6 +54,9 @@ export function ShareCardSheet({ visible, data, onClose }: Props) {
   const [busy, setBusy] = useState<'share' | 'save' | null>(null);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
   const catalog = useCardCatalog(visible, busy !== null);
+  // Published (remote) designs are Pro; the built-in looks stay free.
+  const pro = useEntitlement();
+  const proLocked = (look: LookOption) => !!look.design && pro.loaded && !pro.isPro;
   const { width, height } = CARD_SIZE[format];
   const previewHeight = Math.min(410, window.height * 0.42, ((window.width - 64) * height) / width);
   const scale = previewHeight / height;
@@ -198,8 +202,15 @@ export function ShareCardSheet({ visible, data, onClose }: Props) {
           format={format}
           photoUri={photoUri}
           disabled={busy !== null}
+          isLocked={proLocked}
           onSelect={(value) => {
             if (value === template) return;
+            // This sheet is a Modal: the Pro screen would open hidden behind it, so say it here.
+            const look = templates.find((t) => t.value === value);
+            if (look && proLocked(look)) {
+              setNotice({ text: 'This design is part of FitNyx Pro. Find it in Settings → FitNyx Pro.' });
+              return;
+            }
             setLoadedArt(null);
             setLoadedPhoto(null);
             setTemplate(value);

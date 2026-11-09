@@ -3,6 +3,8 @@ import React, { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useFeatureFlag } from '@/src/features/appConfig/store';
+import { useProGate } from '@/src/features/pro/gate';
+import { ProTag } from '@/src/features/pro/ProTag';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
@@ -14,6 +16,7 @@ export function PhotoEntry({ onPicked }: { onPicked: (uri: string) => void }) {
   const toast = useToast();
   const enabled = useFeatureFlag('photo_meal_log', true);
   const busy = useRef(false);
+  const gate = useProGate();
   if (!enabled) return null;
 
   const pick = async (source: PhotoSource) => {
@@ -31,7 +34,7 @@ export function PhotoEntry({ onPicked }: { onPicked: (uri: string) => void }) {
   };
 
   const button = (source: PhotoSource, label: string, Icon: typeof Camera, primary: boolean) => (
-    <Pressable onPress={() => pick(source)} accessibilityRole="button" accessibilityLabel={label}
+    <Pressable onPress={() => gate.run(() => void pick(source))} accessibilityRole="button" accessibilityLabel={label}
       style={({ pressed }) => [styles.button, primary ? { backgroundColor: c.primary } : { borderWidth: 1, borderColor: c.border, backgroundColor: c.card }, pressed && { opacity: 0.75 }]}>
       <Icon size={18} color={primary ? c.primaryText : c.text} strokeWidth={2.2} />
       <Text style={[styles.buttonText, { color: primary ? c.primaryText : c.text }]}>{label}</Text>
@@ -40,7 +43,10 @@ export function PhotoEntry({ onPicked }: { onPicked: (uri: string) => void }) {
 
   return (
     <View style={[styles.card, { backgroundColor: c.accentSoft, borderColor: c.accent }]}>
-      <Text style={[styles.title, { color: c.text }]}>Snap your meal</Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, { color: c.text }]}>Snap your meal</Text>
+        {gate.locked ? <ProTag /> : null}
+      </View>
       <Text style={[styles.body, { color: c.mutedText }]}>Take a photo and FitNyx lists the food with calories. You check it before it’s saved.</Text>
       <View style={styles.row}>
         {button('camera', 'Take photo', Camera, true)}
@@ -52,6 +58,7 @@ export function PhotoEntry({ onPicked }: { onPicked: (uri: string) => void }) {
 
 const styles = StyleSheet.create({
   card: { borderRadius: radii.xl, borderWidth: StyleSheet.hairlineWidth, padding: spacing.base, gap: spacing.xs },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { fontFamily: type.weight.bold, fontSize: 17 },
   body: { fontFamily: type.weight.regular, fontSize: 14, lineHeight: 20 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },

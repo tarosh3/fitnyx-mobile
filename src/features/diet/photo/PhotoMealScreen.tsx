@@ -55,7 +55,7 @@ export function PhotoMealScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomSpace }]} keyboardShouldPersistTaps="handled">
         {uri ? <Image source={{ uri }} style={[styles.photo, { backgroundColor: c.surface }]} resizeMode="cover" accessibilityLabel="Your meal photo" /> : null}
         {state.status === 'reading' ? <ReadingCard /> : null}
-        {state.status === 'error' ? <PhotoError kind={state.kind} onRetry={() => read('')} onBack={() => router.back()} /> : null}
+        {state.status === 'error' ? <PhotoError kind={state.kind} onRetry={() => read('')} onBack={() => router.back()} onPro={() => router.replace('/pro')} /> : null}
         {done ? <>
           <View style={styles.head}>
             <Text style={[styles.name, { color: c.text }]} accessibilityRole="header">{done.result.name}</Text>

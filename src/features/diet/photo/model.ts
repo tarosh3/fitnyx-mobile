@@ -6,7 +6,7 @@ import type { DietLogItem, PhotoMealItem } from '@/src/lib/api/diet';
 export const MAX_PHOTO_SIDE = 1024;
 const MAX_LOG_NAME = 120;
 
-export type PhotoErrorKind = 'offline' | 'limit' | 'busy' | 'no_food' | 'failed';
+export type PhotoErrorKind = 'offline' | 'limit' | 'busy' | 'no_food' | 'pro' | 'failed';
 
 /** What went wrong, from a fetchWithAuth error (status + code), for the message shown. */
 export function photoErrorKind(error: unknown): PhotoErrorKind {
@@ -14,6 +14,7 @@ export function photoErrorKind(error: unknown): PhotoErrorKind {
   if (status === undefined) return 'offline';
   if (status === 429) return code === 'daily_limit' ? 'limit' : 'busy';
   if (status === 422) return 'no_food';
+  if (status === 402) return 'pro';
   return 'failed';
 }
 
@@ -22,6 +23,7 @@ export const PHOTO_ERRORS: Record<PhotoErrorKind, { title: string; body: string 
   limit: { title: 'That’s today’s photos', body: 'You’ve used today’s meal photos. Search or quick-add for now; photos come back tomorrow.' },
   busy: { title: 'One moment', body: 'Lots of photos right now. Try again in a minute.' },
   no_food: { title: 'No food spotted', body: 'Try a closer, brighter shot from above, with the whole plate in view.' },
+  pro: { title: 'A Pro feature', body: 'Meal photos are part of FitNyx Pro. Search and quick add stay free.' },
   failed: { title: 'Couldn’t read that photo', body: 'Try again, or search for the food instead.' },
 };
 

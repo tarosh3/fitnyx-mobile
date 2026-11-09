@@ -23,5 +23,7 @@ export function filoLeft(e: Entitlement | null): number | null {
   return Math.max(0, e.filo.daily_limit - e.filo.used_today);
 }
 
-/** Guided cardio programs open to free users (by id); the rest are Pro. */
-export const FREE_CARDIO_COUNT = 3;
+/** Guided cardio programs open to free users, one per common need; the other 12 are Pro. */
+export const FREE_CARDIO_IDS: readonly string[] = ['warm-gentle', 'fat-burn', 'run-walk'];
+
+export const cardioIsFree = (programId: string) => FREE_CARDIO_IDS.includes(programId);

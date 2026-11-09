@@ -3,6 +3,7 @@ import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ActivityRow } from '@/src/features/roam/components/ActivityRow';
+import { ProTag } from '@/src/features/pro/ProTag';
 import { formatDistance, formatDuration } from '@/src/features/roam/geo';
 import type { GhostTarget } from '@/src/features/roam/ghost';
 import { Sheet } from '@/src/features/workouts/ui/Sheet';
@@ -13,7 +14,7 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 export const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 /** On the Roam screen: "Race a past Roam", or the ghost picked (with ✕). */
-export function RaceRow({ ghost, onOpen, onClear }: { ghost: GhostTarget | null; onOpen: () => void; onClear: () => void }) {
+export function RaceRow({ ghost, onOpen, onClear, locked = false }: { ghost: GhostTarget | null; onOpen: () => void; onClear: () => void; locked?: boolean }) {
   const c = useThemeColors();
   return (
     <Pressable onPress={onOpen} accessibilityRole="button" testID="race-row"
@@ -23,9 +24,12 @@ export function RaceRow({ ghost, onOpen, onClear }: { ghost: GhostTarget | null;
         <Ghost size={18} color={c.accent} />
       </View>
       <View style={styles.text}>
-        <Text style={[styles.title, { color: c.text }]} numberOfLines={1}>
-          {ghost ? `Racing ${ghost.title}` : 'Race a past Roam'}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>
+            {ghost ? `Racing ${ghost.title}` : 'Race a past Roam'}
+          </Text>
+          {locked && !ghost ? <ProTag /> : null}
+        </View>
         <Text style={[styles.sub, { color: c.mutedText }]} numberOfLines={1}>
           {ghost
             ? `${shortDate(ghost.startedAt)} · ${formatDistance(ghost.distanceM)} in ${formatDuration(ghost.movingSec)}`
@@ -80,6 +84,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: 16, borderWidth: 1, paddingHorizontal: spacing.lg, paddingVertical: 12, minHeight: 56 },
   icon: { width: 36, height: 36, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { fontFamily: type.weight.semibold, fontSize: 15 },
   sub: { fontFamily: type.weight.regular, fontSize: 12 },
   clear: { padding: 4 },

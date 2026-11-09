@@ -9,6 +9,10 @@ jest.mock('@/src/hooks/useThemeColors', () => ({
 }));
 jest.mock('@/src/features/workouts/ui/Toast', () => ({ useToast: () => jest.fn() }));
 jest.mock('@/src/features/workouts/report/exportFile', () => ({ sharePdf: jest.fn(), reportFileName: () => 'x.pdf' }));
+let mockPro = true;
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
+jest.mock('@/src/features/pro/store', () => ({ useEntitlement: () => ({ isPro: mockPro, loaded: true, entitlement: null }) }));
 const mockFetch = jest.fn();
 const mockRequest = jest.fn();
 jest.mock('@/src/lib/api/reports', () => ({
@@ -25,9 +29,29 @@ const ready = {
 
 describe('AiReportCard', () => {
   beforeEach(async () => {
+    mockPro = true;
+    mockPush.mockReset();
     await cacheClear();
     mockFetch.mockReset();
     mockRequest.mockReset();
+  });
+
+  it('free plan: writing a report opens Pro instead', async () => {
+    mockPro = false;
+    mockFetch.mockResolvedValue(base);
+    render(<AiReportCard userId="u" />);
+    fireEvent.press(await screen.findByTestId('ai-report-generate'));
+    expect(screen.getByText('See Pro')).toBeOnTheScreen();
+    expect(mockPush).toHaveBeenCalledWith('/pro');
+    expect(mockRequest).not.toHaveBeenCalled();
+  });
+
+  it('free plan: a report already written can still be read', async () => {
+    mockPro = false;
+    mockFetch.mockResolvedValue(ready);
+    render(<AiReportCard userId="u" />);
+    fireEvent.press(await screen.findByText('Read report'));
+    expect(screen.getByText('Summary')).toBeOnTheScreen();
   });
 
   it('shows progress while locked', async () => {

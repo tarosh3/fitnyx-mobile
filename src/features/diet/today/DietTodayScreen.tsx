@@ -15,6 +15,8 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { useToast } from '@/src/features/workouts/ui/Toast';
 import { usePlan } from '@/src/features/plan/data';
+import { useEntitlement } from '@/src/features/pro/store';
+import { ProUpsellCard } from '@/src/features/pro/ProUpsellCard';
 import { useDietDay, useDietPlan, useDietSummary } from '../data/useDiet';
 import { dateFromKey, dayStatus, dietGoalBase, fmt, lastDays, loggedPlanMeals, nextMealIndex, planCalorieGap, planLogItem, planMeals, planProteinShortfall, sumLogs, withDietGoals, type PlanMeal } from '../model';
 import { InsightsPanel } from '../insights/InsightsPanel';
@@ -51,6 +53,7 @@ export function DietTodayScreen() {
   const targets = usePlan().data?.targets;
   const activity = useDayActivity(date);
   const [editingGoals, setEditingGoals] = useState(false);
+  const pro = useEntitlement();
 
   const meals = useMemo(() => planMeals(plan), [plan]);
   const planGoal = dietGoalBase(targets, plan);
@@ -58,9 +61,11 @@ export function DietTodayScreen() {
   const logged = loggedPlanMeals(day.logs);
   const eaten = sumLogs(day.logs);
   const next = date === today ? nextMealIndex(meals, logged) : null;
-  const shortG = date === today && !tipHidden ? planProteinShortfall(meals, goal) : null;
+  // Free with no AI plan: the day still works (goals from the plan's targets, logging, water).
+  const logOnly = state === 'none' && pro.loaded && !pro.isPro && !!goal;
+  const shortG = plan && date === today && !tipHidden ? planProteinShortfall(meals, goal) : null;
   // Making a new menu needs a connection, so the offer waits until there is one.
-  const kcalGap = date === today && !day.offline ? planCalorieGap(meals, goal) : null;
+  const kcalGap = plan && date === today && !day.offline ? planCalorieGap(meals, goal) : null;
   const stripDays = week.map((d) => {
     const t = summary.summary?.days.find((s) => s.date === d);
     return { date: d, status: dayStatus(t?.kcal ?? 0, t?.meals ?? 0, goal?.kcal ?? 0) };
@@ -85,7 +90,7 @@ export function DietTodayScreen() {
       right={state === 'ready' ? <IconButton label="Change diet plan" onPress={() => router.push('/diet/setup')}><SlidersHorizontal size={20} color={c.text} /></IconButton> : null} />
   );
 
-  if (state !== 'ready' || !plan || !goal) {
+  if (!logOnly && (state !== 'ready' || !plan || !goal)) {
     return (
       <KeyboardAvoidingView behavior="padding" style={[styles.fill, { backgroundColor: c.background }]}>
         {header}
@@ -123,7 +128,8 @@ export function DietTodayScreen() {
           {day.offline ? <Text style={[styles.offlineNote, { color: c.mutedText }]}>Offline — showing what’s saved on this phone. New meals sync when you’re back online.</Text> : null}
           <SummaryCard eaten={eaten} goal={goal} burned={activity.loaded ? activity.day.kcal : null}
             onEditGoals={userGoals.data ? () => setEditingGoals(true) : undefined} />
-          <SectionTitle title="On your menu" note={`${logged.size} / ${meals.length} logged`} />
+          {logOnly ? <ProUpsellCard testID="diet-plan-pro" title="AI meal plan" body="Filo builds a day of meals sized to your calories and protein, with swaps and recipes. Logging food stays free." /> : null}
+          {plan ? <SectionTitle title="On your menu" note={`${logged.size} / ${meals.length} logged`} /> : null}
           {kcalGap !== null && goal ? <MenuGapNote gap={kcalGap} goalKcal={goal.kcal} onNewMenu={() => router.push('/diet/setup')} /> : null}
           {[...meals].sort((a, b) => Number(b.index === next) - Number(a.index === next)).map((m) => (
             <MealCard key={m.index} meal={m} log={logged.get(m.index)} next={next === m.index} onToggle={() => toggle(m)} onOpen={() => openMeal(m)} />

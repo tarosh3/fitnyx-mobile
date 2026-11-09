@@ -42,6 +42,7 @@ import { SectionHeader } from '@/src/components/ui/SectionHeader';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { SettingGroup } from '@/src/components/ui/SettingGroup';
 import { SettingRow } from '@/src/components/ui/SettingRow';
+import { ProSettingsSection } from '@/src/features/pro/ProSettingsSection';
 import { useOfflineAware } from '@/src/hooks/useOfflineAware';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { formatHeight, formatWeight, useHealthSync, useHeightUnit, useLanguage, useVideoDownloads, useWeightUnit } from '@/src/lib/prefs';
@@ -239,6 +240,9 @@ export default function SettingsScreen() {
           <Text style={[styles.editPillText, { color: c.accent }]}>EDIT</Text>
         </View>
       </PressableScale>
+
+      {/* PLAN: free / Pro and invite codes */}
+      <ProSettingsSection />
 
       {/* ACCOUNT */}
       <SectionHeader eyebrow="Account" />

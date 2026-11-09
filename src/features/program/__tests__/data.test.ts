@@ -13,6 +13,8 @@ jest.mock('@/src/lib/cache', () => ({
 jest.mock('@/src/lib/api/programs', () => ({ getDayTargets: (id: string) => mockGetDayTargets(id) }));
 jest.mock('@/src/features/workouts/hooks', () => ({ useCachedResource: jest.fn() }));
 jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: null }) }));
+let mockPro = true;
+jest.mock('@/src/features/pro/store', () => ({ isProNow: () => mockPro, useEntitlement: () => ({ isPro: mockPro, loaded: true }) }));
 
 import { loadProgramTargets } from '@/src/features/program/data';
 
@@ -28,6 +30,14 @@ it("doesn't ask for a day outside the active program", async () => {
   mockStore.set('program:active:u', { days: [{ id: 'other' }] });
   expect(await loadProgramTargets('u', 'd1')).toBeNull();
   expect(mockGetDayTargets).not.toHaveBeenCalled();
+});
+
+it("free (a lapsed Pro): no call, the day's saved targets stand", async () => {
+  mockPro = false;
+  mockStore.set('program:active:u', { days: [{ id: 'd1' }] });
+  expect(await loadProgramTargets('u', 'd1')).toBeNull();
+  expect(mockGetDayTargets).not.toHaveBeenCalled();
+  mockPro = true;
 });
 
 it('saves the targets, and falls back to them offline', async () => {
