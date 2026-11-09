@@ -75,6 +75,7 @@ export function useDayTargets(dayId: string | null | undefined) {
   useEffect(() => {
     if (!user || !dayId) return;
     let alive = true;
+    setData(null); // a new day (or program): never show the last one's targets meanwhile
     setLoading(true);
     loadProgramTargets(user.id, dayId)
       .then((t) => { if (alive) setData(t); })
