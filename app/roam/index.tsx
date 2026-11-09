@@ -2,26 +2,31 @@ import { BrandLoader } from '@/src/components/ui/BrandLoader';
 import { IllustratedEmpty } from '@/src/components/art/Illustration';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight, Flame } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/src/components/ui/Button';
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
 import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { useFeatureFlag } from '@/src/features/appConfig/store';
 import { useGoals, useTodayActivity } from '@/src/features/goals/data';
 import { activityGoals } from '@/src/features/goals/model';
 import { ActivityGoalsSheet } from '@/src/features/goals/ui/ActivityGoalsSheet';
 import { RoamGoalsRow } from '@/src/features/goals/ui/RoamGoalsRow';
 import { ActivityRow } from '@/src/features/roam/components/ActivityRow';
+import { RaceRow, RaceSheet } from '@/src/features/roam/components/RacePicker';
 import { WeekSummary } from '@/src/features/roam/components/WeekSummary';
 import type { ActivityType } from '@/src/features/roam/geo';
+import { raceCandidates, type GhostTarget } from '@/src/features/roam/ghost';
+import { loadGhost, startGhost, takePendingRace } from '@/src/features/roam/ghostStore';
 import { startGoalTracker } from '@/src/features/roam/goalTracker';
 import { getRecordingFor } from '@/src/features/roam/recordingStore';
 import { useRoamActivities } from '@/src/features/roam/useRoamActivities';
 import { useRoamRecording } from '@/src/features/roam/useRoamRecording';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
+import type { ActivitySummary } from '@/src/lib/api/activities';
 import { useAuth } from '@/src/providers/AuthProvider';
 
 const TYPES: { label: string; value: ActivityType }[] = [
@@ -45,12 +50,48 @@ export default function RoamScreen() {
   const goals = useGoals();
   const today = useTodayActivity();
   const [editingGoals, setEditingGoals] = useState(false);
+  // Race your past self: the Roam picked to run beside you as a ghost.
+  const racing = useFeatureFlag('roam_ghost', true);
+  const [ghost, setGhost] = useState<GhostTarget | null>(null);
+  const [raceOpen, setRaceOpen] = useState(false);
+  const [raceLoading, setRaceLoading] = useState<string | null>(null);
+  const [raceError, setRaceError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const candidates = useMemo(() => raceCandidates(data?.data ?? [], type), [data, type]);
 
   useFocusEffect(
     useCallback(() => {
       getRecordingFor(user?.id).then((m) => setInProgress(m != null));
+      // "Race this Roam" on a Roam's page.
+      const picked = takePendingRace();
+      if (picked) {
+        setType(picked.type === 'cycle' ? 'cycle' : 'stride');
+        setGhost(picked);
+        // This screen may have been left scrolled down at the list.
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+      }
     }, [user?.id]),
   );
+
+  const changeType = (t: ActivityType) => {
+    setType(t);
+    // A run can't race a ride.
+    if (ghost && (ghost.type === 'cycle') !== (t === 'cycle')) setGhost(null);
+  };
+
+  const pickRace = async (a: ActivitySummary) => {
+    if (!user?.id) return;
+    setRaceLoading(a.id);
+    setRaceError(null);
+    try {
+      setGhost(await loadGhost(user.id, a.id));
+      setRaceOpen(false);
+    } catch (e) {
+      setRaceError((e as { status?: number }).status ? "Couldn't load that Roam. Try again." : "You're offline. Pick a Roam you've opened before.");
+    } finally {
+      setRaceLoading(null);
+    }
+  };
 
   const onStart = async () => {
     if (startingRef.current) return;
@@ -61,11 +102,13 @@ export default function RoamScreen() {
       if (result === 'granted') {
         // Today's goals and what was done before this Roam, for the live rings + alerts.
         const meta = await getRecordingFor(user?.id);
+        if (meta && ghost) await startGhost(meta.clientId, ghost).catch(() => undefined);
         if (meta) {
           await startGoalTracker({
             clientId: meta.clientId, type, goals: activityGoals(goals.data), before: today.day, weightKg: goals.data?.weight_kg ?? null,
           }).catch(() => undefined);
         }
+        setGhost(null); // the next Roam starts without one
         router.push('/roam/record');
       }
       else if (result === 'denied' || result === 'blocked') setNotice(result);
@@ -79,7 +122,7 @@ export default function RoamScreen() {
   };
 
   return (
-    <Screen>
+    <Screen scrollRef={scrollRef}>
       <PageHeader title="ROAM" subtitle="RUN · WALK · RIDE" backTo="/" />
 
       <View style={styles.section}>
@@ -87,7 +130,10 @@ export default function RoamScreen() {
           <Button title="CONTINUE YOUR ROAM" onPress={() => router.push('/roam/record')} />
         ) : (
           <>
-            <SegmentedControl options={TYPES} value={type} onChange={setType} />
+            <SegmentedControl options={TYPES} value={type} onChange={changeType} />
+            {racing ? (
+              <RaceRow ghost={ghost} onOpen={() => { setRaceError(null); setRaceOpen(true); }} onClear={() => setGhost(null)} />
+            ) : null}
             {goals.data ? <RoamGoalsRow goals={goals.data} day={today.day} onEdit={() => setEditingGoals(true)} /> : null}
             <Button title={`START ${TYPES.find((t) => t.value === type)?.label.toUpperCase()}`} onPress={onStart} loading={starting} />
             {/* "Stride" alone didn't say it covers both runs and walks. */}
@@ -149,6 +195,7 @@ export default function RoamScreen() {
         }}
         onCancel={() => setNotice(null)}
       />
+      <RaceSheet visible={raceOpen} candidates={candidates} loadingId={raceLoading} error={raceError} onPick={pickRace} onClose={() => setRaceOpen(false)} />
       <ActivityGoalsSheet visible={editingGoals} goals={goals.data} onSave={goals.save} onClose={() => setEditingGoals(false)} />
     </Screen>
   );

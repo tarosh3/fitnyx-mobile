@@ -1,14 +1,17 @@
 import { Pause, Play, Square } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { type } from '@/src/styles/tokens';
 
 import { addActivity } from '@/src/features/goals/model';
 import { GoalRingsRow } from '@/src/features/goals/ui/GoalRings';
+import { GhostLiveCard } from '@/src/features/roam/components/GhostCards';
 import { RouteMap } from '@/src/features/roam/components/RouteMap';
 import { StatTile } from '@/src/features/roam/components/StatTile';
 import { VehicleBanner } from '@/src/features/roam/components/VehicleBanner';
 import { currentSpeedMps, formatDistance, formatDuration, formatSpeed } from '@/src/features/roam/geo';
+import { coordAtDistance, raceState, startsNear, type GhostTarget } from '@/src/features/roam/ghost';
+import { getGhost } from '@/src/features/roam/ghostStore';
 import { getGoalTracker, roamActivity, type GoalTracker } from '@/src/features/roam/goalTracker';
 import type { RoamRecording } from '@/src/features/roam/useRoamRecording';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
@@ -23,9 +26,23 @@ export function LiveRecordingView({ recording, onFinish }: Props) {
   const palette = useThemeColors();
   const { meta, stats, elapsedMs } = recording;
   const [tracker, setTracker] = useState<GoalTracker | null>(null);
+  const [ghost, setGhost] = useState<GhostTarget | null>(null);
   useEffect(() => {
     getGoalTracker(meta?.clientId).then(setTracker);
+    getGhost(meta?.clientId).then(setGhost);
   }, [meta?.clientId]);
+  // Changes with each GPS batch, not with the clock, so the map isn't redrawn every second.
+  const race = useMemo(() => {
+    if (!ghost) return null;
+    const progress = { distanceM: stats?.distanceM ?? 0, movingSec: stats?.movingTimeSec ?? 0, splits: stats?.splits ?? [] };
+    const state = raceState(ghost.curve, progress);
+    const ghostM = state.kind === 'racing' ? state.ghostM : state.kind === 'done' ? ghost.distanceM : 0;
+    // Drawn only on the same loop: a ghost dot across town says nothing.
+    const map = ghost.path && startsNear(ghost.path, stats?.route[0])
+      ? { path: ghost.path.coords, coord: coordAtDistance(ghost.path, ghostM) }
+      : null;
+    return { state, map };
+  }, [ghost, stats]);
   if (!meta) return null;
   const paused = meta.status === 'paused';
   // Speed in km/h for every Roam type (runs and walks too — not min/km pace).
@@ -42,7 +59,8 @@ export function LiveRecordingView({ recording, onFinish }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <RouteMap live route={stats?.route ?? NO_ROUTE} vehicleRanges={stats?.vehicleRanges} style={styles.map} />
+      <RouteMap live route={stats?.route ?? NO_ROUTE} vehicleRanges={stats?.vehicleRanges} ghost={race?.map} style={styles.map} />
+      {ghost && race ? <GhostLiveCard ghost={ghost} state={race.state} /> : null}
 
       {stats?.inVehicleNow ? (
         <VehicleBanner message="Looks like you're in a vehicle — this stretch won't count toward your Roam." />

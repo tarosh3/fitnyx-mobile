@@ -9,9 +9,12 @@ import { PageHeader } from '@/src/components/ui/PageHeader';
 import { Screen } from '@/src/components/ui/Screen';
 import { cleanActivityName, defaultActivityName } from '@/src/features/roam/activityName';
 import { ACTIVITY_LABEL } from '@/src/features/roam/components/ActivityTypeIcon';
+import { RaceResultCard } from '@/src/features/roam/components/GhostCards';
 import { LiveRecordingView } from '@/src/features/roam/components/LiveRecordingView';
 import { RecordingSummaryView } from '@/src/features/roam/components/RecordingSummaryView';
 import { computeStats, type VehicleWindow } from '@/src/features/roam/geo';
+import { raceState, type GhostTarget } from '@/src/features/roam/ghost';
+import { getGhost, saveRaceResult } from '@/src/features/roam/ghostStore';
 import { getGoalTracker, type GoalTracker } from '@/src/features/roam/goalTracker';
 import { readVehicleWindows } from '@/src/features/roam/motion';
 import { shareRawTrack } from '@/src/features/roam/rawExport';
@@ -40,6 +43,7 @@ export default function RoamRecordScreen() {
   // The phone's own "in a vehicle" periods, read once the Roam is finished.
   const [vehicleWindows, setVehicleWindows] = useState<VehicleWindow[]>([]);
   const [tracker, setTracker] = useState<GoalTracker | null>(null);
+  const [ghost, setGhost] = useState<GhostTarget | null>(null);
 
   // Nothing recording (opened directly / already saved) → back to Roam home.
   useEffect(() => {
@@ -52,7 +56,10 @@ export default function RoamRecordScreen() {
 
   const { meta: doneMeta } = recording;
   useEffect(() => {
-    if (phase === 'summary') getGoalTracker(doneMeta?.clientId).then(setTracker);
+    if (phase === 'summary') {
+      getGoalTracker(doneMeta?.clientId).then(setTracker);
+      getGhost(doneMeta?.clientId).then(setGhost);
+    }
   }, [phase, doneMeta?.clientId]);
   useEffect(() => {
     if (!doneMeta?.finishedAtMs) return;
@@ -109,6 +116,14 @@ export default function RoamRecordScreen() {
           () => undefined,
         );
       }
+      if (outcome.status === 'saved' && ghost) {
+        // Judged on the server's numbers, which the Roam's page shows.
+        const a = outcome.activity;
+        await saveRaceResult(a.id, {
+          ghostTitle: ghost.title, ghostStartedAt: ghost.startedAt, ghostDistanceM: ghost.distanceM,
+          state: raceState(ghost.curve, { distanceM: a.distance_m, movingSec: a.moving_time_sec, splits: a.splits ?? [] }),
+        });
+      }
       if (outcome.status === 'saved') router.replace(`/roam/${outcome.activity.id}?new=1`);
       else setModal('queued');
     } catch (e) {
@@ -158,6 +173,10 @@ export default function RoamRecordScreen() {
           onDiscard={() => setModal('discard')}
           onExportRaw={() => void shareRawTrack(meta, recording.points).catch(() => undefined)}
           tracker={tracker}
+          race={ghost ? (
+            <RaceResultCard ghost={{ title: ghost.title, startedAt: ghost.startedAt }} ghostDistanceM={ghost.distanceM} myDistanceM={stats.distanceM}
+              state={raceState(ghost.curve, { distanceM: stats.distanceM, movingSec: stats.movingTimeSec, splits: stats.splits })} />
+          ) : null}
         />
       )}
 

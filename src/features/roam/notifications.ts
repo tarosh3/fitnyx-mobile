@@ -3,6 +3,8 @@ import * as LiveActivity from 'expo-live-activity';
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import { activeElapsedMs, getRecording, loadPoints, pauseRecording, resumeRecording, type RecordingMeta } from './recordingStore';
 import { computeStats, type RoamPoint, type RoamStats } from './geo';
+import { raceLine, raceState } from './ghost';
+import { getGhost } from './ghostStore';
 import { checkGoalMilestones } from './goalTracker';
 import { colors } from '@/src/theme/colors';
 
@@ -91,6 +93,13 @@ export function syncRoamNotification(force = false): Promise<void> {
     const snapshot = roamSnapshot(meta, points, Date.now(), stats);
     if ((await pending()).some((action) => action.sessionId === meta.clientId)) return;
     if (Platform.OS === 'android') {
+      // Racing a ghost: its gap takes the status line while GPS is fine. (iOS draws
+      // that line with a "no location" icon, so it waits for a native change.)
+      const ghost = await getGhost(meta.clientId);
+      if (ghost && snapshot.gps === 'GPS connected') {
+        const line = raceLine(raceState(ghost.curve, { distanceM: stats.distanceM, movingSec: stats.movingTimeSec, splits: stats.splits }));
+        if (line) snapshot.gps = line;
+      }
       await bridge?.update(JSON.stringify(snapshot));
     } else if (Platform.OS === 'ios') {
       if (saved && saved.sessionId !== meta.clientId) {
