@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, MoreHorizontal, Plus, TrendingUp, Zap } from 'lucide-react-native';
+import { Check, ChevronDown, ChevronRight, Feather, MoreHorizontal, Plus, TrendingUp, Zap } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, type GestureType } from 'react-native-gesture-handler';
@@ -48,7 +48,9 @@ export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenEx
     b.bestAssistKg != null && t === 'assisted_reps' ? (b.bestAssistKg > 0 ? `Least help ${fmtKg(b.bestAssistKg)} kg` : 'Done with no help') : null,
     b.last ? `Last ${lastText(t, b.last)}` : null,
   ].filter(Boolean).join(' · ');
-  const toBeat = !b.logs.length ? beatLastHint(t, b.last) : null;
+  // A lighter week of the program asks for less than last time: no nudge to beat it.
+  const light = !!b.planned?.program_light;
+  const toBeat = !b.logs.length && !light ? beatLastHint(t, b.last) : null;
   const summary = done ? `${plural(b.logs.length, 'set')} done` : b.planned ? describeTarget(t, b.planned) : `${b.logs.length} of ${plural(total, 'set')}`;
 
   const head = (
@@ -89,6 +91,12 @@ export function ExerciseBlock({ block: b, bi, expanded, hold, onToggle, onOpenEx
             <View testID={`beat-${bi}`} style={styles.beat}>
               <TrendingUp size={16} color={c.accent} />
               <Text style={[styles.beatText, { color: c.mutedText }]} numberOfLines={1}>Beat last time: <Text style={{ color: c.accent, fontFamily: type.weight.bold }}>{toBeat}</Text></Text>
+            </View>
+          ) : null}
+          {light && !b.logs.length ? (
+            <View testID={`light-${bi}`} style={styles.beat}>
+              <Feather size={16} color={c.mutedText} />
+              <Text style={[styles.beatText, { color: c.mutedText }]} numberOfLines={1}>Lighter week: keep these easy</Text>
             </View>
           ) : null}
           {t === 'cardio' && onGuided && !done ? (

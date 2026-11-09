@@ -58,18 +58,21 @@ export function applyTargets(planned: WorkoutDayExercise[], t: DayTargets | null
       target_duration_sec: it.duration_sec ?? p.target_duration_sec,
       target_distance_m: it.distance_m ?? p.target_distance_m,
       rest_seconds: it.rest_sec ?? p.rest_seconds,
+      program_light: t.phase.kind === 'deload',
     };
   });
 }
 
 const n1 = (v: number) => (Math.round(v * 10) / 10).toString();
 
-/** "Est. max 80 → 89 kg", "12 → 15 reps", "45 → 60 s"; null when it can't be shown. */
+/**
+ * "+22%": how much stronger. A percentage, not the estimated max in kg, which read
+ * as a weight never lifted ("Lateral Raise 30 → 36.7 kg" for sets of 27.5 kg).
+ * null when it can't be shown (assisted: its score isn't a quantity).
+ */
 export function formatChange(c: ProgramChange): string | null {
-  if (c.unit === 'kg') return `Est. max ${n1(c.from)} → ${n1(c.to)} kg`;
-  if (c.unit === 'reps') return `${Math.round(c.from)} → ${Math.round(c.to)} reps`;
-  if (c.unit === 's') return `${Math.round(c.from)} → ${Math.round(c.to)} s`;
-  return null;
+  if (!c.unit || !(c.from > 0) || !(c.to > c.from)) return null;
+  return `+${Math.max(1, Math.round((c.to / c.from - 1) * 100))}%`;
 }
 
 /** "62.5 kg × 8", "3 × 12", "45 s": one target line for the preview. */

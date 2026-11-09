@@ -24,9 +24,8 @@ export function CheckinCard({ checkin, fresh }: { checkin: ProgramCheckin; fresh
       {checkin.up.slice(0, 3).map((u) => (
         <View key={u.exercise_uuid} style={styles.line}>
           <ArrowUpRight size={16} color={c.accent} />
-          <Text style={[styles.lineText, { color: c.text }]} numberOfLines={1}>
-            {u.title}{formatChange(u) ? <Text style={{ color: c.mutedText }}>{`  ${formatChange(u)}`}</Text> : null}
-          </Text>
+          <Text style={[styles.lineText, { color: c.text }]} numberOfLines={1}>{u.title}</Text>
+          {formatChange(u) ? <Text style={[styles.pct, { color: c.accent }]}>{formatChange(u)}</Text> : null}
         </View>
       ))}
       {checkin.swaps.map((s) => (
@@ -49,4 +48,5 @@ const styles = StyleSheet.create({
   meta: { fontFamily: type.weight.regular, fontSize: 13 },
   line: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   lineText: { flex: 1, fontFamily: type.weight.regular, fontSize: 14, lineHeight: 20 },
+  pct: { fontFamily: type.weight.bold, fontSize: 14, fontVariant: ['tabular-nums'] },
 });

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type DraftSet, draftToLog, draftToUpdate, trackingOf } from '@/src/features/workouts/model';
 import { type Block, beatsBest, beatsBestAssist, defaultSetsFor, extraRowsAfterLog, nextSetNumber, pendingRows } from '@/src/features/workouts/logger/rows';
-import { loadProgramTargets } from '@/src/features/program/data';
+import { loadProgramTargets, programDayLabel } from '@/src/features/program/data';
 import { applyTargets } from '@/src/features/program/model';
 import { plannedForSwap } from '@/src/features/workouts/today/model';
 import { loadTodayRun, saveTodayRun, type TodayRun } from '@/src/features/workouts/today/store';
@@ -106,7 +106,11 @@ export function useWorkoutLogger(sessionId: string) {
           missing = !cached && !e?.status;
         }
         // A day of the adaptive program: today's targets (earned steps, the week's shape).
-        if (userId && planned.length) planned = applyTargets(planned, await loadProgramTargets(userId, res.session.day_id).catch(() => null));
+        if (userId && planned.length) {
+          const targets = await loadProgramTargets(userId, res.session.day_id).catch(() => null);
+          planned = applyTargets(planned, targets);
+          if (targets) setPlanTitle(await programDayLabel(userId, res.session.day_id).catch(() => null));
+        }
       } else {
         todayRun.current = await loadTodayRun(sessionId).catch(() => null);
         planned = todayRun.current?.items ?? [];
