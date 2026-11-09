@@ -8,29 +8,30 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 type Icon = typeof Camera;
 
 /** What Pro adds, in the order people care about. Free limits are said plainly. */
-export const PRO_FEATURES: { icon: Icon; title: string; detail: string }[] = [
-  { icon: MessageCircle, title: 'Unlimited Filo', detail: 'Free: 5 messages a day' },
+export const PRO_FEATURES: { icon: Icon; title: string; detail: string; proDetail?: string }[] = [
+  { icon: MessageCircle, title: 'Unlimited Filo', detail: 'Free: 5 messages a day', proDetail: 'Chat as much as you like' },
   { icon: Camera, title: 'Log a meal from a photo', detail: 'Snap your plate, check the foods, add it' },
   { icon: TrendingUp, title: 'Adaptive program', detail: 'Targets for every workout and a weekly check-in' },
   { icon: Ghost, title: 'Race your past self', detail: 'A ghost of a past Roam runs beside you' },
   { icon: FileText, title: 'Weekly AI report', detail: 'What your training says, in plain words' },
   { icon: UtensilsCrossed, title: 'AI diet plan', detail: 'Meals built to hit your calories and protein' },
-  { icon: HeartPulse, title: 'All 15 guided cardio programs', detail: 'Free: 3 programs' },
+  { icon: HeartPulse, title: 'All 15 guided cardio programs', detail: 'Free: 3 programs', proDetail: 'Every goal, from warm-ups to hills' },
   { icon: Palette, title: 'Extra share-card designs', detail: 'New looks for your workout and Roam cards' },
 ];
 
-export function ProFeatures() {
+/** `pro`: the user has it, so the free plan's limits aren't the point any more. */
+export function ProFeatures({ pro = false }: { pro?: boolean }) {
   const c = useThemeColors();
   return (
     <View style={[styles.list, { backgroundColor: c.card, borderColor: c.border }]} testID="pro-features">
-      {PRO_FEATURES.map(({ icon: I, title, detail }, i) => (
+      {PRO_FEATURES.map(({ icon: I, title, detail, proDetail }, i) => (
         <View key={title} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }]}>
           <View style={[styles.icon, { backgroundColor: c.accentSoft }]}>
             <I size={18} color={c.accent} />
           </View>
           <View style={styles.text}>
             <Text style={[styles.title, { color: c.text }]}>{title}</Text>
-            <Text style={[styles.detail, { color: c.mutedText }]}>{detail}</Text>
+            <Text style={[styles.detail, { color: c.mutedText }]}>{pro && proDetail ? proDetail : detail}</Text>
           </View>
         </View>
       ))}

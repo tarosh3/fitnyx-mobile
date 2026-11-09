@@ -49,7 +49,7 @@ export function ProScreen() {
           </Text>
         </View>
         {done ? <Text style={[styles.done, { color: c.accent }]} accessibilityLiveRegion="polite">{done}</Text> : null}
-        <ProFeatures />
+        <ProFeatures pro={isPro} />
         {isPro ? null : (
           <View style={styles.subscribe}>
             <Button testID="pro-subscribe" title="Subscribe · coming soon" disabled onPress={() => undefined} />
