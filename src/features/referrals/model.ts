@@ -27,7 +27,6 @@ export function referralErrorMessage(e: unknown): string {
     case 'REFERRAL_IS_PRO_CODE': return "That's a Pro code. Enter it under Get Pro → Pro code.";
     case 'REFERRAL_SELF': return "That's your own code. Share it with friends instead.";
     case 'REFERRAL_ALREADY': return "You've already been referred.";
-    case 'REFERRAL_WINDOW_CLOSED': return 'Friend codes can be entered only in your first 14 days.';
     case 'REFERRAL_MUTUAL': return "You referred this friend, so they can't refer you.";
     case 'SPARKS_NOT_ENOUGH': return 'Not enough Sparks yet.';
   }
@@ -47,12 +46,14 @@ export function friendLine(f: { active_days: number; qualified: boolean }, neede
   return f.qualified ? 'Active · Spark earned' : `${f.active_days} of ${needed} active days`;
 }
 
-/** "Until 24 Nov": the last day a friend's code can be entered. */
-export function enterUntilLabel(iso: string): string {
-  return `Until ${new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+/** Whether to offer "Referred by a friend?": until the user has entered a code, with no deadline.
+ *  `enter_code_until` covers a backend from before `can_enter_code` existed. */
+export function canEnterCode(o: Pick<ReferralOverview, 'can_enter_code' | 'enter_code_until' | 'referred_by'>): boolean {
+  if (o.referred_by) return false;
+  return o.can_enter_code ?? !!o.enter_code_until;
 }
 
 /** The text shared with a friend. */
 export function shareMessage(code: string): string {
-  return `Train with me on FitNyx. Sign up and enter my referral code ${code} under Settings → Refer friends in your first 14 days.`;
+  return `Train with me on FitNyx. Sign up and enter my referral code ${code} under Settings → Refer friends.`;
 }

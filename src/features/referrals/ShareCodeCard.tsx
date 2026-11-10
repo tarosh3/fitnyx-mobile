@@ -43,7 +43,7 @@ export function ShareCodeCard({ code, needed }: { code: string; needed: number }
           style={({ pressed }) => [styles.share, { backgroundColor: c.share.night.ink }, pressed && { transform: [{ scale: 0.98 }], opacity: 0.9 }]}>
           <Share2 size={18} color={c.share.night.text} /><Text style={[styles.shareLabel, { color: c.share.night.text }]}>Share my code</Text>
         </Pressable>
-        <Text style={[styles.body, { color: c.share.night.panelMuted }]}>A friend enters your code in their first 14 days, then completes {needed} active days. You earn 1 Spark.</Text>
+        <Text style={[styles.body, { color: c.share.night.panelMuted }]}>A friend enters your code, then completes {needed} active days. You earn 1 Spark.</Text>
         {error ? <Text accessibilityRole="alert" style={[styles.body, { color: c.share.night.ink }]}>Couldn't open sharing. Try again, or hold your code to copy it.</Text> : null}
       </View>
     </View>
