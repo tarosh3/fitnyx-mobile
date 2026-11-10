@@ -95,7 +95,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: type.weight.medium,
     fontSize: type.size.body,
-    minHeight: 50,
+    // A fixed height, not minHeight: with minHeight iOS sized the input from its
+    // first text measurement and drew the text below the icon until a re-layout.
+    height: 50,
     paddingVertical: 0,
   },
   helper: {

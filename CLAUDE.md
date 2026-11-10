@@ -225,6 +225,8 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 
 Button, Card, Input, Screen, PageHeader, ConfirmModal, Logo, LoopingLottie (decorative looping Lottie that pauses when its screen is unfocused — use it instead of `LottieView autoPlay loop`)
 
+**Edit forms use `SaveBar` + `useSaveState`** (2026-11-10, Edit Profile and Fitness Profile): Save is off ("No changes to save") until a field differs from what was loaded or saved, shows a spinner while saving and "✓ Saved" after, errors sit right above it, and leaving with unsaved edits asks "Discard changes?". Call `markLoaded()` / `markSaved()` after the state updates they follow. Before this the success text appeared at the top of the page, off screen, and users couldn't tell a save happened (reported 2026-11-10). A form that reloads on `user` object changes resets itself after `profileUpdated`: key the load on `user?.id`.
+
 Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, BackendKeepAlive, SyncManager
 
 ## Fonts

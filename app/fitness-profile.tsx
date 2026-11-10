@@ -26,11 +26,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button } from '@/src/components/ui/Button';
+import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
+import { SaveBar } from '@/src/components/ui/SaveBar';
 import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { Field } from '@/src/components/ui/Field';
 import { PressableScale } from '@/src/components/ui/PressableScale';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { useSaveState } from '@/src/components/ui/useSaveState';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
@@ -135,6 +137,13 @@ export default function FitnessProfileScreen() {
   const [equipment, setEquipment] = useState<string[]>([]);
   const [dietary, setDietary] = useState<string[]>([]);
   const [injuries, setInjuries] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Every editable field: Save is live only when one differs from what was loaded or saved.
+  const form = useSaveState(
+    { primaryGoal, experienceLevel, yearsTraining, targetWeight, weeklyTarget, workoutTypes, duration, days, timeSlot, equipment, dietary, injuries },
+    { saving, online: isOnline }
+  );
 
   useEffect(() => {
     load();
@@ -178,6 +187,7 @@ export default function FitnessProfileScreen() {
       setLoadFailed(true);
     } finally {
       setLoading(false);
+      form.markLoaded();
     }
   };
 
@@ -197,6 +207,7 @@ export default function FitnessProfileScreen() {
       return;
     }
     setSaving(true);
+    setSaveError(null);
     try {
       const targetWeightKg = targetWeight
         ? weightUnit === 'kg'
@@ -224,10 +235,10 @@ export default function FitnessProfileScreen() {
       };
 
       await updateFitnessProfile(payload);
-      toast('Fitness profile saved', 'success');
+      form.markSaved();
     } catch (err: any) {
       console.error('Failed to save fitness profile', err);
-      toast(err?.message || 'Couldn’t save. Please try again.', 'error');
+      setSaveError(err?.message || 'Couldn’t save. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -580,15 +591,9 @@ export default function FitnessProfileScreen() {
         <ScreenEdgeFade edge="top" inset={0} fade={16} />
         </View>
 
-        <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border, paddingBottom: insets.bottom + spacing.md }]}>
-          <Button
-            title={saving ? 'Saving…' : !isOnline ? "Offline — can't save" : 'Save'}
-            onPress={save}
-            loading={saving}
-            disabled={saving || !isOnline}
-          />
-        </View>
+        <SaveBar status={form.status} onSave={save} error={saveError} />
       </KeyboardAvoidingView>
+      <ConfirmModal {...form.leave} />
     </View>
   );
 }
@@ -773,14 +778,5 @@ const styles = StyleSheet.create({
     fontFamily: t.weight.regular,
     fontSize: t.size.body,
     minHeight: 60,
-  },
-  saveBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });
