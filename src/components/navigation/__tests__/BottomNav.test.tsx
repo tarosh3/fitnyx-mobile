@@ -204,6 +204,7 @@ describe('BottomNav navigation and visibility', () => {
     '/login',
     '/signup',
     '/update-password',
+    '/pro',
     '/profile',
     '/fitness-profile',
     '/water',

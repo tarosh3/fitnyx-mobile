@@ -1,4 +1,5 @@
-import { Check, Crown } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
+import { ProIcon } from '@/src/features/pro/ProIcon';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -19,7 +20,7 @@ export function LookPicker({ looks, active, data, format, photoUri, disabled, on
   photoUri: string | null;
   disabled: boolean;
   onSelect: (value: ShareTemplate) => void;
-  /** A Pro look on the free plan: a crown on its thumbnail. */
+  /** A Pro look on the free plan: the Nyx Spark on its thumbnail. */
   isLocked?: (look: LookOption) => boolean;
 }) {
   const c = useThemeColors();
@@ -53,7 +54,7 @@ export function LookPicker({ looks, active, data, format, photoUri, disabled, on
               </View>
               {isLocked?.(t) ? (
                 <View style={[styles.selected, { backgroundColor: c.accentSoft, borderWidth: 1, borderColor: c.primary }]} accessibilityLabel="Pro design">
-                  <Crown size={11} strokeWidth={2.5} color={c.accent} />
+                  <ProIcon size={14} color={c.accent} />
                 </View>
               ) : null}
               {on ? (
