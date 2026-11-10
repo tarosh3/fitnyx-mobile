@@ -1,4 +1,4 @@
-import { Crown } from 'lucide-react-native';
+import { ProIcon } from '@/src/features/pro/ProIcon';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -14,7 +14,7 @@ export function FiloAllowance({ left, onSeePro }: { left: number; onSeePro: () =
         {left > 0 ? `${left} free ${left === 1 ? 'message' : 'messages'} left today` : "That's today's free messages"}
       </Text>
       <Pressable onPress={onSeePro} accessibilityRole="button" accessibilityLabel="Get Pro for unlimited messages" hitSlop={8} style={styles.link}>
-        <Crown size={12} color={c.accent} />
+        <ProIcon size={14} color={c.accent} />
         <Text style={[styles.linkText, { color: c.accent }]}>{left > 0 ? 'Unlimited with Pro' : 'Get Pro'}</Text>
       </Pressable>
     </View>

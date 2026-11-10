@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Crown, Ticket } from 'lucide-react-native';
+import { Ticket } from 'lucide-react-native';
+import { ProIcon } from '@/src/features/pro/ProIcon';
 import React from 'react';
 
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
@@ -20,7 +21,7 @@ export function ProSettingsSection() {
       <SectionHeader eyebrow="Plan" />
       <SettingGroup>
         <SettingRow
-          icon={<Crown size={20} color={c.accent} strokeWidth={1.8} />}
+          icon={<ProIcon size={20} color={c.accent} />}
           label="FitNyx Pro"
           description={isPro ? planLine(entitlement) : 'Free plan · see what Pro adds'}
           trailing={isPro ? <ProTag /> : undefined}
@@ -28,7 +29,7 @@ export function ProSettingsSection() {
           showChevron
         />
         <SettingRow
-          icon={<Ticket size={20} color={c.accent} strokeWidth={1.8} />}
+          icon={<Ticket size={20} color={c.accent} />}
           label="Invite code"
           description="Have a code? Redeem it for Pro"
           onPress={() => router.push({ pathname: '/pro', params: { redeem: '1' } })}

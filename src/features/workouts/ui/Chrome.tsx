@@ -56,8 +56,10 @@ export function useBottomBarSpace(): number {
   return insets.bottom + 56 + spacing.md * 2 + spacing.lg;
 }
 
-export function Button({ title, onPress, variant = 'primary', icon, loading, disabled, style, testID }: {
+export function Button({ title, onPress, variant = 'primary', icon, iconAfter, loading, disabled, style, testID }: {
   title: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'danger' | 'quiet'; icon?: React.ReactNode;
+  /** After the label: a forward arrow reads "go on", not "go back". */
+  iconAfter?: React.ReactNode;
   loading?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle>; testID?: string;
 }) {
   const c = useThemeColors();
@@ -68,7 +70,7 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
       accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       style={({ pressed }) => [styles.btn, { backgroundColor: bg }, (variant === 'secondary' || variant === 'danger') && { borderWidth: 1, borderColor: c.border },
         variant === 'quiet' && { minHeight: 48 }, disabled && { opacity: 0.45 }, pressed && !disabled && { transform: [{ scale: 0.97 }] }, style]}>
-      {loading ? <ActivityIndicator color={fg} /> : <>{icon}<Text style={[styles.btnText, { color: fg }, variant === 'quiet' && { fontSize: 16, fontFamily: type.weight.semibold }]}>{title}</Text></>}
+      {loading ? <ActivityIndicator color={fg} /> : <>{icon}<Text style={[styles.btnText, { color: fg }, variant === 'quiet' && { fontSize: 16, fontFamily: type.weight.semibold }]}>{title}</Text>{iconAfter}</>}
     </Pressable>
   );
 }

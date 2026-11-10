@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Crown } from 'lucide-react-native';
+import { ProIcon } from '@/src/features/pro/ProIcon';
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
@@ -18,7 +18,7 @@ export function PlanPill() {
   return (
     <Pressable testID="plan-pill-get-pro" onPress={() => router.push('/pro')} accessibilityRole="button" accessibilityLabel="Get Pro" hitSlop={8}
       style={({ pressed }) => [styles.pill, { borderColor: c.primary }, pressed && { opacity: 0.7 }]}>
-      <Crown size={12} color={c.accent} />
+      <ProIcon size={14} color={c.accent} />
       <Text style={[styles.text, { color: c.accent }]}>Get Pro</Text>
     </Pressable>
   );

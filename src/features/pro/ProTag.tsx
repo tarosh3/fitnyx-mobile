@@ -1,4 +1,4 @@
-import { Crown } from 'lucide-react-native';
+import { ProIcon } from '@/src/features/pro/ProIcon';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -10,7 +10,7 @@ export function ProTag({ label = 'PRO' }: { label?: string }) {
   const c = useThemeColors();
   return (
     <View style={[styles.tag, { backgroundColor: c.accentSoft, borderColor: c.primary }]} accessibilityLabel="Pro feature">
-      <Crown size={11} color={c.accent} />
+      <ProIcon size={14} color={c.accent} />
       <Text style={[styles.text, { color: c.accent }]}>{label}</Text>
     </View>
   );

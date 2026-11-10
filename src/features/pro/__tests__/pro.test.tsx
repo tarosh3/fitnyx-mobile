@@ -65,13 +65,14 @@ describe('model', () => {
 describe('ProScreen', () => {
   const { ProScreen } = require('@/src/features/pro/ProScreen');
 
-  it('free: lists Pro, Subscribe is coming soon, a code unlocks Pro', async () => {
+  it('free: explains invite access and a code unlocks Pro', async () => {
     mockGetEntitlement.mockResolvedValueOnce(FREE).mockResolvedValueOnce(PRO);
     mockRedeem.mockResolvedValue({ access_expires_at: '2026-12-10T08:00:00Z', duration_days: 30 });
     render(<ProScreen />);
-    expect(await screen.findByText('Train smarter with Pro')).toBeOnTheScreen();
+    expect(await screen.findByTestId('pro-unlock')).toBeOnTheScreen();
+    expect(screen.getByText("Available by invite. Subscriptions launch with the app's store release.")).toBeOnTheScreen();
     expect(screen.getByText('Unlimited Filo')).toBeOnTheScreen();
-    expect(screen.getByTestId('pro-subscribe')).toBeDisabled();
+    expect(screen.queryByTestId('pro-subscribe')).toBeNull();
 
     const field = screen.getByLabelText('Invite code');
     fireEvent.changeText(field, 'abcd-ef23-45');
@@ -80,7 +81,7 @@ describe('ProScreen', () => {
     await waitFor(() => expect(mockRedeem).toHaveBeenCalledWith('ABCDEF2345'));
     expect(await screen.findByText('Code redeemed: 30 days of Pro added.')).toBeOnTheScreen();
     expect(await screen.findByText("You're on Pro")).toBeOnTheScreen();
-    expect(screen.queryByTestId('pro-subscribe')).toBeNull();
+    expect(screen.queryByTestId('pro-unlock')).toBeNull();
   });
 
   it("shows the backend's reason when a code fails", async () => {
@@ -90,11 +91,22 @@ describe('ProScreen', () => {
     fireEvent.changeText(screen.getByLabelText('Invite code'), 'ABCDEF2345');
     fireEvent.press(screen.getByTestId('pro-redeem-submit'));
     expect(await screen.findByText('That code has already been used by another account.')).toBeOnTheScreen();
+    fireEvent.changeText(screen.getByLabelText('Invite code'), 'BCDEF23456');
+    expect(screen.queryByText('That code has already been used by another account.')).toBeNull();
   });
 
-  it('the redeem button waits for a full code', () => {
+  it('does not offer activation before the membership is known', async () => {
+    mockGetEntitlement.mockReturnValue(new Promise(() => {}));
+    render(<ProScreen />);
+    expect(screen.getByText('Checking your membership…')).toBeOnTheScreen();
+    expect(screen.queryByTestId('pro-unlock')).toBeNull();
+    await act(async () => {});
+  });
+
+  it('the redeem button waits for a full code', async () => {
     mockGetEntitlement.mockResolvedValue(FREE);
     render(<ProScreen />);
+    await screen.findByTestId('pro-unlock');
     fireEvent.changeText(screen.getByLabelText('Invite code'), 'ABC');
     expect(screen.getByTestId('pro-redeem-submit')).toBeDisabled();
   });

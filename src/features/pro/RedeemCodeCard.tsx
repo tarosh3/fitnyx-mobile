@@ -1,6 +1,6 @@
-import { Ticket } from 'lucide-react-native';
+import { ArrowRight, Ticket } from 'lucide-react-native';
 import React, { forwardRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Input } from '@/src/components/ui/Input';
 import { refreshEntitlement } from '@/src/features/pro/store';
@@ -29,6 +29,7 @@ export const RedeemCodeCard = forwardRef<TextInput, { pro: boolean; onRedeemed: 
         const res = await redeemInviteCode(code);
         await refreshEntitlement();
         setCode('');
+        Keyboard.dismiss();
         onRedeemed(res.duration_days ?? null);
       } catch (e) {
         // A RedeemError carries the backend's reason; anything else is the connection.
@@ -43,26 +44,29 @@ export const RedeemCodeCard = forwardRef<TextInput, { pro: boolean; onRedeemed: 
     return (
       <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]} testID="pro-redeem">
         <View style={styles.head}>
-          <Ticket size={18} color={c.accent} />
-          <Text style={[styles.title, { color: c.text }]}>{pro ? 'Add more Pro with a code' : 'Have an invite code?'}</Text>
+          <View style={[styles.ticket, { backgroundColor: c.accentSoft }]}><Ticket size={22} color={c.accent} /></View>
+          <Text style={[styles.title, { color: c.text }]}>{pro ? 'Keep your momentum.' : 'Your next level starts here.'}</Text>
         </View>
-        <Text style={[styles.body, { color: c.mutedText }]}>Codes give Pro for a set number of days, added to any Pro you already have.</Text>
+        <Text style={[styles.body, { color: c.mutedText }]}>{pro ? 'Have another invite? Add its days to your current Pro access.' : 'Have an invite code? Enter it below to unlock your Pro benefits.'}</Text>
         {/* No maxLength: RN truncates before onChangeText, so a pasted "ABCD-EF23-45" would lose its tail. */}
-        <Input ref={ref} value={code} onChangeText={setCode} sanitize={sanitize} placeholder="ENTER CODE"
+        <Input ref={ref} value={code} onChangeText={(value) => { setCode(value); setError(null); }} sanitize={sanitize} placeholder="XXXXXXXXXX" label="Invite code" editable={!busy}
           autoCapitalize="characters" autoCorrect={false} autoComplete="off" accessibilityLabel="Invite code"
-          returnKeyType="done" onSubmitEditing={redeem} style={styles.input} />
-        {error ? <Text style={[styles.error, { color: c.destructive }]}>{error}</Text> : null}
-        <Button testID="pro-redeem-submit" title="Redeem code" loading={busy} disabled={code.length !== CODE_LENGTH} onPress={redeem} />
+          returnKeyType="done" onSubmitEditing={redeem} style={[styles.input, { backgroundColor: c.background }]} />
+        {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.error, { color: c.destructive }]}>{error}</Text> : null}
+        <Button testID="pro-redeem-submit" title={pro ? "Extend my Pro access" : "Activate my Pro access"} iconAfter={<ArrowRight size={18} color={c.primaryText} />} loading={busy} disabled={code.length !== CODE_LENGTH} onPress={redeem} />
+        <Text style={[styles.caption, { color: c.mutedText }]}>10 characters · Access for the duration of your invite</Text>
       </View>
     );
   },
 );
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radii.xl, borderWidth: 1, padding: spacing.base, gap: spacing.sm },
+  card: { borderRadius: radii.xl, borderWidth: 1, padding: spacing.lg, gap: spacing.base },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  title: { fontFamily: type.weight.bold, fontSize: 16 },
+  ticket: { width: 40, height: 40, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
+  caption: { fontFamily: type.weight.regular, fontSize: 11, lineHeight: 16, textAlign: 'center' },
+  title: { flex: 1, fontFamily: type.weight.bold, fontSize: 16 },
   body: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 19 },
-  input: { fontFamily: type.weight.bold, fontSize: 18, letterSpacing: 4, textAlign: 'center' },
+  input: { fontFamily: type.weight.bold, fontSize: 18, letterSpacing: 2, textAlign: 'center' },
   error: { fontFamily: type.weight.semibold, fontSize: 13, textAlign: 'center' },
 });

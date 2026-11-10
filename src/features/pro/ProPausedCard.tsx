@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Crown } from 'lucide-react-native';
+import { ProIcon } from '@/src/features/pro/ProIcon';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -14,7 +14,7 @@ export function ProPausedCard() {
   return (
     <View style={[styles.card, { backgroundColor: c.card, borderColor: c.primary }]} testID="program-paused">
       <View style={styles.head}>
-        <Crown size={18} color={c.accent} />
+        <ProIcon size={18} color={c.accent} />
         <Text style={[styles.title, { color: c.text }]}>Your program is paused</Text>
       </View>
       <Text style={[styles.body, { color: c.mutedText }]}>
