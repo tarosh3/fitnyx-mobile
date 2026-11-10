@@ -1,5 +1,5 @@
 import { UserPlus } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
 
 import { Input } from '@/src/components/ui/Input';
@@ -16,13 +16,17 @@ export function EnterCodeCard({ until, onApplied }: { until: string; onApplied: 
   const c = useThemeColors();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  // A ref, not just state: state only disables after a render, so a fast double
+  // tap sent two applies and the second showed "already referred".
+  const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const kind = codeKind(code);
 
   const apply = async () => {
-    if (busy) return;
+    if (busyRef.current) return;
     if (kind === 'pro') { setError("That's a Pro code. Enter it under Get Pro → Pro code."); return; }
     if (kind !== 'referral') return;
+    busyRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -32,6 +36,7 @@ export function EnterCodeCard({ until, onApplied }: { until: string; onApplied: 
     } catch (e) {
       setError(referralErrorMessage(e));
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };

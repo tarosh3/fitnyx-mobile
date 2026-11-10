@@ -120,4 +120,63 @@ describe('ReferralsScreen', () => {
     expect(await screen.findByText(/7 days of Pro added\. Pro until 17 Nov\./)).toBeOnTheScreen();
     expect(mockRefreshEntitlement).toHaveBeenCalled();
   });
+
+  it('a double tap on "Use this code" sends one request', async () => {
+    mockGet.mockResolvedValue({ ...BASE, enter_code_until: '2026-11-24T10:00:00Z' });
+    let resolve!: (v: unknown) => void;
+    mockApply.mockReturnValue(new Promise((r) => { resolve = r; }));
+    render(<ReferralsScreen />);
+    fireEvent.changeText(await screen.findByTestId('referral-enter-input'), 'K7M9P2Q');
+    fireEvent.press(screen.getByTestId('referral-enter-submit'));
+    fireEvent.press(screen.getByTestId('referral-enter-submit'));
+    fireEvent(screen.getByTestId('referral-enter-input'), 'submitEditing');
+    expect(mockApply).toHaveBeenCalledTimes(1);
+    resolve({ referred_by: { username: 'asha', active_days: 0, qualified: false } });
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
+  });
+
+  it('a double tap on GET PRO redeems once', async () => {
+    mockGet.mockResolvedValue({ ...BASE, sparks: 60 });
+    let resolve!: (v: unknown) => void;
+    mockRedeem.mockReturnValue(new Promise((r) => { resolve = r; }));
+    render(<ReferralsScreen />);
+    fireEvent.press(await screen.findByTestId('sparks-redeem'));
+    const confirm = await screen.findByText('GET PRO');
+    fireEvent.press(confirm);
+    fireEvent.press(confirm);
+    expect(mockRedeem).toHaveBeenCalledTimes(1);
+    resolve({ sparks: 30, pro_until: '2026-11-17T12:00:00Z', days: 7 });
+    expect(await screen.findByText(/7 days of Pro added/)).toBeOnTheScreen();
+  });
+
+  it('offline: applying or redeeming says so, and the saved copy still shows', async () => {
+    mockGet.mockResolvedValueOnce({ ...BASE, sparks: 30, enter_code_until: '2026-11-24T10:00:00Z' });
+    const offline = Object.assign(new Error('Network request failed'), { name: 'NetworkUnavailableError' });
+    mockApply.mockRejectedValue(offline);
+    mockRedeem.mockRejectedValue(offline);
+    render(<ReferralsScreen />);
+    fireEvent.changeText(await screen.findByTestId('referral-enter-input'), 'K7M9P2Q');
+    fireEvent.press(screen.getByTestId('referral-enter-submit'));
+    expect(await screen.findByText("Couldn't reach FitNyx. Check your connection and try again.")).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('sparks-redeem'));
+    fireEvent.press(await screen.findByText('GET PRO'));
+    await waitFor(() => expect(screen.getAllByText("Couldn't reach FitNyx. Check your connection and try again.").length).toBe(2));
+    expect(screen.getByTestId('referral-code')).toHaveTextContent('K7M9P2Q');
+  });
+
+  it('first load offline with nothing saved: Try again, not a blank screen', async () => {
+    mockGet.mockRejectedValueOnce(new Error('Network request failed')).mockResolvedValueOnce(BASE);
+    render(<ReferralsScreen />);
+    fireEvent.press(await screen.findByText('Try again'));
+    expect(await screen.findByTestId('referral-code')).toBeOnTheScreen();
+  });
+
+  it('a stale screen after the window closed shows the server\'s reason', async () => {
+    mockGet.mockResolvedValue({ ...BASE, enter_code_until: '2026-11-10T10:00:00Z' });
+    mockApply.mockRejectedValue(Object.assign(new Error('x'), { status: 410, code: 'REFERRAL_WINDOW_CLOSED' }));
+    render(<ReferralsScreen />);
+    fireEvent.changeText(await screen.findByTestId('referral-enter-input'), 'K7M9P2Q');
+    fireEvent.press(screen.getByTestId('referral-enter-submit'));
+    expect(await screen.findByText('Friend codes can be entered only in your first 14 days.')).toBeOnTheScreen();
+  });
 });
