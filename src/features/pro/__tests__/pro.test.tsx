@@ -65,16 +65,16 @@ describe('model', () => {
 describe('ProScreen', () => {
   const { ProScreen } = require('@/src/features/pro/ProScreen');
 
-  it('free: explains invite access and a code unlocks Pro', async () => {
+  it('free: explains Pro codes and a code unlocks Pro', async () => {
     mockGetEntitlement.mockResolvedValueOnce(FREE).mockResolvedValueOnce(PRO);
     mockRedeem.mockResolvedValue({ access_expires_at: '2026-12-10T08:00:00Z', duration_days: 30 });
     render(<ProScreen />);
     expect(await screen.findByTestId('pro-unlock')).toBeOnTheScreen();
-    expect(screen.getByText("Available by invite. Subscriptions launch with the app's store release.")).toBeOnTheScreen();
+    expect(screen.getByText("Available with a Pro code, or earn it by referring friends. Subscriptions launch with the app's store release.")).toBeOnTheScreen();
     expect(screen.getByText('Unlimited Filo')).toBeOnTheScreen();
     expect(screen.queryByTestId('pro-subscribe')).toBeNull();
 
-    const field = screen.getByLabelText('Invite code');
+    const field = screen.getByLabelText('Pro code');
     fireEvent.changeText(field, 'abcd-ef23-45');
     expect(field).toHaveProp('value', 'ABCDEF2345');
     fireEvent.press(screen.getByTestId('pro-redeem-submit'));
@@ -88,10 +88,10 @@ describe('ProScreen', () => {
     mockGetEntitlement.mockResolvedValue(FREE);
     mockRedeem.mockRejectedValue(Object.assign(new Error('That code has already been used by another account.'), { isRedeemError: true, code: 'INVITE_USED' }));
     render(<ProScreen />);
-    fireEvent.changeText(screen.getByLabelText('Invite code'), 'ABCDEF2345');
+    fireEvent.changeText(screen.getByLabelText('Pro code'), 'ABCDEF2345');
     fireEvent.press(screen.getByTestId('pro-redeem-submit'));
     expect(await screen.findByText('That code has already been used by another account.')).toBeOnTheScreen();
-    fireEvent.changeText(screen.getByLabelText('Invite code'), 'BCDEF23456');
+    fireEvent.changeText(screen.getByLabelText('Pro code'), 'BCDEF23456');
     expect(screen.queryByText('That code has already been used by another account.')).toBeNull();
   });
 
@@ -107,19 +107,40 @@ describe('ProScreen', () => {
     mockGetEntitlement.mockResolvedValue(FREE);
     render(<ProScreen />);
     await screen.findByTestId('pro-unlock');
-    fireEvent.changeText(screen.getByLabelText('Invite code'), 'ABC');
+    fireEvent.changeText(screen.getByLabelText('Pro code'), 'ABC');
     expect(screen.getByTestId('pro-redeem-submit')).toBeDisabled();
+  });
+
+  it('a referral code typed as a Pro code points to Refer friends, never redeems', async () => {
+    mockGetEntitlement.mockResolvedValue(FREE);
+    render(<ProScreen />);
+    await screen.findByTestId('pro-unlock');
+    fireEvent.changeText(screen.getByLabelText('Pro code'), 'k7m9p2q');
+    fireEvent.press(screen.getByTestId('pro-redeem-submit'));
+    expect(screen.getByText("That's a friend's referral code (7 characters). Enter it on Refer friends.")).toBeOnTheScreen();
+    expect(mockRedeem).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('pro-redeem-to-referrals'));
+    expect(mockPush).toHaveBeenCalledWith('/referrals');
+  });
+
+  it('links to Refer friends', async () => {
+    mockGetEntitlement.mockResolvedValue(FREE);
+    render(<ProScreen />);
+    fireEvent.press(await screen.findByTestId('pro-refer'));
+    expect(mockPush).toHaveBeenCalledWith('/referrals');
   });
 });
 
 describe('where Pro shows up', () => {
-  it('Settings: the plan row and the invite-code row', async () => {
+  it('Settings: the plan row, the Pro-code row and Refer friends', async () => {
     mockGetEntitlement.mockResolvedValue(FREE);
     const { ProSettingsSection } = require('@/src/features/pro/ProSettingsSection');
     render(<ProSettingsSection />);
     expect(await screen.findByText('Free plan · see what Pro adds')).toBeOnTheScreen();
-    fireEvent.press(screen.getByText('Invite code'));
+    fireEvent.press(screen.getByText('Pro code'));
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/pro', params: { redeem: '1' } });
+    fireEvent.press(screen.getByText('Refer friends'));
+    expect(mockPush).toHaveBeenCalledWith('/referrals');
     fireEvent.press(screen.getByText('FitNyx Pro'));
     expect(mockPush).toHaveBeenCalledWith('/pro');
   });

@@ -3,7 +3,7 @@ import type { FriendUser } from '@/src/lib/api/friends';
 
 // Mirrors backend internal/handlers/notification_handler.go.
 
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'overtaken';
+export type NotificationKind = 'friend_request' | 'friend_accepted' | 'overtaken' | 'referral_joined' | 'referral_qualified';
 
 export interface AppNotification {
   id: string;

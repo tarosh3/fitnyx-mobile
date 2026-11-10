@@ -12,7 +12,7 @@ const hiddenRoutePrefixes = [
   // Workouts flows with their own action bar (Start, Repeat, Add…).
   '/workouts/session', '/workouts/routine', '/workouts/history', '/workouts/exercise', '/workouts/programs', '/workouts/report', '/workouts/today', '/roam/record', '/update-password', '/privacy-policy',
   '/terms-of-service', '/delete-account', '/email-verified', '/verification-failed',
-  '/pro', '/invite', '/access-expired', '/trophies', '/readiness', '/cardio',
+  '/pro', '/referrals', '/invite', '/access-expired', '/trophies', '/readiness', '/cardio',
   // Has its own Start bar.
   '/plan',
 ];

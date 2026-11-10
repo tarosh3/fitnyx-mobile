@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowRight, Check, ChevronLeft, Ticket } from 'lucide-react-native';
+import { ArrowRight, Check, ChevronLeft, Gift, Ticket } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -13,7 +13,7 @@ import { Button } from '@/src/features/workouts/ui/Chrome';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
-/** Membership story and invite redemption. Store subscriptions are not available yet. */
+/** Membership story, Pro-code redemption and the way to Refer friends. Store subscriptions are not available yet. */
 export function ProScreen() {
   const c = useThemeColors();
   const router = useRouter();
@@ -53,10 +53,10 @@ export function ProScreen() {
             <ChevronLeft size={22} color={c.text} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: c.text }]}>FitNyx Pro</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Enter an invite code" onPress={goToCode}
+          <Pressable accessibilityRole="button" accessibilityLabel="Enter a Pro code" onPress={goToCode}
             style={({ pressed }) => [styles.inviteLink, pressed && styles.pressed]}>
             <Ticket size={16} color={c.accent} />
-            <Text style={[styles.linkText, { color: c.accent }]}>Invite code</Text>
+            <Text style={[styles.linkText, { color: c.accent }]}>Pro code</Text>
           </Pressable>
         </View>
 
@@ -68,14 +68,14 @@ export function ProScreen() {
               <View style={[styles.check, { backgroundColor: c.primary }]}><Check size={18} color={c.primaryText} /></View>
               <View style={styles.memberCopy}>
                 <Text style={[styles.memberTitle, { color: c.text }]}>You're on Pro</Text>
-                <Text style={[styles.memberDetail, { color: c.mutedText }]}>{planLine(entitlement)}{entitlement?.source === 'invite' ? ' · Invite access' : ''}</Text>
+                <Text style={[styles.memberDetail, { color: c.mutedText }]}>{planLine(entitlement)}</Text>
               </View>
               <Text style={[styles.active, { color: c.accent }]}>ACTIVE</Text>
             </View>
           ) : (
             <>
-              <Button testID="pro-unlock" title="Unlock Pro with an invite" onPress={goToCode} iconAfter={<ArrowRight size={19} color={c.primaryText} />} />
-              <Text style={[styles.note, { color: c.mutedText }]}>Available by invite. Subscriptions launch with the app's store release.</Text>
+              <Button testID="pro-unlock" title="Unlock Pro with a code" onPress={goToCode} iconAfter={<ArrowRight size={19} color={c.primaryText} />} />
+              <Text style={[styles.note, { color: c.mutedText }]}>Available with a Pro code, or earn it by referring friends. Subscriptions launch with the app's store release.</Text>
             </>
           )}
         </View>
@@ -91,12 +91,22 @@ export function ProScreen() {
           }
         }}>
           <RedeemCodeCard ref={codeRef} pro={isPro}
-            onRedeemed={(days) => setDone(days ? `Code redeemed: ${days} days of Pro added.` : 'Code redeemed: Pro is on.')} />
+            onRedeemed={(days) => setDone(days ? `Code redeemed: ${days} days of Pro added.` : 'Code redeemed: Pro is on.')}
+            onReferralCode={() => router.push('/referrals')} />
           {done ? <View style={[styles.success, { backgroundColor: c.accentSoft }]}>
             <Check size={20} color={c.accent} />
             <Text style={[styles.done, { color: c.accent }]} accessibilityLiveRegion="polite">{done}</Text>
           </View> : null}
         </View>
+        <Pressable testID="pro-refer" accessibilityRole="button" onPress={() => router.push('/referrals')}
+          style={({ pressed }) => [styles.refer, { backgroundColor: c.card, borderColor: c.border }, pressed && styles.pressed]}>
+          <View style={[styles.referIcon, { backgroundColor: c.accentSoft }]}><Gift size={20} color={c.accent} /></View>
+          <View style={styles.memberCopy}>
+            <Text style={[styles.memberTitle, { color: c.text }]}>Or earn Pro free</Text>
+            <Text style={[styles.memberDetail, { color: c.mutedText }]}>Refer friends and collect Sparks. 30 Sparks = 7 days of Pro.</Text>
+          </View>
+          <ArrowRight size={18} color={c.mutedText} />
+        </Pressable>
         <Text style={[styles.footer, { color: c.mutedText }]}>Built around your progress.</Text>
       </Screen>
     </KeyboardAvoidingView>
@@ -123,5 +133,7 @@ const styles = StyleSheet.create({
   redeem: { marginTop: spacing['2xl'], gap: spacing.md },
   success: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.base, borderRadius: radii.md },
   done: { flex: 1, fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 20 },
+  refer: { marginTop: spacing.xl, borderRadius: radii.xl, borderWidth: 1, padding: spacing.base, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  referIcon: { width: 40, height: 40, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   footer: { fontFamily: type.weight.medium, fontSize: 12, textAlign: 'center', marginTop: spacing.xl },
 });
