@@ -5,7 +5,6 @@ import {
   Dumbbell,
   Flame,
   Heart,
-  Salad,
   Sparkles,
   Sunrise,
   Sunset,
@@ -28,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/src/components/ui/Button';
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { Field } from '@/src/components/ui/Field';
 import { PressableScale } from '@/src/components/ui/PressableScale';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
@@ -65,7 +65,7 @@ const LEGACY_GOALS: Record<string, string> = {
 
 const EXPERIENCE_LEVELS = [
   { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Inter' },
+  { value: 'intermediate', label: 'Intermediate' },
   { value: 'advanced', label: 'Advanced' },
 ] as const;
 
@@ -275,6 +275,7 @@ export default function FitnessProfileScreen() {
           </View>
         </View>
 
+        <View style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: spacing['3xl'] + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
@@ -466,7 +467,7 @@ export default function FitnessProfileScreen() {
                             { color: active ? c.primaryText : c.text },
                           ]}
                         >
-                          {d.slice(0, 1)}
+                          {d}
                         </Text>
                       </Pressable>
                     );
@@ -549,7 +550,6 @@ export default function FitnessProfileScreen() {
                           },
                         ]}
                       >
-                        <Salad size={14} color={active ? c.accent : c.mutedText} strokeWidth={2} />
                         <Text style={[styles.chipText, { color: active ? c.accent : c.text }]}>{d}</Text>
                       </PressableScale>
                     );
@@ -577,6 +577,8 @@ export default function FitnessProfileScreen() {
 
           <View style={{ height: 100 }} />
         </ScrollView>
+        <ScreenEdgeFade edge="top" inset={0} fade={16} />
+        </View>
 
         <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border, paddingBottom: insets.bottom + spacing.md }]}>
           <Button
@@ -594,7 +596,7 @@ export default function FitnessProfileScreen() {
 const styles = StyleSheet.create({
   scroll: {
     paddingBottom: spacing['3xl'],
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingTop: spacing.sm,
   },
   flexCenter: {
@@ -667,6 +669,8 @@ const styles = StyleSheet.create({
     minWidth: '30%',
     flexGrow: 1,
     flexBasis: 0,
+    minHeight: 78,
+    justifyContent: 'center',
     padding: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: StyleSheet.hairlineWidth,
@@ -676,17 +680,18 @@ const styles = StyleSheet.create({
   goalLabel: {
     fontFamily: t.weight.semibold,
     fontSize: t.size.xs,
+    lineHeight: 16,
     textAlign: 'center',
   },
   stepperRow: {
     flexDirection: 'row',
     gap: spacing.xs,
-    flexWrap: 'wrap',
   },
   stepperDot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    flex: 1,
+    maxWidth: 48,
+    height: 40,
+    borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
@@ -696,12 +701,12 @@ const styles = StyleSheet.create({
     fontSize: t.size.sm,
   },
   stepperPill: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    flex: 1,
+    height: 40,
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
-    minWidth: 48,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   stepperPillText: {
     fontFamily: t.weight.semibold,
@@ -716,14 +721,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    minHeight: 38,
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
   chipText: {
     fontFamily: t.weight.semibold,
-    fontSize: t.size.xs,
+    fontSize: 13,
   },
   dayRow: {
     flexDirection: 'row',
@@ -738,8 +743,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayText: {
-    fontFamily: t.weight.bold,
-    fontSize: t.size.sm,
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.xs,
   },
   timeRow: {
     flexDirection: 'row',

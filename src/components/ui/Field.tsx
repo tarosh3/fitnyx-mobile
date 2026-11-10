@@ -95,7 +95,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: type.weight.medium,
     fontSize: type.size.body,
-    paddingVertical: spacing.md,
+    minHeight: 50,
+    paddingVertical: 0,
   },
   helper: {
     fontFamily: type.weight.regular,
