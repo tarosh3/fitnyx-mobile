@@ -1,4 +1,5 @@
 import React from 'react';
+import { Share } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { codeKind, friendLine, referralErrorMessage, sanitizeCode, shareMessage, sparksProgress } from '@/src/features/referrals/model';
@@ -11,6 +12,7 @@ const mockRefreshEntitlement = jest.fn(() => Promise.resolve());
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn(), canGoBack: () => true, replace: jest.fn() }),
+  useNavigation: () => ({ getState: () => ({ index: 0, routes: [{ name: 'referrals' }] }) }),
   // useCachedResource refreshes on focus: run it once on mount.
   useFocusEffect: (cb: () => void) => { require('react').useEffect(cb, [cb]); },
 }));
@@ -162,6 +164,27 @@ describe('ReferralsScreen', () => {
     fireEvent.press(await screen.findByText('GET PRO'));
     await waitFor(() => expect(screen.getAllByText("Couldn't reach FitNyx. Check your connection and try again.").length).toBe(2));
     expect(screen.getByTestId('referral-code')).toHaveTextContent('K7M9P2Q');
+  });
+
+  it('shares the actual invitation and recovers from an unavailable share sheet', async () => {
+    mockGet.mockResolvedValue(BASE);
+    const share = jest.spyOn(Share, 'share').mockRejectedValueOnce(new Error('unavailable'))
+      .mockResolvedValueOnce({ action: Share.dismissedAction });
+    render(<ReferralsScreen />);
+    fireEvent.press(await screen.findByTestId('referral-share'));
+    expect(await screen.findByText("Couldn't open sharing. Try again, or hold your code to copy it.")).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('referral-share'));
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(2));
+    expect(share).toHaveBeenLastCalledWith({ message: shareMessage(BASE.code) });
+    share.mockRestore();
+  });
+
+  it('uses server-supplied reward thresholds throughout the journey', async () => {
+    mockGet.mockResolvedValue({ ...BASE, sparks: 4, sparks_per_reward: 12, reward_days: 3, active_days_needed: 6 });
+    render(<ReferralsScreen />);
+    expect(await screen.findByText('8 more Sparks to unlock 3 days of Pro')).toBeOnTheScreen();
+    expect(screen.getByText('They finish a workout or a Roam on 6 different days.')).toBeOnTheScreen();
+    expect(screen.getByRole('progressbar')).toHaveAccessibilityValue({ min: 0, max: 12, now: 4 });
   });
 
   it('first load offline with nothing saved: Try again, not a blank screen', async () => {

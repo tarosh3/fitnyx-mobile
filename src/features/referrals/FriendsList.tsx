@@ -11,7 +11,7 @@ function Progress({ days, needed, done }: { days: number; needed: number; done: 
   const c = useThemeColors();
   return (
     <View style={[styles.track, { backgroundColor: c.border }]}>
-      <View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.round((done ? 1 : days / needed) * 100)}%` }]} />
+      <View style={[styles.fill, { backgroundColor: c.primary, width: `${Math.round(Math.max(0, Math.min(1, done ? 1 : days / Math.max(1, needed))) * 100)}%` }]} />
     </View>
   );
 }
@@ -24,7 +24,8 @@ export function FriendsList({ friends, total, needed }: { friends: ReferredFrien
       <Text style={[styles.heading, { color: c.text }]}>Friends you referred{total ? ` · ${total}` : ''}</Text>
       {friends.length === 0 ? (
         <View style={[styles.empty, { backgroundColor: c.card, borderColor: c.border }]}>
-          <Users size={22} color={c.mutedText} />
+          <View style={[styles.emptyIcon, { backgroundColor: c.accentSoft }]}><Users size={26} color={c.accent} /></View>
+          <Text style={[styles.emptyTitle, { color: c.text }]}>Every crew starts with one invite.</Text>
           <Text style={[styles.emptyText, { color: c.mutedText }]}>No one yet. Share your code and they'll show up here.</Text>
         </View>
       ) : (
@@ -63,12 +64,14 @@ export function ReferredByCard({ by, needed }: { by: ReferredBy; needed: number 
 const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   heading: { fontFamily: type.weight.semibold, fontSize: 17 },
+  emptyIcon: { width: 54, height: 54, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  emptyTitle: { fontFamily: type.weight.bold, fontSize: 17, lineHeight: 24, textAlign: 'center' },
   empty: { borderRadius: radii.xl, borderWidth: 1, padding: spacing.lg, alignItems: 'center', gap: spacing.sm },
   emptyText: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 19, textAlign: 'center' },
   list: { borderRadius: radii.xl, borderWidth: 1, overflow: 'hidden' },
   row: { paddingHorizontal: spacing.base, paddingVertical: spacing.md, gap: spacing.sm },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  name: { flex: 1, fontFamily: type.weight.semibold, fontSize: 15 },
+  rowTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  name: { flexGrow: 1, flexShrink: 1, minWidth: 80, fontFamily: type.weight.semibold, fontSize: 15 },
   line: { fontFamily: type.weight.medium, fontSize: 12, lineHeight: 18 },
   track: { height: 6, borderRadius: radii.pill, overflow: 'hidden' },
   fill: { height: 6, borderRadius: radii.pill },
