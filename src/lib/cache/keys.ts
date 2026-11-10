@@ -45,6 +45,8 @@ export const cacheKeys = {
   planIntroDismissed: (userId: string) => `plan:intro-dismissed:${userId}`,
   // Free / Pro (GET /me/entitlement): no expiry, so an offline Pro user stays Pro.
   entitlement: (userId: string) => `entitlement:${userId}`,
+  // Referrals + Sparks (GET /referrals).
+  referrals: (userId: string) => `referrals:${userId}`,
   // Adaptive program (GET /programs/active) and a day's targets, for offline workouts.
   activeProgram: (userId: string) => `program:active:${userId}`,
   programTargets: (userId: string, dayId: string) => `program:targets:${userId}:${dayId}`,

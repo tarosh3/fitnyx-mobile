@@ -12,16 +12,25 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 // The backend accepts A-Z and 2-9 (no 0/O/1/I/L/U); uppercase as you type.
 const sanitize = (t: string) => t.toUpperCase().replace(/[^A-Z2-9]/g, '').slice(0, 10);
 const CODE_LENGTH = 10;
+// A friend's referral code (7 characters, backend internal/referral) typed here by mistake.
+const REFERRAL_LENGTH = 7;
 
-/** "Have an invite code?": redeeming one gives Pro for the code's days. */
-export const RedeemCodeCard = forwardRef<TextInput, { pro: boolean; onRedeemed: (days: number | null) => void }>(
-  function RedeemCodeCard({ pro, onRedeemed }, ref) {
+type Props = { pro: boolean; onRedeemed: (days: number | null) => void; onReferralCode: () => void };
+
+/** "Have a Pro code?" (admin-issued; backend calls them invite codes): redeeming one gives Pro for the code's days. */
+export const RedeemCodeCard = forwardRef<TextInput, Props>(
+  function RedeemCodeCard({ pro, onRedeemed, onReferralCode }, ref) {
     const c = useThemeColors();
     const [code, setCode] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const isReferral = code.length === REFERRAL_LENGTH;
     const redeem = async () => {
+      if (isReferral) {
+        setError("That's a friend's referral code (7 characters). Enter it on Refer friends.");
+        return;
+      }
       if (code.length !== CODE_LENGTH || busy) return;
       setBusy(true);
       setError(null);
@@ -47,14 +56,15 @@ export const RedeemCodeCard = forwardRef<TextInput, { pro: boolean; onRedeemed: 
           <View style={[styles.ticket, { backgroundColor: c.accentSoft }]}><Ticket size={22} color={c.accent} /></View>
           <Text style={[styles.title, { color: c.text }]}>{pro ? 'Keep your momentum.' : 'Your next level starts here.'}</Text>
         </View>
-        <Text style={[styles.body, { color: c.mutedText }]}>{pro ? 'Have another invite? Add its days to your current Pro access.' : 'Have an invite code? Enter it below to unlock your Pro benefits.'}</Text>
+        <Text style={[styles.body, { color: c.mutedText }]}>{pro ? 'Have another Pro code? Add its days to your current Pro access.' : 'Have a Pro code? Enter it below to unlock your Pro benefits.'}</Text>
         {/* No maxLength: RN truncates before onChangeText, so a pasted "ABCD-EF23-45" would lose its tail. */}
-        <Input ref={ref} value={code} onChangeText={(value) => { setCode(value); setError(null); }} sanitize={sanitize} placeholder="XXXXXXXXXX" label="Invite code" editable={!busy}
-          autoCapitalize="characters" autoCorrect={false} autoComplete="off" accessibilityLabel="Invite code"
+        <Input ref={ref} value={code} onChangeText={(value) => { setCode(value); setError(null); }} sanitize={sanitize} placeholder="XXXXXXXXXX" label="Pro code" editable={!busy}
+          autoCapitalize="characters" autoCorrect={false} autoComplete="off" accessibilityLabel="Pro code"
           returnKeyType="done" onSubmitEditing={redeem} style={[styles.input, { backgroundColor: c.background }]} />
         {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[styles.error, { color: c.destructive }]}>{error}</Text> : null}
-        <Button testID="pro-redeem-submit" title={pro ? "Extend my Pro access" : "Activate my Pro access"} iconAfter={<ArrowRight size={18} color={c.primaryText} />} loading={busy} disabled={code.length !== CODE_LENGTH} onPress={redeem} />
-        <Text style={[styles.caption, { color: c.mutedText }]}>10 characters · Access for the duration of your invite</Text>
+        {error && isReferral ? <Button testID="pro-redeem-to-referrals" title="Go to Refer friends" variant="secondary" onPress={onReferralCode} /> : null}
+        <Button testID="pro-redeem-submit" title={pro ? "Extend my Pro access" : "Activate my Pro access"} iconAfter={<ArrowRight size={18} color={c.primaryText} />} loading={busy} disabled={code.length !== CODE_LENGTH && !isReferral} onPress={redeem} />
+        <Text style={[styles.caption, { color: c.mutedText }]}>10 characters · Pro for the code's number of days</Text>
       </View>
     );
   },

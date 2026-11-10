@@ -13,6 +13,9 @@ export function notificationText(n: AppNotification): string {
       const board = BOARD_LABEL[n.data.board as ArenaBoardKind] ?? 'the Arena';
       return `${who(n)} passed you on ${board} this week. Time to fight back?`;
     }
+    case 'referral_joined': return `${who(n)} used your referral code. Once they're active on 10 days, you earn a Spark`;
+    case 'referral_qualified': return `${who(n)} has been active on 10 days: you earned a Spark`;
+    default: return 'Something new in FitNyx';
   }
 }
 
@@ -22,6 +25,9 @@ export function notificationTarget(n: AppNotification): string {
     case 'friend_request': return '/friends?tab=requests';
     case 'friend_accepted': return '/friends';
     case 'overtaken': return `/arena?board=${n.data.board ?? 'grit'}`;
+    case 'referral_joined':
+    case 'referral_qualified': return '/referrals';
+    default: return '/notifications';
   }
 }
 
