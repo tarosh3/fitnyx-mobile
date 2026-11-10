@@ -1,10 +1,10 @@
-import { useRouter } from 'expo-router';
-import { Check, ChevronLeft } from 'lucide-react-native';
+import { Check, WifiOff } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Skeleton } from '@/src/components/ui/Skeleton';
 import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
-import { Screen } from '@/src/components/ui/Screen';
+import { MembershipLayout } from '@/src/features/pro/MembershipLayout';
 import { refreshEntitlement } from '@/src/features/pro/store';
 import { useReferrals } from '@/src/features/referrals/data';
 import { EnterCodeCard } from '@/src/features/referrals/EnterCodeCard';
@@ -21,7 +21,6 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 /** Refer friends: your code, Sparks, a friend's code (first 14 days), referred friends. */
 export function ReferralsScreen() {
   const c = useThemeColors();
-  const router = useRouter();
   const { data, loading, failed, refresh } = useReferrals();
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -48,26 +47,15 @@ export function ReferralsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.fill} behavior="padding">
-      <Screen contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back"
-            onPress={() => router.canGoBack() ? router.back() : router.replace('/settings')}
-            style={({ pressed }) => [styles.back, { backgroundColor: c.card, borderColor: c.border }, pressed && styles.pressed]}>
-            <ChevronLeft size={22} color={c.text} />
-          </Pressable>
-          <Text style={[styles.headerTitle, { color: c.text }]}>Refer friends</Text>
-        </View>
-
-        <Text style={[styles.headline, { color: c.text }]}>Bring friends. Earn Pro.</Text>
-        <Text style={[styles.lead, { color: c.mutedText }]}>
-          Every friend who stays active earns you a Spark. Collect {data?.sparks_per_reward ?? 30} for {data?.reward_days ?? 7} days of Pro.
-        </Text>
-
+    <MembershipLayout title="Refer friends">
         {!data ? (
           <View style={styles.state}>
-            {loading && !failed ? <ActivityIndicator color={c.accent} /> : (
+            {loading && !failed ? <View accessibilityLabel="Loading your invitation and rewards" accessibilityState={{ busy: true }} style={{ gap: spacing.lg }}>
+              <Skeleton height={280} radius={radii['2xl']} /><Skeleton height={100} radius={radii.xl} />
+              <Text accessibilityLiveRegion="polite" style={[styles.lead, { color: c.mutedText }]}>Getting your invitation ready…</Text>
+            </View> : (
               <>
+                <WifiOff size={32} color={c.mutedText} />
                 <Text style={[styles.lead, { color: c.mutedText }]}>Couldn't load your referrals. Check your connection.</Text>
                 <Button title="Try again" variant="secondary" onPress={refresh} />
               </>
@@ -75,9 +63,6 @@ export function ReferralsScreen() {
           </View>
         ) : (
           <View style={styles.cards}>
-            {data.referred_by ? <ReferredByCard by={data.referred_by} needed={data.active_days_needed} />
-              : data.enter_code_until ? <EnterCodeCard until={data.enter_code_until} onApplied={() => { refresh(); }} />
-              : null}
             <ShareCodeCard code={data.code} needed={data.active_days_needed} />
             <SparksCard data={data} busy={busy} onRedeem={() => setConfirm(true)} />
             {notice ? (
@@ -86,30 +71,25 @@ export function ReferralsScreen() {
                 <Text accessibilityLiveRegion="polite" style={[styles.noticeText, { color: notice.ok ? c.accent : c.destructive }]}>{notice.text}</Text>
               </View>
             ) : null}
-            <FriendsList friends={data.friends} total={data.friends_total} needed={data.active_days_needed} />
             <HowItWorks needed={data.active_days_needed} cost={data.sparks_per_reward} days={data.reward_days} />
+            <FriendsList friends={data.friends} total={data.friends_total} needed={data.active_days_needed} />
+            {data.referred_by ? <ReferredByCard by={data.referred_by} needed={data.active_days_needed} />
+              : data.enter_code_until ? <EnterCodeCard until={data.enter_code_until} onApplied={() => { refresh(); }} />
+              : null}
           </View>
         )}
-      </Screen>
       <ConfirmModal visible={confirm} variant="primary"
         title={`Get ${data?.reward_days ?? 7} days of Pro?`}
         message={`This spends ${data?.sparks_per_reward ?? 30} Sparks. The days are added to any Pro you already have.`}
         confirmLabel="Get Pro" onConfirm={redeem} onCancel={() => setConfirm(false)} />
-    </KeyboardAvoidingView>
+    </MembershipLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  content: { paddingBottom: spacing['3xl'] },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
-  back: { width: 44, height: 44, borderRadius: radii.pill, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontFamily: type.weight.bold, fontSize: 17 },
-  pressed: { opacity: 0.65 },
-  headline: { fontFamily: type.weight.extrabold, fontSize: 28, lineHeight: 34 },
-  lead: { fontFamily: type.weight.regular, fontSize: 14, lineHeight: 21, marginTop: spacing.xs },
-  state: { marginTop: spacing['2xl'], gap: spacing.md, alignItems: 'stretch' },
-  cards: { marginTop: spacing.xl, gap: spacing.lg },
+  lead: { fontFamily: type.weight.regular, fontSize: 14, lineHeight: 21 },
+  state: { paddingVertical: spacing.xl, minHeight: 240, justifyContent: 'center', gap: spacing.lg },
+  cards: { gap: spacing.xl },
   notice: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.base, borderRadius: radii.md, borderWidth: StyleSheet.hairlineWidth },
   noticeText: { flex: 1, fontFamily: type.weight.semibold, fontSize: 14, lineHeight: 20 },
 });

@@ -1,5 +1,5 @@
 import { ArrowRight, Ticket } from 'lucide-react-native';
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Input } from '@/src/components/ui/Input';
@@ -23,15 +23,18 @@ export const RedeemCodeCard = forwardRef<TextInput, Props>(
     const c = useThemeColors();
     const [code, setCode] = useState('');
     const [busy, setBusy] = useState(false);
+    const busyRef = useRef(false);
     const [error, setError] = useState<string | null>(null);
 
     const isReferral = code.length === REFERRAL_LENGTH;
     const redeem = async () => {
+      if (busyRef.current) return;
       if (isReferral) {
         setError("That's a friend's referral code (7 characters). Enter it on Refer friends.");
         return;
       }
       if (code.length !== CODE_LENGTH || busy) return;
+      busyRef.current = true;
       setBusy(true);
       setError(null);
       try {
@@ -46,6 +49,7 @@ export const RedeemCodeCard = forwardRef<TextInput, Props>(
           ? (e as Error).message
           : "Couldn't reach FitNyx. Check your connection and try again.");
       } finally {
+        busyRef.current = false;
         setBusy(false);
       }
     };
@@ -74,7 +78,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: radii.xl, borderWidth: 1, padding: spacing.lg, gap: spacing.base },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   ticket: { width: 40, height: 40, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
-  caption: { fontFamily: type.weight.regular, fontSize: 11, lineHeight: 16, textAlign: 'center' },
+  caption: { fontFamily: type.weight.regular, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   title: { flex: 1, fontFamily: type.weight.bold, fontSize: 16 },
   body: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 19 },
   input: { fontFamily: type.weight.bold, fontSize: 18, letterSpacing: 2, textAlign: 'center' },

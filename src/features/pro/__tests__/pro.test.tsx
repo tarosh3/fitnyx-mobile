@@ -7,11 +7,17 @@ import type { Entitlement } from '@/src/lib/api/entitlement';
 import { isProRequired } from '@/src/lib/api/entitlement';
 
 const mockPush = jest.fn();
+const mockBack = jest.fn();
+let mockNavState = { index: 0, routes: [{ name: 'pro' }] };
 const mockRedeem = jest.fn();
 const mockGetEntitlement = jest.fn();
 let mockParams: Record<string, string> = {};
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, back: jest.fn() }), useLocalSearchParams: () => mockParams }));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush, back: mockBack }),
+  useNavigation: () => ({ getState: () => mockNavState }),
+  useLocalSearchParams: () => mockParams,
+}));
 jest.mock('@/src/hooks/useThemeColors', () => ({ useThemeColors: () => require('@/src/theme/colors').colors.light }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('@/src/providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
@@ -123,11 +129,56 @@ describe('ProScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/referrals');
   });
 
+  it('browses the three stories and exposes the complete comparison on request', async () => {
+    mockGetEntitlement.mockResolvedValue(FREE);
+    render(<ProScreen />);
+    await screen.findByTestId('pro-unlock');
+    expect(screen.getByTestId('pro-tab-coach')).toHaveProp('accessibilityState', { selected: true });
+    fireEvent.press(screen.getByTestId('pro-tab-train'));
+    expect(screen.getByText('Find your next gear.')).toBeOnTheScreen();
+    expect(screen.getByText('Race your past self')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('pro-tab-fuel'));
+    expect(screen.getByText('Log a meal from a photo')).toBeOnTheScreen();
+    expect(screen.queryByTestId('pro-comparison')).toBeNull();
+    fireEvent.press(screen.getByTestId('pro-compare-toggle'));
+    expect(screen.getByTestId('pro-compare-toggle')).toHaveProp('accessibilityState', { expanded: true });
+    expect(screen.getByText('5 / day')).toBeOnTheScreen();
+    expect(screen.getByText('All 15')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('pro-compare-toggle'));
+    expect(screen.queryByTestId('pro-comparison')).toBeNull();
+  });
+
+  it('submits one Pro redemption for rapid button and keyboard submissions', async () => {
+    mockGetEntitlement.mockResolvedValue(FREE);
+    let resolve!: (v: unknown) => void;
+    mockRedeem.mockReturnValue(new Promise(r => { resolve = r; }));
+    render(<ProScreen />);
+    await screen.findByTestId('pro-unlock');
+    fireEvent.changeText(screen.getByLabelText('Pro code'), 'ABCDEF2345');
+    const submit = screen.getByTestId('pro-redeem-submit');
+    fireEvent.press(submit);
+    fireEvent.press(submit);
+    fireEvent(screen.getByLabelText('Pro code'), 'submitEditing');
+    expect(mockRedeem).toHaveBeenCalledTimes(1);
+    resolve({ duration_days: 7 });
+    expect(await screen.findByText('Code redeemed: 7 days of Pro added.')).toBeOnTheScreen();
+  });
+
   it('links to Refer friends', async () => {
     mockGetEntitlement.mockResolvedValue(FREE);
     render(<ProScreen />);
     fireEvent.press(await screen.findByTestId('pro-refer'));
     expect(mockPush).toHaveBeenCalledWith('/referrals');
+  });
+
+  it('goes back to Refer friends when it is the screen below, instead of stacking another', async () => {
+    mockGetEntitlement.mockResolvedValue(FREE);
+    mockNavState = { index: 2, routes: [{ name: 'settings' }, { name: 'referrals' }, { name: 'pro' }] };
+    render(<ProScreen />);
+    fireEvent.press(await screen.findByTestId('pro-refer'));
+    expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
+    mockNavState = { index: 0, routes: [{ name: 'pro' }] };
   });
 });
 
