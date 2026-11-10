@@ -13,6 +13,13 @@ const OLD = 'https://res.cloudinary.com/demo/image/upload/v1791990000/avatars/us
 const NEW = 'https://res.cloudinary.com/demo/image/upload/v1791990500/avatars/user-1.jpg';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: jest.fn(), replace: jest.fn(), canGoBack: () => true }) }));
+const mockDispatch = jest.fn();
+let mockPreventCb: ((e: { data: { action: unknown } }) => void) | null = null;
+let mockPreventOn = false;
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ dispatch: mockDispatch }),
+  usePreventRemove: (on: boolean, cb: (e: { data: { action: unknown } }) => void) => { mockPreventOn = on; mockPreventCb = cb; },
+}));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
 jest.mock('@react-native-picker/picker', () => ({ Picker: Object.assign(() => null, { Item: () => null }) }));
@@ -64,14 +71,15 @@ describe('changing the profile photo', () => {
       { resize: { width: 256, height: 256 } },
     ], { compress: 0.8, format: 'jpeg' });
 
-    await act(async () => { fireEvent.press(screen.getByText('Save Profile')); });
+    await act(async () => { fireEvent.press(screen.getByText('Save changes')); });
 
     await waitFor(() => expect(mockProfileUpdated).toHaveBeenCalled());
     expect(uploadAvatar).toHaveBeenCalledWith('file:///resized.jpg');
     expect(updateProfile).toHaveBeenCalledWith(expect.objectContaining({ avatar_url: NEW }));
     expect(mockProfileUpdated).toHaveBeenCalledWith(expect.objectContaining({ avatar_url: NEW }));
     expect(mockUpdateUser).toHaveBeenCalledWith({ data: expect.objectContaining({ avatar_url: NEW }) });
-    expect(await screen.findByText('Profile saved.')).toBeTruthy();
+    // The button itself says it worked, where the user is looking.
+    expect(await screen.findByTestId('save-bar-saved')).toBeTruthy();
   });
 
   it('keeps the old photo and says so when the upload fails', async () => {
@@ -79,20 +87,68 @@ describe('changing the profile photo', () => {
     const screen = render(<ProfileScreen />);
     const change = await screen.findByLabelText('Change profile photo');
     await act(async () => { fireEvent.press(change); });
-    await act(async () => { fireEvent.press(screen.getByText('Save Profile')); });
+    await act(async () => { fireEvent.press(screen.getByText('Save changes')); });
 
     await waitFor(() => expect(uploadAvatar).toHaveBeenCalled());
     expect(updateProfile).not.toHaveBeenCalled();
     expect(mockProfileUpdated).not.toHaveBeenCalled();
     expect(await screen.findByText('Photo uploads are not available right now')).toBeTruthy();
+    // Nothing was saved, so the changes are still waiting.
+    expect(screen.getByText('Save changes')).toBeTruthy();
   });
 
   it('saves other changes without uploading when the photo is unchanged', async () => {
     const screen = render(<ProfileScreen />);
     await screen.findByLabelText('Change profile photo');
-    await act(async () => { fireEvent.press(screen.getByText('Save Profile')); });
+    fireEvent.changeText(screen.getByDisplayValue('Tarosh'), 'Taro');
+    await act(async () => { fireEvent.press(screen.getByText('Save changes')); });
 
     await waitFor(() => expect(updateProfile).toHaveBeenCalledWith(expect.objectContaining({ avatar_url: OLD })));
     expect(uploadAvatar).not.toHaveBeenCalled();
+  });
+
+  it('Save is off until something changes, says Saved after, and comes back on a new edit', async () => {
+    const screen = render(<ProfileScreen />);
+    await screen.findByLabelText('Change profile photo');
+    const button = screen.getByTestId('save-bar-button');
+    expect(screen.getByText('No changes to save')).toBeTruthy();
+    expect(button.props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.press(button);
+    expect(updateProfile).not.toHaveBeenCalled();
+
+    fireEvent.changeText(screen.getByDisplayValue('Tarosh'), 'Taro');
+    expect(screen.getByText('Save changes')).toBeTruthy();
+    // Typing it back to what was saved means nothing to save again.
+    fireEvent.changeText(screen.getByDisplayValue('Taro'), 'Tarosh');
+    expect(screen.getByText('No changes to save')).toBeTruthy();
+
+    fireEvent.changeText(screen.getByDisplayValue('Tarosh'), 'Taro');
+    await act(async () => { fireEvent.press(screen.getByText('Save changes')); });
+    expect(await screen.findByTestId('save-bar-saved')).toBeTruthy();
+    expect(updateProfile).toHaveBeenCalledTimes(1);
+
+    fireEvent.changeText(screen.getByDisplayValue('Taro'), 'Tar');
+    expect(screen.getByText('Save changes')).toBeTruthy();
+  });
+
+  it('asks before leaving with unsaved changes, and leaves freely once saved', async () => {
+    const screen = render(<ProfileScreen />);
+    await screen.findByLabelText('Change profile photo');
+    expect(mockPreventOn).toBe(false);
+    fireEvent.changeText(screen.getByDisplayValue('Tarosh'), 'Taro');
+    expect(mockPreventOn).toBe(true);
+
+    act(() => { mockPreventCb?.({ data: { action: { type: 'GO_BACK' } } }); });
+    expect(screen.getByText('DISCARD CHANGES?')).toBeTruthy();
+    fireEvent.press(screen.getByText('KEEP EDITING'));
+    expect(mockDispatch).not.toHaveBeenCalled();
+
+    act(() => { mockPreventCb?.({ data: { action: { type: 'GO_BACK' } } }); });
+    fireEvent.press(screen.getByText('DISCARD'));
+    expect(mockDispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+
+    await act(async () => { fireEvent.press(screen.getByText('Save changes')); });
+    await screen.findByTestId('save-bar-saved');
+    expect(mockPreventOn).toBe(false);
   });
 });

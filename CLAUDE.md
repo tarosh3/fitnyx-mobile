@@ -127,7 +127,7 @@ AsyncStorage store for workout plans, days, exercises. Queue key: `fitnyx-db:off
 - Codes: Settings → Invite code → `/pro?redeem=1` → `redeemInviteCode` (raw fetch, existing) then `refreshEntitlement`. Subscribe is "coming soon" until store billing.
 
 **Referrals + Sparks (`src/features/referrals/`, route `app/referrals.tsx`; backend `internal/referral`)** — 2026-11-10:
-- Settings → Plan → Refer friends, and Get Pro's "Or earn Pro free". One `GET /referrals` (`useReferrals`, `cacheKeys.referrals`): the user's 7-char code (Share; long-press copies), Sparks toward 30 (= 7 days of Pro, `POST /referrals/redeem` behind a `ConfirmModal`, then `refreshEntitlement`), referred friends with "n of 10 active days", and — only while `enter_code_until` is set — "Referred by a friend?" (`POST /referrals/apply`). A referred user sees `ReferredByCard` instead.
+- Settings → Plan → Refer friends, and Get Pro's "Or earn Pro free". One `GET /referrals` (`useReferrals`, `cacheKeys.referrals`): the user's 7-char code (Share; long-press copies), Sparks toward 30 (= 7 days of Pro, `POST /referrals/redeem` behind a `ConfirmModal`, then `refreshEntitlement`), referred friends with "n of 10 active days", and — until the user has entered a code (`canEnterCode`: `can_enter_code`, no deadline since 2026-11-10; once entered it can never be changed) — "Referred by a friend?" (`POST /referrals/apply`). A referred user sees `ReferredByCard` instead.
 - **Admin-issued invite codes are called "Pro codes" in the app** (Settings row, `RedeemCodeCard`, Get Pro header); the backend and admin keep "invite". Each box catches the other's code by length (`codeKind`: 7 = referral, 10 = Pro) before calling the server. Shapes mirror backend `internal/referral`: change both together.
 
 **Set types (`TrackingType`)** — 2026-11-06: `weight_reps`, `reps` (+kg), `duration` (+kg, weighted plank), `cardio` (time + distance + count-up timer), `assisted_reps`, `weight_distance`. Assistance has its own column (`assist_kg`): **less is better**, so it stays out of `weight_kg`, volume, e1RM and heaviest-weight records; the record is the lowest value ever (`prLogIDs`, `MinAssistByUserAndExercise`, `beatsBestAssist`). 0 = no help and is a real value, so never treat it as empty. On a routine row, `target_weight_kg` of an assisted exercise is the target assistance. Grit doesn't yet reward less assistance (reps only).
@@ -224,6 +224,8 @@ PKCE flow, AsyncStorage session persistence, auto-refresh pauses when background
 ## UI primitives (`src/components/ui/`)
 
 Button, Card, Input, Screen, PageHeader, ConfirmModal, Logo, LoopingLottie (decorative looping Lottie that pauses when its screen is unfocused — use it instead of `LottieView autoPlay loop`)
+
+**Edit forms use `SaveBar` + `useSaveState`** (2026-11-10, Edit Profile and Fitness Profile): Save is off ("No changes to save") until a field differs from what was loaded or saved, shows a spinner while saving and "✓ Saved" after, errors sit right above it, and leaving with unsaved edits asks "Discard changes?". Call `markLoaded()` / `markSaved()` after the state updates they follow. Before this the success text appeared at the top of the page, off screen, and users couldn't tell a save happened (reported 2026-11-10). A form that reloads on `user` object changes resets itself after `profileUpdated`: key the load on `user?.id`.
 
 Global overlays (root level): BottomNav, ActiveSessionIndicator, AICoachChat, BackendKeepAlive, SyncManager
 

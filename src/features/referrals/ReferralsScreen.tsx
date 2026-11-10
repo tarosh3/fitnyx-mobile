@@ -9,7 +9,7 @@ import { refreshEntitlement } from '@/src/features/pro/store';
 import { useReferrals } from '@/src/features/referrals/data';
 import { EnterCodeCard } from '@/src/features/referrals/EnterCodeCard';
 import { FriendsList, ReferredByCard } from '@/src/features/referrals/FriendsList';
-import { referralErrorMessage } from '@/src/features/referrals/model';
+import { canEnterCode, referralErrorMessage } from '@/src/features/referrals/model';
 import { HowItWorks } from '@/src/features/referrals/HowItWorks';
 import { ShareCodeCard } from '@/src/features/referrals/ShareCodeCard';
 import { SparksCard } from '@/src/features/referrals/SparksCard';
@@ -18,7 +18,7 @@ import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { redeemSparks } from '@/src/lib/api/referrals';
 import { radii, spacing, type } from '@/src/styles/tokens';
 
-/** Refer friends: your code, Sparks, a friend's code (first 14 days), referred friends. */
+/** Refer friends: your code, Sparks, a friend's code (until one is entered), referred friends. */
 export function ReferralsScreen() {
   const c = useThemeColors();
   const { data, loading, failed, refresh } = useReferrals();
@@ -74,7 +74,7 @@ export function ReferralsScreen() {
             <HowItWorks needed={data.active_days_needed} cost={data.sparks_per_reward} days={data.reward_days} />
             <FriendsList friends={data.friends} total={data.friends_total} needed={data.active_days_needed} />
             {data.referred_by ? <ReferredByCard by={data.referred_by} needed={data.active_days_needed} />
-              : data.enter_code_until ? <EnterCodeCard until={data.enter_code_until} onApplied={() => { refresh(); }} />
+              : canEnterCode(data) ? <EnterCodeCard onApplied={() => { refresh(); }} />
               : null}
           </View>
         )}

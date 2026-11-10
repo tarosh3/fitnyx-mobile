@@ -5,7 +5,6 @@ import {
   Dumbbell,
   Flame,
   Heart,
-  Salad,
   Sparkles,
   Sunrise,
   Sunset,
@@ -27,10 +26,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button } from '@/src/components/ui/Button';
+import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
+import { SaveBar } from '@/src/components/ui/SaveBar';
+import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
 import { Field } from '@/src/components/ui/Field';
 import { PressableScale } from '@/src/components/ui/PressableScale';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { useSaveState } from '@/src/components/ui/useSaveState';
 import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { cacheGetStale, cacheKeys, cacheSet, cacheTTL } from '@/src/lib/cache';
@@ -65,7 +67,7 @@ const LEGACY_GOALS: Record<string, string> = {
 
 const EXPERIENCE_LEVELS = [
   { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Inter' },
+  { value: 'intermediate', label: 'Intermediate' },
   { value: 'advanced', label: 'Advanced' },
 ] as const;
 
@@ -135,6 +137,13 @@ export default function FitnessProfileScreen() {
   const [equipment, setEquipment] = useState<string[]>([]);
   const [dietary, setDietary] = useState<string[]>([]);
   const [injuries, setInjuries] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Every editable field: Save is live only when one differs from what was loaded or saved.
+  const form = useSaveState(
+    { primaryGoal, experienceLevel, yearsTraining, targetWeight, weeklyTarget, workoutTypes, duration, days, timeSlot, equipment, dietary, injuries },
+    { saving, online: isOnline }
+  );
 
   useEffect(() => {
     load();
@@ -178,6 +187,7 @@ export default function FitnessProfileScreen() {
       setLoadFailed(true);
     } finally {
       setLoading(false);
+      form.markLoaded();
     }
   };
 
@@ -197,6 +207,7 @@ export default function FitnessProfileScreen() {
       return;
     }
     setSaving(true);
+    setSaveError(null);
     try {
       const targetWeightKg = targetWeight
         ? weightUnit === 'kg'
@@ -224,10 +235,10 @@ export default function FitnessProfileScreen() {
       };
 
       await updateFitnessProfile(payload);
-      toast('Fitness profile saved', 'success');
+      form.markSaved();
     } catch (err: any) {
       console.error('Failed to save fitness profile', err);
-      toast(err?.message || 'Couldn’t save. Please try again.', 'error');
+      setSaveError(err?.message || 'Couldn’t save. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -275,6 +286,7 @@ export default function FitnessProfileScreen() {
           </View>
         </View>
 
+        <View style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: spacing['3xl'] + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
@@ -466,7 +478,7 @@ export default function FitnessProfileScreen() {
                             { color: active ? c.primaryText : c.text },
                           ]}
                         >
-                          {d.slice(0, 1)}
+                          {d}
                         </Text>
                       </Pressable>
                     );
@@ -549,7 +561,6 @@ export default function FitnessProfileScreen() {
                           },
                         ]}
                       >
-                        <Salad size={14} color={active ? c.accent : c.mutedText} strokeWidth={2} />
                         <Text style={[styles.chipText, { color: active ? c.accent : c.text }]}>{d}</Text>
                       </PressableScale>
                     );
@@ -577,16 +588,12 @@ export default function FitnessProfileScreen() {
 
           <View style={{ height: 100 }} />
         </ScrollView>
-
-        <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border, paddingBottom: insets.bottom + spacing.md }]}>
-          <Button
-            title={saving ? 'Saving…' : !isOnline ? "Offline — can't save" : 'Save'}
-            onPress={save}
-            loading={saving}
-            disabled={saving || !isOnline}
-          />
+        <ScreenEdgeFade edge="top" inset={0} fade={16} />
         </View>
+
+        <SaveBar status={form.status} onSave={save} error={saveError} />
       </KeyboardAvoidingView>
+      <ConfirmModal {...form.leave} />
     </View>
   );
 }
@@ -594,7 +601,7 @@ export default function FitnessProfileScreen() {
 const styles = StyleSheet.create({
   scroll: {
     paddingBottom: spacing['3xl'],
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingTop: spacing.sm,
   },
   flexCenter: {
@@ -667,6 +674,8 @@ const styles = StyleSheet.create({
     minWidth: '30%',
     flexGrow: 1,
     flexBasis: 0,
+    minHeight: 78,
+    justifyContent: 'center',
     padding: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: StyleSheet.hairlineWidth,
@@ -676,17 +685,18 @@ const styles = StyleSheet.create({
   goalLabel: {
     fontFamily: t.weight.semibold,
     fontSize: t.size.xs,
+    lineHeight: 16,
     textAlign: 'center',
   },
   stepperRow: {
     flexDirection: 'row',
     gap: spacing.xs,
-    flexWrap: 'wrap',
   },
   stepperDot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    flex: 1,
+    maxWidth: 48,
+    height: 40,
+    borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
@@ -696,12 +706,12 @@ const styles = StyleSheet.create({
     fontSize: t.size.sm,
   },
   stepperPill: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    flex: 1,
+    height: 40,
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
-    minWidth: 48,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   stepperPillText: {
     fontFamily: t.weight.semibold,
@@ -716,14 +726,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    minHeight: 38,
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
   chipText: {
     fontFamily: t.weight.semibold,
-    fontSize: t.size.xs,
+    fontSize: 13,
   },
   dayRow: {
     flexDirection: 'row',
@@ -738,8 +748,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayText: {
-    fontFamily: t.weight.bold,
-    fontSize: t.size.sm,
+    fontFamily: t.weight.semibold,
+    fontSize: t.size.xs,
   },
   timeRow: {
     flexDirection: 'row',
@@ -768,14 +778,5 @@ const styles = StyleSheet.create({
     fontFamily: t.weight.regular,
     fontSize: t.size.body,
     minHeight: 60,
-  },
-  saveBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

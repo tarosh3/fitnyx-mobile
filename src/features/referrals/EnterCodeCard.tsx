@@ -3,7 +3,7 @@ import React, { useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
 
 import { Input } from '@/src/components/ui/Input';
-import { codeKind, enterUntilLabel, REFERRAL_CODE_LENGTH, referralErrorMessage, sanitizeCode } from '@/src/features/referrals/model';
+import { codeKind, REFERRAL_CODE_LENGTH, referralErrorMessage, sanitizeCode } from '@/src/features/referrals/model';
 import { Button } from '@/src/features/workouts/ui/Chrome';
 import { useThemeColors } from '@/src/hooks/useThemeColors';
 import { applyReferralCode, type ReferredBy } from '@/src/lib/api/referrals';
@@ -11,8 +11,8 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 
 const sanitize = (t: string) => sanitizeCode(t).slice(0, 12);
 
-/** "Referred by a friend?": enter their code, once, in the first 14 days. */
-export function EnterCodeCard({ until, onApplied }: { until: string; onApplied: (by: ReferredBy) => void }) {
+/** "Referred by a friend?": enter their code once, any time. It can't be changed afterwards. */
+export function EnterCodeCard({ onApplied }: { onApplied: (by: ReferredBy) => void }) {
   const c = useThemeColors();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -46,7 +46,6 @@ export function EnterCodeCard({ until, onApplied }: { until: string; onApplied: 
       <View style={styles.head}>
         <View style={[styles.icon, { backgroundColor: c.accentSoft }]}><UserPlus size={20} color={c.accent} /></View>
         <Text style={[styles.title, { color: c.text }]}>Referred by a friend?</Text>
-        <Text style={[styles.until, { color: c.mutedText }]}>{enterUntilLabel(until)}</Text>
       </View>
       <Text style={[styles.body, { color: c.mutedText }]}>
         Enter their code once. They'll see your username and how many days you've been active until they earn their Spark.
@@ -68,7 +67,6 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   icon: { width: 40, height: 40, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, fontFamily: type.weight.bold, fontSize: 16 },
-  until: { fontFamily: type.weight.semibold, fontSize: 12 },
   body: { fontFamily: type.weight.regular, fontSize: 13, lineHeight: 19 },
   input: { fontFamily: type.weight.bold, fontSize: 18, letterSpacing: 2, textAlign: 'center' },
   error: { fontFamily: type.weight.semibold, fontSize: 13, textAlign: 'center' },

@@ -7,8 +7,8 @@ import { radii, spacing, type } from '@/src/styles/tokens';
 export function HowItWorks({ needed, cost, days }: { needed: number; cost: number; days: number }) {
   const c = useThemeColors();
   const steps = [
-    ['Send a little motivation', 'A friend signs up and enters your code in their first 14 days.'],
-    ['They find their rhythm', `They finish a workout or a Roam on ${needed} different days.`],
+    ['Send a little motivation', 'A friend enters your code in the app. Any time works, but only once.'],
+    ['They find their rhythm', `From that day on, they finish a workout or a Roam on ${needed} different days.`],
     ['Their effort. Your Spark.', `You get 1 Spark. ${cost} Sparks = ${days} days of Pro, added to any Pro you have.`],
   ];
   return (
@@ -29,7 +29,7 @@ export function HowItWorks({ needed, cost, days }: { needed: number; cost: numbe
           </View>
         ))}
       </View>
-      <Text style={[styles.fine, { color: c.mutedText }]}>Each person can be referred once. You can't use your own code, and two friends can't refer each other. Sparks don't expire.</Text>
+      <Text style={[styles.fine, { color: c.mutedText }]}>Each person can be referred once, and a code can't be changed after it's entered. You can't use your own code, and two friends can't refer each other. Sparks don't expire.</Text>
     </View>
   );
 }

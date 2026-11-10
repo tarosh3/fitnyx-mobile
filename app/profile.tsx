@@ -28,8 +28,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmModal } from '@/src/components/ui/ConfirmModal';
+import { SaveBar } from '@/src/components/ui/SaveBar';
 import { ScreenEdgeFade } from '@/src/components/ui/ScreenEdgeFade';
-import { Button } from '@/src/components/ui/Button';
+import { useSaveState } from '@/src/components/ui/useSaveState';
 import { Field } from '@/src/components/ui/Field';
 import { PressableScale } from '@/src/components/ui/PressableScale';
 import { SectionHeader } from '@/src/components/ui/SectionHeader';
@@ -93,15 +95,27 @@ export default function ProfileScreen() {
   const debouncedUsername = useDebouncedValue(username.trim(), 400);
   const reqIdRef = useRef(0);
 
+  // Every editable field: Save is live only when one differs from what was loaded or saved.
+  const form = useSaveState(
+    { firstName, lastName, username: username.trim(), bio, phone, countryCode, gender, dob: dob ? dob.toISOString() : null, photo: newAvatarLocalUri },
+    {
+      saving,
+      online: isOnline,
+      blocked: usernameStatus.state === 'checking' || usernameStatus.state === 'taken' || usernameStatus.state === 'invalid',
+    }
+  );
+
   const selectedCountry = useMemo(
     () => countries.find((country) => country.code === countryCode) || countries[0],
     [countryCode]
   );
 
+  // Keyed on the account, not the user object: saving calls profileUpdated, which
+  // replaces that object, and reloading then reset the form and hid "Saved".
   useEffect(() => {
     if (authLoading || !user) return;
     loadProfile();
-  }, [authLoading, user]);
+  }, [authLoading, user?.id]);
 
   // Filled from the offline copy: reload from the server once back online,
   // before anything can be saved over it.
@@ -194,6 +208,7 @@ export default function ProfileScreen() {
       setMessage({ type: 'error', text: 'Failed to load profile.' });
     } finally {
       setLoading(false);
+      form.markLoaded();
     }
   };
 
@@ -301,7 +316,7 @@ export default function ProfileScreen() {
 
       setOriginalUsername(username.trim());
       setNewAvatarLocalUri(null);
-      setMessage({ type: 'success', text: 'Profile saved.' });
+      form.markSaved();
     } catch (err: any) {
       console.error('Failed to save profile', err);
       setMessage({ type: 'error', text: err?.message || 'Failed to save profile.' });
@@ -361,26 +376,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {message ? (
-            <View
-              style={[
-                styles.messageBox,
-                {
-                  backgroundColor: message.type === 'success' ? `${c.success}22` : `${c.destructive}22`,
-                  borderColor: message.type === 'success' ? c.success : c.destructive,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.messageText,
-                  { color: message.type === 'success' ? c.success : c.destructive },
-                ]}
-              >
-                {message.text}
-              </Text>
-            </View>
-          ) : null}
 
           {/* Avatar */}
           <View style={styles.avatarSection}>
@@ -575,15 +570,7 @@ export default function ProfileScreen() {
           <View style={{ height: 96 }} />
         </ScrollView>
 
-        {/* Sticky Save */}
-        <View style={[styles.saveBar, { backgroundColor: c.background, borderColor: c.border, paddingBottom: insets.bottom + spacing.md }]}>
-          <Button
-            title={saving ? 'Saving…' : !isOnline ? "Offline — can't save" : 'Save Profile'}
-            onPress={save}
-            loading={saving}
-            disabled={saving || usernameStatus.state === 'checking' || !isOnline}
-          />
-        </View>
+        <SaveBar status={form.status} onSave={save} error={message?.type === 'error' ? message.text : null} />
       </KeyboardAvoidingView>
 
       {/* Country picker modal */}
@@ -614,6 +601,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
       <ScreenEdgeFade edge="top" inset={insets.top} fade={12} />
+      <ConfirmModal {...form.leave} />
     </View>
   );
 }
@@ -676,17 +664,6 @@ const styles = StyleSheet.create({
     fontSize: t.size.h1,
     letterSpacing: t.tracking.tight,
     marginTop: 2,
-  },
-  messageBox: {
-    marginHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  messageText: {
-    fontFamily: t.weight.semibold,
-    fontSize: t.size.xs,
   },
   avatarSection: {
     alignItems: 'center',
@@ -808,15 +785,6 @@ const styles = StyleSheet.create({
   countryCode: {
     fontFamily: t.weight.semibold,
     fontSize: t.size.body,
-  },
-  saveBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
   sheetBackdrop: {
     flex: 1,

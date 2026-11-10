@@ -23,8 +23,10 @@ export interface ReferralOverview {
   sparks_per_reward: number;
   reward_days: number;
   active_days_needed: number;
-  /** When the user can last enter a friend's code; null when they can't. */
-  enter_code_until: string | null;
+  /** The user hasn't entered a friend's code yet (no deadline). Absent on backends before 2026-11-10. */
+  can_enter_code?: boolean;
+  /** Old backends only: the 14-day deadline that has since been dropped. */
+  enter_code_until?: string | null;
   referred_by: ReferredBy | null;
   friends: ReferredFriend[];
   friends_total: number;
